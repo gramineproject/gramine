@@ -357,9 +357,4 @@ struct ocall_edmm_remove_pages {
     size_t count;
 };
 
-struct ocall_capget_t {
-    uint32_t version;
-    void *cap_data;
-};
-
 #pragma pack(pop)

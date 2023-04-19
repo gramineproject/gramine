@@ -3,9 +3,10 @@
  *                    Nirjhar Roy <nirjhar.roy@fortanix.com> */
 
 /* Test description: this test tests return values of capget and capset system call with various
- * inputs. All the test cases are limited to 1 single thread. */
-
+ * inputs. */
+#define _GNU_SOURCE
 #include <assert.h>
+#include <pthread.h>
 #include <sys/capability.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -21,7 +22,7 @@
 #define ROOT_USER_ID 0
 #define KERNEL_POINTER 0xffff000000000000
 
-static bool TestEFAULT(void) {
+static bool test_efault(void) {
     bool success = true;
     struct __user_cap_header_struct header = {
         .pid = getpid(),
@@ -37,6 +38,23 @@ static bool TestEFAULT(void) {
         }
     }
     return success;
+}
+
+static void *check_capabilities_for_different_thread(void *ptr) {
+    struct __user_cap_data_struct  mod_caps = *(struct __user_cap_data_struct *)ptr;
+    struct __user_cap_header_struct cap_header;
+    struct __user_cap_data_struct cap_data;
+    cap_header.pid = gettid() ;
+    cap_header.version = _LINUX_CAPABILITY_VERSION_1;
+    CHECK(capget(&cap_header, &cap_data));
+
+    if (mod_caps.effective != cap_data.effective)
+        errx(1, "effective capabilities is not modified in child thread");
+    if (mod_caps.permitted != cap_data.permitted)
+        errx(1, "permitted capabilities is not modified in child thread");
+    if (mod_caps.inheritable != cap_data.inheritable)
+        errx(1, "inheritable capabilities is not modified in child thread");
+    return NULL;
 }
 
 int main(void) {
@@ -82,8 +100,20 @@ int main(void) {
         errx(1, "failed capset() call modified effective capabilities");
     if (cap_data2.permitted != (euid == ROOT_USER_ID ? cap_data_mod.permitted : cap_data.permitted))
         errx(1, "failed capset() call modified permitted capabilities");
-    if (cap_data2.inheritable != (euid == ROOT_USER_ID ? cap_data_mod.inheritable : cap_data.inheritable))
+    if (cap_data2.inheritable != (euid == ROOT_USER_ID ?
+        cap_data_mod.inheritable : cap_data.inheritable))
         errx(1, "failed capset() call modified inheritable capabilities");
+
+    if (euid == ROOT_USER_ID) {
+        /* No point in checking with non-root user as capset will fail with non-root user
+         * and hence the capabilities of the parent thread won't be modified
+         */
+        printf("Checking if child thread inherits parent thread capabilities\n");
+        pthread_t thread[1];
+        CHECK(pthread_create(&thread[0], NULL, check_capabilities_for_different_thread,
+              &cap_data_mod));
+        pthread_join(thread[0], NULL);
+    }
 
     /* setting pid to some non-existant pid (with datap != NULL). Right now anything except 0 or
      * current thread id will return ESRCH.
@@ -191,7 +221,7 @@ int main(void) {
     if (errno != EINVAL)
         err(1, "Invalid errno for capset at line = %d", __LINE__);
 
-    bool success = TestEFAULT();
+    bool success = test_efault();
     if (!success)
         errx(1, "capget test case with kernel pointer failed");
     puts("TEST OK");

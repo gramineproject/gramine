@@ -158,7 +158,7 @@ if host_machine.cpu_family() == 'x86_64'
             'source': 'bootstrap_cpp.cpp',
         },
         'capget_bytes' : {},
-        'capget_capset_values' : {},
+        'capget_capset_values' : {'link_args': '-lpthread',},
     }
 endif
 

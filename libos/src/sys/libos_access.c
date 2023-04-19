@@ -7,8 +7,8 @@
 
 #include <errno.h>
 #include <linux/fcntl.h>
-#include <linux/capability.h>
 
+#include "linux_capabilities.h"
 #include "libos_fs.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
@@ -51,51 +51,52 @@ out:
     return ret;
 }
 
-long libos_syscall_capget(cap_user_header_t _hdrp, const cap_user_data_t _datap) {
-    struct __user_cap_header_struct hdrp;
-    struct __user_cap_data_struct datap[2];
+long libos_syscall_capget(struct gramine_user_cap_header* hdrp_unaligned,
+                          struct gramine_user_cap_data* datap_unaligned) {
+    struct gramine_user_cap_header hdrp;
+    struct gramine_user_cap_data datap[2];
     int ret;
-    if (!_hdrp || !is_user_memory_readable(_hdrp, sizeof(*_hdrp)))
+    if (!is_user_memory_readable(hdrp_unaligned, sizeof(*hdrp_unaligned)))
         return -EFAULT;
-    memcpy(&hdrp, _hdrp, sizeof(*_hdrp));
+    memcpy(&hdrp, hdrp_unaligned, sizeof(*hdrp_unaligned));
 
     struct libos_thread* cur_thread = get_cur_thread();
     lock(&cur_thread->lock);
     if (hdrp.pid != 0 && hdrp.pid != (int)cur_thread->tid) {
-        ret = _datap == NULL ? 0 : -ESRCH;
+        ret = datap_unaligned == NULL ? 0 : -ESRCH;
         goto out_locked;
     }
     unlock(&cur_thread->lock);
     size_t size = 0;
     switch(hdrp.version) {
-        case _LINUX_CAPABILITY_VERSION_1:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_1:
             size = 1;
             break;
-        case _LINUX_CAPABILITY_VERSION_2:
-        case _LINUX_CAPABILITY_VERSION_3:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_2:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_3:
             size = 2;
             break;
         default:
-            hdrp.version = _LINUX_CAPABILITY_VERSION_3;
-            if (!_hdrp || !is_user_memory_writable(_hdrp, sizeof(hdrp)))
+            hdrp.version = GRAMINE_LINUX_CAPABILITY_VERSION_3;
+            if (!is_user_memory_writable(hdrp_unaligned, sizeof(hdrp)))
                 ret = -EFAULT;
             else {
-                memcpy(_hdrp, &hdrp, sizeof(*_hdrp));
-                ret = _datap == NULL ? 0 : -EINVAL;
+                memcpy(hdrp_unaligned, &hdrp, sizeof(*hdrp_unaligned));
+                ret = datap_unaligned == NULL ? 0 : -EINVAL;
             }
             goto out;
     }
-    if (_datap == NULL) {
+    if (datap_unaligned == NULL) {
         ret = 0;
         goto out;
     }
-    /* For now we can get and set capabilties for current thread.
+    /* For now we can get and set capabilities for current thread.
      * TODO: Add support to get and set capabalities for other threads */
     lock(&cur_thread->lock);
-    if (!_datap || !is_user_memory_writable(_datap, size * sizeof(datap[0])))
+    if (!is_user_memory_writable(datap_unaligned, size * sizeof(datap[0])))
         ret = -EFAULT;
     else {
-        memcpy(_datap, cur_thread->capabilities, size * sizeof(datap[0]));
+        memcpy(datap_unaligned, cur_thread->capabilities, size * sizeof(datap[0]));
         ret = 0;
     }
 out_locked:
@@ -104,17 +105,23 @@ out:
     return ret;
 }
 
-long libos_syscall_capset(cap_user_header_t _hdrp, const cap_user_data_t _datap) {
-    struct __user_cap_header_struct hdrp;
-    struct __user_cap_data_struct datap[2];
-    int ret;
-    if (!_hdrp || !is_user_memory_readable(_hdrp, sizeof(*_hdrp)))
-        return -EFAULT;
-    memcpy(&hdrp, _hdrp, sizeof(*_hdrp));
-
-    /* For now we can get and set capabilties for current thread.
-     * TODO: Add support to get and set capabalities for other threads */
+long libos_syscall_capset(struct gramine_user_cap_header* hdrp_unaligned, struct gramine_user_cap_data* datap_unaligned) {
     struct libos_thread* cur_thread = get_cur_thread();
+    log_error("cur_thread->is_capability_enabled = %d", cur_thread->is_capability_enabled);
+    if (!cur_thread->is_capability_enabled) {
+        log_debug("Setting of capabilities is disabled. Please set sys.enable_capabilities to true "
+                  "to enable setting of capabilities");
+        return -ENOSYS;
+    }
+    struct gramine_user_cap_header hdrp;
+    struct gramine_user_cap_data datap[2];
+    int ret;
+    if (!is_user_memory_readable(hdrp_unaligned, sizeof(*hdrp_unaligned)))
+        return -EFAULT;
+    memcpy(&hdrp, hdrp_unaligned, sizeof(*hdrp_unaligned));
+
+    /* For now we can get and set capabilities for current thread.
+     * TODO: Add support to get and set capabalities for other threads */
     lock(&cur_thread->lock);
     if (hdrp.pid != 0 && hdrp.pid != (int)cur_thread->tid) {
         unlock(&cur_thread->lock);
@@ -122,28 +129,29 @@ long libos_syscall_capset(cap_user_header_t _hdrp, const cap_user_data_t _datap)
     }
     size_t size = 0;
     switch(hdrp.version) {
-        case _LINUX_CAPABILITY_VERSION_1:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_1:
             size = 1;
             break;
-        case _LINUX_CAPABILITY_VERSION_2:
-        case _LINUX_CAPABILITY_VERSION_3:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_2:
+        case GRAMINE_LINUX_CAPABILITY_VERSION_3:
             size = 2;
             break;
         default:
-            hdrp.version = _LINUX_CAPABILITY_VERSION_3;
-            if (!_hdrp || !is_user_memory_writable(_hdrp, sizeof(*_hdrp))) {
+            hdrp.version = GRAMINE_LINUX_CAPABILITY_VERSION_3;
+            if (!is_user_memory_writable(hdrp_unaligned,
+                sizeof(*hdrp_unaligned))) {
                 unlock(&cur_thread->lock);
                 return -EFAULT;
             }
-            memcpy(_hdrp, &hdrp, sizeof(hdrp));
+            memcpy(hdrp_unaligned, &hdrp, sizeof(hdrp));
             unlock(&cur_thread->lock);
             return -EINVAL;
     }
-    if (!_datap || !is_user_memory_readable(_datap, size * sizeof(datap[0]))) {
+    if (!is_user_memory_readable(datap_unaligned, size * sizeof(datap[0]))) {
         unlock(&cur_thread->lock);
         return -EFAULT;
     }
-    memcpy(datap, _datap, size * sizeof(datap[0]));
+    memcpy(datap, datap_unaligned, size * sizeof(datap[0]));
 
     ret = cur_thread->euid == 0 ? 0 : -EPERM;
     if (ret < 0) {

@@ -7,7 +7,6 @@
 
 #include <asm/fcntl.h>
 #include <linux/time.h>
-#include <sys/capability.h>
 
 #include "api.h"
 #include "pal.h"

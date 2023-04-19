@@ -958,7 +958,7 @@ class TC_30_Syscall(RegressionTestCase):
 
     def test_123_capget_capset_values_check(self):
         stdout, _ = self.run_binary(['capget_capset_values'])
-        self.assertIn("TEST OK", stdout)
+        self.assertIn("TESTs OK", stdout)
 
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):

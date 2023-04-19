@@ -122,7 +122,7 @@ unmap:;
     return ret;
 }
 
-static void set_cur_thread_capabilities(struct libos_thread* cur_thread) {
+static void init_cur_thread_capabilities(struct libos_thread* cur_thread) {
     bool is_root = cur_thread->euid == 0;
     cur_thread->capabilities[0].inheritable = cur_thread->capabilities[1].inheritable = 0;
 
@@ -162,7 +162,7 @@ static int init_main_thread(void) {
     __atomic_store_n(&g_process.pgid, g_process.pid, __ATOMIC_RELEASE);
 
     int64_t uid_int64;
-    ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/1, &uid_int64);
+    ret = toml_int_in(g_manifest_root, "loader.uid", /*defaultval=*/0, &uid_int64);
     if (ret < 0) {
         log_error("Cannot parse 'loader.uid'");
         put_thread(cur_thread);
@@ -170,7 +170,7 @@ static int init_main_thread(void) {
     }
 
     int64_t gid_int64;
-    ret = toml_int_in(g_manifest_root, "loader.gid", /*defaultval=*/1, &gid_int64);
+    ret = toml_int_in(g_manifest_root, "loader.gid", /*defaultval=*/0, &gid_int64);
     if (ret < 0) {
         log_error("Cannot parse 'loader.gid'");
         put_thread(cur_thread);
@@ -185,6 +185,14 @@ static int init_main_thread(void) {
 
     if (gid_int64 < 0 || gid_int64 > IDTYPE_MAX) {
         log_error("'loader.gid' = %ld is negative or greater than %u", gid_int64, IDTYPE_MAX);
+        put_thread(cur_thread);
+        return -EINVAL;
+    }
+
+    ret = toml_bool_in(g_manifest_root, "sys.enable_capabilities", /*defaultval=*/false,
+                       &cur_thread->is_capability_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.enable_capabilities'");
         put_thread(cur_thread);
         return -EINVAL;
     }
@@ -239,7 +247,7 @@ static int init_main_thread(void) {
         put_thread(cur_thread);
         return ret;
     }
-    set_cur_thread_capabilities(cur_thread);
+    init_cur_thread_capabilities(cur_thread);
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
@@ -312,6 +320,8 @@ struct libos_thread* get_new_thread(void) {
     thread->stack     = cur_thread->stack;
     thread->stack_top = cur_thread->stack_top;
     thread->stack_red = cur_thread->stack_red;
+    thread->is_capability_enabled = cur_thread->is_capability_enabled;
+    memcpy(thread->capabilities, cur_thread->capabilities, sizeof(cur_thread->capabilities));
 
     thread->signal_dispositions = cur_thread->signal_dispositions;
     get_signal_dispositions(thread->signal_dispositions);

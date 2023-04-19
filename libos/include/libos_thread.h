@@ -136,6 +136,13 @@ struct libos_thread {
 
     refcount_t ref_count;
     struct libos_lock lock;
+
+    /* Setting is_capability_enabled to true will emulate capset system call inside Gramine but will
+     * not propagate the modified capabilities to the host OS */
+    bool is_capability_enabled;
+    /* According to man page, 64-bit capabilities use datap[0] and datap[1], whereas
+     * 32-bit capabilities use only datap[0]. That is why we have an array of size 2 of struct
+     * __user_cap_data_struct capabilities. */
     struct __user_cap_data_struct capabilities[2];
 };
 

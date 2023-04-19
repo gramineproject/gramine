@@ -8,7 +8,6 @@
 #include <asm/mman.h>
 #include <asm/poll.h>
 #include <limits.h>
-#include <linux/capability.h>
 #include <linux/futex.h>
 #include <linux/in.h>
 #include <linux/in6.h>
