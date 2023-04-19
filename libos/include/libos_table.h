@@ -7,10 +7,6 @@
 
 #pragma once
 
-#if defined(__i386__) || defined(__x86_64__)
-#include <asm/ldt.h>
-#endif
-
 #include "libos_types.h"
 
 typedef void (*libos_syscall_t)(void);
@@ -206,21 +202,3 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, void* unused_cache);
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
-
-#define GRND_NONBLOCK 0x0001
-#define GRND_RANDOM   0x0002
-#define GRND_INSECURE 0x0004
-
-#ifndef MADV_FREE
-#define MADV_FREE 8
-#endif
-#ifdef __x86_64__
-#ifndef MADV_WIPEONFORK
-#define MADV_WIPEONFORK 18
-#endif
-#ifndef MADV_KEEPONFORK
-#define MADV_KEEPONFORK 19
-#endif
-#else /* __x86_64__ */
-#error "Unsupported platform"
-#endif

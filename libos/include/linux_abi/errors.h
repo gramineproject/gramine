@@ -8,11 +8,8 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-#define SIGS_CNT 64
-#define SIGRTMIN 32
+#include <asm/errno.h>
 
-typedef struct {
-    unsigned long __val[SIGS_CNT / (8 * sizeof(unsigned long))];
-} __sigset_t;
-
-#define RED_ZONE_SIZE 128
+#define ERESTARTSYS     512 /* Usual case - restart if SA_RESTART is set. */
+#define ERESTARTNOINTR  513 /* Always restart. */
+#define ERESTARTNOHAND  514 /* Restart if no signal handler. */

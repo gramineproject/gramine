@@ -4,9 +4,6 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <errno.h>
-#include <linux/sched.h>
-
 #include "libos_checkpoint.h"
 #include "libos_fs.h"
 #include "libos_internal.h"
@@ -16,6 +13,9 @@
 #include "libos_thread.h"
 #include "libos_types.h"
 #include "libos_vma.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/process.h"
+#include "linux_abi/sched.h"
 #include "pal.h"
 #include "toml_utils.h"
 

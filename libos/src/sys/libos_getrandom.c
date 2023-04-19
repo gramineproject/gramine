@@ -7,6 +7,8 @@
 
 #include "libos_internal.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/random.h"
 
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags) {
     if (flags & ~(GRND_NONBLOCK | GRND_RANDOM | GRND_INSECURE))

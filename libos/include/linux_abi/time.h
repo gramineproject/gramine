@@ -2,6 +2,7 @@
 /* Copyright (C) 2023 Intel Corporation
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
+
 #pragma once
 
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
@@ -11,6 +12,7 @@
 #include <linux/times.h>
 #include <linux/timex.h>
 #include <linux/utime.h>
+#include <linux/version.h>
 
 typedef __kernel_time_t time_t;
 

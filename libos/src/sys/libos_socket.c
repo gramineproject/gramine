@@ -12,6 +12,7 @@
 #include "libos_signal.h"
 #include "libos_socket.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
 
 /*
  * Sockets can be in 4 states: NEW, BOUND, LISTENING and CONNECTED.

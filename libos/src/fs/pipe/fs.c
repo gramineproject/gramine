@@ -19,9 +19,6 @@
  * However, using FDs makes it easier to checkpoint a named pipe.
  */
 
-#include <asm/fcntl.h>
-#include <errno.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
@@ -29,6 +26,8 @@
 #include "libos_process.h"
 #include "libos_signal.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
 #include "pal.h"
 #include "perm.h"
 #include "stat.h"

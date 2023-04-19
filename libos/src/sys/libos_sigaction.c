@@ -9,12 +9,7 @@
  * and "tgkill".
  */
 
-#include <errno.h>
-#include <stddef.h>  // FIXME(mkow): Without this we get:
-                     //     asm/signal.h:126:2: error: unknown type name ‘size_t’
-                     // It definitely shouldn't behave like this...
 #include <limits.h>
-#include <linux/signal.h>
 
 #include "libos_internal.h"
 #include "libos_ipc.h"
@@ -23,6 +18,8 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_utils.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/signals.h"
 #include "pal.h"
 
 long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act,

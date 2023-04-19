@@ -8,11 +8,6 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-#define SIGS_CNT 64
-#define SIGRTMIN 32
-
-typedef struct {
-    unsigned long __val[SIGS_CNT / (8 * sizeof(unsigned long))];
-} __sigset_t;
-
-#define RED_ZONE_SIZE 128
+#define GRND_NONBLOCK 0x0001
+#define GRND_RANDOM   0x0002
+#define GRND_INSECURE 0x0004

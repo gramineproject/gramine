@@ -8,10 +8,7 @@
 
 #define _POSIX_C_SOURCE 200809L  /* for SSIZE_MAX */
 
-#include <errno.h>
 #include <limits.h>
-#include <linux/fadvise.h>
-#include <linux/fcntl.h>
 #include <stdalign.h>
 
 #include "libos_fs.h"
@@ -20,6 +17,9 @@
 #include "libos_lock.h"
 #include "libos_process.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
+#include "linux_abi/memory.h"
 #include "stat.h"
 
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count) {

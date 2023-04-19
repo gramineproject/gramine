@@ -5,25 +5,21 @@
  * This file contains code for parsing system call arguments for debug purpose.
  */
 
-#include <asm/fcntl.h>
-#include <asm/ioctls.h>
-#include <asm/mman.h>
-#include <asm/unistd.h>
-#include <linux/fcntl.h>
-#include <linux/futex.h>
-#include <linux/in.h>
-#include <linux/in6.h>
-#include <linux/sched.h>
-#include <linux/un.h>
-#include <linux/wait.h>
-
 #include "api.h"
 #include "libos_fs.h"
 #include "libos_internal.h"
-#include "libos_syscalls.h"
 #include "libos_table.h"
 #include "libos_types.h"
 #include "libos_vma.h"
+#include "linux_abi/fs.h"
+#include "linux_abi/ioctl.h"
+#include "linux_abi/memory.h"
+#include "linux_abi/net.h"
+#include "linux_abi/process.h"
+#include "linux_abi/random.h"
+#include "linux_abi/sched.h"
+#include "linux_abi/signals.h"
+#include "linux_abi/syscalls_nr_arch.h"
 
 static void parse_open_flags(struct print_buf*, va_list*);
 static void parse_open_mode(struct print_buf*, va_list*);

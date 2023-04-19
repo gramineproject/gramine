@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <asm/unistd.h>
+
 /* TODO: This is required when building Gramine on systems with older headers. We should actually
  * have our own copy of headers of the kernel we emulate, not from the one which is used on the
  * build machine.

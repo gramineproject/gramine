@@ -17,7 +17,6 @@
  * than glibc.
  */
 
-#include <asm/mman.h>
 #include <endian.h>
 #include <errno.h>
 
@@ -34,6 +33,7 @@
 #include "libos_vdso.h"
 #include "libos_vdso_arch.h"
 #include "libos_vma.h"
+#include "linux_abi/memory.h"
 
 #define INTERP_PATH_SIZE 256 /* Default shebang size */
 

@@ -5,8 +5,6 @@
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 
-#include <linux/fcntl.h>
-#include <linux/mman.h>
 #include <stdalign.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -23,6 +21,7 @@
 #include "libos_tcb.h"
 #include "libos_utils.h"
 #include "libos_vma.h"
+#include "linux_abi/memory.h"
 #include "spinlock.h"
 
 /* The amount of total memory usage, all accesses must be protected by `vma_tree_lock`. */

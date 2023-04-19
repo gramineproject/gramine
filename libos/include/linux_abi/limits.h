@@ -2,11 +2,14 @@
 /* Copyright (C) 2023 Intel Corporation
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
+
 #pragma once
 
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
+#include <asm/resource.h>
+#include <linux/resource.h>
 #include <stdint.h>
 
 #include "linux_abi/time.h"
@@ -37,3 +40,11 @@ struct __kernel_rlimit {
 struct __kernel_rlimit64 {
     uint64_t rlim_cur, rlim_max;
 };
+
+/*
+ * Limits for path and filename length, as defined in Linux. Note that, same as Linux, PATH_MAX only
+ * applies to paths processed by syscalls such as getcwd() - there is no limit on paths you can
+ * open().
+ */
+#define NAME_MAX 255   /* filename length, NOT including NULL terminator */
+#define PATH_MAX 4096  /* path size, including NULL terminator */

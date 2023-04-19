@@ -3,13 +3,12 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <asm/fcntl.h>
-#include <asm/ioctls.h>
-
 #include "api.h"
 #include "libos_fs.h"
 #include "libos_lock.h"
 #include "libos_socket.h"
+#include "linux_abi/fs.h"
+#include "linux_abi/ioctl.h"
 #include "pal.h"
 #include "perm.h"
 #include "stat.h"

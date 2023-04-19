@@ -13,12 +13,10 @@
 
 #pragma once
 
-#include <asm/fcntl.h>
-#include <linux/fcntl.h>
-#include <linux/mman.h>
-
 #include "api.h"
 #include "assert.h"
+#include "linux_abi/fs.h"
+#include "linux_abi/memory.h"
 #include "pal.h"
 
 static inline pal_prot_flags_t LINUX_PROT_TO_PAL(int prot, int map_flags) {

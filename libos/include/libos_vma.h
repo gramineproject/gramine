@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <linux/mman.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -17,6 +16,7 @@
 #include "libos_defs.h"
 #include "libos_handle.h"
 #include "libos_types.h"
+#include "linux_abi/memory.h"
 #include "pal.h"
 
 #define VMA_COMMENT_LEN 16
@@ -32,14 +32,6 @@ struct libos_vma_info {
     uint64_t file_offset;
     char comment[VMA_COMMENT_LEN];
 };
-
-/* MAP_FIXED_NOREPLACE and MAP_SHARED_VALIDATE are fairly new and might not be defined. */
-#ifndef MAP_FIXED_NOREPLACE
-#define MAP_FIXED_NOREPLACE 0x100000
-#endif // MAP_FIXED_NOREPLACE
-#ifndef MAP_SHARED_VALIDATE
-#define MAP_SHARED_VALIDATE 0x03
-#endif // MAP_SHARED_VALIDATE
 
 /* vma is kept for bookkeeping, but the memory is not actually allocated */
 #define VMA_UNMAPPED 0x10000000

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <asm/stat.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -16,6 +15,8 @@
 #include "libos_refcount.h"
 #include "libos_types.h"
 #include "libos_utils.h"
+#include "linux_abi/fs.h"
+#include "linux_abi/limits.h"
 #include "list.h"
 #include "pal.h"
 
@@ -459,14 +460,6 @@ struct libos_d_ops {
      */
     int (*irestore)(struct libos_inode* inode, void* data);
 };
-
-/*
- * Limits for path and filename length, as defined in Linux. Note that, same as Linux, PATH_MAX only
- * applies to paths processed by syscalls such as getcwd() - there is no limit on paths you can
- * open().
- */
-#define NAME_MAX 255   /* filename length, NOT including null terminator */
-#define PATH_MAX 4096  /* path size, including null terminator */
 
 struct libos_fs {
     /* Null-terminated, used in manifest and for uniquely identifying a filesystem. */

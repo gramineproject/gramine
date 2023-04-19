@@ -7,14 +7,13 @@
  * they must be explicitly allowed through the "sys.insecure__allow_eventfd" manifest key.
  */
 
-#include <asm/fcntl.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_utils.h"
 #include "linux_eventfd.h"
+#include "linux_abi/fs.h"
 #include "pal.h"
 #include "toml_utils.h"
 

@@ -5,13 +5,12 @@
  * Implementation of system calls "access" and "faccessat".
  */
 
-#include <errno.h>
-#include <linux/fcntl.h>
-
 #include "libos_fs.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
+#include "linux_abi/fs.h"
 
 long libos_syscall_access(const char* file, mode_t mode) {
     return libos_syscall_faccessat(AT_FDCWD, file, mode);

@@ -3,11 +3,9 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include <stddef.h> // without this header we are missing `size_t` definition in "signal.h" ...
-#include <linux/sched.h>
-#include <linux/signal.h>
-
 #include "libos_table.h"
+#include "linux_abi/process.h"
+#include "linux_abi/signals.h"
 
 long libos_syscall_fork(void) {
     return libos_syscall_clone(SIGCHLD, 0, NULL, NULL, 0);
