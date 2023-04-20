@@ -1,0 +1,22 @@
+# modify this to test with AMX / without AMX
+sgx.cpu_features.amx = "unspecified"
+
+libos.entrypoint = "/amxtest"
+loader.entrypoint = "file:{{ gramine.libos }}"
+loader.log_level = "{{ log_level }}"
+loader.insecure__use_cmdline_argv = true
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/amxtest", uri = "file:amxtest" },
+]
+
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:amxtest",
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir() }}/",
+]
