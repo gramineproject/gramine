@@ -491,16 +491,6 @@ static bool is_in_out(PAL_CONTEXT* context) {
     return false;
 }
 
-static bool maybe_raise_sigsegv(PAL_CONTEXT* context) {
-    /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
-     * Gramine's PAL tries to handle this exception and propagates it to LibOS/app as a SIGILL
-     * signal. However, I/O instructions result in a #GP fault (which raises a SIGSEGV signal) if
-     * I/O is not permitted. Let Gramine emulate these instructions as if they end up in SIGSEGV.
-     * This helps some apps, e.g. `lscpu`.
-     */
-    return is_in_out(context);
-}
-
 static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
@@ -524,7 +514,13 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
            .si_code = ILL_ILLOPC,
             .si_addr = (void*)addr,
         };
-        if (maybe_raise_sigsegv(context)) {
+        if (is_in_out(context)) {
+           /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
+            * Gramine's PAL tries to handle this exception and propagates it to LibOS/app as a
+            * SIGILL signal. However, I/O instructions result in a #GP fault (which raises a
+            * SIGSEGV signal) if I/O is not permitted. Let Gramine emulate these instructions as if
+            * they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+            */
             info.si_signo = SIGSEGV;
             info.si_code = SEGV_MAPERR;
             log_debug("Illegal instruction during app execution at %p, emulated as if "

@@ -544,6 +544,7 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         finally:
             os.remove('nonexisting_testfile')
 
+
 @unittest.skipUnless(HAS_SGX,
     'These tests are only meaningful on SGX PAL because only SGX supports attestation.')
 @unittest.skipIf(USES_MUSL,
