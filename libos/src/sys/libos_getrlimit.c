@@ -15,6 +15,7 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
+#include "linux_resource.h"
 
 /*
  * TODO: implement actual limitation on each resource.
@@ -174,5 +175,18 @@ long libos_syscall_sysinfo(struct sysinfo* info) {
     info->freehigh  = free_mem;
     info->mem_unit  = 1;
     info->procs     = 1; /* report only this Gramine process */
+    return 0;
+}
+
+long libos_syscall_getrusage(int who, struct gramine_rusage *usage) {
+    if (!is_user_memory_writable(usage, sizeof(*usage)))
+        return -EFAULT;
+    if (who != GRAMINE_RUSAGE_SELF && who != GRAMINE_RUSAGE_CHILDREN &&
+        who != GRAMINE_RUSAGE_THREAD)
+        return -EINVAL;
+
+    memset(usage, 0, sizeof(*usage));
+    size_t virtual_mem_size = get_total_memory_usage();
+    usage->ru_maxrss = virtual_mem_size;
     return 0;
 }

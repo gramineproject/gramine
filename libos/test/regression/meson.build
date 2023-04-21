@@ -44,6 +44,7 @@ tests = {
     'getcwd': {},
     'getdents': {},
     'getdents_lseek': {},
+    'getrusage': {},
     'getsockname': {},
     'getsockopt': {},
     'gettimeofday': {},

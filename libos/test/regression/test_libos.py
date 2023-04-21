@@ -952,6 +952,10 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['hostname_extra_runtime_conf', socket.gethostname()])
         self.assertIn("TEST OK", stdout)
 
+    def test_122_getrusage(self):
+        stdout, _ = self.run_binary(['getrusage'])
+        self.assertIn("TEST OK", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
