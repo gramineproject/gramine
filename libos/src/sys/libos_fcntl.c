@@ -283,7 +283,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
 }
 
 /* The current implementation does not cover the mmap case. 
- * when a mapped file is unlocked, the lock will remain in effect 
+ * In Linux, when a mapped file is unlocked, the lock will remain in effect 
  * until the file is explicitly unmapped. */
 long libos_syscall_flock(int fd, int operation) {
     int ret;
