@@ -206,7 +206,8 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, void* unused_cache);
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
-
+long libos_syscall_get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode,
+                                 void* addr, unsigned long flags);
 #define GRND_NONBLOCK 0x0001
 #define GRND_RANDOM   0x0002
 #define GRND_INSECURE 0x0004

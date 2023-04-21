@@ -157,6 +157,9 @@ if host_machine.cpu_family() == 'x86_64'
         'bootstrap_cpp': {
             'source': 'bootstrap_cpp.cpp',
         },
+        'get_mempolicy' : {
+            'link_args' : '-lnuma',
+        },
     }
 endif
 

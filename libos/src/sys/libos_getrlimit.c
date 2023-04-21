@@ -15,7 +15,7 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
-
+#include "linux_mempolicy.h"
 /*
  * TODO: implement actual limitation on each resource.
  *
@@ -174,5 +174,24 @@ long libos_syscall_sysinfo(struct sysinfo* info) {
     info->freehigh  = free_mem;
     info->mem_unit  = 1;
     info->procs     = 1; /* report only this Gramine process */
+    return 0;
+}
+
+long libos_syscall_get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode,
+                                 void* addr, unsigned long flags) {
+
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    unsigned long sys_maxnode = topo->numa_nodes_cnt;
+    log_error("sys_maxnode = %ld\n", sys_maxnode);
+    if (!is_user_memory_readable(mode, sizeof(*mode)) ||
+        !is_user_memory_readable(nodemask, sizeof(*nodemask)) ||
+        ((flags & MPOL_F_ADDR) && !addr))
+        return -EFAULT;
+
+    if (maxnode < sys_maxnode ||
+       (flags & ~(MPOL_F_NODE | MPOL_F_ADDR)) ||
+       (!(flags & MPOL_F_ADDR) && addr) ||
+       ((flags & MPOL_F_MEMS_ALLOWED) && (flags & (MPOL_F_ADDR | MPOL_F_NODE))))
+       return -EINVAL;
     return 0;
 }
