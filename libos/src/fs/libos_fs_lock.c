@@ -148,8 +148,8 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 /*
  * Find first lock that conflicts with `pl`. for `fcntl` case (pl->handle_id == 0), Two locks 
  * conflict if they have different PIDs, their ranges overlap, and at least one of them is a
- * write lock. for `flock` case, Two locks conflict i they have different
- * handle IDs, and at least one of them is a write lock.
+ * write lock. for `flock` case, Two locks conflict if they have different
+ * handle IDs or at least one of them is a write lock.
  */
 static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
     assert(locked(&g_fs_lock_lock));
