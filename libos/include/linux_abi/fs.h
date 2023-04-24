@@ -2,6 +2,7 @@
 /* Copyright (C) 2023 Intel Corporation
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
+
 #pragma once
 
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */

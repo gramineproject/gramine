@@ -11,14 +11,13 @@
  * finished.
  */
 
-#include <errno.h>
-
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_utils.h"
+#include "linux_abi/errors.h"
 #include "linux_abi/fs.h"
 #include "linux_abi/memory.h"
 #include "pal.h"

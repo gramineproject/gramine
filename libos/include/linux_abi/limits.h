@@ -2,6 +2,7 @@
 /* Copyright (C) 2023 Intel Corporation
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
+
 #pragma once
 
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
@@ -45,5 +46,5 @@ struct __kernel_rlimit64 {
  * applies to paths processed by syscalls such as getcwd() - there is no limit on paths you can
  * open().
  */
-#define NAME_MAX 255   /* filename length, NOT including null terminator */
-#define PATH_MAX 4096  /* path size, including null terminator */
+#define NAME_MAX 255   /* filename length, NOT including NULL terminator */
+#define PATH_MAX 4096  /* path size, including NULL terminator */

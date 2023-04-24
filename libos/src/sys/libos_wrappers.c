@@ -5,8 +5,6 @@
  * Implementation of system calls "readv" and "writev".
  */
 
-#include <errno.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
