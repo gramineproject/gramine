@@ -261,8 +261,6 @@ void close_cloexec_handles(struct libos_handle_map* map);
 int dup_handle_map(struct libos_handle_map** new_map, struct libos_handle_map* old_map);
 void get_handle_map(struct libos_handle_map* map);
 void put_handle_map(struct libos_handle_map* map);
-int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle_map*),
-                    struct libos_handle_map* map);
 
 int init_handle(void);
 int init_std_handles(void);

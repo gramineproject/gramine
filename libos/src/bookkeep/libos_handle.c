@@ -328,19 +328,6 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
     return handle;
 }
 
-static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
-    struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
-    put_handle(hdl);
-    return 0;
-}
-
-void detach_all_fds(void) {
-    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
-    assert(handle_map);
-
-    walk_handle_map(&detach_fd, handle_map);
-}
-
 struct libos_handle* get_new_handle(void) {
     struct libos_handle* new_handle =
         get_mem_obj_from_mgr_enlarge(handle_mgr, size_align_up(HANDLE_MGR_ALLOC));
@@ -662,8 +649,9 @@ void put_handle_map(struct libos_handle_map* map) {
     }
 }
 
-int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle_map*),
-                    struct libos_handle_map* map) {
+static int walk_handle_map_writable(int (*callback)(struct libos_fd_handle*,
+                                                    struct libos_handle_map*),
+                                    struct libos_handle_map* map) {
     int ret = 0;
     rwlock_write_lock(&map->lock);
 
@@ -677,6 +665,21 @@ int walk_handle_map(int (*callback)(struct libos_fd_handle*, struct libos_handle
 
     rwlock_write_unlock(&map->lock);
     return ret;
+}
+
+static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
+    struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
+    put_handle(hdl);
+    return 0;
+}
+
+void detach_all_fds(void) {
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    /* TODO: either this should check the return value or the iterator function should not halt on
+     *       errors. */
+    walk_handle_map_writable(&detach_fd, handle_map);
 }
 
 void close_cloexec_handles(struct libos_handle_map* map) {
