@@ -288,7 +288,7 @@ class TC_00_FileSystem(RegressionTestCase):
 
     # These tests are disabled for Linux-SGX because it doesn't implement mmap(PROTO_WRITE)
     # which is used in this test. We decided not to implement mmap(PROTO_WRITE) as we don't
-    # know any workload with it.
+    # know any workload that uses it.
     @unittest.skipIf(HAS_SGX, 'mmap(PROTO_WRITE) not implemented in Linux-SGX PAL')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
