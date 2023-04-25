@@ -552,7 +552,7 @@ static struct libos_handle_map* get_new_handle_map(uint32_t size) {
 
     handle_map->fd_top  = FD_NULL;
     handle_map->fd_size = size;
-    if (!create_rwlock(&handle_map->lock)) {
+    if (!rwlock_create(&handle_map->lock)) {
         free(handle_map->map);
         free(handle_map);
         return NULL;
@@ -656,7 +656,7 @@ void put_handle_map(struct libos_handle_map* map) {
         }
 
     done:
-        destroy_rwlock(&map->lock);
+        rwlock_destroy(&map->lock);
         free(map->map);
         free(map);
     }
@@ -936,7 +936,7 @@ BEGIN_RS_FUNC(handle_map) {
 
     DEBUG_RS("size=%d,top=%d", handle_map->fd_size, handle_map->fd_top);
 
-    if (!create_rwlock(&handle_map->lock)) {
+    if (!rwlock_create(&handle_map->lock)) {
         return -ENOMEM;
     }
     rwlock_write_lock(&handle_map->lock);
