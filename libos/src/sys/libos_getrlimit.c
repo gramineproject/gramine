@@ -15,7 +15,8 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
-#include "linux_resource.h"
+#include "limits.h"
+
 
 /*
  * TODO: implement actual limitation on each resource.
@@ -178,15 +179,16 @@ long libos_syscall_sysinfo(struct sysinfo* info) {
     return 0;
 }
 
-long libos_syscall_getrusage(int who, struct gramine_rusage *usage) {
+long libos_syscall_getrusage(int who, struct __kernel_rusage *usage) {
+    log_warning("getrusage called with an almost dummy implementation with most of the fields set"
+                " to 0");
     if (!is_user_memory_writable(usage, sizeof(*usage)))
         return -EFAULT;
-    if (who != GRAMINE_RUSAGE_SELF && who != GRAMINE_RUSAGE_CHILDREN &&
-        who != GRAMINE_RUSAGE_THREAD)
+    if (who != RUSAGE_SELF && who != RUSAGE_CHILDREN && who != RUSAGE_THREAD)
         return -EINVAL;
 
     memset(usage, 0, sizeof(*usage));
     size_t virtual_mem_size = get_total_memory_usage();
-    usage->ru_maxrss = virtual_mem_size;
+    usage->ru_maxrss = virtual_mem_size >> 10;
     return 0;
 }

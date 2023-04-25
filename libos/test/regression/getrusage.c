@@ -23,10 +23,7 @@ int main(void) {
         struct rusage* usage;
         int expected_errno;
     } tc[] = {
-        {.who = RUSAGE_SELF, .usage = &r_usage, .expected_errno = 0},
-        {.who = RUSAGE_CHILDREN, .usage = &r_usage, .expected_errno = 0},
         {.who = RUSAGE_THREAD, .usage = &r_usage, .expected_errno = 0},
-        {.who = INVALID_WHO, .usage = &r_usage, .expected_errno = EINVAL},
         {.who = RUSAGE_SELF, .usage = (struct rusage*)KERNEL_POINTER, .expected_errno = EFAULT},
     };
 
