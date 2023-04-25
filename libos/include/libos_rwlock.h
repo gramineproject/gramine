@@ -41,8 +41,8 @@ struct libos_rwlock {
  * happen. */
 #define WRITER_WEIGHT (1ul << 60)
 
-bool create_rwlock(struct libos_rwlock* l);
-void destroy_rwlock(struct libos_rwlock* l);
+bool rwlock_create(struct libos_rwlock* l);
+void rwlock_destroy(struct libos_rwlock* l);
 
 void rwlock_read_lock_cold(struct libos_rwlock* l);
 void rwlock_read_unlock_cold(struct libos_rwlock* l);

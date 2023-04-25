@@ -6,7 +6,7 @@
 
 #include "libos_rwlock.h"
 
-bool create_rwlock(struct libos_rwlock* l) {
+bool rwlock_create(struct libos_rwlock* l) {
     l->state = 0;
     l->departing_readers = 0;
     if (PalEventCreate(&l->readers_wait, /*init_signaled=*/false, /*auto_clear=*/false) < 0) {
@@ -25,7 +25,7 @@ bool create_rwlock(struct libos_rwlock* l) {
     return true;
 }
 
-void destroy_rwlock(struct libos_rwlock* l) {
+void rwlock_destroy(struct libos_rwlock* l) {
     assert(__atomic_load_n(&l->state, __ATOMIC_ACQUIRE) == 0);
     assert(l->departing_readers == 0);
     assert(l->waiting_readers == 0);
