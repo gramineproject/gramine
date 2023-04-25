@@ -282,9 +282,10 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     return ret;
 }
 
-/* The current implementation does not cover the mmap case. 
- * In Linux, when a mapped file is unlocked, the lock will remain in effect 
- * until the file is explicitly unmapped. */
+/* The current implementation does not cover the `mmap` case. In Linux, when a mapped file
+ * is unlocked, the lock will remain in effect until the file is explicitly unmapped. But 
+ * in Gramine the `mmap` doesn't influence the lock's state.
+ */
 long libos_syscall_flock(int fd, int operation) {
     int ret;
 
@@ -313,6 +314,7 @@ long libos_syscall_flock(int fd, int operation) {
     }
 
     fl.l_whence = SEEK_SET;
+
     /* Lock the whole file. */
     fl.l_start = fl.l_len = 0L;
 

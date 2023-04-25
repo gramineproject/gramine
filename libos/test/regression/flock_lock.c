@@ -21,11 +21,16 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <sys/file.h>
+#include <pthread.h>
 
 #include "common.h"
 
 #define TEST_DIR "tmp/"
 #define TEST_FILE "tmp/lock_file"
+
+struct thread_args {
+    int pipes[2][2];
+};
 
 static const char* str_type(int type) {
     switch (type) {
@@ -81,15 +86,6 @@ static void read_pipe(int pipe[2]) {
         errx(1, "pipe closed");
 }
 
-static void wait_for_child(void) {
-    int ret;
-    do {
-        ret = wait(NULL);
-    } while (ret == -1 && errno == EINTR);
-    if (ret == -1)
-        err(1, "wait");
-}
-
 static void test_flock_dup_open(void) {
     printf("testing locks with the dup and open...\n");
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
@@ -107,46 +103,66 @@ static void test_flock_dup_open(void) {
     CHECK(close(fd));
     try_flock(fd3, LOCK_EX | LOCK_NB, -1);
     CHECK(close(fd2));
-    try_flock(fd3, LOCK_EX | LOCK_NB, 0);
+    try_flock(fd3, LOCK_SH | LOCK_NB, 0);
     CHECK(close(fd3));
 }
 
-static void test_flock_fork(void) {
-    printf("testing flock with fork...\n");
+static void* thread_flock_first(void* arg) {
+    struct thread_args* args = (struct thread_args*) arg;
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    
+    try_flock(fd, LOCK_EX | LOCK_NB, 0);
+    write_pipe(args->pipes[0]);
 
-    int pipes[2][2];
-    open_pipes(pipes);
+    read_pipe(args->pipes[1]);
+    try_flock(fd, LOCK_UN, 0);
+    write_pipe(args->pipes[0]);
 
+    read_pipe(args->pipes[1]);
+    try_flock(fd, LOCK_SH | LOCK_NB, 0);
+    return arg;
+}
+
+static void* thread_flock_second(void* arg) {
+    struct thread_args* args = (struct thread_args*) arg;
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
 
-    pid_t pid = CHECK(fork());
+    read_pipe(args->pipes[0]);
+    try_flock(fd, LOCK_EX | LOCK_NB, -1);
     
-    if (pid == 0) {
-        read_pipe(pipes[1]);
-        try_flock(fd, LOCK_EX, 0);
-        int fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-        if (fd2 < 0)
-            err(1, "open");
-        
-        try_flock(fd2, LOCK_EX | LOCK_NB, -1);
-        try_flock(fd2, LOCK_SH | LOCK_NB, -1);
-        CHECK(close(fd2));
-        CHECK(close(fd));
-        exit(0);
-    } 
-    write_pipe(pipes[1]);
-    try_flock(fd, LOCK_EX, 0);
+    write_pipe(args->pipes[1]);
 
-    CHECK(close(fd));
-    wait_for_child();
-    close_pipes(pipes);
+    read_pipe(args->pipes[0]);
+    try_flock(fd, LOCK_SH | LOCK_NB, 0);
+
+    write_pipe(args->pipes[1]);
+    return arg;
+}
+
+static void test_flock_multithread(void) {
+    printf("testing flock with multithread...\n");
+    
+    pthread_t threads[2];
+     
+    int i;
+    struct thread_args args;
+    open_pipes(args.pipes);
+
+    CHECK(pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args));
+    CHECK(pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args));
+
+    for (i = 0; i < 2; i++) {
+        CHECK(pthread_join(threads[i], NULL)); 
+    }
+    
+    close_pipes(args.pipes);
 }
 
 int main(void) {
     setbuf(stdout, NULL);
 
     test_flock_dup_open();
-    test_flock_fork();
+    test_flock_multithread();
 
     printf("TEST OK\n");
     return 0;
