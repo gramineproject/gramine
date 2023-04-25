@@ -6,7 +6,6 @@ import unittest
 from graminelibos.regression import (
     HAS_SGX,
     RegressionTestCase,
-    expectedFailureIf,
 )
 
 # Generic FS tests that mimic probable usage patterns in applications.
@@ -287,15 +286,19 @@ class TC_00_FileSystem(RegressionTestCase):
     def test_203_copy_dir_sendfile(self):
         self.do_copy_test('copy_sendfile', 60)
 
-    @expectedFailureIf(HAS_SGX)
+    # Gramine's implementation of file_map doesn't currently support shared memory-mapped
+    # files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
+    # These tests require it, so skip them. We decided not to implement it as we don't
+    # know any workload using it.
+    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
 
-    @expectedFailureIf(HAS_SGX)
+    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_205_copy_dir_mmap_seq(self):
         self.do_copy_test('copy_mmap_seq', 60)
 
-    @expectedFailureIf(HAS_SGX)
+    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_206_copy_dir_mmap_rev(self):
         self.do_copy_test('copy_mmap_rev', 60)
 
