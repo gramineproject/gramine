@@ -146,9 +146,9 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 }
 
 /*
- * Find first lock that conflicts with `pl`. for `fcntl` case (pl->handle_id == 0), Two locks 
+ * Find first lock that conflicts with `pl`. for `fcntl` case (pl->handle_id == 0), two locks 
  * conflict if they have different PIDs, their ranges overlap, and at least one of them is a 
- * write lock. for `flock` case, Two locks conflict if they have different handle IDs or at 
+ * write lock. For `flock` case, Two locks conflict if they have different handle IDs or at 
  * least one of them is a write lock.
  */
 static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
@@ -190,9 +190,10 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
 }
 
 /*
- * Main part of `posix_lock_set`. Adds/removes locks based on `pl->type`, assumes we already
- * verified there are no conflicts. For `fcntl` (where pl->handle_id == 0), replaces & merges adjacent locks. 
- * For `flock`, replaces locks for a handle ID.
+ * Main part of `posix_lock_set`. Adds/removes locks based on `pl->type`, assumes 
+ * we already verified there are no conflicts. For `fcntl` (where pl->handle_id == 0), 
+ * replaces existing locks for a given PID, and merges adjacent. For `flock`, replaces 
+ * locks for a handle ID.
  *
  * See also Linux sources (`fs/locks.c`) for a similar implementation.
  */
