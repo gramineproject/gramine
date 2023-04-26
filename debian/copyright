@@ -28,10 +28,6 @@ Copyright:
  2005-2020 Rich Felker, et al.
 License: MIT
 
-Files: common/src/network/inet_pton.c
-Copyright: 1996,1999 Internet Software Consortium
-License: ISC
-
 Files:
  pal/include/arch/x86_64/linux/sigcontext.h
  pal/include/arch/x86_64/linux/sigset.h

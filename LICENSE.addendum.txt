@@ -4,8 +4,6 @@ Gramine also includes the following third party sources (and licenses):
 
 mbedtls crypto libraries - Apache 2.0
 
-Internet Software Consortium (permissive license): common/src/network/inet_pton.c
-
 cJSON - MIT
 tomlc99 - MIT
 uthash - BSD revised

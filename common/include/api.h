@@ -367,9 +367,6 @@ int buf_flush(struct print_buf* buf);
 
 /* Miscelleneous */
 
-int inet_pton4(const char* src, size_t len, void* dst);
-int inet_pton6(const char* src, size_t len, void* dst);
-
 uint32_t __htonl(uint32_t x);
 uint32_t __ntohl(uint32_t x);
 uint16_t __htons(uint16_t x);
