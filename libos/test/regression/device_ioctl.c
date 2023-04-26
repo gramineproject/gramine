@@ -11,7 +11,7 @@
 
 #include "gramine_test_dev_ioctl.h" /* currently unused */
 
-#define STRING_READWRITE      "Hello world via read/write\n"
+#define STRING_READWRITE "Hello world via read/write\n"
 
 int main(void) {
     int devfd = CHECK(open("/dev/gramine_test_dev", O_RDWR));
