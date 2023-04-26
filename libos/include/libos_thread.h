@@ -11,6 +11,7 @@
 #include <stdint.h>
 
 #include "api.h"
+#include "linux_capabilities.h"
 #include "libos_internal.h"
 #include "libos_pollable_event.h"
 #include "libos_refcount.h"
@@ -135,6 +136,15 @@ struct libos_thread {
 
     refcount_t ref_count;
     struct libos_lock lock;
+
+    /* Setting is_capability_enabled to true will emulate capset system call inside Gramine but will
+     * not propagate the modified capabilities to the host OS */
+    bool is_capability_enabled;
+    /* According to man page, 64-bit capabilities use 2 structures variables, each capable of
+     * storing 32 bit capabilities. Hence we are using an array of 2 struct gramine_user_cap_data
+     * variables. One struct gramine_user_cap_data variable is capable of storing 32 bit
+     * capabilities. */
+    struct gramine_user_cap_data capabilities[2];
 };
 
 struct libos_thread_queue {

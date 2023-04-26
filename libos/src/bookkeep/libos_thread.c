@@ -122,6 +122,17 @@ unmap:;
     return ret;
 }
 
+static void init_cur_thread_capabilities(struct libos_thread* cur_thread) {
+    bool is_root = cur_thread->euid == 0;
+    cur_thread->capabilities[0].inheritable = cur_thread->capabilities[1].inheritable = 0;
+
+    cur_thread->capabilities[0].effective = is_root ? 0xffffffff : 0;
+    cur_thread->capabilities[1].effective = is_root ? 0x1ff : 0;
+
+    cur_thread->capabilities[0].permitted = is_root ? 0xffffffff : 0;
+    cur_thread->capabilities[1].permitted = is_root ? 0x1ff : 0;
+}
+
 static int init_main_thread(void) {
     struct libos_thread* cur_thread = get_cur_thread();
     if (cur_thread) {
@@ -178,6 +189,14 @@ static int init_main_thread(void) {
         return -EINVAL;
     }
 
+    ret = toml_bool_in(g_manifest_root, "sys.enable_dummy_capabilities", /*defaultval=*/false,
+                       &cur_thread->is_capability_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.enable_dummy_capabilities'");
+        put_thread(cur_thread);
+        return -EINVAL;
+    }
+
     cur_thread->uid = uid_int64;
     cur_thread->euid = uid_int64;
     cur_thread->suid = uid_int64;
@@ -228,7 +247,7 @@ static int init_main_thread(void) {
         put_thread(cur_thread);
         return ret;
     }
-
+    init_cur_thread_capabilities(cur_thread);
     set_cur_thread(cur_thread);
     add_thread(cur_thread);
 
@@ -301,6 +320,8 @@ struct libos_thread* get_new_thread(void) {
     thread->stack     = cur_thread->stack;
     thread->stack_top = cur_thread->stack_top;
     thread->stack_red = cur_thread->stack_red;
+    thread->is_capability_enabled = cur_thread->is_capability_enabled;
+    memcpy(thread->capabilities, cur_thread->capabilities, sizeof(cur_thread->capabilities));
 
     thread->signal_dispositions = cur_thread->signal_dispositions;
     get_signal_dispositions(thread->signal_dispositions);

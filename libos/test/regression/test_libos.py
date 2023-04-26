@@ -960,6 +960,18 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['hostname_extra_runtime_conf', socket.gethostname()])
         self.assertIn("TEST OK", stdout)
 
+    def test_122_capget_bytes_check(self):
+        stdout, _ = self.run_binary(['capget_bytes'])
+        self.assertIn("TEST OK", stdout)
+
+    def test_123_capget_capset_values_check(self):
+        stdout, _ = self.run_binary(['capget_capset_values'])
+        self.assertIn("TEST OK", stdout)
+
+    def test_124_capget_capset_values_non_root_check(self):
+        stdout, _ = self.run_binary(['capget_capset_values_non_root'])
+        self.assertIn("TEST OK", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
