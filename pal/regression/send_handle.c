@@ -1,6 +1,7 @@
 #include "api.h"
 #include "pal.h"
 #include "pal_regression.h"
+#include "socket_utils.h"
 
 #define MSG "Some message."
 #define MSG_SIZE (static_strlen(MSG))
@@ -107,8 +108,8 @@ static void do_parent(void) {
     struct pal_socket_addr addr = {
         .domain = PAL_IPV4,
         .ipv4 = {
-            .addr = __htonl(0x7f000001), // localhost
-            .port = __htons(PORT),
+            .addr = htonl(0x7f000001), // localhost
+            .port = htons(PORT),
         },
     };
     set_reuseaddr(handle);
@@ -128,7 +129,7 @@ static void do_parent(void) {
         .domain = PAL_IPV6,
         .ipv6 = {
             .addr = { [15] = 1 }, // localhost
-            .port = __htons(PORT),
+            .port = htons(PORT),
         },
     };
     set_reuseaddr(handle);

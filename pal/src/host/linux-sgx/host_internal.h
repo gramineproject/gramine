@@ -30,11 +30,6 @@ extern pid_t g_host_pid;
 #define ALLOC_ALIGN_DOWN(addr)     ALIGN_DOWN_POW2(addr, g_page_size)
 #define ALLOC_ALIGN_DOWN_PTR(addr) ALIGN_DOWN_PTR_POW2(addr, g_page_size)
 
-uint32_t htonl(uint32_t longval);
-uint16_t htons(uint16_t shortval);
-uint32_t ntohl(uint32_t longval);
-uint16_t ntohs(uint16_t shortval);
-
 struct pal_enclave {
     /* attributes */
     bool is_first_process; // Initial process in Gramine namespace is special.

@@ -367,11 +367,6 @@ int buf_flush(struct print_buf* buf);
 
 /* Miscelleneous */
 
-uint32_t __htonl(uint32_t x);
-uint32_t __ntohl(uint32_t x);
-uint16_t __htons(uint16_t x);
-uint16_t __ntohs(uint16_t x);
-
 extern const char* const* sys_errlist_internal;
 
 #define URI_PREFIX_SEPARATOR ":"

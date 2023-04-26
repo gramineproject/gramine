@@ -20,6 +20,7 @@
 #include "linux_abi/sched.h"
 #include "linux_abi/signals.h"
 #include "linux_abi/syscalls_nr_arch.h"
+#include "socket_utils.h"
 
 static void parse_open_flags(struct print_buf*, va_list*);
 static void parse_open_mode(struct print_buf*, va_list*);
@@ -1127,7 +1128,7 @@ static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
             struct sockaddr_in* a = (void*)addr;
             unsigned char* ip     = (void*)&a->sin_addr.s_addr;
             buf_printf(buf, "{family=IPv4,ip=%u.%u.%u.%u,port=%u}", ip[0], ip[1], ip[2], ip[3],
-                       __ntohs(a->sin_port));
+                       ntohs(a->sin_port));
             break;
         }
 
@@ -1135,9 +1136,9 @@ static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
             struct sockaddr_in6* a = (void*)addr;
             unsigned short* ip     = (void*)&a->sin6_addr.s6_addr;
             buf_printf(buf, "{family=IPv6,ip=[%x:%x:%x:%x:%x:%x:%x:%x],port=%u}",
-                       __ntohs(ip[0]), __ntohs(ip[1]), __ntohs(ip[2]), __ntohs(ip[3]),
-                       __ntohs(ip[4]), __ntohs(ip[5]), __ntohs(ip[6]), __ntohs(ip[7]),
-                       __ntohs(a->sin6_port));
+                       ntohs(ip[0]), ntohs(ip[1]), ntohs(ip[2]), ntohs(ip[3]),
+                       ntohs(ip[4]), ntohs(ip[5]), ntohs(ip[6]), ntohs(ip[7]),
+                       ntohs(a->sin6_port));
             break;
         }
 

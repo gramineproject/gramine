@@ -57,7 +57,7 @@ static bool is_linux_sockaddr_any(const void* linux_addr) {
         case AF_INET:;
             struct sockaddr_in sa_ipv4;
             memcpy(&sa_ipv4, linux_addr, sizeof(sa_ipv4));
-            if (sa_ipv4.sin_addr.s_addr == __htonl(INADDR_ANY)) {
+            if (sa_ipv4.sin_addr.s_addr == htonl(INADDR_ANY)) {
                 return true;
             }
             break;
