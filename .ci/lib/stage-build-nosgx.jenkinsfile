@@ -49,6 +49,7 @@ stage('build') {
     env.PKG_CONFIG_PATH = libdir + '/pkgconfig'
 
     env.PATH = env.PREFIX + '/bin:' + env.PATH
+    sh 'echo "---- HERE IS THE PATH: $PATH ----"'
 
     // prevent cheating and testing from repo
     sh 'rm -rf build'

@@ -40,9 +40,10 @@ stage('build') {
             ninja -vC build/
         '''
 
-        // install
+        // install (note that we need to set PATH so that Gramine signing tool can be found)
         sh '''
             ninja -vC build/ install
+            export PATH=$PREFIX/bin:$PATH
             gramine-sgx-gen-private-key
         '''
     } finally {
