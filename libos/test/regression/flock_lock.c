@@ -7,7 +7,7 @@
  * Test for `flock` syscall (`flock(LOCK_EX/LOCK_SH/LOCK_UN`). We assert that the calls succeed (or
  * taking a lock fails), and log all details for debugging purposes.
  *
- * The tests usually start another process, and coordinate with it using pipes.
+ * The tests involve multithreaded and dup case.
  */
 
 #define _GNU_SOURCE
@@ -144,14 +144,13 @@ static void test_flock_multithread(void) {
     
     pthread_t threads[2];
      
-    int i;
     struct thread_args args;
     open_pipes(args.pipes);
 
     CHECK(pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args));
     CHECK(pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args));
 
-    for (i = 0; i < 2; i++) {
+    for (int i = 0; i < 2; i++) {
         CHECK(pthread_join(threads[i], NULL)); 
     }
     
