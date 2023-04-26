@@ -62,6 +62,10 @@ long libos_syscall_capget(struct gramine_user_cap_header* hdrp_unaligned,
 
     struct libos_thread* cur_thread = get_cur_thread();
     lock(&cur_thread->lock);
+    if (hdrp.pid < 0) {
+        ret = -EINVAL;
+        goto out_locked;
+    }
     if (hdrp.pid != 0 && hdrp.pid != (int)cur_thread->tid) {
         ret = datap_unaligned == NULL ? 0 : -ESRCH;
         goto out_locked;
@@ -103,6 +107,15 @@ out_locked:
     unlock(&cur_thread->lock);
 out:
     return ret;
+}
+
+static bool is_subset(uint32_t super_set, uint32_t sub_set) {
+    size_t len = sizeof(super_set) << 3;
+    for (size_t i = 0; i < len; i++) {
+        if (!(super_set & (1 << i)) && (sub_set & (1 << i)))
+            return false;
+    }
+    return true;
 }
 
 long libos_syscall_capset(struct gramine_user_cap_header* hdrp_unaligned,
@@ -159,6 +172,19 @@ long libos_syscall_capset(struct gramine_user_cap_header* hdrp_unaligned,
         return ret;
     }
 
+    if (!(cur_thread->capabilities[0].effective & CAP_SETPCAP)) {
+        for(size_t i = 0; i < size; i++) {
+            if (!is_subset(cur_thread->capabilities[i].effective, datap[i].effective)
+                || !is_subset(cur_thread->capabilities[i].permitted, datap[i].permitted)
+                || !is_subset(cur_thread->capabilities[i].inheritable, datap[i].inheritable)
+                || !is_subset(cur_thread->capabilities[i].permitted, datap[i].inheritable)
+                || !is_subset(cur_thread->capabilities[i].permitted, datap[i].effective)) {
+
+                unlock(&cur_thread->lock);
+                return -EPERM;
+            }
+        }
+    }
     for(size_t i = 0; i < size; i++) {
         cur_thread->capabilities[i].effective = datap[i].effective;
         cur_thread->capabilities[i].permitted = datap[i].permitted;

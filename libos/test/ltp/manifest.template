@@ -7,6 +7,8 @@ loader.env.LD_PRELOAD = "{{ coreutils_libdir }}/libstdbuf.so"
 loader.env._STDBUF_O = "L"
 loader.insecure__use_cmdline_argv = true
 
+sys.enable_dummy_capabilities = true
+
 fs.root.uri = "file:{{ binary_dir }}"
 
 fs.mounts = [

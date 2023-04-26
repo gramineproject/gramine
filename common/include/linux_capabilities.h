@@ -13,6 +13,7 @@
 #define GRAMINE_LINUX_CAPABILITY_VERSION_2  0x20071026
 #define GRAMINE_LINUX_CAPABILITY_VERSION_3  0x20080522
 
+#define CAP_SETPCAP 8
 /* The following definition of struct gramine_user_cap_header and struct gramine_user_cap_data is
  * taken from
  * https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/capability.h#L39
