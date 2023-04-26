@@ -172,8 +172,8 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 
     /* Send this Gramine instance ID. */
     uint64_t instance_id = g_pal_public_state.instance_id;
-    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id,
-                                sizeof(instance_id), /*is_blocking=*/!child->process.nonblocking);
+    ret = _PalStreamSecureWrite(child->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+                                /*is_blocking=*/!child->process.nonblocking);
     if (ret != sizeof(instance_id)) {
         goto failed;
     }
@@ -227,8 +227,8 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
         goto out_error;
 
     uint64_t instance_id;
-    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id,
-                               sizeof(instance_id), /*is_blocking=*/!parent->process.nonblocking);
+    ret = _PalStreamSecureRead(parent->process.ssl_ctx, (uint8_t*)&instance_id, sizeof(instance_id),
+                               /*is_blocking=*/!parent->process.nonblocking);
     if (ret != sizeof(instance_id)) {
         goto out_error;
     }
