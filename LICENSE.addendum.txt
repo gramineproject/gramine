@@ -1,13 +1,13 @@
 Gramine itself is licensed under the LGPL-3.0-or-later.
 
 Gramine also includes the following third party sources (and licenses):
-
-mbedtls crypto libraries - Apache 2.0
-
-cJSON - MIT
-tomlc99 - MIT
-uthash - BSD revised
-Ninja (python/graminelibos/ninja_syntax.py) - Apache 2.0
+* cJSON - MIT
+* curl/libcurl - MIT derivative
+* GCC/libgomp (built only optionally and not included by default) - GPL v3.0
+* Mbed TLS - Apache 2.0
+* Ninja (python/graminelibos/ninja_syntax.py) - Apache 2.0
+* tomlc99 - MIT
+* uthash - BSD revised
 
 A number of files taken from other C libraries:
 * glibc - LGPL
