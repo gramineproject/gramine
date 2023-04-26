@@ -1,5 +1,7 @@
 env.MAKEOPTS = '-j8'
 
+env.PATH = env.PREFIX + '/bin:' + env.PATH
+
 python_platlib = sh(returnStdout: true, script: 'python3 scripts/get-python-platlib.py "$PREFIX"')
 env.PYTHONPATH = python_platlib + ':' + env.WORKSPACE + '/scripts'
 
