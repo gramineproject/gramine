@@ -1209,7 +1209,7 @@ int main(int argc, char* argv[], char* envp[]) {
         return -ENOMEM;
     }
 
-    // Are we the first in this Gramine's namespace?
+    // Are we the first in this Gramine's instance?
     bool first_process = !strcmp(argv[2], "init");
     if (!first_process && strcmp(argv[2], "child")) {
         print_usage_and_exit(argv[0]);

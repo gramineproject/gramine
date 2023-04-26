@@ -95,10 +95,10 @@ static struct libos_ipc_connection* node2conn(struct avl_tree_node* node) {
     return container_of(node, struct libos_ipc_connection, node);
 }
 
-static int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_len) {
-    int ret = snprintf(uri, uri_len, URI_PREFIX_PIPE "%lu/%u", g_pal_public_state->namespace_id,
+static int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_size) {
+    int ret = snprintf(uri, uri_size, URI_PREFIX_PIPE "%lu/%u", g_pal_public_state->instance_id,
                        vmid);
-    if (ret < 0 || (size_t)ret >= uri_len) {
+    if (ret < 0 || (size_t)ret >= uri_size) {
         return -ERANGE;
     }
 

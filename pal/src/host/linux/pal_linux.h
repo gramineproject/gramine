@@ -57,7 +57,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size);
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
 
 void init_child_process(int parent_stream_fd, PAL_HANDLE* parent, char** manifest_out,
-                        uint64_t* namespace_id);
+                        uint64_t* instance_id);
 
 void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]);
 int block_async_signals(bool block);

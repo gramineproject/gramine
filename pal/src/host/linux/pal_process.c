@@ -85,7 +85,7 @@ struct proc_param {
 };
 
 struct proc_args {
-    uint64_t        namespace_id;
+    uint64_t        instance_id;
 
     unsigned long   memory_quota;
 
@@ -144,7 +144,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
         goto out;
     }
 
-    proc_args->namespace_id = g_pal_public_state.namespace_id;
+    proc_args->instance_id = g_pal_public_state.instance_id;
     proc_args->memory_quota = g_pal_linux_state.memory_quota;
 
     char* data = (char*)(proc_args + 1);
@@ -234,7 +234,7 @@ out:
 }
 
 void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** manifest_out,
-                        uint64_t* namespace_id) {
+                        uint64_t* instance_id) {
     int ret = 0;
 
     struct proc_args proc_args;
@@ -277,7 +277,7 @@ void init_child_process(int parent_stream_fd, PAL_HANDLE* parent_handle, char** 
     g_pal_linux_state.memory_quota = proc_args.memory_quota;
 
     *manifest_out = manifest;
-    *namespace_id = proc_args.namespace_id;
+    *instance_id = proc_args.instance_id;
     free(data);
 }
 

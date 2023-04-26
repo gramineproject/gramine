@@ -37,7 +37,7 @@ uint16_t ntohs(uint16_t shortval);
 
 struct pal_enclave {
     /* attributes */
-    bool is_first_process; // Initial process in Gramine namespace is special.
+    bool is_first_process; // Initial process in Gramine instance is special.
 
     char* application_path;
     char* raw_manifest_data;

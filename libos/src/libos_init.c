@@ -546,7 +546,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     while (true) {
         if (use_vmid_for_name) {
-            len = snprintf(pipename, sizeof(pipename), "%lu/%u", g_pal_public_state->namespace_id,
+            len = snprintf(pipename, sizeof(pipename), "%lu/%u", g_pal_public_state->instance_id,
                            g_process_ipc_ids.self_vmid);
             if (len >= sizeof(pipename))
                 return -ERANGE;
