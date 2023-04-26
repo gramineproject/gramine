@@ -7,7 +7,6 @@ common_src_internal = files(
     'avl_tree.c',
     'init.c',
     'location.c',
-    'network/hton.c',
     'pal_error.c',
     'printf.c',
     'socket_utils.c',
