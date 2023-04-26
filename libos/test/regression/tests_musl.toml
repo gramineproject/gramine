@@ -50,6 +50,7 @@ manifests = [
   "getcwd",
   "getdents",
   "getdents_lseek",
+  "get_mempolicy",
   "getsockname",
   "getsockopt",
   "gettimeofday",

@@ -44,6 +44,24 @@
                        | MAP_HUGE_2MB           \
                        | MAP_HUGE_1GB)
 
+/* FIXME: We should move the following three get_mempolicy flags to appropriate linux_abi/ header
+ * file */
+/* Flags for get_mempolicy. They are taken from
+ * https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/mempolicy.h */
+#define MPOL_F_NODE	(1 << 0)	/* return next IL mode instead of node mask */
+#define MPOL_F_ADDR	(1 << 1)	/* look up vma using address */
+#define MPOL_F_MEMS_ALLOWED (1 << 2) /* return allowed memories */
+/* Policies */
+enum {
+	MPOL_DEFAULT,
+	MPOL_PREFERRED,
+	MPOL_BIND,
+	MPOL_INTERLEAVE,
+	MPOL_LOCAL,
+	MPOL_PREFERRED_MANY,
+	MPOL_MAX,	/* always last member of enum */
+};
+
 static int check_prot(int prot) {
     if (prot & ~(PROT_NONE | PROT_READ | PROT_WRITE | PROT_EXEC | PROT_GROWSDOWN | PROT_GROWSUP |
                  PROT_SEM)) {
@@ -529,4 +547,36 @@ long libos_syscall_msync(unsigned long start, size_t len_orig, int flags) {
         /* `MS_ASYNC` is a no-op on Linux. */
         return 0;
     }
+}
+
+long libos_syscall_get_mempolicy(int* mode, unsigned long* nodemask, unsigned long maxnode,
+                                 void* addr, unsigned long flags) {
+    log_warning("get_mempolicy is a dummy implementation, it always returns specific constants.");
+
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    unsigned long sys_maxnode = topo->numa_nodes_cnt;
+
+    if (maxnode < sys_maxnode
+       || (flags & ~(MPOL_F_NODE | MPOL_F_ADDR | MPOL_F_MEMS_ALLOWED))
+       || (!(flags & MPOL_F_ADDR) && !(flags & MPOL_F_MEMS_ALLOWED) && addr)
+       || ((flags & MPOL_F_MEMS_ALLOWED) && (flags & (MPOL_F_ADDR | MPOL_F_NODE))))
+       return -EINVAL;
+    bool is_nodemask_writable = is_user_memory_writable(nodemask, sizeof(*nodemask));
+    bool is_mode_ptr_writable = is_user_memory_writable(mode, sizeof(*mode));
+
+    if ((!(flags & MPOL_F_MEMS_ALLOWED) && (!is_nodemask_writable || !is_mode_ptr_writable))
+        || ((flags & MPOL_F_ADDR) && !addr)
+        || ((flags & MPOL_F_MEMS_ALLOWED) && ((nodemask && !is_nodemask_writable) || (mode && !is_mode_ptr_writable))))
+        return -EFAULT;
+
+    if (is_mode_ptr_writable)
+        *mode = MPOL_DEFAULT;
+    if (is_nodemask_writable) {
+        memset(nodemask, 0, sizeof(*nodemask));
+        for (size_t i = 0; i < sys_maxnode; i++) {
+            if (topo->numa_nodes[i].is_online)
+                *nodemask |= (1 << i);
+        }
+    }
+    return 0;
 }

@@ -960,6 +960,13 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['hostname_extra_runtime_conf', socket.gethostname()])
         self.assertIn("TEST OK", stdout)
 
+    def test_123_getmempolicy(self):
+        # ToDo: Shall I assume that numa is there by default or should I skip this test if numa
+        # isn't there on the system (by applying a check)
+        stdout, _ = self.run_binary(['get_mempolicy'])
+        self.assertIn("TEST OK", stdout)
+
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
