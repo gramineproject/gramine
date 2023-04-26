@@ -35,6 +35,15 @@
     } while (0)
 #endif
 
+/*
+ * Some `sys/ptrace.h` headers define ptrace requests as macro, others as enum.
+ */
+#ifndef PTRACE_TRACEME
+typedef enum __ptrace_request gramine_ptrace_request;
+#else
+typedef int gramine_ptrace_request;
+#endif
+
 static int g_memdevs_cnt = 0;
 static struct {
     struct enclave_dbginfo ei;
@@ -43,7 +52,7 @@ static struct {
 } g_memdevs[32];
 
 #if DEBUG_GDB_PTRACE == 1
-static char* str_ptrace_request(enum __ptrace_request request) {
+static char* str_ptrace_request(gramine_ptrace_request request) {
     static char buf[50];
     int prev_errno;
 
@@ -146,7 +155,7 @@ static void fill_gpr(sgx_pal_gpr_t* gpr, const struct user_regs_struct* regs) {
 
 /* This function emulates Glibc ptrace() by issuing ptrace syscall and
  * setting errno on error. It is used to access non-enclave memory. */
-static long int host_ptrace(enum __ptrace_request request, pid_t tid, void* addr, void* data) {
+static long int host_ptrace(gramine_ptrace_request request, pid_t tid, void* addr, void* data) {
     long int res, ret, is_dbginfo_addr;
     int ptrace_errno;
 
@@ -169,7 +178,7 @@ static long int host_ptrace(enum __ptrace_request request, pid_t tid, void* addr
 
     if (!is_dbginfo_addr)
         DEBUG_LOG("[GDB %d] Executed host_ptrace(%s, %d, %p, %p) = %ld\n", getpid(),
-              str_ptrace_request(request), tid, addr, data, ret);
+                  str_ptrace_request(request), tid, addr, data, ret);
 
     if (ret < 0 && ptrace_errno != 0) {
         errno = ptrace_errno; /* DEBUG/getpid could contaminate errno */
@@ -232,8 +241,8 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
         return NULL;
     }
 
-    DEBUG_LOG("[enclave thread %d] TCS at 0x%lx: TCS.ossa = 0x%lx TCS.cssa = %d\n", tid, (long)tcs_addr,
-          tcs_part.ossa, tcs_part.cssa);
+    DEBUG_LOG("[enclave thread %d] TCS at 0x%lx: TCS.ossa = 0x%lx TCS.cssa = %d\n", tid,
+              (long)tcs_addr, tcs_part.ossa, tcs_part.cssa);
     assert(tcs_part.cssa > 0);
     /* CSSA points to the next empty slot, so to read the current frame, we look at CSSA - 1. */
     return (void*)ei->base + tcs_part.ossa + ei->ssa_frame_size * (tcs_part.cssa - 1);
@@ -497,7 +506,7 @@ static int is_in_enclave(pid_t tid, struct enclave_dbginfo* ei) {
     return ((void*)regs.rip == ei->aep) ? 1 : 0;
 }
 
-long int ptrace(enum __ptrace_request request, ...) {
+long int ptrace(gramine_ptrace_request request, ...) {
     long int ret = 0, res;
     va_list ap;
     pid_t tid;
@@ -514,8 +523,8 @@ long int ptrace(enum __ptrace_request request, ...) {
     data = va_arg(ap, void*);
     va_end(ap);
 
-    DEBUG_LOG("[GDB %d] Intercepted ptrace(%s, %d, %p, %p)\n", getpid(), str_ptrace_request(request),
-          tid, addr, data);
+    DEBUG_LOG("[GDB %d] Intercepted ptrace(%s, %d, %p, %p)\n", getpid(),
+              str_ptrace_request(request), tid, addr, data);
 
     ret = open_memdevice(tid, &memdev, &ei);
     if (ret < 0) {
@@ -694,8 +703,8 @@ long int ptrace(enum __ptrace_request request, ...) {
             regs.rip = (unsigned long long)ei->eresume;
             ret = host_ptrace(PTRACE_SETREGS, tid, NULL, &regs);
             if (ret < 0) {
-                DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave thread %d\n",
-                      tid);
+                DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave "
+                          "thread %d\n", tid);
                 errno = EFAULT;
                 return -1;
             }
