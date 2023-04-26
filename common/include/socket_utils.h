@@ -5,8 +5,35 @@
 
 #pragma once
 
+#include <endian.h>
+
 #include "linux_socket.h"
 
 void pal_to_linux_sockaddr(const struct pal_socket_addr* pal_addr,
                            struct sockaddr_storage* linux_addr, size_t* linux_addr_len);
 void linux_to_pal_sockaddr(const void* linux_addr, struct pal_socket_addr* pal_addr);
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+static inline uint16_t htons(uint16_t x) {
+    return x;
+}
+static inline uint32_t htonl(uint32_t x) {
+    return x;
+}
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+static inline uint16_t htons(uint16_t x) {
+    return __builtin_bswap16(x);
+}
+static inline uint32_t htonl(uint32_t x) {
+    return __builtin_bswap32(x);
+}
+#else
+#error "System is not big-endian or little-endian"
+#endif
+
+static inline uint16_t ntohs(uint16_t x) {
+    return htons(x);
+}
+static inline uint32_t ntohl(uint32_t x) {
+    return htonl(x);
+}
