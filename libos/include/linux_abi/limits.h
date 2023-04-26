@@ -11,6 +11,12 @@
 
 #include "linux_abi/time.h"
 
+#define RUSAGE_SELF 0
+#ifndef RUSAGE_CHILDREN
+#define RUSAGE_CHILDREN -1
+#endif
+#define RUSAGE_THREAD 1
+
 struct __kernel_rusage {
     struct __kernel_timeval ru_utime; /* user time used */
     struct __kernel_timeval ru_stime; /* system time used */
@@ -31,9 +37,11 @@ struct __kernel_rusage {
 };
 
 struct __kernel_rlimit {
-    unsigned long rlim_cur, rlim_max;
+    unsigned long rlim_cur;
+    unsigned long rlim_max;
 };
 
 struct __kernel_rlimit64 {
-    uint64_t rlim_cur, rlim_max;
+    uint64_t rlim_cur;
+    uint64_t rlim_max;
 };

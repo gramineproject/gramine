@@ -10,7 +10,7 @@
 #if defined(__i386__) || defined(__x86_64__)
 #include <asm/ldt.h>
 #endif
-
+#include "limits.h"
 #include "libos_types.h"
 
 typedef void (*libos_syscall_t)(void);
@@ -113,6 +113,7 @@ long libos_syscall_fchown(int fd, uid_t user, gid_t group);
 long libos_syscall_umask(mode_t mask);
 long libos_syscall_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone* tz);
 long libos_syscall_getrlimit(int resource, struct __kernel_rlimit* rlim);
+long libos_syscall_getrusage(int who, struct __kernel_rusage *usage);
 long libos_syscall_getuid(void);
 long libos_syscall_getgid(void);
 long libos_syscall_setuid(uid_t uid);
