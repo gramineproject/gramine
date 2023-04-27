@@ -170,7 +170,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     /* relocate PAL */
     ret = setup_pal_binary();
     if (ret < 0)
-        INIT_FAIL("Relocation of the PAL binary failed: %s", pal_strerror(ret));
+        INIT_FAIL("Relocation of the PAL binary failed: %d", ret);
 
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);
