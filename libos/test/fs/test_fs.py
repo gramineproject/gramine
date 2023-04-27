@@ -288,8 +288,8 @@ class TC_00_FileSystem(RegressionTestCase):
 
     # Gramine's implementation of file_map doesn't currently support shared memory-mapped
     # files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
-    # These tests require it because of that we skip them. We decided not to implement it as we
-    # don't know any workload with it.
+    # These tests require it, so skip them. We decided not to implement it as we don't
+    # know any workload using it.
     @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE) not implemented in Linux-SGX PAL')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
