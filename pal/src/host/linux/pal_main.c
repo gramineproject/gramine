@@ -169,8 +169,12 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     /* relocate PAL */
     ret = setup_pal_binary();
-    if (ret < 0)
+    if (ret < 0) {
+        /* PAL relocation failed, so we can't use functions which use PAL .rodata (like
+         * pal_strerror or unix_strerror) to report an error because these functions will return
+         * offset instead of actual address, which will cause segfault. */
         INIT_FAIL("Relocation of the PAL binary failed: %d", ret);
+    }
 
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);

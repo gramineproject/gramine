@@ -530,7 +530,10 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* Relocate PAL */
     ret = setup_pal_binary();
     if (ret < 0) {
-        log_error("Relocation of the PAL binary failed: %s", pal_strerror(ret));
+        /* PAL relocation failed, so we can't use functions which use PAL .rodata (like
+         * pal_strerror or unix_strerror) to report an error because these functions will return
+         * offset instead of actual address, which will cause segfault. */
+        log_error("Relocation of the PAL binary failed: %d", ret);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
