@@ -178,7 +178,7 @@ static long int host_ptrace(gramine_ptrace_request request, pid_t tid, void* add
 
     if (!is_dbginfo_addr)
         DEBUG_LOG("[GDB %d] Executed host_ptrace(%s, %d, %p, %p) = %ld\n", getpid(),
-              str_ptrace_request(request), tid, addr, data, ret);
+                  str_ptrace_request(request), tid, addr, data, ret);
 
     if (ret < 0 && ptrace_errno != 0) {
         errno = ptrace_errno; /* DEBUG/getpid could contaminate errno */
@@ -242,7 +242,7 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
     }
 
     DEBUG_LOG("[enclave thread %d] TCS at 0x%lx: TCS.ossa = 0x%lx TCS.cssa = %d\n", tid,
-          (long)tcs_addr, tcs_part.ossa, tcs_part.cssa);
+              (long)tcs_addr, tcs_part.ossa, tcs_part.cssa);
     assert(tcs_part.cssa > 0);
     /* CSSA points to the next empty slot, so to read the current frame, we look at CSSA - 1. */
     return (void*)ei->base + tcs_part.ossa + ei->ssa_frame_size * (tcs_part.cssa - 1);
@@ -524,7 +524,7 @@ long int ptrace(gramine_ptrace_request request, ...) {
     va_end(ap);
 
     DEBUG_LOG("[GDB %d] Intercepted ptrace(%s, %d, %p, %p)\n", getpid(),
-          str_ptrace_request(request), tid, addr, data);
+              str_ptrace_request(request), tid, addr, data);
 
     ret = open_memdevice(tid, &memdev, &ei);
     if (ret < 0) {
@@ -704,7 +704,7 @@ long int ptrace(gramine_ptrace_request request, ...) {
             ret = host_ptrace(PTRACE_SETREGS, tid, NULL, &regs);
             if (ret < 0) {
                 DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave thread %d\n",
-                      tid);
+                          tid);
                 errno = EFAULT;
                 return -1;
             }
