@@ -703,8 +703,8 @@ long int ptrace(gramine_ptrace_request request, ...) {
             regs.rip = (unsigned long long)ei->eresume;
             ret = host_ptrace(PTRACE_SETREGS, tid, NULL, &regs);
             if (ret < 0) {
-                DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave thread %d\n",
-                          tid);
+                DEBUG_LOG("Cannot set RIP to ERESUME to continue single-step in enclave "
+                          "thread %d\n", tid);
                 errno = EFAULT;
                 return -1;
             }
