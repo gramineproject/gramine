@@ -10,11 +10,11 @@
  * High level description:
  * The most important part is the `state` variable, which tracks the number of active readers. It
  * also indicates whether a writer is active (waiting for the lock or already has it). Each reader
- * increments this variable on lock and decrements on unlock. Writes decrements it by a large
- * value (bigger than maximal number of readers) on write lock, which also hints any incoming
+ * increments this variable on lock and decrements on unlock. A writer decrements it by a large
+ * value (bigger than the maximal number of readers) on write lock, which also hints any incoming
  * readers that a writer is pending (so they must wait for the writer to finish).
- * Rest of the variables is used to signal waiting readers when the writer is finised and waiting
- * writer when all readers have released the lock.
+ * Rest of the variables is used to signal waiting readers when the writer is finished and
+ * the waiting writer when all the readers have released the lock.
  */
 
 #pragma once

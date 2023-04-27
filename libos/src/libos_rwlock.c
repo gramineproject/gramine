@@ -2,6 +2,7 @@
 /* Copyright (C) 2022 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
+
 #include "pal.h"
 
 #include "libos_rwlock.h"
