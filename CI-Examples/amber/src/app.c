@@ -115,7 +115,7 @@ int main(void) {
     size_t i = 0;
     for (i = 0; i < sizeof(user_data_arr)/sizeof(const char*); i++) {
         size_t user_data_sz = strlen(user_data_arr[i]);
-        // supply the user data with encoded pubkey
+        // supply the user data
         ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
                                 user_data_arr[i], user_data_sz);
         if (ret == 0) {
