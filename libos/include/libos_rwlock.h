@@ -54,13 +54,13 @@ struct libos_rwlock {
 bool rwlock_create(struct libos_rwlock* l);
 void rwlock_destroy(struct libos_rwlock* l);
 
-void rwlock_read_lock_cold(struct libos_rwlock* l);
-void rwlock_read_unlock_cold(struct libos_rwlock* l);
+void rwlock_read_lock_slow_path(struct libos_rwlock* l);
+void rwlock_read_unlock_slow_path(struct libos_rwlock* l);
 
 static inline void rwlock_read_lock(struct libos_rwlock* l) {
     int64_t state = __atomic_fetch_add(&l->state, 1, __ATOMIC_ACQUIRE);
     if (state < 0) {
-        rwlock_read_lock_cold(l);
+        rwlock_read_lock_slow_path(l);
     }
 }
 
@@ -68,9 +68,24 @@ static inline void rwlock_read_unlock(struct libos_rwlock* l) {
     RMB();
     int64_t state = __atomic_sub_fetch(&l->state, 1, __ATOMIC_RELAXED);
     if (state < 0) {
-        rwlock_read_unlock_cold(l);
+        rwlock_read_unlock_slow_path(l);
     }
 }
 
 void rwlock_write_lock(struct libos_rwlock* l);
 void rwlock_write_unlock(struct libos_rwlock* l);
+
+#ifdef DEBUG
+/*
+ * These two functions are not complete and might return false positives, but there are no false
+ * negatives. Creating a fully complete check (working in all cases) is very hard or even impossible
+ * with the current implementation, so this should be good enough.
+ */
+static inline bool rwlock_is_read_locked(struct libos_rwlock* l) {
+    return __atomic_load_n(&l->state, __ATOMIC_RELAXED) != 0;
+}
+
+static inline bool rwlock_is_write_locked(struct libos_rwlock* l) {
+    return locked(&l->writers_lock) && __atomic_load_n(&l->state, __ATOMIC_RELAXED) < 0;
+}
+#endif // DEBUG

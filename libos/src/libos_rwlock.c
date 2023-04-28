@@ -3,9 +3,8 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
-#include "pal.h"
-
 #include "libos_rwlock.h"
+#include "pal.h"
 
 bool rwlock_create(struct libos_rwlock* l) {
     l->state = 0;
@@ -36,7 +35,7 @@ void rwlock_destroy(struct libos_rwlock* l) {
     destroy_lock(&l->writers_lock);
 }
 
-void rwlock_read_lock_cold(struct libos_rwlock* l) {
+void rwlock_read_lock_slow_path(struct libos_rwlock* l) {
     while (PalEventWait(l->readers_wait, /*timeout=*/NULL) < 0)
         /* nop */;
     size_t waiting_readers = __atomic_sub_fetch(&l->waiting_readers, 1, __ATOMIC_RELAXED);
@@ -47,7 +46,7 @@ void rwlock_read_lock_cold(struct libos_rwlock* l) {
     (void)__atomic_load_n(&l->state, __ATOMIC_ACQUIRE);
 }
 
-void rwlock_read_unlock_cold(struct libos_rwlock* l) {
+void rwlock_read_unlock_slow_path(struct libos_rwlock* l) {
     int64_t departing = __atomic_sub_fetch(&l->departing_readers, 1, __ATOMIC_RELAXED);
     if (departing == 0) {
         /* Last reader, wake up writer. */
