@@ -58,7 +58,9 @@ struct libos_process {
     struct libos_lock children_lock;
     struct libos_lock fs_lock;
 
-    /* Complete command line for the process, as reported by /proc/[pid]/cmdline. */
+    /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
+     * once during initialization and not able to be modified.
+     * See https://github.com/gramineproject/gramine/issues/79. */
     char* cmdline;
     size_t cmdline_size;
 };

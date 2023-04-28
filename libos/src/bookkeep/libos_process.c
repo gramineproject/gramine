@@ -74,7 +74,7 @@ int init_process_cmdline(const char* const* argv) {
 
     for (const char* const* a = argv; *a; a++) {
         if (size + strlen(*a) + 1 > max) {
-            max *= 2;
+            max = MAX(max * 2, size + strlen(*a) + 1);
             /* TODO: use `realloc()` once it's available. */
             char* new_cmdline = malloc(max);
             if (!new_cmdline) {
