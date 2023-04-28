@@ -603,7 +603,7 @@ void debug_base64_bytes(const char* label, const char *base64_encoded,
     if (!hex_buf) {
         log_debug("calloc failed.");
     }
-    log_debug("%s:\nbase64_encoded: %s\nbase64_decoded %s\n",
+    log_debug("%s:\nbase64_encoded: %s\nbase64_decoded: %s\n",
                 label, base64_encoded, bytes2hex(base64_decoded, base64_decoded_sz, hex_buf, hex_buf_sz));
     free(hex_buf);
 }
@@ -624,9 +624,15 @@ static int amber_update_token(void) {
     if (inp_udata_sz > 0) {
         ret = mbedtls_base64_decode((unsigned char*)udata, inp_udata_sz, &udata_sz,
                                     (const unsigned char*)inp_udata, inp_udata_sz);
-        if (ret != 0) {
-            amber_status_error("Base64 decode of user data failed");
+        if (ret != 0 || udata_sz == 0) {
+            amber_status_info("Base64 decode of user data failed, switch to plain mode");
+            log_debug("Decode user data failed %d, switch to plain mode", ret);
+        } else {
+            memcpy(udata, inp_udata, inp_udata_sz);
+            udata_sz = inp_udata_sz;
         }
+    } else {
+        log_debug("No user data found");
     }
 
     unsigned char nonce[256];
@@ -698,7 +704,7 @@ static int amber_update_token(void) {
             return -ENOMEM;
         }
 
-        if (udata_sz > 0) {
+        if (inp_udata_sz > 0) {
             snprintf(data_buf, data_bufsz,
             "{\"quote\":\"%s\", \"nonce\":%s, \"user_data\":\"%s\"}",
                     qb64, response, inp_udata);
@@ -706,7 +712,9 @@ static int amber_update_token(void) {
             snprintf(data_buf, data_bufsz,
             "{\"quote\":\"%s\", \"nonce\":%s}",
                     qb64, response);
+            log_debug("#### >>>> no user data supplied");
         }
+        // log_error("%s\n -+++--- %ld", data_buf, strlen(data_buf));
         // snprintf(data_buf, data_bufsz, "{\"quote\":\"%s\", \"user_data\":\"%s\"}", qb64, inp_udata);
         // snprintf(data_buf, data_bufsz, "{\"quote\":\"%s\"}", qb64);
         free(qb64);
@@ -741,12 +749,17 @@ static int amber_update_token(void) {
             log_debug("APPRAISE error - amber_json_parse found count: %d \n", cnt);
             if (cnt > 0) {
                 idx = amber_json_query(response, t, cnt, "error");
-                if (idx >= 0) {
+                if (idx > 0 && idx < cnt) {
                     sz = t[idx].end - t[idx].start;
-                    amber_status_error("Token retrieval failed: %.*s", sz,
+                    amber_status_error("Token retrieval failed with error: %.*s", sz,
                                 response + t[idx].start);
                 } else {
-                    amber_status_error("Token retrieval failed with no error info");
+                    idx = amber_json_query(response, t, cnt, "message");
+                    if (idx > 0 && idx < cnt) {
+                        sz = t[idx].end - t[idx].start;
+                        amber_status_error("Token retrieval failed with message: %.*s", sz,
+                                    response + t[idx].start);
+                    }
                 }
             } else {
                 amber_status_error("Token retrieval failed with no response info");

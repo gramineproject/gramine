@@ -141,6 +141,23 @@ int main(int argc, char** argv) {
     }
     printf("A keypair generated: %ld, %ld \n", der_key_size, der_crt_size);
 
+    size_t b64_size = 0;
+    // encode the raw pubkey material
+    ret = mbedtls_base64_encode(buf, BUF_SZ - 1, &b64_size, der_crt, der_crt_size);
+    if (ret < 0) {
+        printf("Failed to base64 encode the generated cert.\n");
+        return -1;
+    }
+
+    // supply the user data with encoded pubkey
+    // ret = write_from_buffer(AMBER_USERDATA_DEVFILE, buf, b64_size);
+    // if (ret == 0) {
+    //     printf("Write to %s: \n%s\nb64 size: %ld\n", AMBER_USERDATA_DEVFILE, buf, b64_size);
+    // } else {
+    //     printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
+    // }
+
+    // read the amber token
     ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
     if (ret == 0) {
         printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
@@ -148,6 +165,7 @@ int main(int argc, char** argv) {
         printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
     }
 
+    // read the status
     ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
     if (ret == 0) {
         printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
@@ -155,32 +173,20 @@ int main(int argc, char** argv) {
         printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
     }
 
-    size_t b64_size = 0;
-    ret = mbedtls_base64_encode(buf, BUF_SZ - 1, &b64_size, der_crt, der_crt_size);
-    if (ret < 0) {
-        printf("Failed to base64 encode the generated cert.\n");
-        return -1;
-    }
-    ret = write_from_buffer(AMBER_USERDATA_DEVFILE, buf, b64_size + 1);
-    if (ret == 0) {
-        printf("Write to %s: \n%s\nb64 size: %ld\n", AMBER_USERDATA_DEVFILE, buf, b64_size);
-    } else {
-        printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
-    }
+    // This part does only work with KBS
+    // ret = read_to_buffer(AMBER_SECRET_DEVFILE, buf, BUF_SZ);
+    // if (ret == 0) {
+    //     printf("Read from %s: \n%s\n", AMBER_SECRET_DEVFILE, buf);
+    // } else {
+    //     printf("Failed to read from %s: %d\n", AMBER_SECRET_DEVFILE, ret);
+    // }
 
-    ret = read_to_buffer(AMBER_SECRET_DEVFILE, buf, BUF_SZ);
-    if (ret == 0) {
-        printf("Read from %s: \n%s\n", AMBER_SECRET_DEVFILE, buf);
-    } else {
-        printf("Failed to read from %s: %d\n", AMBER_SECRET_DEVFILE, ret);
-    }
-
-    ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
-    if (ret == 0) {
-        printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
-    } else {
-        printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
-    }
+    // ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
+    // if (ret == 0) {
+    //     printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
+    // } else {
+    //     printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
+    // }
 
     return ret;
 }
