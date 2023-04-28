@@ -60,39 +60,29 @@ int init_process(void) {
 }
 
 int init_process_cmdline(const char* const* argv) {
-    /* The command line arguments passed are stored in /proc/self/cmdline as part of the proc fs.
-     * They are not separated by space, but by NUL instead. So, it is essential to maintain the
-     * cmdline_size also as a member here. */
-    g_process.cmdline_size = 0;
+    size_t size = 0;
 
-    size_t size = 0, max = 256;
-    char* cmdline = malloc(max);
+    for (const char* const* a = argv; *a; a++) {
+        size += strlen(*a) + 1;
+    }
+
+    char* cmdline = calloc(1, size);
     if (!cmdline) {
         return -ENOMEM;
     }
-    memset(cmdline, '\0', max);
 
+    size = 0;
     for (const char* const* a = argv; *a; a++) {
-        if (size + strlen(*a) + 1 > max) {
-            max = MAX(max * 2, size + strlen(*a) + 1);
-            /* TODO: use `realloc()` once it's available. */
-            char* new_cmdline = malloc(max);
-            if (!new_cmdline) {
-                free(cmdline);
-                return -ENOMEM;
-            }
-            memset(new_cmdline, '\0', max);
-            memcpy(new_cmdline, cmdline, size);
-            free(cmdline);
-            cmdline = new_cmdline;
-        }
-
         memcpy(cmdline + size, *a, strlen(*a));
         size += strlen(*a) + 1;
     }
 
     g_process.cmdline = cmdline;
+    /* The command line arguments passed are stored in /proc/self/cmdline as part of the proc fs.
+     * They are not separated by space, but by NUL instead. So, it is essential to maintain the
+     * cmdline_size also as a member here. */
     g_process.cmdline_size = size;
+
     return 0;
 }
 
