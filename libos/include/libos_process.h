@@ -13,7 +13,9 @@
 #include "list.h"
 #include "pal.h"
 
-#define CMDLINE_SIZE 4096
+/* Some Java applications (e.g. Apache Kafka) use ~6KB of command-line arguments. The current limit
+ * of 16KB should be enough even for such applications. */
+#define CMDLINE_SIZE (4096 * 4)
 
 DEFINE_LIST(libos_child_process);
 DEFINE_LISTP(libos_child_process);
