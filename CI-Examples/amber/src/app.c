@@ -37,6 +37,82 @@ int write_from_buffer(const char* fn, const char buf[], size_t bufsz);
 #define AMBER_STATUS_DEVFILE "/dev/amber/status"
 #define BUF_SZ 8096
 
+int main(void) {
+    int ret;
+    char buf[BUF_SZ] = {0};
+    size_t user_data_sz;
+
+    /* Example 1 : get Amber token by passing user data in json format,
+     * that includes the public key.
+     * Amber token will have the claim "amber_runtime",
+     * which matches to the user data.
+     */
+    const char *user_data_json = "{\"type\":\"RSA\", \"key\":\"RHVtbXkga2V5IChkb250IHVzZSBpdCkK\"}";
+    user_data_sz = strlen(user_data_json);
+    // supply the user data
+    ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
+                            user_data_json, user_data_sz);
+    if (ret == 0) {
+        printf("Write to %s: \n%s\nuser data size: %ld\n",
+        AMBER_USERDATA_DEVFILE, user_data_json, user_data_sz);
+    } else {
+        printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
+    }
+
+    // read the amber token
+    ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
+    if (ret == 0) {
+        printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
+    } else {
+        printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
+    }
+
+    // read the status
+    ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
+    if (ret == 0) {
+        printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
+    } else {
+        printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
+    }
+
+    /* Example 2 - [Deprecated]: get Amber token by passing user data in string format,
+     * Amber token will have the claim "amber_tee_held_data",
+     * which matches to the user data.
+     */
+    const char *user_data_string = "a dummy string";
+    user_data_sz = strlen(user_data_string);
+    // supply the user data
+    ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
+                            user_data_string, user_data_sz);
+    if (ret == 0) {
+        printf("Write to %s: \n%s\nuser data size: %ld\n",
+        AMBER_USERDATA_DEVFILE, user_data_string, user_data_sz);
+    } else {
+        printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
+    }
+
+    // read the amber token
+    ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
+    if (ret == 0) {
+        printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
+    } else {
+        printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
+    }
+
+    // read the status
+    ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
+    if (ret == 0) {
+        printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
+    } else {
+        printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
+    }
+
+    return ret;
+}
+
+/*
+ * this function is used to read the content of a file to a buffer
+ */
 int read_to_buffer(const char* fn, char buf[], size_t bufsz) {
     int ret;
     ssize_t cnt;
@@ -74,6 +150,9 @@ int read_to_buffer(const char* fn, char buf[], size_t bufsz) {
     return ret;
 }
 
+/*
+ * this function is used to write a buffer to a file
+ */
 int write_from_buffer(const char* fn, const char buf[], size_t bufsz) {
     int ret;
     ssize_t cnt;
@@ -102,60 +181,6 @@ int write_from_buffer(const char* fn, const char buf[], size_t bufsz) {
         fprintf(stderr, "[error] cannot close '%s'\n", fn);
         return -1;
     }
-
-    return ret;
-}
-
-int main(void) {
-    int ret;
-    char buf[BUF_SZ] = {0};
-    const char *user_data_arr[] = {"a dummy string",
-        "{\"type\":\"RSA\", \"key\":\"RHVtbXkga2V5IChkb250IHVzZSBpdCkK\"}"};
-
-    size_t i = 0;
-    for (i = 0; i < sizeof(user_data_arr)/sizeof(const char*); i++) {
-        size_t user_data_sz = strlen(user_data_arr[i]);
-        // supply the user data
-        ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
-                                user_data_arr[i], user_data_sz);
-        if (ret == 0) {
-            printf("Write to %s: \n%s\nuser data size: %ld\n",
-            AMBER_USERDATA_DEVFILE, user_data_arr[i], user_data_sz);
-        } else {
-            printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
-        }
-
-        // read the amber token
-        ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
-        if (ret == 0) {
-            printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
-        } else {
-            printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
-        }
-
-        // read the status
-        ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
-        if (ret == 0) {
-            printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
-        } else {
-            printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
-        }
-    }
-
-    // This part does only work with KBS
-    // ret = read_to_buffer(AMBER_SECRET_DEVFILE, buf, BUF_SZ);
-    // if (ret == 0) {
-    //     printf("Read from %s: \n%s\n", AMBER_SECRET_DEVFILE, buf);
-    // } else {
-    //     printf("Failed to read from %s: %d\n", AMBER_SECRET_DEVFILE, ret);
-    // }
-
-    // ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
-    // if (ret == 0) {
-    //     printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
-    // } else {
-    //     printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
-    // }
 
     return ret;
 }
