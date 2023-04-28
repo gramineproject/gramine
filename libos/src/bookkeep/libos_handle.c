@@ -229,6 +229,7 @@ int init_std_handles(void) {
 
 struct libos_handle* __get_fd_handle(uint32_t fd, int* fd_flags, struct libos_handle_map* map) {
     assert(map);
+    assert(rwlock_is_read_locked(&map->lock) || rwlock_is_write_locked(&map->lock));
 
     struct libos_fd_handle* fd_handle = NULL;
 
@@ -259,6 +260,8 @@ struct libos_handle* get_fd_handle(uint32_t fd, int* fd_flags, struct libos_hand
 
 static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
                                                struct libos_handle_map* map) {
+    assert(rwlock_is_write_locked(&map->lock));
+
     struct libos_handle* handle = NULL;
 
     if (HANDLE_ALLOCATED(fd)) {
@@ -551,6 +554,8 @@ static struct libos_handle_map* get_new_handle_map(uint32_t size) {
 }
 
 static int __enlarge_handle_map(struct libos_handle_map* map, uint32_t size) {
+    assert(rwlock_is_write_locked(&map->lock));
+
     if (size <= map->fd_size)
         return 0;
 
