@@ -106,9 +106,6 @@ int write_from_buffer(const char* fn, const char buf[], size_t bufsz) {
     return ret;
 }
 
-int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
-                                       size_t* der_crt_size);
-
 int main(void) {
     int ret;
     char buf[BUF_SZ] = {0};
