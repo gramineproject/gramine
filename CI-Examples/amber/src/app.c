@@ -119,7 +119,7 @@ int main(void) {
         ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
                                 user_data_arr[i], user_data_sz);
         if (ret == 0) {
-            printf("Write to %s: \n%s\nb64 size: %ld\n",
+            printf("Write to %s: \n%s\nuser data size: %ld\n",
             AMBER_USERDATA_DEVFILE, user_data_arr[i], user_data_sz);
         } else {
             printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
