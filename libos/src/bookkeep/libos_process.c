@@ -64,18 +64,35 @@ int init_process_cmdline(const char* const* argv) {
      * They are not separated by space, but by NUL instead. So, it is essential to maintain the
      * cmdline_size also as a member here. */
     g_process.cmdline_size = 0;
-    memset(g_process.cmdline, '\0', ARRAY_SIZE(g_process.cmdline));
-    size_t tmp_size = 0;
+
+    size_t size = 0, max = 256;
+    char* cmdline = malloc(max);
+    if (!cmdline) {
+        return -ENOMEM;
+    }
+    memset(cmdline, '\0', max);
 
     for (const char* const* a = argv; *a; a++) {
-        if (tmp_size + strlen(*a) + 1 > ARRAY_SIZE(g_process.cmdline))
-            return -ENOMEM;
+        if (size + strlen(*a) + 1 > max) {
+            max *= 2;
+            /* TODO: use `realloc()` once it's available. */
+            char* new_cmdline = malloc(max);
+            if (!new_cmdline) {
+                free(cmdline);
+                return -ENOMEM;
+            }
+            memset(new_cmdline, '\0', max);
+            memcpy(new_cmdline, cmdline, size);
+            free(cmdline);
+            cmdline = new_cmdline;
+        }
 
-        memcpy(g_process.cmdline + tmp_size, *a, strlen(*a));
-        tmp_size += strlen(*a) + 1;
+        memcpy(cmdline + size, *a, strlen(*a));
+        size += strlen(*a) + 1;
     }
 
-    g_process.cmdline_size = tmp_size;
+    g_process.cmdline = cmdline;
+    g_process.cmdline_size = size;
     return 0;
 }
 
@@ -237,7 +254,9 @@ BEGIN_CP_FUNC(process_description) {
     new_process->pgid = process->pgid;
 
     /* copy cmdline (used by /proc/[pid]/cmdline) from the current process */
-    memcpy(new_process->cmdline, g_process.cmdline, ARRAY_SIZE(g_process.cmdline));
+    char* new_cmdline = (char*)(base + ADD_CP_OFFSET(g_process.cmdline_size));
+    memcpy(new_cmdline, g_process.cmdline, g_process.cmdline_size);
+    new_process->cmdline = new_cmdline;
     new_process->cmdline_size = g_process.cmdline_size;
 
     DO_CP_MEMBER(dentry, process, new_process, root);
@@ -289,6 +308,7 @@ BEGIN_RS_FUNC(process_description) {
     CP_REBASE(process->root);
     CP_REBASE(process->cwd);
     CP_REBASE(process->exec);
+    CP_REBASE(process->cmdline);
 
     if (process->exec) {
         get_handle(process->exec);

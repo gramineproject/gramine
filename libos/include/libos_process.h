@@ -13,8 +13,6 @@
 #include "list.h"
 #include "pal.h"
 
-#define CMDLINE_SIZE 4096
-
 DEFINE_LIST(libos_child_process);
 DEFINE_LISTP(libos_child_process);
 struct libos_child_process {
@@ -60,10 +58,8 @@ struct libos_process {
     struct libos_lock children_lock;
     struct libos_lock fs_lock;
 
-    /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
-     * once during initialization, using static buffer and restricted to CMDLINE_SIZE. This is
-     * enough for current workloads but see https://github.com/gramineproject/gramine/issues/79. */
-    char cmdline[CMDLINE_SIZE];
+    /* Complete command line for the process, as reported by /proc/[pid]/cmdline. */
+    char* cmdline;
     size_t cmdline_size;
 };
 
