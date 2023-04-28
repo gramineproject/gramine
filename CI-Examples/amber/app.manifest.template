@@ -27,7 +27,8 @@ sgx.ra_client_spid = ""
 sgx.amber_ip = "127.0.0.1"
 sgx.amber_url = "https://127.0.0.1:443/appraisal/v1/"
 sgx.amber_apikey = ""
-sgx.amber_userdata = "RHVtbXkga2V5IChkb250IHVzZSBpdCkK"
+
+sgx.amber_userdata = "a dummy user data"
 
 # dummy configuration for KBS provided by project Amber
 # the public key component of a 2048-bit RSA key for secret wrapping

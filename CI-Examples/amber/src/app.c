@@ -27,12 +27,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dlfcn.h>
-#include "mbedtls/build_info.h"
-#include "mbedtls/base64.h"
-
 
 int read_to_buffer(const char* fn, char buf[], size_t bufsz);
-int write_from_buffer(const char* fn, char buf[], size_t bufsz);
+int write_from_buffer(const char* fn, const char buf[], size_t bufsz);
 
 #define AMBER_TOKEN_DEVFILE "/dev/amber/token"
 #define AMBER_SECRET_DEVFILE "/dev/amber/secret"
@@ -77,7 +74,7 @@ int read_to_buffer(const char* fn, char buf[], size_t bufsz) {
     return ret;
 }
 
-int write_from_buffer(const char* fn, char buf[], size_t bufsz) {
+int write_from_buffer(const char* fn, const char buf[], size_t bufsz) {
     int ret;
     ssize_t cnt;
     int fd = open(fn, O_WRONLY);
@@ -112,65 +109,40 @@ int write_from_buffer(const char* fn, char buf[], size_t bufsz) {
 int (*ra_tls_create_key_and_crt_der_f)(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
                                        size_t* der_crt_size);
 
-int main(int argc, char** argv) {
+int main(void) {
     int ret;
     char buf[BUF_SZ] = {0};
+    const char *user_data_arr[] = {"a dummy string",
+        "{\"type\":\"RSA\", \"key\":\"RHVtbXkga2V5IChkb250IHVzZSBpdCkK\"}"};
 
-    void* ra_tls_attest_lib = dlopen("libra_tls_attest.so", RTLD_LAZY);;
-    if (!ra_tls_attest_lib) {
-        printf("User requested RA-TLS attestation but cannot find lib\n");
-        return -1;
-    }
+    size_t i = 0;
+    for (i = 0; i < sizeof(user_data_arr)/sizeof(const char*); i++) {
+        size_t user_data_sz = strlen(user_data_arr[i]);
+        // supply the user data with encoded pubkey
+        ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
+                                user_data_arr[i], user_data_sz);
+        if (ret == 0) {
+            printf("Write to %s: \n%s\nb64 size: %ld\n",
+            AMBER_USERDATA_DEVFILE, user_data_arr[i], user_data_sz);
+        } else {
+            printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
+        }
 
-    char* error;
-    ra_tls_create_key_and_crt_der_f = dlsym(ra_tls_attest_lib, "ra_tls_create_key_and_crt_der");
-    if ((error = dlerror()) != NULL) {
-        printf("%s\n", error);
-        return -1;
-    }
+        // read the amber token
+        ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
+        if (ret == 0) {
+            printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
+        } else {
+            printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
+        }
 
-    uint8_t* der_key = NULL;
-    uint8_t* der_crt = NULL;
-    size_t der_key_size;
-    size_t der_crt_size;
-    // An ephemeral keypair generated here, and it can be manually configured as well.
-    ret = (*ra_tls_create_key_and_crt_der_f)(&der_key, &der_key_size, &der_crt, &der_crt_size);
-    if (ret != 0) {
-        printf(" failed\n  !  ra_tls_create_key_and_crt_der returned %d\n\n", ret);
-        return -1;
-    }
-    printf("A keypair generated: %ld, %ld \n", der_key_size, der_crt_size);
-
-    size_t b64_size = 0;
-    // encode the raw pubkey material
-    ret = mbedtls_base64_encode(buf, BUF_SZ - 1, &b64_size, der_crt, der_crt_size);
-    if (ret < 0) {
-        printf("Failed to base64 encode the generated cert.\n");
-        return -1;
-    }
-
-    // supply the user data with encoded pubkey
-    // ret = write_from_buffer(AMBER_USERDATA_DEVFILE, buf, b64_size);
-    // if (ret == 0) {
-    //     printf("Write to %s: \n%s\nb64 size: %ld\n", AMBER_USERDATA_DEVFILE, buf, b64_size);
-    // } else {
-    //     printf("Failed to write to %s: %d\n", AMBER_USERDATA_DEVFILE, ret);
-    // }
-
-    // read the amber token
-    ret = read_to_buffer(AMBER_TOKEN_DEVFILE, buf, BUF_SZ);
-    if (ret == 0) {
-        printf("Read from %s: \n%s\n", AMBER_TOKEN_DEVFILE, buf);
-    } else {
-        printf("Failed to read from %s: %d\n", AMBER_TOKEN_DEVFILE, ret);
-    }
-
-    // read the status
-    ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
-    if (ret == 0) {
-        printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
-    } else {
-        printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
+        // read the status
+        ret = read_to_buffer(AMBER_STATUS_DEVFILE, buf, BUF_SZ);
+        if (ret == 0) {
+            printf("Read from %s: \n%s\n", AMBER_STATUS_DEVFILE, buf);
+        } else {
+            printf("Failed to read from %s: %d\n", AMBER_STATUS_DEVFILE, ret);
+        }
     }
 
     // This part does only work with KBS

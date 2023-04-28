@@ -503,7 +503,7 @@ static int update_quote(void) {
     if (!quote)
         return -ENOMEM;
     // MUST be sizeof(sgx_report_data_t) == 64
-    ret = PalAttestationQuote(&g_amber_user_report_data, 64, quote, &quote_size);
+    ret = PalAttestationQuote(&g_amber_user_report_data, g_amber_user_report_data_size, quote, &quote_size);
     if (ret < 0) {
         free(quote);
         return -EACCES;
@@ -616,24 +616,21 @@ static int amber_update_token(void) {
     const char *inp_udata = g_amber_userdata;
     size_t inp_udata_sz = g_amber_userdata_size; // strlen(inp_udata);
 
-    unsigned char *udata = calloc(1, inp_udata_sz);
-    if (!udata)
+    size_t udata_b64_outsz, udata_b64_sz = inp_udata_sz * 2;
+    char *udata_b64 = calloc(1, udata_b64_sz);
+    if (!udata_b64)
         return ret;
 
-    size_t udata_sz = 0;
-    if (inp_udata_sz > 0) {
-        ret = mbedtls_base64_decode((unsigned char*)udata, inp_udata_sz, &udata_sz,
-                                    (const unsigned char*)inp_udata, inp_udata_sz);
-        if (ret != 0 || udata_sz == 0) {
-            amber_status_info("Base64 decode of user data failed, switch to plain mode");
-            log_debug("Decode user data failed %d, switch to plain mode", ret);
-        } else {
-            memcpy(udata, inp_udata, inp_udata_sz);
-            udata_sz = inp_udata_sz;
-        }
-    } else {
-        log_debug("No user data found");
+    ret = mbedtls_base64_encode((unsigned char*)udata_b64, udata_b64_sz,
+                        &udata_b64_outsz,
+                        (unsigned char*)inp_udata, inp_udata_sz);
+    if (ret != 0) {
+        amber_status_error("Base64 encode of user data failed");
+        free(udata_b64);
+        return ret;
     }
+    udata_b64[udata_b64_outsz] = '\0';
+    udata_b64_sz = udata_b64_outsz;
 
     unsigned char nonce[256];
     size_t nonce_sz = sizeof(nonce);
@@ -641,20 +638,23 @@ static int amber_update_token(void) {
     if (ret == 0) {
         log_debug("GET NONCE response: %s", response);
 
-        size_t cudata_sz = nonce_sz + udata_sz;
+        size_t cudata_sz = nonce_sz + inp_udata_sz;
         void *cudata = calloc(1,cudata_sz);
         if (!cudata)
             return -ENOMEM;
 
-        memcpy(cudata, nonce, nonce_sz);
-        memcpy(cudata + nonce_sz, udata, udata_sz);
-        
-        log_debug("nonce size: %ld\nudata size: %ld\ncudata size: %ld\n",
-                    nonce_sz, udata_sz, cudata_sz);
-        debug_base64_bytes("user data", inp_udata, udata, udata_sz);
+        // memcpy(cudata, nonce, nonce_sz);
+        // memcpy(cudata + nonce_sz, udata, udata_sz);
+        // this code just consider user data only
+        memcpy(cudata, inp_udata, inp_udata_sz);
+        cudata_sz = inp_udata_sz;
+
+        log_debug("nonce size: %ld\nudata_b64 size: %ld\ncudata size: %ld\n",
+                    nonce_sz, udata_b64_sz, cudata_sz);
+        debug_base64_bytes("user data", udata_b64, (unsigned char*)inp_udata, inp_udata_sz);
         debug_base64_bytes("nonce", "--", nonce, nonce_sz);
         debug_base64_bytes("Combined", "--", cudata, cudata_sz);
-
+    
         ret = mbedtls_sha256(cudata, cudata_sz,
                              (unsigned char*)g_amber_user_report_data, 0);
         // ret = mbedtls_sha256(udata, udata_sz,
@@ -705,13 +705,18 @@ static int amber_update_token(void) {
         }
 
         if (inp_udata_sz > 0) {
+            // snprintf(data_buf, data_bufsz,
+            // "{\"quote\":\"%s\", \"nonce\":%s, \"user_data\":\"%s\"}",
+            //         qb64, response, inp_udata);
             snprintf(data_buf, data_bufsz,
-            "{\"quote\":\"%s\", \"nonce\":%s, \"user_data\":\"%s\"}",
-                    qb64, response, inp_udata);
+            "{\"quote\":\"%s\", \"user_data\":\"%s\"}",
+                    qb64, udata_b64);
         } else {
+            // snprintf(data_buf, data_bufsz,
+            // "{\"quote\":\"%s\", \"nonce\":%s}",
+            //         qb64, response);
             snprintf(data_buf, data_bufsz,
-            "{\"quote\":\"%s\", \"nonce\":%s}",
-                    qb64, response);
+            "{\"quote\":\"%s\"}", qb64);
             log_debug("#### >>>> no user data supplied");
         }
         // log_error("%s\n -+++--- %ld", data_buf, strlen(data_buf));
