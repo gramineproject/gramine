@@ -79,7 +79,7 @@ int main(void) {
      * Amber token will have the claim "amber_tee_held_data",
      * which matches to the user data.
      */
-    const char *user_data_string = "a dummy string";
+    const char *user_data_string = "a dummy public key here";
     user_data_sz = strlen(user_data_string);
     // supply the user data
     ret = write_from_buffer(AMBER_USERDATA_DEVFILE,
