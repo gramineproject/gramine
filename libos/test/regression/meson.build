@@ -96,6 +96,13 @@ tests = {
             '../../include/arch' / host_machine.cpu_family(),
         ),
     },
+    'rwlock': {
+        'include_directories': include_directories(
+            # for `libos_entry_api.h`
+            '../../include',
+            '../../include/arch' / host_machine.cpu_family(),
+        ),
+    },
     'sched': {},
     'sched_set_get_affinity': {},
     'sealed_file': {},

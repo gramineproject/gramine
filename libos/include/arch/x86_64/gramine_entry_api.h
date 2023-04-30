@@ -29,6 +29,9 @@ jmpq *%gs:GRAMINE_SYSCALL_OFFSET
 
 #else /* !__ASSEMBLER__ */
 
+#include <stdbool.h>
+#include <stdint.h>
+
 #define GRAMINE_STR(x)  #x
 #define GRAMINE_XSTR(x) GRAMINE_STR(x)
 
@@ -47,6 +50,12 @@ __asm__(
 enum {
     GRAMINE_CALL_REGISTER_LIBRARY = 1,
     GRAMINE_CALL_RUN_TEST,
+    GRAMINE_CALL_RWLOCK_CREATE,
+    GRAMINE_CALL_RWLOCK_DESTROY,
+    GRAMINE_CALL_RWLOCK_READ_LOCK,
+    GRAMINE_CALL_RWLOCK_READ_UNLOCK,
+    GRAMINE_CALL_RWLOCK_WRITE_LOCK,
+    GRAMINE_CALL_RWLOCK_WRITE_UNLOCK,
 };
 
 /* Magic syscall number for Gramine custom calls */
@@ -68,6 +77,30 @@ static inline int gramine_register_library(const char* name, unsigned long load_
 
 static inline int gramine_run_test(const char* test_name) {
     return gramine_call(GRAMINE_CALL_RUN_TEST, (unsigned long)test_name, 0);
+}
+
+static inline bool gramine_rwlock_create(void** out_lock) {
+    return gramine_call(GRAMINE_CALL_RWLOCK_CREATE, (unsigned long)out_lock, 0);
+}
+
+static inline void gramine_rwlock_destroy(void* lock) {
+    gramine_call(GRAMINE_CALL_RWLOCK_DESTROY, (unsigned long)lock, 0);
+}
+
+static inline void gramine_rwlock_read_lock(void* lock) {
+    gramine_call(GRAMINE_CALL_RWLOCK_READ_LOCK, (unsigned long)lock, 0);
+}
+
+static inline void gramine_rwlock_read_unlock(void* lock) {
+    gramine_call(GRAMINE_CALL_RWLOCK_READ_UNLOCK, (unsigned long)lock, 0);
+}
+
+static inline void gramine_rwlock_write_lock(void* lock) {
+    gramine_call(GRAMINE_CALL_RWLOCK_WRITE_LOCK, (unsigned long)lock, 0);
+}
+
+static inline void gramine_rwlock_write_unlock(void* lock){
+    gramine_call(GRAMINE_CALL_RWLOCK_WRITE_UNLOCK, (unsigned long)lock, 0);
 }
 
 #endif /* __ASSEMBLER__ */
