@@ -90,6 +90,7 @@ manifests = [
   "readdir",
   "rename_unlink",
   "run_test",
+  "rwlock",
   "sched",
   "sched_set_get_affinity",
   "sealed_file",
