@@ -11,6 +11,7 @@
 #include "asan.h"
 #include "gramine_entry_api.h"
 #include "libos_entry.h"
+#include "libos_rwlock.h"
 #include "libos_utils.h"
 
 /* Test: do nothing, return success */
@@ -104,6 +105,36 @@ long handle_libos_call(int number, unsigned long arg1, unsigned long arg2) {
 
         case GRAMINE_CALL_RUN_TEST:
             return run_test((const char*)arg1);
+
+        case GRAMINE_CALL_RWLOCK_CREATE: {
+            /* TODO: Change rwlock_create() to return `int` and then change this place analogously
+             * (currently it's interpreted as true/false). */
+            struct libos_rwlock* lock = malloc(sizeof(*lock));
+            if (!lock)
+                return 0;
+            if (!rwlock_create(lock)) {
+                free(lock);
+                return 0;
+            }
+            *(struct libos_rwlock**)arg1 = lock;
+            return 1;
+        }
+        case GRAMINE_CALL_RWLOCK_DESTROY:
+            rwlock_destroy((struct libos_rwlock*)arg1);
+            free((void*)arg1);
+            return 0;
+        case GRAMINE_CALL_RWLOCK_READ_LOCK:
+            rwlock_read_lock((struct libos_rwlock*)arg1);
+            return 0;
+        case GRAMINE_CALL_RWLOCK_READ_UNLOCK:
+            rwlock_read_unlock((struct libos_rwlock*)arg1);
+            return 0;
+        case GRAMINE_CALL_RWLOCK_WRITE_LOCK:
+            rwlock_write_lock((struct libos_rwlock*)arg1);
+            return 0;
+        case GRAMINE_CALL_RWLOCK_WRITE_UNLOCK:
+            rwlock_write_unlock((struct libos_rwlock*)arg1);
+            return 0;
 
         default:
             log_warning("handle_libos_call: invalid number: %d", number);

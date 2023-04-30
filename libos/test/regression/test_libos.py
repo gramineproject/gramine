@@ -28,8 +28,18 @@ CPUINFO_TEST_FLAGS = [
 class TC_00_Unittests(RegressionTestCase):
     def test_000_spinlock(self):
         stdout, _ = self.run_binary(['spinlock'], timeout=20)
-
         self.assertIn('Test successful!', stdout)
+
+    def test_001_rwlock(self):
+        # You may need to adjust sgx.max_threads in the manifest when changing these
+        instances = 5
+        iterations = 100
+        readers_num = 10
+        writers_num = 3
+        writers_delay_us = 100
+        stdout, _ = self.run_binary(['rwlock', str(instances), str(iterations), str(readers_num),
+                                     str(writers_num), str(writers_delay_us)], timeout=45)
+        self.assertIn('TEST OK', stdout)
 
     def test_010_gramine_run_test(self):
         stdout, _ = self.run_binary(['run_test', 'pass'])
