@@ -172,7 +172,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0) {
         /* PAL relocation failed, so we can't use functions which use PAL .rodata (like
          * pal_strerror or unix_strerror) to report an error because these functions will return
-         * offset instead of actual address, which will cause segfault. */
+         * offset instead of actual address, which will cause a segfault. */
         INIT_FAIL("Relocation of the PAL binary failed: %d", ret);
     }
 
