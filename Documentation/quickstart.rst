@@ -7,17 +7,16 @@ There are three options to choose from when using Gramine to protect your
 application.
 The option you choose depends on how you are running your application.
 
-:ref:`Install Gramine` - This option provides instructions for installing
-Gramine on various versions of Ubuntu or Red Hat Enterprise Linux 8.
+:ref:`Install Gramine` - This option is explained on this page. It involves
+installing Gramine from binaries from operating system repositories.
 
-:doc:`docker-image-installation` - This option provides instructions for
-installing a prepared Docker image with Gramine and running the container.
-This option enables you to protect an application running in the cloud.
+:doc:`docker-image-installation` - With this option, you protect your
+application using a prepared Docker image providing a minimal distribution of
+Gramine.
 
 :doc:`devel/building` - This option is mainly used for assisting in helping the
 development of Gramine.
 This option is much more involved.
-The instructions for this option are listed on another page.
 
 Debian 11
 ^^^^^^^^^

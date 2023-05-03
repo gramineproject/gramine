@@ -17,4 +17,3 @@ The following man pages are available:
    gramine-sgx-sigstruct-view
    gramine-sgx-sign
    is-sgx-available
-

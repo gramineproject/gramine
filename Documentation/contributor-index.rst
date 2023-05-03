@@ -3,7 +3,8 @@
 Contribution Guidelines
 =======================
 
-These articles contain helpful material for users who want to contribute to Gramine development.
+These articles contain helpful material for users who want to contribute to
+Gramine development.
 
 :doc:`devel/contributing` - Learn about how to report bugs, security
 vulnerabilities and perform pull requests. This section contains information
