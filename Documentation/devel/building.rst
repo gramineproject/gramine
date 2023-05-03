@@ -21,13 +21,6 @@ higher. If you find problems with Gramine on other Linux distributions,
 contact us with a |~| detailed `bug report
 <https://github.com/gramineproject/gramine/issues/new>`__.
 
-**Install from a Docker container**
-
-If you opt to build Gramine, you can install Gramine from a Docker container
-you build that includes an OS packaged with Gramine binaries.
-The container includes everything that's included in the custom installation.
-You must create your own manifest. Go to :doc:`docker-image-installation`.
-
 Install dependencies
 --------------------
 
@@ -277,14 +270,6 @@ Prepare a signing key
 
 These instructions are only required for systems using Intel® SGX that have not
 already created a signing key.
-
-   - If your system is not using Intel® SGX, skip this step.
-
-   - If your system is using Intel® SGX and you already created a signing key,
-     skip this step.
-
-   - If your system is using Intel® SGX and have not created a signing key,
-     follow the instructions below.
 
 The following command generates an |~| RSA 3072 key suitable for signing SGX
 enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`.
