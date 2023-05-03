@@ -2,7 +2,7 @@
 
 
 Run a sample application
-=======================
+========================
 
 The core Gramine repository contains sample applications to test the Gramine
 installation. To clone the Gramine repo, use the following command:
@@ -34,7 +34,6 @@ Build and run with SGX::
    make SGX=1
    gramine-sgx helloworld
 
-
 Other sample applications
 -------------------------
 
@@ -55,7 +54,8 @@ specific versions/builds of Glibc may break (our GCC example is known to work
 only on Ubuntu).
 
 glibc vs musl
-------------------------------------
+-------------
+
 Most of the examples we provide use GNU C Library (glibc).
 If your application is built against musl libc, you can pass ''musl'' to
 ''gramine.runtimedir()'' when generating the manifest from a template;
