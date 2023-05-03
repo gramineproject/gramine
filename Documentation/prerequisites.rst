@@ -15,7 +15,7 @@ If your system doesn't meet these requirements, please refer to the
 requirements.
 
 Check for Intel® SGX compatibility
----------------
+----------------------------------
 
 To check your hardware and system for Intel® SGX compatibility, use the supplied
 tool, :doc:`manpages/is-sgx-available`. It's installed together with the
