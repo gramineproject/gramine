@@ -14,7 +14,6 @@ The following man pages are available:
    gramine-sgx-ias-request
    gramine-sgx-ias-verify-report
    gramine-sgx-quote-view
-   gramine-sgx-sigstruct-view
    gramine-sgx-sign
+   gramine-sgx-sigstruct-view
    is-sgx-available
-

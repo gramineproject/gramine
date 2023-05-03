@@ -10,7 +10,6 @@ making modifications. This option requires you to create your own manifest.
 **Select** :doc:`quickstart` instructions to quickly install and run Gramine.
 For full build instructions, see :doc:`devel/building`.
 
-
 Gramine Docker image
 --------------------
 
@@ -19,7 +18,7 @@ that you build which includes an OS packaged with Gramine binaries. The
 container includes everything that's included in the installation. This option
 requires you to create your own manifest.
 
-Cloud cloud-deployment
+Cloud deployment
 ----------------------
 
 **Select** :doc:`docker-image-installation`
