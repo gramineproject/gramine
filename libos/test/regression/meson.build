@@ -91,15 +91,13 @@ tests = {
     'rename_unlink': {},
     'run_test': {
         'include_directories': include_directories(
-            # for `libos_entry_api.h`
-            '../../include',
+            # for `gramine_entry_api.h`
             '../../include/arch' / host_machine.cpu_family(),
         ),
     },
     'rwlock': {
         'include_directories': include_directories(
-            # for `libos_entry_api.h`
-            '../../include',
+            # for `gramine_entry_api.h`
             '../../include/arch' / host_machine.cpu_family(),
         ),
     },

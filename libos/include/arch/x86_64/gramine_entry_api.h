@@ -50,6 +50,9 @@ __asm__(
 enum {
     GRAMINE_CALL_REGISTER_LIBRARY = 1,
     GRAMINE_CALL_RUN_TEST,
+    /* For RW locks test. GRAMINE_CALL_RUN_TEST is not suitable for it, because we need full control
+     * over locks from multiple threads. Additionally, this test is non-trivial in size, so it
+     * doesn't seem right to always compile it into our LibOS. */
     GRAMINE_CALL_RWLOCK_CREATE,
     GRAMINE_CALL_RWLOCK_DESTROY,
     GRAMINE_CALL_RWLOCK_READ_LOCK,

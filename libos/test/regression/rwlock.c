@@ -4,48 +4,51 @@
  */
 
 #include <err.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "gramine_entry_api.h"
 
-#define RUNTIME_ASSERT(x) do {if (!(x)) errx(1, "Assertion failure: `" #x "` is false"); } while (0)
+#define CHECK_IF_TRUE(x) CHECK((x) ? 0 : -1)
 
-/* A simple 2x2 matrix, large enough to make naive modifications non-atomic on x64. */
-struct matrix {
-    uint64_t a, b;
-    uint64_t c, d;
+/* Large enough to make naive modifications non-atomic on x64. */
+struct shared_state {
+    uint64_t a, b; // first fibonacci sequence
+    uint64_t c, d; // second fibonacci sequence (one step ahead of the first)
 };
 
 struct reader_args {
     void* lock;
-    struct matrix* m;
+    struct shared_state* m;
     size_t total_iterations;
 };
 
 struct writer_args {
     void* lock;
-    struct matrix* m;
+    struct shared_state* m;
     size_t iterations;
     size_t writers_delay_us;
 };
 
-static void reader(void* lock, struct matrix* m, size_t total_iterations) {
+/* Keeps its own fibonacci sequence and synchronizes it with the shared one. */
+static void reader(void* lock, struct shared_state* m, size_t total_iterations) {
     uint64_t a = 0, b = 1;
     size_t current_it = 0;
     while (current_it < total_iterations) {
         gramine_rwlock_read_lock(lock);
-        RUNTIME_ASSERT(m->b == m->c);
-        RUNTIME_ASSERT(m->a + m->b == m->d);
+        CHECK_IF_TRUE(m->b == m->c);
+        CHECK_IF_TRUE(m->a + m->b == m->d);
         while (b != m->d) {
             /* Advance local sequence to the global state */
             uint64_t sum = a + b;
             a = b;
             b = sum;
             current_it++;
-            RUNTIME_ASSERT(current_it <= total_iterations);
+            CHECK_IF_TRUE(current_it <= total_iterations);
         }
         gramine_rwlock_read_unlock(lock);
     }
@@ -57,14 +60,12 @@ static int reader_(void* args_) {
     return 0;
 }
 
-static void writer(void* lock, struct matrix* m, size_t iterations, size_t writers_delay_us) {
+static void writer(void* lock, struct shared_state* m, size_t iterations, size_t writers_delay_us) {
     for (size_t i = 0; i < iterations; i++) {
         gramine_rwlock_write_lock(lock);
         /* Computing fibonacci this exact way doesn't make much sense, but we need some workload
          * to be executed for testing. */
-        /* *= [0, 1] */
-        /*    [1, 1] */
-        *m = (struct matrix) {
+        *m = (struct shared_state) {
             m->b, m->a + m->b,
             m->d, m->c + m->d
         };
@@ -82,7 +83,7 @@ static int writer_(void* args_) {
 
 static void run_test(size_t iterations, size_t readers_num, size_t writers_num,
                      size_t writers_delay_us) {
-    struct matrix m = {1, 0, 0, 1};
+    struct shared_state m = {1, 0, 0, 1};
     void* lock;
     if (!gramine_rwlock_create(&lock))
         errx(1, "gramine_rwlock_create failed");
@@ -109,17 +110,18 @@ static void run_test(size_t iterations, size_t readers_num, size_t writers_num,
             .iterations = iterations,
             .writers_delay_us = writers_delay_us,
         });
-        if (ret < 0)
+        if (ret != thrd_success)
             errx(1, "thrd_create failed with ret = %d", ret);
     }
 
     /* Wait for all */
     for (size_t i = 0; i < readers_num + writers_num; i++) {
         int ret = thrd_join(threads[i], NULL);
-        if (ret < 0)
+        if (ret != thrd_success)
             errx(1, "thrd_join failed with ret = %d", ret);
     }
     gramine_rwlock_destroy(lock);
+    free(threads);
 }
 
 struct run_test_args {
@@ -135,17 +137,25 @@ static int run_test_(void* args_) {
     return 0;
 }
 
+static size_t str_to_size_t(const char* str) {
+    errno = 0;
+    size_t res = strtoul(str, /*str_end=*/NULL, 10);
+    CHECK_IF_TRUE(errno == 0);
+    return res;
+}
+
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
 
     if (argc != 6)
         errx(2, "Usage: %s <instances> <iterations> <readers_num> <writers_num> <writers_delay_us>\n", argv[0]);
-    size_t instances_num = atoi(argv[1]);
-    size_t iterations = atoi(argv[2]);
-    size_t readers_num = atoi(argv[3]);
-    size_t writers_num = atoi(argv[4]);
-    size_t writers_delay_us = atoi(argv[5]);
+
+    size_t instances_num = str_to_size_t(argv[1]);
+    size_t iterations = str_to_size_t(argv[2]);
+    size_t readers_num = str_to_size_t(argv[3]);
+    size_t writers_num = str_to_size_t(argv[4]);
+    size_t writers_delay_us = str_to_size_t(argv[5]);
 
     thrd_t* threads = calloc(sizeof(*threads), instances_num);
     if (!threads)
@@ -158,13 +168,13 @@ int main(int argc, char* argv[]) {
             .writers_num = writers_num,
             .writers_delay_us = writers_delay_us,
         });
-        if (ret < 0)
+        if (ret != thrd_success)
             errx(1, "thrd_create failed with ret = %d", ret);
     }
 
     for (size_t i = 0; i < instances_num; i++) {
         int ret = thrd_join(threads[i], NULL);
-        if (ret < 0)
+        if (ret != thrd_success)
             errx(1, "thrd_join failed with ret = %d", ret);
     }
 

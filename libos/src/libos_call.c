@@ -115,6 +115,7 @@ long handle_libos_call(int number, unsigned long arg1, unsigned long arg2) {
         }
         case GRAMINE_CALL_RWLOCK_DESTROY:
             rwlock_destroy((struct libos_rwlock*)arg1);
+            free((void*)arg1);
             return 0;
         case GRAMINE_CALL_RWLOCK_READ_LOCK:
             rwlock_read_lock((struct libos_rwlock*)arg1);
