@@ -40,7 +40,7 @@ On Ubuntu 20.04 LTS and 18.04 LTS::
 Prepare a signing key
 ^^^^^^^^^^^^^^^^^^^^^
 
-Only prepare a signing key if you haven't already done so.::
+Only prepare a signing key if you haven't already done so.
 
 The following command generates an |~| RSA 3072 key suitable for signing SGX
 enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`.
