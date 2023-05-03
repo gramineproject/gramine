@@ -55,7 +55,7 @@ static void reader(void* lock, struct shared_state* m, size_t total_iterations) 
 }
 
 static int reader_(void* args_) {
-    struct reader_args* args = (struct reader_args*)args_;
+    const struct reader_args* args = (const struct reader_args*)args_;
     reader(args->lock, args->m, args->total_iterations);
     return 0;
 }
@@ -76,7 +76,7 @@ static void writer(void* lock, struct shared_state* m, size_t iterations, size_t
 }
 
 static int writer_(void* args_) {
-    struct writer_args* args = (struct writer_args*)args_;
+    const struct writer_args* args = (const struct writer_args*)args_;
     writer(args->lock, args->m, args->iterations, args->writers_delay_us);
     return 0;
 }
@@ -92,24 +92,27 @@ static void run_test(size_t iterations, size_t readers_num, size_t writers_num,
     if (!threads)
         errx(1, "calloc failed");
 
+    struct reader_args reader_args = {
+        .lock = lock,
+        .m = &m,
+        .total_iterations = iterations * writers_num,
+    };
+    struct writer_args writer_args = {
+        .lock = lock,
+        .m = &m,
+        .iterations = iterations,
+        .writers_delay_us = writers_delay_us,
+    };
+
     /* Spawn readers */
     for (size_t i = 0; i < readers_num; i++) {
-        int ret = thrd_create(&threads[i], reader_, &(struct reader_args) {
-            .lock = lock,
-            .m = &m,
-            .total_iterations = iterations * writers_num,
-        });
+        int ret = thrd_create(&threads[i], reader_, &reader_args);
         if (ret != thrd_success)
             errx(1, "thrd_create failed with ret = %d", ret);
     }
     /* Spawn writers */
     for (size_t i = readers_num; i < readers_num + writers_num; i++) {
-        int ret = thrd_create(&threads[i], writer_, &(struct writer_args) {
-            .lock = lock,
-            .m = &m,
-            .iterations = iterations,
-            .writers_delay_us = writers_delay_us,
-        });
+        int ret = thrd_create(&threads[i], writer_, &writer_args);
         if (ret != thrd_success)
             errx(1, "thrd_create failed with ret = %d", ret);
     }
@@ -132,7 +135,7 @@ struct run_test_args {
 };
 
 static int run_test_(void* args_) {
-    struct run_test_args* args = (struct run_test_args*)args_;
+    const struct run_test_args* args = (const struct run_test_args*)args_;
     run_test(args->iterations, args->readers_num, args->writers_num, args->writers_delay_us);
     return 0;
 }
@@ -161,13 +164,15 @@ int main(int argc, char* argv[]) {
     if (!threads)
         errx(1, "calloc failed");
 
+    struct run_test_args run_test_args = {
+        .iterations = iterations,
+        .readers_num = readers_num,
+        .writers_num = writers_num,
+        .writers_delay_us = writers_delay_us,
+    };
+
     for (size_t i = 0; i < instances_num; i++) {
-        int ret = thrd_create(&threads[i], run_test_, &(struct run_test_args) {
-            .iterations = iterations,
-            .readers_num = readers_num,
-            .writers_num = writers_num,
-            .writers_delay_us = writers_delay_us,
-        });
+        int ret = thrd_create(&threads[i], run_test_, &run_test_args);
         if (ret != thrd_success)
             errx(1, "thrd_create failed with ret = %d", ret);
     }
