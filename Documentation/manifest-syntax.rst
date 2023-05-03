@@ -132,7 +132,8 @@ of the three mutually exclusive options:
 - point ``loader.argv_src_file`` to a file
   containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
-If none of the above arguments-handling manifest options are specified in the manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
+If none of the above arguments-handling manifest options are specified in the
+manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
 encrypted file. The former allows to securely hardcode arguments, the latter
@@ -162,7 +163,8 @@ This option will generate the following extra configuration:
    - ``search``
    - ``options`` [``edns0``] [``inet6``] [``rotate``] [``use-vc``]
 
-  Unsupported keywords and malformed lines from ``/etc/resolv.conf`` are ignored.
+  Unsupported keywords and malformed lines from ``/etc/resolv.conf`` are
+  ignored.
 
 The functionality is achieved by taking the host's configuration via various
 APIs and reading the host's configuration files. In the case of Linux PAL,
