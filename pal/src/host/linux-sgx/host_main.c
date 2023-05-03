@@ -1230,6 +1230,7 @@ int main(int argc, char* argv[], char* envp[]) {
         ret = read_text_file_to_cstr(manifest_path, &manifest);
         if (ret < 0) {
             log_error("Reading manifest failed");
+            free(manifest_path);
             return ret;
         }
         free(manifest_path);
