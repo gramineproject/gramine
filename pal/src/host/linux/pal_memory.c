@@ -46,6 +46,11 @@ int _PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
 
 int _PalVirtualMemoryFree(void* addr, size_t size) {
     int ret = DO_SYSCALL(munmap, addr, size);
+    if (ret == -ENOMEM && FIRST_TIME()) {
+        log_error("Host Linux returned -ENOMEM on munmap(); this may happen because process's "
+                  "maximum number of mappings is exceeded. Gramine cannot handle this case. "
+                  "You may want to increase the value in /proc/sys/vm/max_map_count.");
+    }
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
