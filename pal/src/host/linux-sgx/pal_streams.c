@@ -34,24 +34,6 @@ struct hdl_header {
     size_t  data_size; /* total size of serialized PAL handle */
 };
 
-int _PalStreamUnmap(void* addr, uint64_t size) {
-    __UNUSED(addr);
-    __UNUSED(size);
-    assert(sgx_is_completely_within_enclave(addr, size));
-
-    if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
-        if (ret < 0) {
-            return ret;
-        }
-    } else {
-#ifdef ASAN
-        asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
-#endif
-    }
-    return 0;
-}
-
 static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
     int ret;
     const void* field = NULL;

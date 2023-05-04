@@ -176,9 +176,6 @@ applications.
 .. doxygenfunction:: PalStreamMap
    :project: pal
 
-.. doxygenfunction:: PalStreamUnmap
-   :project: pal
-
 .. doxygenfunction:: PalStreamSetLength
    :project: pal
 

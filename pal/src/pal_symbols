@@ -17,7 +17,6 @@ PalStreamOpen
 PalStreamRead
 PalStreamWrite
 PalStreamMap
-PalStreamUnmap
 PalStreamSetLength
 PalStreamFlush
 PalStreamDelete

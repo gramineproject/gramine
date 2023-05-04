@@ -351,14 +351,6 @@ int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t 
     return _PalStreamMap(handle, addr, prot, offset, size);
 }
 
-int PalStreamUnmap(void* addr, size_t size) {
-    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
-    }
-
-    return _PalStreamUnmap(addr, size);
-}
-
 /* _PalStreamSetLength for internal use. This function truncate the stream to certain length. This
  *  call might not be support for certain streams */
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {

@@ -416,19 +416,11 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
  * \param size    Size of the requested mapping. Must be non-zero and properly aligned.
  *
  * \returns 0 on success, negative error code on failure.
+ *
+ * Use `PalVirtualMemoryFree` to unmap the file.
  */
 int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size);
-
-/*!
- * \brief Unmap virtual memory that is backed by a file stream.
- *
- * \returns 0 on success, negative error code on failure.
- *
- * `addr` and `size` must be aligned at the allocation alignment.
- * `[addr; addr+size)` must be a continuous memory range without any holes.
- */
-int PalStreamUnmap(void* addr, size_t size);
 
 /*!
  * \brief Set the length of the file referenced by handle to `length`.

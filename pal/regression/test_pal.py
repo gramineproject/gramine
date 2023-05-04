@@ -150,7 +150,6 @@ class TC_02_Symbols(RegressionTestCase):
         'PalStreamWrite',
         'PalStreamDelete',
         'PalStreamMap',
-        'PalStreamUnmap',
         'PalStreamSetLength',
         'PalStreamFlush',
         'PalSendHandle',

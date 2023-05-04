@@ -37,18 +37,6 @@ int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
     return 0;
 }
 
-/* _PalStreamUnmap for internal use. Unmap stream at certain memory address. The memory is unmapped
- *  as a whole.*/
-int _PalStreamUnmap(void* addr, uint64_t size) {
-    /* Just let the kernel tell us if the mapping isn't good. */
-    int ret = DO_SYSCALL(munmap, addr, size);
-
-    if (ret < 0)
-        return -PAL_ERROR_DENIED;
-
-    return 0;
-}
-
 int handle_serialize(PAL_HANDLE handle, void** data) {
     const void* field = NULL;
     size_t field_size = 0;

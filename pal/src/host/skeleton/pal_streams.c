@@ -10,10 +10,6 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _PalStreamUnmap(void* addr, uint64_t size) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

@@ -75,9 +75,9 @@ int main(int argc, char** argv, char** envp) {
             memcpy(buffer2, mem1 + 200, 40);
             print_hex("Map Test 2 (200th - 240th): %s\n", buffer2, 40);
 
-            ret = PalStreamUnmap(mem1, PAGE_SIZE);
+            ret = PalVirtualMemoryFree(mem1, PAGE_SIZE);
             if (ret < 0) {
-                pal_printf("PalStreamUnmap failed\n");
+                pal_printf("PalVirtualMemoryFree failed\n");
                 return 1;
             }
             ret = mem_bkeep_free((uintptr_t)mem1, PAGE_SIZE);
