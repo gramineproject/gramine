@@ -34,7 +34,7 @@ struct writer_args {
     size_t writers_delay_us;
 };
 
-/* Keeps its own fibonacci sequence and synchronizes it with the shared one. */
+/* Keeps its own fibonacci sequence and synchronizes it with the shared ones. */
 static void reader(void* lock, struct shared_state* m, size_t total_iterations) {
     uint64_t a = 0, b = 1;
     size_t current_it = 0;
@@ -65,10 +65,11 @@ static void writer(void* lock, struct shared_state* m, size_t iterations, size_t
         gramine_rwlock_write_lock(lock);
         /* Computing fibonacci this exact way doesn't make much sense, but we need some workload
          * to be executed for testing. */
-        *m = (struct shared_state) {
-            m->b, m->a + m->b,
-            m->d, m->c + m->d
-        };
+        m->b += m->a;
+        m->a = m->b - m->a;
+        thrd_yield();
+        m->d += m->c;
+        m->c = m->d - m->c;
         gramine_rwlock_write_unlock(lock);
         if (thrd_sleep(&(struct timespec){.tv_nsec = writers_delay_us * 1000}, NULL) < -1)
             errx(1, "thrd_sleep failed");

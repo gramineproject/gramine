@@ -107,11 +107,17 @@ long handle_libos_call(int number, unsigned long arg1, unsigned long arg2) {
             return run_test((const char*)arg1);
 
         case GRAMINE_CALL_RWLOCK_CREATE: {
+            /* TODO: Change rwlock_create() to return `int` and then change this place analogously
+             * (currently it's interpreted as true/false). */
             struct libos_rwlock* lock = malloc(sizeof(*lock));
             if (!lock)
                 return 0;
+            if (!rwlock_create(lock)) {
+                free(lock);
+                return 0;
+            }
             *(struct libos_rwlock**)arg1 = lock;
-            return rwlock_create(lock);
+            return 1;
         }
         case GRAMINE_CALL_RWLOCK_DESTROY:
             rwlock_destroy((struct libos_rwlock*)arg1);
