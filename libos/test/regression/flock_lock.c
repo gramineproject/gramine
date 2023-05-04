@@ -1,3 +1,15 @@
+/* SPDX-License-Identifier: LGPL-3.0-or-later */
+/* Copyright (C) 2023 Intel Corporation
+ *                    Liang Ma <liang3.ma@intel.com>
+ */
+
+/*
+ * Test for `flock` syscall (`flock(LOCK_EX/LOCK_SH/LOCK_UN`). We assert that the calls succeed (or
+ * taking a lock fails), and log all details for debugging purposes.
+ *
+ * The tests involve multithreaded and dup case.
+ */
+
 #define _GNU_SOURCE
 #include <assert.h>
 #include <err.h>
@@ -76,17 +88,14 @@ static void read_pipe(int pipe[2]) {
 static void test_flock_dup_open(void) {
     printf("testing locks with the dup and open...\n");
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-
     try_flock(fd, LOCK_EX, 0);
 
     int fd2 = CHECK(dup(fd));
-    
     try_flock(fd2, LOCK_EX, 0);
     try_flock(fd, LOCK_UN, 0);
     try_flock(fd2, LOCK_EX, 0);
 
     int fd3 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    
     CHECK(close(fd));
     try_flock(fd3, LOCK_EX | LOCK_NB, -1);
     CHECK(close(fd2));
@@ -97,7 +106,6 @@ static void test_flock_dup_open(void) {
 static void* thread_flock_first(void* arg) {
     struct thread_args* args = (struct thread_args*) arg;
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    
     try_flock(fd, LOCK_EX | LOCK_NB, 0);
     write_pipe(args->pipes[0]);
 
