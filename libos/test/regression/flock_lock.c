@@ -1,15 +1,3 @@
-/* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2023 Intel Corporation
- *                    Liang Ma <liang3.ma@intel.com>
- */
-
-/*
- * Test for `flock` syscall (`flock(LOCK_EX/LOCK_SH/LOCK_UN`). We assert that the calls succeed (or
- * taking a lock fails), and log all details for debugging purposes.
- *
- * The tests involve multithreaded and dup case.
- */
-
 #define _GNU_SOURCE
 #include <assert.h>
 #include <err.h>
@@ -25,7 +13,6 @@
 
 #include "common.h"
 
-#define TEST_DIR "tmp/"
 #define TEST_FILE "tmp/lock_file"
 
 struct thread_args {

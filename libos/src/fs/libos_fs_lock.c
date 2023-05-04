@@ -146,9 +146,9 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 }
 
 /*
- * Find first lock that conflicts with `pl`. for `fcntl` case (pl->handle_id == 0), two locks 
- * conflict if they have different PIDs, their ranges overlap, and at least one of them is a 
- * write lock. For `flock` case, Two locks conflict if they have different handle IDs or at 
+ * Find first lock that conflicts with `pl`. For `fcntl` case (pl->handle_id == 0), two locks 
+ * conflict if they have different PIDs, their ranges overlap, or at least one of them is a 
+ * write lock. For `flock` case, two locks conflict if they have different handle IDs or at 
  * least one of them is a write lock.
  */
 static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
@@ -189,13 +189,12 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
     return 0;
 }
 
-/*
- * Main part of `posix_lock_set`. Adds/removes locks based on `pl->type`, assumes 
+/* Main part of `posix_lock_set`. Adds/removes locks based on `pl->type`, assumes 
  * we already verified there are no conflicts. For `fcntl` (where pl->handle_id == 0), 
- * replaces existing locks for a given PID, and merges adjacent. For `flock`, replaces 
- * locks for a handle ID.
+ * replaces existing locks for a given PID, and merges adjacent locks if possible. 
+ * For `flock`, replaces locks for a handle ID.
  *
- * See also Linux sources (`fs/locks.c`) for a similar implementation.
+ * See also Linux sources (`fs/locks.c`) for a similar implementation for `fcntl`.
  */
 static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     assert(locked(&g_fs_lock_lock));
@@ -210,13 +209,6 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
             return -ENOMEM;
     }
 
-    /* Extra lock that we might need when splitting existing one. */
-    struct posix_lock* extra = malloc(sizeof(*extra));
-    if (!extra) {
-        free(new);
-        return -ENOMEM;
-    }
-
     /* Target range: we will be changing it when merging existing locks. */
     uint64_t start = pl->start;
     uint64_t end   = pl->end;
@@ -228,6 +220,13 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     struct posix_lock* cur;
     struct posix_lock* tmp;
     if (pl->handle_id == 0) {
+        /* Extra lock that we might need when splitting existing one. */
+        struct posix_lock* extra = malloc(sizeof(*extra));
+        if (!extra) {
+            free(new);
+            return -ENOMEM;
+        }
+
         LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
             if (cur->pid < pl->pid) {
                 prev = cur;
@@ -326,6 +325,9 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
                 }
             }
         }
+        
+    if (extra)
+        free(extra);  
     } else {
         LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
             if (cur->handle_id == pl->handle_id) {
@@ -364,8 +366,6 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
         }
     }
 
-    if (extra)
-        free(extra);
     return 0;
 }
 
