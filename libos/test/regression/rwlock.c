@@ -3,6 +3,7 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
+#define _GNU_SOURCE
 #include <err.h>
 #include <errno.h>
 #include <stdio.h>
@@ -71,8 +72,8 @@ static void writer(void* lock, struct shared_state* m, size_t iterations, size_t
         m->d += m->c;
         m->c = m->d - m->c;
         gramine_rwlock_write_unlock(lock);
-        if (thrd_sleep(&(struct timespec){.tv_nsec = writers_delay_us * 1000}, NULL) < -1)
-            errx(1, "thrd_sleep failed");
+
+        CHECK(usleep(writers_delay_us));
     }
 }
 
