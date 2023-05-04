@@ -148,7 +148,7 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 /*
  * Find first lock that conflicts with `pl`. For `fcntl` case (pl->handle_id == 0), two locks 
  * conflict if they have different PIDs, their ranges overlap, or at least one of them is a 
- * write lock. For `flock` case, two locks conflict if they have different handle IDs or at 
+ * write lock. For `flock` case, two locks conflict if they have different handle IDs and at 
  * least one of them is a write lock.
  */
 static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
@@ -367,10 +367,6 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
             return -ENOMEM;
     }
 
-    /* Target lock range: for `flock` lock the whole file */
-    uint64_t start = pl->start;
-    uint64_t end   = pl->end;
-
     struct posix_lock* cur;
     struct posix_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
@@ -385,8 +381,8 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
         assert(pl->type != F_UNLCK);
 
         new->type = pl->type;
-        new->start = start;
-        new->end = end;
+        new->start = pl->start;
+        new->end = pl->end;
         new->pid = pl->pid;
         new->handle_id = pl->handle_id;
 
@@ -420,7 +416,6 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
                 } else {
                     result = _flock_posix_lock_set(fs_lock, &req->pl);
                 }
-                
                 LISTP_DEL(req, &fs_lock->posix_lock_requests, list);
 
                 /* Notify the waiter that we processed their request. Note that the result might
@@ -485,7 +480,6 @@ static int posix_lock_set_or_add_request(struct libos_dentry* dent, struct posix
         } else {
             ret = _flock_posix_lock_set(fs_lock, pl);
         }
-        
         if (ret < 0)
             goto out;
         posix_lock_process_requests(fs_lock);
