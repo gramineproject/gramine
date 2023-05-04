@@ -367,7 +367,8 @@ struct libos_handle* get_new_handle(void) {
     }
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
-    new_handle->id= ((uint64_t)g_process.pid << 32) | __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
+    new_handle->id= ((uint64_t)g_process.pid << 32) 
+                     | __atomic_add_fetch(&local_counter, 1, __ATOMIC_SEQ_CST);
     return new_handle;
 }
 
