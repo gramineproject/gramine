@@ -134,9 +134,7 @@ static void* thread_flock_second(void* arg) {
 
 static void test_flock_multithread(void) {
     printf("testing flock with multithread...\n");
-    
     pthread_t threads[2];
-     
     struct thread_args args;
     open_pipes(args.pipes);
 
@@ -146,7 +144,6 @@ static void test_flock_multithread(void) {
     for (int i = 0; i < 2; i++) {
         CHECK(pthread_join(threads[i], NULL)); 
     }
-    
     close_pipes(args.pipes);
 }
 
@@ -156,6 +153,7 @@ int main(void) {
     test_flock_dup_open();
     test_flock_multithread();
 
+    CHECK(unlink(TEST_FILE));
     printf("TEST OK\n");
     return 0;
 }
