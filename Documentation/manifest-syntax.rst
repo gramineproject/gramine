@@ -964,15 +964,6 @@ See :ref:`vtune-sgx-profiling` for more information.
 Deprecated options
 ------------------
 
-Experimental sysfs topology support
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    fs.experimental__enable_sysfs_topology = [true|false]
-
-This feature is now enabled by default and the option was removed.
-
 Attestation and quotes (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

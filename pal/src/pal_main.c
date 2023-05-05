@@ -586,13 +586,6 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     }
     g_pal_public_state.mem_total = _PalMemoryQuota();
 
-    if (toml_key_exists(g_pal_public_state.manifest_root,
-                        "fs.experimental__enable_sysfs_topology")) {
-        // TODO: Deprecation started in v1.2, drop in 2 releases.
-        log_warning("fs.experimental__enable_sysfs_topology is deprecated and sysfs topology is "
-                    "enabled by default now.");
-    }
-
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)
         INIT_FAIL("Unable to load loader.entrypoint: %ld", ret);
