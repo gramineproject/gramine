@@ -705,20 +705,9 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     }
 
     if (thread_num_int64 < 0) {
-        /* TODO: sgx.thread_num is deprecated in v1.4, remove in v1.5 */
-        ret = toml_int_in(manifest_root, "sgx.thread_num", /*defaultval=*/-1, &thread_num_int64);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.thread_num'");
-            ret = -EINVAL;
-            goto out;
-        }
-        if (thread_num_int64 < 0) {
-            log_error("'sgx.max_threads' not found in the manifest");
-            ret = -EINVAL;
-            goto out;
-        }
-        log_error("Detected deprecated syntax: 'sgx.thread_num'. Consider switching to "
-                  "'sgx.max_threads'.");
+        log_error("'sgx.max_threads' not found in the manifest");
+        ret = -EINVAL;
+        goto out;
     }
 
     if (!thread_num_int64) {

@@ -998,12 +998,3 @@ This syntax specified how much additional memory Gramine used to reserve for its
 internal use (e.g., metadata for trusted files, internal handles,
 etc.). Currently Gramine correctly tracks all internal memory allocations and
 does not require this workaround.
-
-Number of threads (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.thread_num = [NUM]
-
-This name was ambiguous and was replaced with ``sgx.max_threads``.
