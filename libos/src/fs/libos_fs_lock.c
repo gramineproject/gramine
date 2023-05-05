@@ -122,6 +122,7 @@ static void posix_lock_dump(struct fs_lock* fs_lock) {
         } else {
             buf_printf(&buf, " %c[%lu..%lu]", c, pl->start, pl->end);
         }
+        buf_printf(&buf, ":%lu", pl->handle_id);
     }
     if (LISTP_EMPTY(&fs_lock->posix_locks)) {
         buf_printf(&buf, "no locks");
@@ -146,8 +147,8 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 }
 
 /*
- * Find first lock that conflicts with `pl`. For `fcntl` case (pl->handle_id == 0), two locks 
- * conflict if they have different PIDs, their ranges overlap, or at least one of them is a 
+ * Find first lock that conflicts with `pl`. For `fcntl` case (pl->handle_id == 0), two locks
+ * conflict if they have different PIDs, their ranges overlap, or at least one of them is a
  * write lock. For `flock` case, two locks conflict if they have different handle IDs and at 
  * least one of them is a write lock.
  */

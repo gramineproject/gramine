@@ -294,7 +294,7 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry) {
+    if (handle && handle->dentry && (handle->id == 0 || handle->ref_count == 1)) {
         /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
          * if the process holds other handles for that file, or duplicated FDs for the same
          * handle. */
@@ -328,9 +328,8 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
         handle = __detach_fd_handle(handle_map->map[fd], flags, handle_map);
 
     unlock(&handle_map->lock);
-    if (handle && (handle->id == 0 || handle->ref_count == 1)) {
-        (void)clear_posix_locks(handle);
-    }
+
+    (void)clear_posix_locks(handle);
 
     return handle;
 }

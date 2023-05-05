@@ -142,6 +142,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     struct libos_handle* hdl = get_fd_handle(fd, &flags, handle_map);
     if (!hdl)
         return -EBADF;
+    /* To distinguish from `flock` */
     hdl->id = 0;
 
     switch (cmd) {
@@ -296,7 +297,13 @@ long libos_syscall_flock(int fd, int operation) {
     if (!hdl)
         return -EBADF;
 
-    struct flock fl;
+    struct flock fl = {
+        .l_type   = F_RDLCK,
+        .l_whence = SEEK_SET,
+        .l_start  = 0,
+        .l_len    = 0,
+        .l_pid    = 0
+    };
 
     switch (operation & ~LOCK_NB) {
         case LOCK_EX:
@@ -312,8 +319,6 @@ long libos_syscall_flock(int fd, int operation) {
             ret = -EINVAL;
             goto out;
     }
-
-    fl.l_whence = SEEK_SET;
 
     struct posix_lock pl;
     ret = flock_to_posix_lock(&fl, hdl, &pl);
