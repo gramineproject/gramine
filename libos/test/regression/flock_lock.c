@@ -99,38 +99,36 @@ static void test_flock_dup_open(void) {
     CHECK(close(fd));
     try_flock(fd3, LOCK_EX | LOCK_NB, -1);
     CHECK(close(fd2));
-    try_flock(fd3, LOCK_SH | LOCK_NB, 0);
+    try_flock(fd3, LOCK_EX | LOCK_NB, 0);
     CHECK(close(fd3));
 }
 
 static void* thread_flock_first(void* arg) {
     struct thread_args* args = (struct thread_args*) arg;
+
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     try_flock(fd, LOCK_EX | LOCK_NB, 0);
     write_pipe(args->pipes[0]);
-
     read_pipe(args->pipes[1]);
     try_flock(fd, LOCK_UN, 0);
     write_pipe(args->pipes[0]);
-
     read_pipe(args->pipes[1]);
     try_flock(fd, LOCK_SH | LOCK_NB, 0);
+
     return arg;
 }
 
 static void* thread_flock_second(void* arg) {
     struct thread_args* args = (struct thread_args*) arg;
-    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
 
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     read_pipe(args->pipes[0]);
     try_flock(fd, LOCK_EX | LOCK_NB, -1);
-    
     write_pipe(args->pipes[1]);
-
     read_pipe(args->pipes[0]);
     try_flock(fd, LOCK_SH | LOCK_NB, 0);
-
     write_pipe(args->pipes[1]);
+
     return arg;
 }
 
