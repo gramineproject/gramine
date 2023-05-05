@@ -297,13 +297,7 @@ long libos_syscall_flock(int fd, int operation) {
     if (!hdl)
         return -EBADF;
 
-    struct flock fl = {
-        .l_type   = F_RDLCK,
-        .l_whence = SEEK_SET,
-        .l_start  = 0,
-        .l_len    = 0,
-        .l_pid    = 0
-    };
+    struct flock fl = { .l_whence = SEEK_SET };
 
     switch (operation & ~LOCK_NB) {
         case LOCK_EX:

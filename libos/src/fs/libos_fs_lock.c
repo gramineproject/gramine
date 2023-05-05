@@ -382,8 +382,8 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
         assert(pl->type != F_UNLCK);
 
         new->type = pl->type;
-        new->start = pl->start;
-        new->end = pl->end;
+        new->start = 0;
+        new->end = FS_LOCK_EOF;
         new->pid = pl->pid;
         new->handle_id = pl->handle_id;
 
