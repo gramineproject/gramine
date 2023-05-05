@@ -55,42 +55,25 @@ int parse_attestation_type(toml_table_t* manifest_root,
         goto out;
 
     ret = toml_string_in(manifest_root, "sgx.remote_attestation", &sgx_attestation_type_str);
-    if (!ret) {
-        if (sgx_attestation_type_str) {
-            if (!strcmp(sgx_attestation_type_str, "none")) {
-                attestation_type = SGX_ATTESTATION_NONE;
-            } else if (!strcmp(sgx_attestation_type_str, "epid")) {
-                attestation_type = SGX_ATTESTATION_EPID;
-            } else if (!strcmp(sgx_attestation_type_str, "dcap")) {
-                attestation_type = SGX_ATTESTATION_DCAP;
-            } else {
-                log_error("Unknown 'sgx.remote_attestation' type (recognized values are "
-                          "\"none\", \"epid\" and \"dcap\")");
-                ret = -EINVAL;
-                goto out;
-            }
-        }
-    } else {
-        /* TODO: Bool syntax is deprecated in v1.3, remove 2 versions later. */
-        bool sgx_remote_attestation_enabled;
-        ret = toml_bool_in(manifest_root, "sgx.remote_attestation", /*defaultval=*/false,
-                           &sgx_remote_attestation_enabled);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.remote_attestation' (the value must be \"none\", \"epid\" "
-                      "or \"dcap\", or in case of legacy syntax `true` or `false`)");
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.remote_attestation'");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (sgx_attestation_type_str) {
+        if (!strcmp(sgx_attestation_type_str, "none")) {
+            attestation_type = SGX_ATTESTATION_NONE;
+        } else if (!strcmp(sgx_attestation_type_str, "epid")) {
+            attestation_type = SGX_ATTESTATION_EPID;
+        } else if (!strcmp(sgx_attestation_type_str, "dcap")) {
+            attestation_type = SGX_ATTESTATION_DCAP;
+        } else {
+            log_error("Unknown 'sgx.remote_attestation' type (recognized values are \"none\", "
+                      "\"epid\" and \"dcap\")");
             ret = -EINVAL;
             goto out;
         }
-        if (sgx_remote_attestation_enabled) {
-            /* legacy syntax: use EPID if SPID is a non-empty string in manifest, otherwise DCAP */
-            if (sgx_ra_client_spid_str && strlen(sgx_ra_client_spid_str)) {
-                attestation_type = SGX_ATTESTATION_EPID;
-            } else {
-                attestation_type = SGX_ATTESTATION_DCAP;
-            }
-        }
-        log_always("Detected deprecated syntax 'sgx.remote_attestation = true|false'; "
-                   "consider using 'sgx.remote_attestation = \"none\"|\"epid\"|\"dcap\"'.");
     }
 
     *out_attestation_type = attestation_type;

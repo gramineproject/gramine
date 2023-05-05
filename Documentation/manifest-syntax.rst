@@ -973,19 +973,6 @@ Experimental sysfs topology support
 
 This feature is now enabled by default and the option was removed.
 
-Attestation and quotes (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.remote_attestation = [true|false]
-
-This syntax specified whether to enable SGX remote attestation. The boolean
-value has been replaced with the string value. The ``none`` value in the new
-syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
-explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
-``true`` boolean value in the deprecated syntax.
-
 Gramine internal metadata size (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
