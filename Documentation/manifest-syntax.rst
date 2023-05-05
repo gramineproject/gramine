@@ -986,19 +986,6 @@ syntax corresponds to the ``false`` boolean value in the deprecated syntax. The
 explicit ``epid`` and ``dcap`` values in the new syntax replace the ambiguous
 ``true`` boolean value in the deprecated syntax.
 
-Gramine internal metadata size (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    loader.pal_internal_mem_size = "[SIZE]"
-    (default: "0")
-
-This syntax specified how much additional memory Gramine used to reserve for its
-internal use (e.g., metadata for trusted files, internal handles,
-etc.). Currently Gramine correctly tracks all internal memory allocations and
-does not require this workaround.
-
 Number of threads (deprecated syntax)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
