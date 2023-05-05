@@ -382,6 +382,7 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
         assert(pl->type != F_UNLCK);
 
         new->type = pl->type;
+        /* Lock the whole file */
         new->start = 0;
         new->end = FS_LOCK_EOF;
         new->pid = pl->pid;

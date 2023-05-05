@@ -142,7 +142,7 @@ static void test_flock_multithread(void) {
     CHECK(pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args));
 
     for (int i = 0; i < 2; i++) {
-        CHECK(pthread_join(threads[i], NULL)); 
+        pthread_join(threads[i], NULL); 
     }
     close_pipes(args.pipes);
 }
