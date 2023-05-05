@@ -972,12 +972,3 @@ Experimental sysfs topology support
     fs.experimental__enable_sysfs_topology = [true|false]
 
 This feature is now enabled by default and the option was removed.
-
-Number of threads (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sgx.thread_num = [NUM]
-
-This name was ambiguous and was replaced with ``sgx.max_threads``.
