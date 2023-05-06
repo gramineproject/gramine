@@ -144,7 +144,7 @@ static void test_flock_multithread(void) {
         err(ret, "pthread_create");
     }
 
-    ret = pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args) != 0) {
+    ret = pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args);
     if (ret != 0) {
         err(ret, "pthread_create");
     }
