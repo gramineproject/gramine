@@ -134,15 +134,25 @@ static void* thread_flock_second(void* arg) {
 
 static void test_flock_multithread(void) {
     printf("testing flock with multithread...\n");
+    int ret;
     pthread_t threads[2];
     struct thread_args args;
     open_pipes(args.pipes);
 
-    CHECK(pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args));
-    CHECK(pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args));
+    ret = pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args);
+    if (ret != 0) {
+        err(ret, "pthread_create");
+    }
+
+    ret = pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args) != 0) {
+    if (ret != 0) {
+        err(ret, "pthread_create");
+    }
 
     for (int i = 0; i < 2; i++) {
-        pthread_join(threads[i], NULL); 
+        if ((ret = pthread_join(threads[i], NULL)) != 0) {
+            err(ret, "pthread_join");
+        } 
     }
     close_pipes(args.pipes);
 }

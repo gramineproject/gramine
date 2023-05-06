@@ -298,7 +298,7 @@ static int clear_posix_locks(struct libos_handle* handle) {
         /* Clear POSIX locks for a file. In `fcntl` case, we are required to do that every time
          * a FD is closed, even if the process holds other handles for that file, or duplicated 
          * FDs for the same handle. In `flock` case, we should do that only when a fd's related
-         * `handle->ref_count == 1` */
+         * `handle->ref_count == 1`. */
         struct posix_lock pl = {
             .type = F_UNLCK,
             .start = 0,

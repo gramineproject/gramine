@@ -963,7 +963,7 @@ class TC_30_Syscall(RegressionTestCase):
     def test_121_gethostname_pass_etc(self):
         stdout, _ = self.run_binary(['hostname_extra_runtime_conf', socket.gethostname()])
         self.assertIn("TEST OK", stdout)
-    
+
     def test_122_flock_lock(self):
         try:
             stdout, _ = self.run_binary(['flock_lock'])
