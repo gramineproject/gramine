@@ -15,13 +15,11 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <stdbool.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/wait.h>
-#include <unistd.h>
 #include <sys/file.h>
-#include <pthread.h>
+#include <unistd.h>
 
 #include "common.h"
 
@@ -136,7 +134,7 @@ static void test_flock_multithread(void) {
     printf("testing flock with multithread...\n");
     int ret;
     pthread_t threads[2];
-    struct thread_args args;
+    struct thread_args args = {.pipes = {{-1, -1}, {-1, -1}}};
     open_pipes(args.pipes);
 
     ret = pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args);
