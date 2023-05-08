@@ -132,7 +132,7 @@ of the three mutually exclusive options:
 - point ``loader.argv_src_file`` to a file
   containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
-If none of the above arguments-handling manifest options are specified in the
+If none of the above argument-handling manifest options are specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
