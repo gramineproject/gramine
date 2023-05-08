@@ -1038,6 +1038,16 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_ioctl'])
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skipUnless(IS_VM and HAS_SGX, 'Requires /dev/gramine_test_dev and SGX')
+    def test_004_device_ioctl_fail(self):
+        try:
+            self.run_binary(['device_ioctl_fail'])
+            self.fail('device_ioctl_fail unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stdout = e.stdout.decode()
+            self.assertRegex(stdout, r'ioctl[(]devfd, GRAMINE_TEST_DEV_IOCTL_REWIND[)].*'
+                                     r'Function not implemented')
+
     def test_010_path(self):
         stdout, _ = self.run_binary(['proc_path'])
         self.assertIn('proc path test success', stdout)
