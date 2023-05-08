@@ -1,0 +1,24 @@
+{% set entrypoint = "device_ioctl" -%}
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/dev/gramine_test_dev", uri = "dev:/dev/gramine_test_dev" },
+]
+
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
+
+sgx.allowed_ioctls = [
+  # no allowed IOCTLs to force test failure (on SGX)
+]
