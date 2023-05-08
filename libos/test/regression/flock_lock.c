@@ -134,7 +134,7 @@ static void test_flock_multithread(void) {
     printf("testing flock with multithread...\n");
     int ret;
     pthread_t threads[2];
-    struct thread_args args = {.pipes = {{-1, -1}, {-1, -1}}};
+    struct thread_args args = {0};
     open_pipes(args.pipes);
 
     ret = pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args);
