@@ -1046,7 +1046,7 @@ class TC_40_FileSystem(RegressionTestCase):
         except subprocess.CalledProcessError as e:
             stdout = e.stdout.decode()
             self.assertRegex(stdout, r'ioctl[(]devfd, GRAMINE_TEST_DEV_IOCTL_REWIND[)].*'
-                                     r'Function not implemented')
+                                     r'BLABLABLA Function not implemented')
 
     def test_010_path(self):
         stdout, _ = self.run_binary(['proc_path'])
