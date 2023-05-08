@@ -1,4 +1,14 @@
 version: 2
+
+# The recent version of urllib3 (v2.0) only supports OpenSSL 1.1.1+. However, the ReadTheDocs
+# engine that we use for generating our web documentation by default uses older OpenSSL. The
+# workaround is to pin a specific OS distro and Python version.
+# See also https://github.com/readthedocs/readthedocs.org/issues/10290.
+build:
+    os: ubuntu-22.04
+    tools:
+        python: "3.11"
+
 python:
     install:
         - requirements: Documentation/requirements.txt
