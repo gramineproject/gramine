@@ -199,7 +199,7 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
  */
 static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     assert(locked(&g_fs_lock_lock));
-
+    assert(pl->handle_id == 0);
     /* Preallocate new locks first, so that we don't fail after modifying something. */
 
     /* Lock to be added. Not necessary for F_UNLCK, because we're only removing existing locks. */
@@ -359,6 +359,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
 
 static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     assert(locked(&g_fs_lock_lock));
+    assert(pl->handle_id);
 
     /* Lock to be added. Not necessary for F_UNLCK, because we're only removing existing locks. */
     struct posix_lock* new = NULL;
