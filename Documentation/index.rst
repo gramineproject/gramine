@@ -27,8 +27,8 @@ Ready-made protected applications
 =================================
 
 Confidential compute images are ready-made solutions for popular open source
-projects such as `PyTorch <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/pytorch>`_
-and `Redis <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/redis>`_.
+projects such as `PyTorch <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/pytorch>`_
+and `Redis <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/redis>`_.
 These images enable you to customize your environment through interactive
 scripts. The result is an image that includes your specific machine-learning
 application, common dependencies, and a manifest file.

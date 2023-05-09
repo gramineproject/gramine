@@ -16,5 +16,5 @@ file that specifies security policies to enforce for your workload.
 
 Current list of solutions and installation instructions:
 
-- `Redis <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/redis>`_
-- `PyTorch <https://github.com/gramineproject/contrib/tree/master/Curated-Apps/workloads/pytorch>`_
+- `Redis <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/redis>`_
+- `PyTorch <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/pytorch>`_
