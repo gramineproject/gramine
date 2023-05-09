@@ -3,6 +3,12 @@
 Ready-made confidential protected images
 ========================================
 
+.. note::
+    This is not an official part of Gramine.
+    The offering mentioned here wasn't thoroughly reviewed by the Gramine
+    maintainers.
+    Use at your own risk!
+
 Confidential Compute images with Gramine are ready-made solutions for popular
 open-source projects, such as PyTorch and Redis.
 Customize your environment through interactive scripts.

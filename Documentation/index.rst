@@ -20,26 +20,20 @@ This page mimics the table of contents in the left column.
 Gramine deployment options
 --------------------------
 
-There are three deployment options for Gramine -- each option has a dedicated
-section in the menu and an introduction is provided below.
-
-Ready-made protected applications
-=================================
-
-Confidential compute images are ready-made solutions for popular open source
-projects such as `PyTorch <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/pytorch>`_
-and `Redis <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/redis>`_.
-These images enable you to customize your environment through interactive
-scripts. The result is an image that includes your specific machine-learning
-application, common dependencies, and a manifest file.
-
-.. note::  These confidential compute images only run on machines that support
-   Intel SGX.
-
-See the :doc:`curated-installation` article for more information.
+There are two deployment options for Gramine: protect your container and protect
+your application.
+Each option has a dedicated section in the menu and an introduction is provided
+below.
 
 Protect your container
 ======================
+
+In this section, we describe how you can protect your Docker container using
+Gramine Shielded Containers and how you can use ready-made solutions for popular
+open source projects.
+
+Gramine Shielded Containers
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Docker images are used to run applications in the cloud.
 The Gramine Shielded Container tool transforms a Docker image into a graminized
@@ -52,6 +46,23 @@ It enables you to run an application on a Docker image and keep it protected.
   Build a Docker image that contains the Gramine functionality.
 - `Download the Gramine Shielded Container tool <https://github.com/gramineproject/gsc>`_ -
   Protect the Docker image containing the application you want to protect.
+
+Ready-made protected applications
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Confidential compute images are ready-made solutions for popular open source
+projects such as `PyTorch <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/pytorch>`_
+and `Redis <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X/workloads/redis>`_.
+These images enable you to customize your environment through interactive
+scripts.
+The result is an image that includes your specific machine-learning
+application, common dependencies, and a manifest file.
+
+.. note::  These confidential compute images only run on machines that support
+   Intel SGX.
+
+See the :doc:`curated-installation` article for more information.
+
 
 Protect your application
 ========================
@@ -148,18 +159,11 @@ Indices and tables
 
 .. toctree::
    :hidden:
-   :caption: Ready-made protected applications
-   :maxdepth: 1
-
-   curated-installation
-
-
-.. toctree::
-   :hidden:
    :caption: Protect your container
    :maxdepth: 1
 
    gsc-installation
+   curated-installation
 
 
 .. toctree::
