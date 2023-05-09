@@ -18,11 +18,12 @@ Most of the PAL Host ABI is adapted from the Drawbridge library OS.
 PAL as loader
 -------------
 
-Regardless of the actual implementation, we require PAL to be able to load ELF-format binaries
-as executables or dynamic libraries and perform the necessary dynamic relocation. PAL needs
-to look up all unresolved symbols in loaded binaries and resolve the ones matching the names of
-PAL APIs. PAL does not and will not resolve other unresolved symbols, so the loaded libraries and
-executables must resolve them afterwards.
+Each PAL implementation must support loading and dynamic relocation of ELF-format executables and
+dynamic libraries.
+PAL needs to look up all unresolved symbols in loaded binaries and resolve the ones matching the
+names of PAL APIs.
+PAL does not and will not resolve other unresolved symbols, so the loaded libraries and executables
+must resolve them afterwards.
 
 After loading the binaries, PAL needs to load and interpret the manifest files. The manifest syntax
 is described in :doc:`../manifest-syntax`.

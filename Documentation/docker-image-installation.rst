@@ -1,4 +1,4 @@
-Gramine docker image
+Gramine Docker image
 ====================
 
 This Gramine image is a minimal distribution of Gramine: it contains only
