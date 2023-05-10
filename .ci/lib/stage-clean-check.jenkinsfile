@@ -57,13 +57,6 @@ stage('clean-check') {
         rm -rf /tmp/*.clean-check.clean/python/graminelibos/__pycache__
         rm -rf python/graminelibos/__pycache__
 
-        # on Ubuntu 18.04, git clean -Xf fails to remove packagecache directory itself
-        rm -rf \
-            /tmp/*.clean-check.clean/subprojects/*-* \
-            /tmp/*.clean-check.clean/subprojects/packagecache \
-            subprojects/*-* \
-            subprojects/packagecache
-
         ./scripts/clean-check
     '''
 

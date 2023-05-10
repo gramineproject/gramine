@@ -5,7 +5,6 @@ node() {
         'debian11',
         'ubuntu22.04',
         'ubuntu20.04',
-        'ubuntu18.04',
         'almalinux9',
         'almalinux8',
     ].each { distro ->
