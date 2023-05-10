@@ -22,7 +22,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "cpu.h"
 #include "libos_lock.h"
 
 struct libos_rwlock {
@@ -65,8 +64,7 @@ static inline void rwlock_read_lock(struct libos_rwlock* l) {
 }
 
 static inline void rwlock_read_unlock(struct libos_rwlock* l) {
-    RMB();
-    int64_t state = __atomic_sub_fetch(&l->state, 1, __ATOMIC_RELAXED);
+    int64_t state = __atomic_sub_fetch(&l->state, 1, __ATOMIC_RELEASE);
     if (state < 0) {
         rwlock_read_unlock_slow_path(l);
     }
