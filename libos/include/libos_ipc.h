@@ -281,8 +281,8 @@ struct libos_ipc_posix_lock {
     int type;
     uint64_t start;
     uint64_t end;
-    IDTYPE pid;
     uint64_t handle_id;
+    IDTYPE pid;
 
     bool wait;
     char path[]; /* null-terminated */

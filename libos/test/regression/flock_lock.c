@@ -23,7 +23,7 @@
 
 #include "common.h"
 
-#define TEST_FILE "tmp/lock_file"
+#define TEST_FILE "tmp/flock_file"
 
 struct thread_args {
     int pipes[2][2];
@@ -43,7 +43,7 @@ static const char* str_type(int type) {
 static void try_flock(int fd, int operation, int expect_ret) {
     int ret = flock(fd, operation);
     if (ret != expect_ret) {
-        errx(1, "flock(%d, %s) error return value = %d\n", fd, str_type(operation), ret);
+        errx(1, "flock(%d, %s) error with return value = %d, expected value = %d", fd, str_type(operation), ret, expect_ret);
     }
 }
 
@@ -68,7 +68,7 @@ static void write_pipe(int pipe[2]) {
         ret = write(pipe[1], &c, sizeof(c));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
-        err(1, "write");
+        errx(1, "write");
 }
 
 static void read_pipe(int pipe[2]) {
@@ -78,7 +78,7 @@ static void read_pipe(int pipe[2]) {
         ret = read(pipe[0], &c, sizeof(c));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
-        err(1, "read");
+        errx(1, "read");
     if (ret == 0)
         errx(1, "pipe closed");
 }
@@ -102,7 +102,7 @@ static void test_flock_dup_open(void) {
 }
 
 static void* thread_flock_first(void* arg) {
-    struct thread_args* args = (struct thread_args*) arg;
+    struct thread_args* args = (struct thread_args*)arg;
 
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     try_flock(fd, LOCK_EX | LOCK_NB, 0);
@@ -112,12 +112,13 @@ static void* thread_flock_first(void* arg) {
     write_pipe(args->pipes[0]);
     read_pipe(args->pipes[1]);
     try_flock(fd, LOCK_SH | LOCK_NB, 0);
+    CHECK(close(fd));
 
     return arg;
 }
 
 static void* thread_flock_second(void* arg) {
-    struct thread_args* args = (struct thread_args*) arg;
+    struct thread_args* args = (struct thread_args*)arg;
 
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     read_pipe(args->pipes[0]);
@@ -126,6 +127,7 @@ static void* thread_flock_second(void* arg) {
     read_pipe(args->pipes[0]);
     try_flock(fd, LOCK_SH | LOCK_NB, 0);
     write_pipe(args->pipes[1]);
+    CHECK(close(fd));
 
     return arg;
 }
@@ -138,18 +140,16 @@ static void test_flock_multithread(void) {
     open_pipes(args.pipes);
 
     ret = pthread_create(&threads[0], NULL, thread_flock_first, (void*)&args);
-    if (ret != 0) {
-        err(1, "pthread_create");
-    }
+    if (ret != 0)
+        errx(1, "pthread_create");
 
     ret = pthread_create(&threads[1], NULL, thread_flock_second, (void*)&args);
-    if (ret != 0) {
-        err(1, "pthread_create");
-    }
+    if (ret != 0)
+        errx(1, "pthread_create");
 
     for (int i = 0; i < 2; i++) {
         if ((ret = pthread_join(threads[i], NULL)) != 0) {
-            err(1, "pthread_join");
+            errx(1, "pthread_join");
         } 
     }
     close_pipes(args.pipes);

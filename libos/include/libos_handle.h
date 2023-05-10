@@ -133,7 +133,9 @@ struct libos_epoll_handle {
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
-
+    
+    /* Unique id, works as an identifier for `flock` syscall. */
+    uint64_t id;
     refcount_t ref_count;
 
     struct libos_fs* fs;
@@ -199,9 +201,6 @@ struct libos_handle {
      * `read`, `seek` but not `pread`). This lock should be taken *before* `libos_handle.lock` and
      * `libos_inode.lock`. */
     struct libos_lock pos_lock;
-
-    /* Unique id, works as an identifier for `flock` syscall */
-    uint64_t id;
 };
 
 /* allocating / manage handle */

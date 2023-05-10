@@ -1349,9 +1349,6 @@ static void parse_flockop(struct print_buf* buf, va_list* ap) {
         case LOCK_UN:
             buf_puts(buf, "LOCK_UN");
             break;
-        case LOCK_NB:
-            buf_puts(buf, "LOCK_NB");
-            break;
         case LOCK_EX | LOCK_NB:
             buf_puts(buf, "LOCK_EX | LOCK_NB");
             break;

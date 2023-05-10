@@ -964,12 +964,12 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['hostname_extra_runtime_conf', socket.gethostname()])
         self.assertIn("TEST OK", stdout)
 
-    def test_122_flock_lock(self):
+    def test_130_flock_lock(self):
         try:
             stdout, _ = self.run_binary(['flock_lock'])
         finally:
-            if os.path.exists('tmp/lock_file'):
-                os.remove('tmp/lock_file')
+            if os.path.exists('tmp/flock_file'):
+                os.remove('tmp/flock_file')
         self.assertIn('TEST OK', stdout)
 
 class TC_31_Syscall(RegressionTestCase):

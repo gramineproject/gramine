@@ -5,7 +5,7 @@
  */
 
 /*
- * Implementation of system call "fcntl":
+ * Implementation of system call "fcntl" and `flock`:
  *
  * - F_DUPFD, F_DUPFD_CLOEXEC (duplicate a file descriptor)
  * - F_GETFD, F_SETFD (file descriptor flags)
@@ -59,7 +59,8 @@ int set_handle_nonblocking(struct libos_handle* handle, bool on) {
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
  */
-static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struct posix_lock* pl) {
+static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, uint64_t handle_id,
+                               struct posix_lock* pl) {
     if (!(fl->l_type == F_RDLCK || fl->l_type == F_WRLCK || fl->l_type == F_UNLCK))
         return -EINVAL;
 
@@ -128,7 +129,7 @@ static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struc
     pl->start = start;
     pl->end = end;
     pl->pid = g_process.pid;
-    pl->handle_id = 0;
+    pl->handle_id = handle_id;
     return 0;
 }
 
@@ -142,8 +143,6 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     struct libos_handle* hdl = get_fd_handle(fd, &flags, handle_map);
     if (!hdl)
         return -EBADF;
-    /* To distinguish from `flock` */
-    hdl->id = 0;
 
     switch (cmd) {
         /* See `man fcntl` for the expected semantics of these commands. */
@@ -215,7 +214,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct posix_lock pl;
-            ret = flock_to_posix_lock(fl, hdl, &pl);
+            ret = flock_to_posix_lock(fl, hdl, /*handle_id=*/0, &pl);
             if (ret < 0)
                 break;
 
@@ -238,7 +237,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct posix_lock pl;
-            ret = flock_to_posix_lock(fl, hdl, &pl);
+            ret = flock_to_posix_lock(fl, hdl, /*handle_id=*/0, &pl);
             if (ret < 0)
                 break;
 
@@ -287,7 +286,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
  * unlocked, the lock will remain in effect until the file is unmapped. But in Gramine the
  * `mmap` doesn't influence the lock's state.
  */
-long libos_syscall_flock(int fd, int operation) {
+long libos_syscall_flock(int fd, unsigned int cmd) {
     int ret;
 
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
@@ -299,7 +298,7 @@ long libos_syscall_flock(int fd, int operation) {
 
     struct flock fl = { .l_whence = SEEK_SET };
 
-    switch (operation & ~LOCK_NB) {
+    switch (cmd & ~LOCK_NB) {
         case LOCK_EX:
             fl.l_type = F_WRLCK;
             break;
@@ -315,12 +314,11 @@ long libos_syscall_flock(int fd, int operation) {
     }
 
     struct posix_lock pl;
-    ret = flock_to_posix_lock(&fl, hdl, &pl);
+    ret = flock_to_posix_lock(&fl, hdl, hdl->id, &pl);
     if (ret < 0)
         goto out;
 
-    pl.handle_id = hdl->id;
-    ret = posix_lock_set(hdl->dentry, &pl, !(operation & LOCK_NB));
+    ret = posix_lock_set(hdl->dentry, &pl, !(cmd & LOCK_NB));
 
 out:
     put_handle(hdl);

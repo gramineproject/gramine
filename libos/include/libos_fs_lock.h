@@ -4,7 +4,7 @@
  */
 
 /*
- * File locks. Currently only POSIX locks are implemented.
+ * File locks. Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented.
  */
 
 #pragma once
@@ -22,7 +22,8 @@ struct libos_dentry;
 int init_fs_lock(void);
 
 /*
- * POSIX locks (also known as advisory record locks). See `man fcntl` for details.
+ * Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented.
+ * See `man fcntl` and `man flock` for details.
  *
  * The current implementation works over IPC and handles all requests in the main process. It has
  * the following caveats:
@@ -34,6 +35,7 @@ int init_fs_lock(void);
  * - There is no deadlock detection (EDEADLK).
  * - The lock requests cannot be interrupted (EINTR).
  * - The locks work only on files that have a dentry (no pipes, sockets etc.)
+ * - The flock-type locks do not support the case when a file was mapped and then unmapped
  */
 
 DEFINE_LISTP(posix_lock);

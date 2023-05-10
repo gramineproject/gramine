@@ -122,7 +122,11 @@ static void posix_lock_dump(struct fs_lock* fs_lock) {
         } else {
             buf_printf(&buf, " %c[%lu..%lu]", c, pl->start, pl->end);
         }
-        buf_printf(&buf, ":%lu", pl->handle_id);
+        if (pl->handle_id == 0) {
+            buf_printf(&buf, " posix lock");
+        } else {
+            buf_printf(&buf, " flock[id=%lu]", pl->handle_id);
+        }
     }
     if (LISTP_EMPTY(&fs_lock->posix_locks)) {
         buf_printf(&buf, "no locks");
@@ -148,8 +152,8 @@ static void fs_lock_gc(struct fs_lock* fs_lock) {
 
 /*
  * Find first lock that conflicts with `pl`. For `fcntl` case (pl->handle_id == 0), two locks
- * conflict if they have different PIDs, their ranges overlap, or at least one of them is a
- * write lock. For `flock` case, two locks conflict if they have different handle IDs and at 
+ * conflict if they have different PIDs, their ranges overlap, and at least one of them is a
+ * write lock. For `flock` case, two locks conflict if they have different handle IDs and at
  * least one of them is a write lock.
  */
 static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
@@ -157,6 +161,8 @@ static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, stru
     assert(pl->type != F_UNLCK);
 
     struct posix_lock* cur;
+    /* Gramine doesn't support mixing POSIX and flock types of locks, and assumes that the
+     * application won't ever mix them, otherwise it may exhibit unexpected behavior. */
     if (pl->handle_id == 0) {
         LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
             if (cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
@@ -228,6 +234,10 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     struct posix_lock* cur;
     struct posix_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
+        /* To ensure that `clear_posix_locks` won't clear BSD locks */
+        if (cur->handle_id != 0) {
+            return 0;
+        }
         if (cur->pid < pl->pid) {
             prev = cur;
             continue;
@@ -334,6 +344,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
         new->start = start;
         new->end = end;
         new->pid = pl->pid;
+        new->handle_id = 0;
 
 #ifdef DEBUG
         /* Assert that list order is preserved */
@@ -357,7 +368,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     return 0;
 }
 
-static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
+static int _flock_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     assert(locked(&g_fs_lock_lock));
     assert(pl->handle_id);
 
@@ -372,6 +383,10 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
     struct posix_lock* cur;
     struct posix_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
+        /* To ensure POSIX locks won't be removed */
+        if (cur->handle_id == 0) {
+            return 0;
+        }
         if (cur->handle_id == pl->handle_id) {
             LISTP_DEL(cur, &fs_lock->posix_locks, list);
             free(cur);
@@ -381,9 +396,8 @@ static int _flock_posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl)
 
     if (new) {
         assert(pl->type != F_UNLCK);
-
         new->type = pl->type;
-        /* Lock the whole file */
+        /* Lock the whole file; start, end and pid fields are set only for sanity (not used by flock). */
         new->start = 0;
         new->end = FS_LOCK_EOF;
         new->pid = pl->pid;
@@ -413,12 +427,8 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
         LISTP_FOR_EACH_ENTRY_SAFE(req, tmp, &fs_lock->posix_lock_requests, list) {
             struct posix_lock* conflict = posix_lock_find_conflict(fs_lock, &req->pl);
             if (!conflict) {
-                int result;
-                if (req->pl.handle_id == 0) {
-                    result = _posix_lock_set(fs_lock, &req->pl);
-                } else {
-                    result = _flock_posix_lock_set(fs_lock, &req->pl);
-                }
+                int result = req->pl.handle_id == 0 ? _posix_lock_set(fs_lock, &req->pl)
+                                                    : _flock_lock_set(fs_lock, &req->pl);
                 LISTP_DEL(req, &fs_lock->posix_lock_requests, list);
 
                 /* Notify the waiter that we processed their request. Note that the result might
@@ -478,11 +488,8 @@ static int posix_lock_set_or_add_request(struct libos_dentry* dent, struct posix
 
         *out_req = req;
     } else {
-        if (pl->handle_id == 0) {
-            ret = _posix_lock_set(fs_lock, pl);
-        } else {
-            ret = _flock_posix_lock_set(fs_lock, pl);
-        }
+        ret = pl->handle_id == 0 ? _posix_lock_set(fs_lock, pl)
+                                 : _flock_lock_set(fs_lock, pl);
         if (ret < 0)
             goto out;
         posix_lock_process_requests(fs_lock);
