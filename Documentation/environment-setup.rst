@@ -32,6 +32,7 @@ Prepare a signing key
 Only for SGX, and if you haven’t already, enter the following:
 
 ::
+
     gramine-sgx-gen-private-key
 
 This command generates an RSA 3072 key suitable for signing SGX enclaves and

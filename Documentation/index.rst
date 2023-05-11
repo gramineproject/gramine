@@ -58,9 +58,6 @@ scripts.
 The result is an image that includes your specific machine-learning
 application, common dependencies, and a manifest file.
 
-.. note::  These confidential compute images only run on machines that support
-   Intel SGX.
-
 See the :doc:`curated-installation` article for more information.
 
 
