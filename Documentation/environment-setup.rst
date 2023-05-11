@@ -27,6 +27,8 @@ installed.
 Prepare a signing key
 =====================
 
+.. highlight:: sh
+
 Only for SGX, and if you haven’t already, enter the following::
 
     gramine-sgx-gen-private-key
