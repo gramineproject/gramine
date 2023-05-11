@@ -12,9 +12,9 @@ Ready-made confidential protected images
 Confidential Compute images with Gramine are ready-made solutions for popular
 open-source projects, such as PyTorch and Redis.
 Customize your environment through interactive scripts.
-The result is a curated, confidentially-protected Gramine image that includes
-your specific machine-learning application, common dependencies, and a manifest
-file that specifies security policies to enforce for your workload.
+The result is a curated, confidentially protected Gramine image that includes
+your specific machine-learning application, common dependencies, and a Gramine
+manifest file that specifies security policies to enforce for your workload.
 
 .. note::
     These confidential compute images only run on machines that support Intel
