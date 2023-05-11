@@ -292,22 +292,23 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry && (handle->id == 0 || handle->ref_count == 1)) {
-        /* Clear POSIX locks for a file. In `fcntl` case, we are required to do that every time
-         * a FD is closed, even if the process holds other handles for that file, or duplicated 
-         * FDs for the same handle. In `flock` case, we should do that only when a fd's related
-         * `handle->ref_count == 1`. */
-        struct posix_lock pl = {
-            .type = F_UNLCK,
-            .start = 0,
-            .end = FS_LOCK_EOF,
-            .pid = g_process.pid,
-            .handle_id = handle->id,
-        };
-        int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
-        if (ret < 0) {
-            log_warning("error releasing locks: %s", unix_strerror(ret));
-            return ret;
+    if (handle && handle->dentry) {
+        /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
+         * if the process holds other handles for that file, or duplicated FDs for the same
+         * handle. */
+        if (is_flock(handle->dentry) != 1) {
+            struct posix_lock pl = {
+                .type = F_UNLCK,
+                .start = 0,
+                .end = FS_LOCK_EOF,
+                .pid = g_process.pid,
+                .handle_id = 0,
+            };
+            int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
+            if (ret < 0) {
+                log_warning("error releasing locks: %s", unix_strerror(ret));
+                return ret;
+            }
         }
     }
 
@@ -535,7 +536,8 @@ void put_handle(struct libos_handle* hdl) {
         }
 
         if (hdl->dentry) {
-            (void)clear_file_lock(hdl);
+            if (is_flock(hdl->dentry) == 1)
+                (void)clear_file_lock(hdl);
             put_dentry(hdl->dentry);
         }
 

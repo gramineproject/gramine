@@ -127,3 +127,14 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
  * send the returned value and `out_pl` in an IPC response.
  */
 int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posix_lock* out_pl);
+
+/*!
+ * \brief To determine `posix_locks` is append by `flock`.
+ *
+ * \param dent The dentry for a file.
+ * 
+ * Return 0 means the lock was append by `fnctl`.
+ * Return 1 means the lock was append by `flock`.
+ * Return -1 means there is no locks.
+ */
+int is_flock(struct libos_dentry* dent);

@@ -196,6 +196,26 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
     return 0;
 }
 
+int is_flock(struct libos_dentry* dent) {
+    int ret = -1;
+    if (!dent->fs_lock)
+        return ret;
+
+    struct fs_lock* fs_lock = dent->fs_lock;
+    struct posix_lock* cur;
+    LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
+        if (cur->handle_id == 0) {
+            ret = 0;
+            break;
+        }
+        if (cur->handle_id != 0) {
+            ret = 1;
+            break;
+        } 
+    }
+    return ret;
+}
+
 /*
  * Main part of `posix_lock_set`. Adds/removes a lock (depending on `pl->type`), assumes we already
  * verified there are no conflicts. Replaces existing locks for a given PID, and merges adjacent
@@ -234,10 +254,6 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     struct posix_lock* cur;
     struct posix_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
-        /* To ensure that `clear_posix_locks` won't clear BSD locks */
-        if (cur->handle_id != 0) {
-            return 0;
-        }
         if (cur->pid < pl->pid) {
             prev = cur;
             continue;
@@ -383,10 +399,6 @@ static int _flock_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     struct posix_lock* cur;
     struct posix_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
-        /* To ensure POSIX locks won't be removed */
-        if (cur->handle_id == 0) {
-            return 0;
-        }
         if (cur->handle_id == pl->handle_id) {
             LISTP_DEL(cur, &fs_lock->posix_locks, list);
             free(cur);
