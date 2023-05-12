@@ -367,8 +367,6 @@ int buf_flush(struct print_buf* buf);
 
 /* Miscelleneous */
 
-extern const char* const* sys_errlist_internal;
-
 #define URI_PREFIX_SEPARATOR ":"
 
 #define URI_TYPE_DIR      "dir"
