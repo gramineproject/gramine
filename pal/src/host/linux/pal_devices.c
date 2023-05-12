@@ -217,10 +217,9 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    *out_ret = ret;
+    /* note that if the host returned a negative value (typically means an error, but not always
+     * since this is completely device-specific), then we still return success and forward the value
+     * as-is to the LibOS and ultimately to the app */
+    *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
     return 0;
 }

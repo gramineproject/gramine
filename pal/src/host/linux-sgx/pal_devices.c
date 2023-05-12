@@ -224,8 +224,8 @@ struct handle_ops g_dev_ops = {
 
 /*
  * Code below describes the TOML syntax of the manifest entries used for deep-copying complex nested
- * objects out and inside the SGX enclave. This syntax is currently used for IOCTL emulation. This
- * syntax is generic enough to describe any memory layout for deep copy of IOCTL structs.
+ * objects out and inside the SGX enclave. This syntax is currently used for IOCTL emulation and is
+ * generic enough to describe the most common memory layouts for deep copy of IOCTL structs.
  *
  * The high-level description can be found in the "manifest syntax" documentation page.
  *
@@ -233,7 +233,9 @@ struct handle_ops g_dev_ops = {
  *
  *   struct pascal_str { uint8_t len; char str[]; };
  *   struct c_str { char str[]; };
- *   struct root { struct pascal_str* s1; struct c_str* s2; uint64_t s2_len; int8_t x; int8_t y; };
+ *   struct root { struct pascal_str* s1;
+ *                 struct c_str* s2; uint64_t s2_size;
+ *                 int8_t x; int8_t y; };
  *
  *   alignas(128) struct root obj;
  *   ioctl(devfd, DEV_IOCTL_NUMBER, &obj);
@@ -241,13 +243,13 @@ struct handle_ops g_dev_ops = {
  * The example IOCTL takes as a third argument a pointer to an object of type `struct root` that
  * contains two pointers to other objects (pascal-style string and a C-style string) and embeds two
  * integers `x` and `y`. The two strings reside in separate memory regions in enclave memory. Note
- * that the max possible length of the C-style string is stored in the `s2_len` field of the root
- * object. The `pascal_str` string is an input to the IOCTL, the `c_str` string and its length
- * `s2_len` are the outputs of the IOCTL, and the integers `x` and `y` are also outputs of the
- * IOCTL. Also note that the root object is 128B-aligned (for illustration purposes). This IOCTL
- * could for example be used to convert a Pascal string into a C string (C string will be truncated
- * to user-specified `s2_len` if greater than this limit), and find the indices of the first
- * occurences of chars "x" and "y" in the Pascal string.
+ * that the size of the allocated buffer for the C-style string is stored in the `s2_size` field of
+ * the root object. The `pascal_str` string is an input to the IOCTL, the `c_str` string and its
+ * actual size `s2_size` are the outputs of the IOCTL, and the integers `x` and `y` are also outputs
+ * of the IOCTL. Also note that the root object is 128B-aligned (for illustration purposes). This
+ * IOCTL could for example be used to convert a Pascal string into a C string (C string will be
+ * truncated to user-specified `s2_size` if greater than this limit), and find the indices of the
+ * first occurences of chars "x" and "y" in the Pascal string.
  *
  * The corresponding manifest entries describing these structs look like this:
  *
@@ -257,9 +259,9 @@ struct handle_ops g_dev_ops = {
  *                      { name = "pascal-str", size = "pascal-str-len", direction = "out"}
  *                    ] },
  *     { ptr = [
- *         { name = "c-str", size = "c-str-len", direction = "in" }
+ *         { name = "c-str", size = "c-str-size", direction = "in" }
  *       ] },
- *     { name = "c-str-len", size = 8, direction = "inout" },
+ *     { name = "c-str-size", size = 8, direction = "inout" },
  *     { size = 1, direction = "in" }
  *     { size = 1, direction = "in" }
  *   ]
@@ -268,15 +270,15 @@ struct handle_ops g_dev_ops = {
  *     { request_code = <DEV_IOCTL_NUMER>, struct = "root" }
  *   ]
  *
- * One can observe the following rules in this TOML syntax:
+ * The current TOML syntax has the following rules/limitations:
  *
  *  1. Each separate memory region is represented as a TOML array (`[]`).
  *  2. Each sub-region of one memory region is represented as a TOML table (`{}`).
  *  3. Each sub-region may be a pointer (`ptr`) to another memory region. In this case, the value of
  *     `ptr` is a TOML-array representation of that other memory region or a TOML string with the
  *     name of another memory region. The `ptr` sub-region always has size of 8B (assuming x86-64)
- *     and doesn't have an in/out direction.  The `array_len` field specifies the number of adjacent
- *     memory regions that this pointer points to (i.e. the length of an array).
+ *     and doesn't have an in/out direction. The `array_len` field specifies the number of adjacent
+ *     memory regions that this pointer points to (i.e. the length of the array).
  *  4. Sub-regions can be fixed-size (like the last sub-region containing two bytes `x` and `y`) or
  *     can be flexible-size (like the two strings). In the latter case, the `size` field contains a
  *     name of a sub-region where the actual size is stored. Note that this referenced sub-region
@@ -284,7 +286,8 @@ struct handle_ops g_dev_ops = {
  *     typical IOCTL structs always have the size specifier in a sub-region found before the buffer
  *     sub-region, either in the same memory region (e.g. as in flexible array members in C) or in
  *     the "outer" memory region (e.g. the size specifier is located in the root memory region and
- *     the buffer is located in the nested memory region).
+ *     the buffer is located in the nested memory region). This is a limitation of the current
+ *     parser and could be removed in the future, if need arises.
  *  5. Sub-regions that store the size of another sub-region must be less than or equal to 8 bytes
  *     in size.
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
@@ -331,8 +334,8 @@ struct handle_ops g_dev_ops = {
 #define MAX_MEM_REGIONS 1024
 #define MAX_SUB_REGIONS (10 * 1024)
 
-/* direction of copy: none (used for padding), out of enclave, inside enclave, both or a special
- * "pointer" sub-region; default is DIRECTION_NONE */
+/* direction of copy: none (used for padding), out of enclave, inside enclave or both;
+ * default is DIRECTION_NONE */
 enum mem_copy_direction {
     DIRECTION_NONE,
     DIRECTION_OUT,
@@ -341,7 +344,7 @@ enum mem_copy_direction {
 };
 
 struct mem_region {
-    toml_array_t* toml_mem_region; /* describes contigious sub_regions in this mem_region */
+    toml_array_t* toml_mem_region; /* describes contiguous sub-regions in this mem-region */
     void* enclave_addr;            /* base address of this memory region in enclave memory */
     bool adjacent;                 /* memory region adjacent to previous one? (used for arrays) */
 };
@@ -398,7 +401,8 @@ static int get_sub_region_idx(struct sub_region* all_sub_regions, size_t all_sub
             return 0;
         }
     }
-    return -PAL_ERROR_NOTDEFINED;
+    log_error("IOCTL: cannot find '%s'", sub_region_name);
+    return -PAL_ERROR_INVAL;
 }
 
 /* allocates a name string, it is responsibility of the caller to free it after use */
@@ -459,7 +463,8 @@ static int get_sub_region_adjust(const toml_table_t* toml_sub_region, int64_t* o
     return ret < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
-static int get_toml_mem_region(toml_table_t* toml_sub_region, toml_array_t** out_toml_mem_region) {
+static int get_toml_nested_mem_region(toml_table_t* toml_sub_region,
+                                      toml_array_t** out_toml_mem_region) {
     toml_array_t* toml_mem_region = toml_array_in(toml_sub_region, "ptr");
     if (toml_mem_region) {
         *out_toml_mem_region = toml_mem_region;
@@ -484,7 +489,7 @@ static int get_toml_mem_region(toml_table_t* toml_sub_region, toml_array_t** out
 
     toml_mem_region = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
     if (!toml_mem_region || toml_array_nelem(toml_mem_region) <= 0) {
-        ret = -PAL_ERROR_NOTDEFINED;
+        ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -514,7 +519,7 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
         return 0;
     }
 
-    /* size must be specified as string (another sub-region's name) */
+    /* size must have been specified as string (another sub-region's name) */
     char* sub_region_name = NULL;
     ret = toml_rtos(sub_region_size_raw, &sub_region_name);
     if (ret < 0)
@@ -528,7 +533,15 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
 
     void* addr_of_size_field  = all_sub_regions[found_idx].enclave_addr;
     size_t size_of_size_field = all_sub_regions[found_idx].size;
-    return copy_value(addr_of_size_field, size_of_size_field, out_size);
+    uint64_t read_size;
+
+    ret = copy_value(addr_of_size_field, size_of_size_field, &read_size);
+    if (ret < 0)
+        return ret;
+
+    static_assert(sizeof(read_size) == sizeof(*out_size), "wrong types");
+    *out_size = (size_t)read_size;
+    return 0;
 }
 
 /* may allocate an array-len-name string, it is responsibility of the caller to free it after use */
@@ -585,14 +598,27 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
     size_t max_mem_regions = *mem_regions_cnt_ptr;
     size_t mem_regions_cnt = 0;
 
+    if (!max_sub_regions || !max_mem_regions)
+        return -PAL_ERROR_NOMEM;
+
     mem_regions[0].toml_mem_region = root_toml_mem_region;
     mem_regions[0].enclave_addr    = root_enclave_addr;
     mem_regions[0].adjacent        = false;
     mem_regions_cnt++;
 
-    /* collecting memory regions and their sub-regions must use top-to-bottom breadth-first search
-     * to dynamically calculate sizes of sub-regions even if they are specified via another
-     * sub-region's "name" */
+    /*
+     * Collecting memory regions and their sub-regions must use top-to-bottom breadth-first search
+     * to dynamically calculate sizes of sub-regions when they are specified via another
+     * sub-region's "name". Consider this example (unnecessary fields not shown for simplicity):
+     *
+     *   ioctl_read = [ { ptr = [ { size = "buf_size" } ] }, { name = "buf_size" } ]
+     *
+     * Here the field that contains size of the buffer (pointed to by the first sub-region) is
+     * located in the second sub-region. Note that the buffer itself is located in the nested memory
+     * region. Now, if the search would be depth-first, then the parser would arrive at the buffer
+     * before learning its size.
+     *
+     */
     char* cur_enclave_addr = NULL;
     size_t mem_region_idx = 0;
     while (mem_region_idx < mem_regions_cnt) {
@@ -693,7 +719,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            ret = get_toml_mem_region(toml_sub_region, &cur_sub_region->toml_mem_region);
+            ret = get_toml_nested_mem_region(toml_sub_region, &cur_sub_region->toml_mem_region);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'ptr' field failed");
                 goto out;
@@ -785,8 +811,11 @@ out:
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         /* "name" fields are not needed after we collected all sub_regions */
         free(sub_regions[i].name);
-        if (!sub_regions[i].array_len.is_determined)
+        sub_regions[i].name = NULL;
+        if (!sub_regions[i].array_len.is_determined) {
             free(sub_regions[i].array_len.sub_region_name);
+            sub_regions[i].array_len.sub_region_name = NULL;
+        }
     }
     return ret;
 }
@@ -966,11 +995,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
-        ret = ocall_ioctl(handle->dev.fd, cmd, arg);
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        *out_ret = ret;
+        *out_ret = ocall_ioctl(handle->dev.fd, cmd, arg);
         return 0;
     }
 
@@ -1012,10 +1037,6 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         goto out;
 
     int ioctl_ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)untrusted_addr);
-    if (ioctl_ret < 0) {
-        ret = unix_to_pal_error(ioctl_ret);
-        goto out;
-    }
 
     ret = copy_sub_regions_to_enclave(sub_regions, sub_regions_cnt);
     if (ret < 0)

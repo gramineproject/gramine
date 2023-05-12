@@ -821,11 +821,11 @@ Available IOCTL structs are described via ``sgx.ioctl_structs``. Each IOCTL
 struct describes the memory layout of the third argument to the ``ioctl`` system
 call (typically a pointer to a complex nested object passed to the device).
 Description of the memory layout is required for a deep copy of the IOCTL
-struct. We use the term *memory region* to denote a separate contiguous region
-of memory and the term *sub-region of a memory region* to denote a part of the
-memory region that has properties different from other sub-regions in the same
-memory region (e.g., should it be copied in or out of the SGX enclave, is it a
-pointer to another memory region, etc.). For example, a C struct can be
+struct. Here we use the term *memory region* to denote a separate contiguous
+region of memory and the term *sub-region of a memory region* to denote a part
+of the memory region that has properties different from other sub-regions in the
+same memory region (e.g., should it be copied in or out of the SGX enclave, is
+it a pointer to another memory region, etc.). For example, a C struct can be
 considered one memory region, and fields of this C struct can be considered
 sub-regions of this memory region.
 
@@ -838,15 +838,15 @@ keys:
   length-specifying fields and nested memory regions.
 - ``align`` is an optional alignment of the memory region; may be specified only
   in the first sub-region of a memory region (all other sub-regions are
-  contigious with the first sub-region, so specifying their alignment doesn't
+  contiguous with the first sub-region, so specifying their alignment doesn't
   make sense).
-- ``size`` is a mandatory size of this sub-region. The ``size`` field may be a
-  string with the name of another field that contains the size value or an
-  integer with the constant size measured in ``unit`` units (default unit is 1
-  byte; also see below). For example, ``size = "strlen"`` denotes a size field
-  that will be calculated dynamically during IOCTL execution based on the
-  sub-region named ``strlen``, whereas ``size = 16`` denotes a sub-region of
-  size 16B. Note that ``ptr`` sub-regions must *not* specify the ``size`` field.
+- ``size`` is a size of this sub-region. The ``size`` field may be a string with
+  the name of another field that contains the size value or an integer with the
+  constant size measured in ``unit`` units (default unit is 1 byte; also see
+  below). For example, ``size = "strlen"`` denotes a size field that will be
+  calculated dynamically during IOCTL execution based on the sub-region named
+  ``strlen``, whereas ``size = 16`` denotes a sub-region of size 16B. Note that
+  ``ptr`` sub-regions must *not* specify the ``size`` field.
 - ``unit`` is an optional unit of measurement for ``size``. It is 1 byte by
   default. Unit of measurement must be a constant integer. For example,
   ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
@@ -858,28 +858,32 @@ keys:
 - ``array_len`` denotes the number of items in the ``ptr`` array. This field
   cannot be specified with non-``ptr`` regions.
 - ``direction = "none" | "out" | "in" | "inout"`` is an optional direction of
-  copy for this sub-region. For example, ``direction = "out"`` denotes a
-  sub-region to be copied out of the enclave to untrusted memory, i.e., this
-  sub-region is an input to the host device. The default value is ``none`` which
-  is useful for e.g. padding of structs. This field must be ommitted if the
-  ``ptr`` field is specified for this sub-region (pointer sub-regions contain
-  the pointer value which will be unconditionally rewired to point to untrusted
-  memory).
+  copy for this sub-region (from the app point of view). For example,
+  ``direction = "out"`` denotes a sub-region to be copied out of the enclave to
+  untrusted memory, i.e., this sub-region is an input to the host device. The
+  default value is ``none`` which is useful for e.g. padding of structs. This
+  field must be ommitted if the ``ptr`` field is specified for this sub-region
+  (pointer sub-regions contain the pointer value which will be unconditionally
+  rewired to point to untrusted memory).
 - ``ptr = inlined-memory-region`` or ``ptr = "another-ioctl-struct"``
   specifies a pointer to another, nested memory region. This field is required
   when describing complex IOCTL structs. Such pointer memory region always has
-  the implicit size of 8B, and the pointer value is always rewired to the memory
-  region in untrusted memory (containing a corresponding nested memory region).
-  If ``ptr`` is specified together with ``array_len``, it describes an array of
-  these memory regions. (In other words, ``ptr`` is an array of memory regions
-  with ``array_len = 1`` by default.)
+  the implicit size of 8B, and the pointer value is always rewired by Gramine to
+  the memory region in untrusted memory (containing a corresponding nested
+  memory region). If ``ptr`` is specified together with ``array_len``, it
+  describes an array of pointers to these memory regions. (In other words,
+  ``ptr`` is an array of pointers to memory regions with ``array_len = 1`` by
+  default.) This may be recursive with the ``NULL`` value being a guard, which
+  allows describing linked lists.
 
-Consider this simple C snippet::
+Consider this simple C snippet:
 
-    struct ioctl_read {
-        size_t buf_size;  /* copied from enclave to device */
-        char* buf;        /* copied from device to enclave */
-    } aligned(0x1000);    /* alignment just for illustration */
+.. code-block:: c
+
+   struct ioctl_read {
+       size_t buf_size;                /* copied from enclave to device */
+       char* buf;                      /* copied from device to enclave */
+   } __attribute__((aligned(0x1000))); /* alignment just for illustration */
 
 This translates into the following manifest syntax::
 
@@ -888,7 +892,7 @@ This translates into the following manifest syntax::
             name      = "buf_size",
             size      = 8,
             direction = "out",
-            aligned   = 0x1000
+            align     = 0x1000
         },
         {
             ptr = [
@@ -922,8 +926,8 @@ all), then the ``struct`` key must be an empty string or not exist at all::
     ]
 
 .. note ::
-   IOCTLs for device communication are pass-through and thus insecure by
-   themselves in SGX environments:
+   IOCTLs for device communication are pass-through and thus potentially
+   insecure by themselves in SGX environments:
 
        - IOCTL arguments are passed as-is from the app to the untrusted host,
          which may lead to leaks of enclave data.

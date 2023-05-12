@@ -35,13 +35,13 @@ sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
     { size = 8, direction = "out", name = "replacements_cnt" },            # replacements_cnt
     { array_len = "replacements_cnt", ptr = [                              # replacements_arr
                                         { size = 2, direction = "out" },   # src, dst
-                                        { size = 6, direction = "none" },  # pad
+                                        { size = 6, direction = "none" },  # padding
                                       ] },
 ]
 
 sgx.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
     { size = 1, unit = 2, direction = "out" },       # src, dst; `unit` is just for testing
-    { size = 3, adjust = 3, direction = "none" },    # 6-byte pad; `adjust` is just for testing
+    { size = 3, adjust = 3, direction = "none" },    # 6-byte padding; `adjust` is just for testing
     { ptr = "gramine_test_dev_ioctl_replace_list" }, # next
 ]
 

@@ -19,6 +19,7 @@ stage('build') {
            echo 'gramine-test pytest -v -k test_001_helloworld'
            echo 'gramine-test pytest -v -k test_003_device_ioctl'
            echo 'gramine-test pytest -v -k test_004_device_ioctl_fail'
+           echo 'gramine-test pytest -v -k test_005_device_ioctl_parse_fail'
            echo 'echo "TESTS OK"'
            echo 'poweroff -n -f'
         } > new_init

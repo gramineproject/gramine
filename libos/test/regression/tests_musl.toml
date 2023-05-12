@@ -137,4 +137,5 @@ manifests = [
 manifests = [
   "device_ioctl",
   "device_ioctl_fail",
+  "device_ioctl_parse_fail",
 ]

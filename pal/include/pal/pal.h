@@ -902,9 +902,13 @@ int PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr);
  *                         some PALs (e.g. Linux-SGX), the manifest must describe the layout of
  *                         this buffer in order to correctly copy the data to/from the host.
  * \param[out]    out_ret  Typically zero, but some device-specific operations return a
- *                         device-specific nonnegative value (in addition to or instead of \p arg).
+ *                         device-specific value (in addition to or instead of \p arg).
  *
  * \returns 0 on success, negative error value on failure.
+ *
+ * Note that this function returns a negative error value only for PAL-internal errors (like errors
+ * during finding/parsing of the corresponding IOCTL data struct in the manifest). The host's error
+ * value, if any, is always passed in `out_ret`.
  *
  * This function corresponds to ioctl() in UNIX systems and DeviceIoControl() in Windows.
  */
