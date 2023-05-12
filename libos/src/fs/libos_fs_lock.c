@@ -206,7 +206,7 @@ bool has_flock_locks(struct libos_dentry* dent){
     struct posix_lock* cur;
     lock(&g_fs_lock_lock);
     LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
-        if (cur->handle_id == 1) {
+        if (cur->handle_id != 0) {
             has_flock = true;
             break;
         } 

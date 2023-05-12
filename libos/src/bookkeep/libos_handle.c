@@ -520,7 +520,6 @@ void put_handle(struct libos_handle* hdl) {
         assert(LISTP_EMPTY(&hdl->epoll_items));
 
         if (hdl->is_dir) {
-            (void)clear_flock_locks(hdl);
             clear_directory_handle(hdl);
         }
 
@@ -535,6 +534,7 @@ void put_handle(struct libos_handle* hdl) {
         }
 
         if (hdl->dentry) {
+            (void)clear_flock_locks(hdl);
             put_dentry(hdl->dentry);
         }
 
