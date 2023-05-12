@@ -262,16 +262,6 @@ static void configure_logging(void) {
     int ret = 0;
     int log_level = PAL_LOG_DEFAULT_LEVEL;
 
-    char* debug_type = NULL;
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.debug_type", &debug_type);
-    if (ret < 0)
-        INIT_FAIL_MANIFEST("Cannot parse 'loader.debug_type'");
-    if (debug_type) {
-        free(debug_type);
-        INIT_FAIL_MANIFEST("'loader.debug_type' has been replaced by 'loader.log_level' and "
-                           "'loader.log_file'");
-    }
-
     char* log_level_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
