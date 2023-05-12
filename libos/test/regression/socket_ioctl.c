@@ -30,7 +30,8 @@ int main(int argc, char **argv) {
     ifend = ifs + (ifc.ifc_len / sizeof(struct ifreq));
     for (ifr = ifc.ifc_req; ifr < ifend; ifr++) {
         if (ifr->ifr_addr.sa_family == AF_INET) {
-            strncpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name));
+            memset(ifreq.ifr_name, 0, sizeof(ifreq.ifr_name));
+            strncpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name) - 1);
             CHECK(ioctl (s, SIOCGIFHWADDR, &ifreq));
             printf("interface %s: inet %s ether %02x:%02x:%02x:%02x:%02x:%02x\n", ifreq.ifr_name,
                     inet_ntoa(((struct sockaddr_in*)&ifr->ifr_addr)->sin_addr),
