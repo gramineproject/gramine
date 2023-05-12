@@ -45,7 +45,8 @@ struct posix_lock_request {
     LIST_TYPE(posix_lock_request) list;
 };
 
-/* Describes file lock details for a given dentry. Currently holds only POSIX locks. */
+/* Describes file lock details for a given dentry. Currently holds both POSIX and BSD (flock) locks,
+ * but for historic reasons has the prefix `posix_` in some fields. */
 DEFINE_LISTP(fs_lock);
 DEFINE_LIST(fs_lock);
 struct fs_lock {
@@ -196,24 +197,22 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
     return 0;
 }
 
-int is_flock(struct libos_dentry* dent) {
-    int ret = -1;
+bool has_flock_locks(struct libos_dentry* dent){
+    bool has_flock = false;
     if (!dent->fs_lock)
-        return ret;
+        return has_flock;
 
     struct fs_lock* fs_lock = dent->fs_lock;
     struct posix_lock* cur;
+    lock(&g_fs_lock_lock);
     LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
-        if (cur->handle_id == 0) {
-            ret = 0;
-            break;
-        }
-        if (cur->handle_id != 0) {
-            ret = 1;
+        if (cur->handle_id == 1) {
+            has_flock = true;
             break;
         } 
     }
-    return ret;
+    unlock(&g_fs_lock_lock);
+    return has_flock;
 }
 
 /*
@@ -355,7 +354,6 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     if (new) {
         assert(pl->type != F_UNLCK);
 
-
         new->type = pl->type;
         new->start = start;
         new->end = end;
@@ -409,7 +407,8 @@ static int _flock_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     if (new) {
         assert(pl->type != F_UNLCK);
         new->type = pl->type;
-        /* Lock the whole file; start, end and pid fields are set only for sanity (not used by flock). */
+        /* Lock the whole file; start, end and pid fields are set only for sanity
+         * (not used by flock). */
         new->start = 0;
         new->end = FS_LOCK_EOF;
         new->pid = pl->pid;

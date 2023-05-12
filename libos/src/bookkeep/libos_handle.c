@@ -292,26 +292,23 @@ struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* flags,
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry) {
+    if (handle && handle->dentry && (!has_flock_locks(handle->dentry))) {
         /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
          * if the process holds other handles for that file, or duplicated FDs for the same
          * handle. */
-        if (is_flock(handle->dentry) != 1) {
-            struct posix_lock pl = {
-                .type = F_UNLCK,
-                .start = 0,
-                .end = FS_LOCK_EOF,
-                .pid = g_process.pid,
-                .handle_id = 0,
-            };
-            int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
-            if (ret < 0) {
-                log_warning("error releasing locks: %s", unix_strerror(ret));
-                return ret;
-            }
+        struct posix_lock pl = {
+            .type = F_UNLCK,
+            .start = 0,
+            .end = FS_LOCK_EOF,
+            .pid = g_process.pid,
+            .handle_id = 0,
+        };
+        int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
+        if (ret < 0) {
+            log_warning("error releasing locks: %s", unix_strerror(ret));
+            return ret;
         }
     }
-
     return 0;
 }
 
@@ -495,22 +492,23 @@ static void destroy_handle(struct libos_handle* hdl) {
     free_mem_obj_to_mgr(handle_mgr, hdl);
 }
 
-static int clear_file_lock(struct libos_handle* hdl) {
-    /* Clear BSD locks for a file. we should do that only when a fd's related
-     * `handle->ref_count == 0`. */
-    struct posix_lock pl = {
-        .type = F_UNLCK,
-        .start = 0,
-        .end = FS_LOCK_EOF,
-        .pid = g_process.pid,
-        .handle_id = hdl->id,
-    };
-    int ret = posix_lock_set(hdl->dentry, &pl, /*block=*/false);
-    if (ret < 0) {
-        log_warning("error releasing locks: %s", unix_strerror(ret));
-        return ret;
+static int clear_flock_locks(struct libos_handle* hdl) {
+    /* Clear BSD locks for a file. We are required to do that when the handle is closed. */
+    if (hdl && hdl->dentry && has_flock_locks(hdl->dentry)) {
+        assert(hdl->ref_count == 0);
+        struct posix_lock pl = {
+            .type = F_UNLCK,
+            .start = 0,
+            .end = FS_LOCK_EOF,
+            .pid = g_process.pid,
+            .handle_id = hdl->id,
+        };
+        int ret = posix_lock_set(hdl->dentry, &pl, /*block=*/false);
+        if (ret < 0) {
+            log_warning("error releasing locks: %s", unix_strerror(ret));
+            return ret;
+        }
     }
-
     return 0;
 }
 
@@ -522,6 +520,7 @@ void put_handle(struct libos_handle* hdl) {
         assert(LISTP_EMPTY(&hdl->epoll_items));
 
         if (hdl->is_dir) {
+            (void)clear_flock_locks(hdl);
             clear_directory_handle(hdl);
         }
 
@@ -536,8 +535,6 @@ void put_handle(struct libos_handle* hdl) {
         }
 
         if (hdl->dentry) {
-            if (is_flock(hdl->dentry) == 1)
-                (void)clear_file_lock(hdl);
             put_dentry(hdl->dentry);
         }
 

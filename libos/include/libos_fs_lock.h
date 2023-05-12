@@ -4,7 +4,8 @@
  */
 
 /*
- * File locks. Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented.
+ * File locks. Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented via
+ * a common struct `posix_lock` (the name is historic). See `man fcntl` and `man flock` for details.
  */
 
 #pragma once
@@ -35,7 +36,8 @@ int init_fs_lock(void);
  * - There is no deadlock detection (EDEADLK).
  * - The lock requests cannot be interrupted (EINTR).
  * - The locks work only on files that have a dentry (no pipes, sockets etc.)
- * - The flock-type locks do not support the case when a file was mapped and then unmapped
+ * - The flock-type locks do not support the case when a file was mapped and then unmapped.
+ *   (in that case, the lock should be released on the last unmap).
  */
 
 DEFINE_LISTP(posix_lock);
@@ -129,12 +131,12 @@ int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, 
 int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posix_lock* out_pl);
 
 /*!
- * \brief To determine `posix_locks` is append by `flock`.
+ * \brief Determine whether dentry has flock-typed locks.
  *
  * \param dent The dentry for a file.
- * 
- * Return 0 means the lock was append by `fnctl`.
- * Return 1 means the lock was append by `flock`.
- * Return -1 means there is no locks.
+ *
+ * Returns true if at least one associated lock is flock-typed. Otherwise returns
+ * false. Note that if a dentry has a mix of POSIX and flock locks, then this function
+ * returns true (and the subsequent behavior is undefined).
  */
-int is_flock(struct libos_dentry* dent);
+bool has_flock_locks(struct libos_dentry* dent);

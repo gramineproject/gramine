@@ -8,6 +8,8 @@
  * taking a lock fails), and log all details for debugging purposes.
  *
  * The tests involve multithreaded and dup case.
+ * LTP test `flock03` amd `flock04` covers the multi-process test case, and that's why we're not
+ * adding such a sub-test here.
  */
 
 #define _GNU_SOURCE
@@ -35,7 +37,7 @@ static const char* str_type(int type) {
         case LOCK_EX: return "LOCK_EX";
         case LOCK_UN: return "LOCK_UN";
         case LOCK_SH | LOCK_NB: return "LOCK_SH | LOCK_NB";
-        case LOCK_EX | LOCK_NB: return "LOCK_SH | LOCK_NB";
+        case LOCK_EX | LOCK_NB: return "LOCK_EX | LOCK_NB";
         default: return "???";
     }
 }
@@ -43,7 +45,8 @@ static const char* str_type(int type) {
 static void try_flock(int fd, int operation, int expect_ret) {
     int ret = flock(fd, operation);
     if (ret != expect_ret) {
-        errx(1, "flock(%d, %s) error with return value = %d, expected value = %d", fd, str_type(operation), ret, expect_ret);
+        errx(1, "flock(%d, %s) error with return value = %d, expected value = %d",
+             fd, str_type(operation), ret, expect_ret);
     }
 }
 
@@ -68,7 +71,7 @@ static void write_pipe(int pipe[2]) {
         ret = write(pipe[1], &c, sizeof(c));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
-        errx(1, "write");
+        err(1, "write");
 }
 
 static void read_pipe(int pipe[2]) {
@@ -78,9 +81,9 @@ static void read_pipe(int pipe[2]) {
         ret = read(pipe[0], &c, sizeof(c));
     } while (ret == -1 && errno == EINTR);
     if (ret == -1)
-        errx(1, "read");
+        err(1, "read");
     if (ret == 0)
-        errx(1, "pipe closed");
+        err(1, "pipe closed");
 }
 
 static void test_flock_dup_open(void) {

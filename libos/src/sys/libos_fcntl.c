@@ -5,7 +5,7 @@
  */
 
 /*
- * Implementation of system call "fcntl" and `flock`:
+ * Implementation of system calls "fcntl" and "flock":
  *
  * - F_DUPFD, F_DUPFD_CLOEXEC (duplicate a file descriptor)
  * - F_GETFD, F_SETFD (file descriptor flags)
