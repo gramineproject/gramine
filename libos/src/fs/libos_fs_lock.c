@@ -197,19 +197,21 @@ static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl
     return 0;
 }
 
-bool has_flock_locks(struct libos_dentry* dent){
-    bool has_flock = false;
-    if (!dent->fs_lock)
-        return has_flock;
+bool has_flock_locks(struct libos_dentry* dent) {
+    lock(&g_fs_lock_lock);
+    if (!dent->fs_lock) {
+        unlock(&g_fs_lock_lock);
+        return false;
+    }
 
+    bool has_flock = false;
     struct fs_lock* fs_lock = dent->fs_lock;
     struct posix_lock* cur;
-    lock(&g_fs_lock_lock);
     LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
         if (cur->handle_id != 0) {
             has_flock = true;
             break;
-        } 
+        }
     }
     unlock(&g_fs_lock_lock);
     return has_flock;

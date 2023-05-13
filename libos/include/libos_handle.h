@@ -135,7 +135,7 @@ struct libos_handle {
     bool is_dir;
 
     /* Unique id, works as an identifier for `flock` syscall. This field does not change, so
-     * reading it does not require holding any locks.*/
+     * reading it does not require holding any locks. */
     uint64_t id;
 
     refcount_t ref_count;
