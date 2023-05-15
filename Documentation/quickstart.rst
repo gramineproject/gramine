@@ -83,19 +83,20 @@ This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
 stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
 be protected and should not be disclosed to anyone.
 
-Run sample application
-----------------------
+Run a sample application
+------------------------
 
-Core Gramine repository contains several sample applications. Thus, to test
-Gramine installation, we clone the Gramine repo:
+The core Gramine repository contains sample applications to test the Gramine
+installation. To clone the Gramine repo, use the following command:
 
 .. parsed-literal::
 
    git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
 
-We don't want to build Gramine (it is already installed on the system). Instead,
-we want to build and run the HelloWorld example. To build the HelloWorld
-application, we need the ``gcc`` compiler and the ``make`` build system::
+Don't build Gramine as it is already installed on the system. Instead,
+build and run the HelloWorld example. To build the HelloWorld application,
+install the ``gcc`` compiler and the ``make`` build system by entering the
+following::
 
    sudo apt-get install gcc make  # for Ubuntu distribution
    sudo dnf install gcc make      # for RHEL-like distribution
@@ -117,11 +118,11 @@ Build and run with SGX::
 Other sample applications
 -------------------------
 
-We prepared and tested several applications to demonstrate Gramine usability.
-These applications can be found in the :file:`CI-Examples` directory in the
-repository, each containing a short README with instructions how to test it. We
-recommend starting with a simpler, thoroughly documented example of Redis, to
-understand manifest options and features of Gramine.
+Several applications that demonstrate Gramine usability are available in the
+:file:`CI-Examples` directory in the repository. Each application contains a
+short README file with instructions how to test it. We recommend starting
+with a simpler, thoroughly documented example of Redis to
+understand manifest options and Gramine features.
 
 Additional sample configurations for applications enabled in Gramine can be
 found in a separate repository https://github.com/gramineproject/examples.
