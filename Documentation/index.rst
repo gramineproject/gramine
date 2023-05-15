@@ -120,6 +120,12 @@ Table of Contents
 
    python/api
 
+.. toctree::
+   :caption: Resources
+   :maxdepth: 1
+
+   management-team
+
 Indices and tables
 ==================
 
