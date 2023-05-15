@@ -835,28 +835,26 @@ sub-region in one memory region). Each sub-region is described via the following
 keys:
 
 - ``name`` is an optional name for this sub-region; mainly used to find
-  length-specifying fields and nested memory regions.
-- ``align`` is an optional alignment of the memory region; may be specified only
-  in the first sub-region of a memory region (all other sub-regions are
+  length-specifying sub-regions and nested memory regions.
+- ``alignment`` is an optional alignment of the memory region; may be specified
+  only in the first sub-region of a memory region (all other sub-regions are
   contiguous with the first sub-region, so specifying their alignment doesn't
-  make sense).
-- ``size`` is a size of this sub-region. The ``size`` field may be a string with
-  the name of another field that contains the size value or an integer with the
-  constant size measured in ``unit`` units (default unit is 1 byte; also see
-  below). For example, ``size = "strlen"`` denotes a size field that will be
-  calculated dynamically during IOCTL execution based on the sub-region named
-  ``strlen``, whereas ``size = 16`` denotes a sub-region of size 16B. Note that
-  ``ptr`` sub-regions must *not* specify the ``size`` field.
+  make sense). The default value is ``1``.
+- ``size`` is the size of this sub-region. The ``size`` field may be a string
+  with the name of another sub-region that contains the size value or an integer
+  with the constant size measured in ``unit`` units (default unit is 1 byte;
+  also see below). For example, ``size = "strlen"`` denotes a size field that
+  will be calculated dynamically during IOCTL execution based on the sub-region
+  named ``strlen``, whereas ``size = 16`` denotes a sub-region of size 16B. Note
+  that ``ptr`` sub-regions must *not* specify the ``size`` field.
 - ``unit`` is an optional unit of measurement for ``size``. It is 1 byte by
   default. Unit of measurement must be a constant integer. For example,
   ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
   character is 2B long) of a dynamically specified length.
-- ``adjust`` is an optional integer adjustment for ``size`` (always specified in
-  bytes). It is 0 bytes by default. This field must be a constant (possibly
-  negative) integer. For example, ``size = 6``, ``unit = 2`` and ``adjust = -8``
-  results in a total size of 4B.
-- ``array_len`` denotes the number of items in the ``ptr`` array. This field
-  cannot be specified with non-``ptr`` regions.
+- ``adjustment`` is an optional integer adjustment for ``size`` (always
+  specified in bytes). It is 0 bytes by default. This field must be a constant
+  (possibly negative) integer. For example, ``size = 6``, ``unit = 2`` and
+  ``adjustment = -8`` results in a total size of 4B.
 - ``direction = "none" | "out" | "in" | "inout"`` is an optional direction of
   copy for this sub-region (from the app point of view). For example,
   ``direction = "out"`` denotes a sub-region to be copied out of the enclave to
@@ -875,6 +873,8 @@ keys:
   ``ptr`` is an array of pointers to memory regions with ``array_len = 1`` by
   default.) This may be recursive with the ``NULL`` value being a guard, which
   allows describing linked lists.
+- ``array_len`` is an optional number of items in the ``ptr`` array. This field
+  cannot be specified with non-``ptr`` sub-regions. The default value is ``1``.
 
 Consider this simple C snippet:
 
@@ -892,7 +892,7 @@ This translates into the following manifest syntax::
             name      = "buf_size",
             size      = 8,
             direction = "out",
-            align     = 0x1000
+            alignment = 0x1000
         },
         {
             ptr = [
@@ -929,10 +929,10 @@ all), then the ``struct`` key must be an empty string or not exist at all::
    IOCTLs for device communication are pass-through and thus potentially
    insecure by themselves in SGX environments:
 
-       - IOCTL arguments are passed as-is from the app to the untrusted host,
-         which may lead to leaks of enclave data.
-       - Untrusted host can change IOCTL arguments as it wishes when passing
-         them from Gramine to the device and back.
+   - IOCTL arguments are passed as-is from the app to the untrusted host,
+     which may lead to leaks of enclave data.
+   - Untrusted host can change IOCTL arguments as it wishes when passing
+     them from Gramine to the device and back.
 
    It is the responsibility of the app developer to correctly use IOCTLs, with
    security implications in mind. In most cases, IOCTL arguments should be

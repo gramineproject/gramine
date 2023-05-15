@@ -249,21 +249,20 @@ struct handle_ops g_dev_ops = {
  * of the IOCTL. Also note that the root object is 128B-aligned (for illustration purposes). This
  * IOCTL could for example be used to convert a Pascal string into a C string (C string will be
  * truncated to user-specified `s2_size` if greater than this limit), and find the indices of the
- * first occurences of chars "x" and "y" in the Pascal string.
+ * first occurrences of chars "x" and "y" in the Pascal string.
  *
  * The corresponding manifest entries describing these structs look like this:
  *
  *   sgx.ioctl_structs.root = [
- *     { align = 128, ptr = [
- *                      { name = "pascal-str-len", size = 1, direction = "out" },
- *                      { name = "pascal-str", size = "pascal-str-len", direction = "out"}
- *                    ] },
+ *     { alignment = 128, ptr = [
+ *                            { name = "pascal-str-len", size = 1, direction = "out" },
+ *                            { name = "pascal-str", size = "pascal-str-len", direction = "out"}
+ *                        ] },
  *     { ptr = [
- *         { name = "c-str", size = "c-str-size", direction = "in" }
+ *           { name = "c-str", size = "c-str-size", direction = "in" }
  *       ] },
  *     { name = "c-str-size", size = 8, direction = "inout" },
- *     { size = 1, direction = "in" }
- *     { size = 1, direction = "in" }
+ *     { size = 2, direction = "in" }  # x and y fields
  *   ]
  *
  *   sgx.allowed_ioctls = [
@@ -282,12 +281,13 @@ struct handle_ops g_dev_ops = {
  *  4. Sub-regions can be fixed-size (like the last sub-region containing two bytes `x` and `y`) or
  *     can be flexible-size (like the two strings). In the latter case, the `size` field contains a
  *     name of a sub-region where the actual size is stored. Note that this referenced sub-region
- *     must come *before* the sub-region with such flexible-size `size` -- TOML representations of
- *     typical IOCTL structs always have the size specifier in a sub-region found before the buffer
- *     sub-region, either in the same memory region (e.g. as in flexible array members in C) or in
- *     the "outer" memory region (e.g. the size specifier is located in the root memory region and
- *     the buffer is located in the nested memory region). This is a limitation of the current
- *     parser and could be removed in the future, if need arises.
+ *     must come *before* (in the Breadth-First-Search sense) the sub-region with such flexible-size
+ *     `size` -- TOML representations of typical IOCTL structs always have the size specifier in a
+ *     sub-region found before the buffer sub-region, either in the same memory region (e.g. as in
+ *     flexible array members in C) or in the "outer" memory region (e.g. the size specifier is
+ *     located in the root memory region and the buffer is located in the nested memory region).
+ *     This is a limitation of the current parser and could be removed in the future, if need
+ *     arises.
  *  5. Sub-regions that store the size of another sub-region must be less than or equal to 8 bytes
  *     in size.
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
@@ -298,34 +298,34 @@ struct handle_ops g_dev_ops = {
  *     Note that pointer sub-regions do not have a direction (their values are unconditionally
  *     rewired so as to point to the corresponding region in untrusted memory).
  *  8. The first sub-region (and only the first!) may specify the alignment of the memory region.
- *  9. The total size of a sub-region is calculated as `size * unit + adjust`. By default `unit` is
- *     1 byte and `adjust` is 0. Note that `adjust` may be a negative number.
+ *  9. The total size of a sub-region is calculated as `size * unit + adjustment`. By default `unit`
+ *     is 1 byte and `adjustment` is 0. Note that `adjustment` may be a negative number.
  *
  * The diagram below shows how this complex object is copied from enclave memory (left side) to
  * untrusted memory (right side). MR stands for "memory region", SR stands for "sub-region". Note
  * how enclave pointers are copied and rewired to point to untrusted memory regions.
  *
- *       struct root (MR1)              |         deep-copied struct (aligned at 128B)
- *      +------------------+            |       +------------------------+
- *  +----+ pascal_str* s1  |     SR1    |    +----+ pascal_str* s1  (MR1)|
- *  |   |                  |            |    |  |                        |
- *  |   |  c_str* s2 +-------+   SR2    |    |  |   c_str* s2 +-------------+
- *  |   |                  | |          |    |  |                        |  |
- *  |   |  uint64_t s2_len | |   SR3    |    |  |   uint64_t s2_len      |  |
- *  |   |                  | |          |    |  |                        |  |
- *  |   |  int8_t x, y     | |   SR4    |    |  |   int8_t x, y          |  |
- *  |   +------------------+ |          |    |  +------------------------+  |
- *  |                        |          |    +->|   uint8_t len     (MR2)|  |
- *  v (MR2)                  |          |       |                        |  |
- * +-------------+           |          |       |   char str[len]        |  |
- * | uint8_t len |           |   SR5    |       +------------------------+  |
- * |             |           |          |       |  char str[s2_len] (MR3)|<-+
- * | char str[]  |           |   SR6    |       +------------------------+
- * +-------------+           |          |
- *                  (MR3)    v          |
- *                +----------+-+        |
- *                | char str[] | SR7    |
- *                +------------+        |
+ *      struct root (MR1)                   |       deep-copied struct (aligned at 128B)
+ *      +----------------------+            |       +-----------------------------+
+ *  +----+ pascal_str* s1      |     SR1    |    +----+ pascal_str* s1    (MR1)   |
+ *  |   |                      |            |    |  |                             |
+ *  |   |  c_str* s2 +-----------+   SR2    |    |  |   c_str* s2 +------------------+
+ *  |   |                      | |          |    |  |                             |  |
+ *  |   |  uint64_t s2_size    | |   SR3    |    |  |   uint64_t s2_size          |  |
+ *  |   |                      | |          |    |  |                             |  |
+ *  |   |  int8_t x, y         | |   SR4    |    |  |   int8_t x, y               |  |
+ *  |   +----------------------+ |          |    |  +-----------------------------+  |
+ *  |                            |          |    +->|   uint8_t len         (MR2) |  |
+ *  v (MR2)                      |          |       |                             |  |
+ * +-------------+               |          |       |   char str[len]             |  |
+ * | uint8_t len |               |   SR5    |       +-----------------------------+  |
+ * |             |               |          |       |  char str[s2_size]    (MR3) |<-+
+ * | char str[]  |               |   SR6    |       +-----------------------------+
+ * +-------------+               |          |
+ *                      (MR3)    v          |
+ *                    +----------+-+        |
+ *                    | char str[] | SR7    |
+ *                    +------------+        |
  *
  */
 
@@ -360,14 +360,15 @@ struct dynamic_value {
     };
 };
 
+/* total size in bytes of a sub-region is calculated as `size * unit + adjustment` */
 struct sub_region {
     enum mem_copy_direction direction; /* direction of copy during OCALL */
     char* name;                     /* may be NULL for unnamed regions */
     struct dynamic_value array_len; /* array length of the sub-region (only for `ptr` regions) */
     size_t size;                    /* size of this sub-region */
-    size_t unit;                    /* total size in bytes calculated as `size * unit + adjust` */
-    int64_t adjust;                 /* may be negative; used to adjust total size */
-    size_t align;                   /* alignment of this sub-region */
+    size_t unit;                    /* unit of measurement, used in total size calculation */
+    int64_t adjustment;             /* may be negative; used to adjust total size */
+    size_t alignment;               /* alignment of this sub-region */
     void* enclave_addr;             /* base address of this sub region in enclave mem */
     void* untrusted_addr;           /* base address of corresponding sub region in untrusted mem */
     toml_array_t* toml_mem_region;  /* for pointers/arrays, specifies pointed-to mem region */
@@ -438,13 +439,13 @@ static int get_sub_region_direction(const toml_table_t* toml_sub_region,
     return ret;
 }
 
-static int get_sub_region_align(const toml_table_t* toml_sub_region, size_t* out_align) {
-    int64_t align;
-    int ret = toml_int_in(toml_sub_region, "align", /*defaultval=*/0, &align);
-    if (ret < 0 || align < 0)
+static int get_sub_region_alignment(const toml_table_t* toml_sub_region, size_t* out_alignment) {
+    int64_t alignment;
+    int ret = toml_int_in(toml_sub_region, "alignment", /*defaultval=*/1, &alignment);
+    if (ret < 0 || alignment <= 0)
         return -PAL_ERROR_INVAL;
 
-    *out_align = (size_t)align;
+    *out_alignment = (size_t)alignment;
     return 0;
 }
 
@@ -458,8 +459,8 @@ static int get_sub_region_unit(const toml_table_t* toml_sub_region, size_t* out_
     return 0;
 }
 
-static int get_sub_region_adjust(const toml_table_t* toml_sub_region, int64_t* out_adjust) {
-    int ret = toml_int_in(toml_sub_region, "adjust", /*defaultval=*/0, out_adjust);
+static int get_sub_region_adjustment(const toml_table_t* toml_sub_region, int64_t* out_adjustment) {
+    int ret = toml_int_in(toml_sub_region, "adjustment", /*defaultval=*/0, out_adjustment);
     return ret < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
@@ -477,6 +478,7 @@ static int get_toml_nested_mem_region(toml_table_t* toml_sub_region,
         return -PAL_ERROR_INVAL;
 
     if (!ioctl_struct_str) {
+        /* if we're here, then we didn't find `ptr` field at all */
         *out_toml_mem_region = NULL;
         return 0;
     }
@@ -657,8 +659,8 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            if (toml_raw_in(toml_sub_region, "align") && i != 0) {
-                log_error("IOCTL: 'align' may be specified only at beginning of mem region");
+            if (toml_raw_in(toml_sub_region, "alignment") && i != 0) {
+                log_error("IOCTL: 'alignment' may be specified only at beginning of mem region");
                 ret = -PAL_ERROR_INVAL;
                 goto out;
             }
@@ -671,6 +673,13 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 }
                 if (toml_raw_in(toml_sub_region, "size")) {
                     log_error("IOCTL: 'ptr' cannot specify 'size' (did you mean 'array_len'?)");
+                    ret = -PAL_ERROR_INVAL;
+                    goto out;
+                }
+            } else {
+                if (toml_raw_in(toml_sub_region, "array_len")) {
+                    log_error("IOCTL: non-'ptr' field cannot specify 'array_len' (did you mean"
+                              " 'size'?)");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
                 }
@@ -688,9 +697,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            ret = get_sub_region_align(toml_sub_region, &cur_sub_region->align);
+            ret = get_sub_region_alignment(toml_sub_region, &cur_sub_region->alignment);
             if (ret < 0) {
-                log_error("IOCTL: parsing of 'align' field failed");
+                log_error("IOCTL: parsing of 'alignment' field failed");
                 goto out;
             }
 
@@ -700,9 +709,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            ret = get_sub_region_adjust(toml_sub_region, &cur_sub_region->adjust);
+            ret = get_sub_region_adjustment(toml_sub_region, &cur_sub_region->adjustment);
             if (ret < 0) {
-                log_error("IOCTL: parsing of 'adjust' field failed");
+                log_error("IOCTL: parsing of 'adjustment' field failed");
                 goto out;
             }
 
@@ -735,9 +744,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                     ret = -PAL_ERROR_OVERFLOW;
                     goto out;
                 }
-                if (__builtin_add_overflow(cur_sub_region->size, cur_sub_region->adjust,
+                if (__builtin_add_overflow(cur_sub_region->size, cur_sub_region->adjustment,
                                            &cur_sub_region->size)) {
-                    log_error("IOCTL: integer overflow while applying 'adjust'");
+                    log_error("IOCTL: integer overflow while applying 'adjustment'");
                     ret = -PAL_ERROR_OVERFLOW;
                     goto out;
                 }
@@ -822,16 +831,15 @@ out:
 
 static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t sub_regions_cnt,
                                          void* untrusted_addr) {
+    /* we rely on the fact that the untrusted memory region was zeroed out: we can simply "jump
+     * over" untrusted memory when doing alignment and when direction of copy is in or none */
     char* cur_untrusted_addr = untrusted_addr;
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         if (!sub_regions[i].size)
             continue;
 
-        if (sub_regions[i].align > 0) {
-            char* aligned_untrusted_addr = ALIGN_UP_PTR(cur_untrusted_addr, sub_regions[i].align);
-            memset(cur_untrusted_addr, 0, aligned_untrusted_addr - cur_untrusted_addr);
-            cur_untrusted_addr = aligned_untrusted_addr;
-        }
+        assert(sub_regions[i].alignment);
+        cur_untrusted_addr = ALIGN_UP_PTR(cur_untrusted_addr, sub_regions[i].alignment);
 
         if (!sgx_is_completely_within_enclave(sub_regions[i].enclave_addr, sub_regions[i].size)
                 || !sgx_is_valid_untrusted_ptr(cur_untrusted_addr, sub_regions[i].size, 1)) {
@@ -844,8 +852,6 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
                                              sub_regions[i].size);
             if (!ret)
                 return -PAL_ERROR_DENIED;
-        } else {
-            memset(cur_untrusted_addr, 0, sub_regions[i].size);
         }
 
         sub_regions[i].untrusted_addr = cur_untrusted_addr;
@@ -1020,8 +1026,10 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         goto out;
     }
 
-    for (size_t i = 0; i < sub_regions_cnt; i++)
-        untrusted_size += sub_regions[i].size + sub_regions[i].align;
+    for (size_t i = 0; i < sub_regions_cnt; i++) {
+        /* overapproximation since alignment doesn't necessarily increase sub-region's size */
+        untrusted_size += sub_regions[i].size + sub_regions[i].alignment;
+    }
 
     ret = ocall_mmap_untrusted(&untrusted_addr, ALLOC_ALIGN_UP(untrusted_size),
                                PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1,

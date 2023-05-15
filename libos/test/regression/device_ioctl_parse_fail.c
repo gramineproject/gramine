@@ -51,8 +51,8 @@ int main(void) {
         errx(1, "ioctl(GRAMINE_TEST_DEV_IOCTL_READ) didn't fail on parsing "
                 "(returned: %d, errno: %d)", ret, errno);
 
-    /* test 6: `align` keyword specified not in the first sub-region; note that we need the struct
-     * arg because the parser tries to collect the first sub-region */
+    /* test 6: `alignment` keyword specified not in the first sub-region; note that we need the
+     * struct arg because the parser tries to collect the first sub-region */
     errno = 0;
     struct gramine_test_dev_ioctl_replace_arr replace_arr = { 0 };
     ret = ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_REPLACE_ARR, &replace_arr);

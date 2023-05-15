@@ -1056,8 +1056,8 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('error: IOCTL: parsing of \'size\' field failed', stderr)
         self.assertIn('error: IOCTL: cannot find \'buf_size\'', stderr)
         self.assertIn('error: IOCTL: \'ptr\' cannot specify \'size\'', stderr)
-        self.assertIn('error: IOCTL: \'align\' may be specified only at beginning of mem region',
-                      stderr)
+        self.assertIn('error: IOCTL: \'alignment\' may be specified only at beginning of mem '
+                      'region', stderr)
         self.assertIn('error: IOCTL: parsing of \'direction\' field failed', stderr)
         self.assertIn('TEST OK', stdout)
 

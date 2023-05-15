@@ -44,7 +44,7 @@ sgx.ioctl_structs.pointer_of_wrong_size = [
 # Alignment can be specified only on the first sub-region
 sgx.ioctl_structs.alignment_specified_in_second_subregion = [
     { size = 1, direction = "none" },
-    { size = 1, align = 16 },
+    { size = 1, alignment = 16 },
 ]
 
 # Direction field can only be one of "out", "in", "inout" and "none"
