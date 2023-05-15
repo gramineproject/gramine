@@ -361,7 +361,6 @@ FSGSBASE patchset was merged in Linux kernel version 5.9, so if your kernel
 version is 5.9 or higher, then the FSGSBASE feature is already supported and you
 can skip this step. For older kernels it is available as `separate patches
 <https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
-
 (Note that Gramine was prevously called *Graphene* and was hosted under
 a different organization, hence the name of the linked repository.)
 
