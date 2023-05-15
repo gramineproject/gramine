@@ -2,7 +2,7 @@ Coding style guidelines
 =======================
 
 This document describes coding conventions and formatting styles we use in
-Gramine. All newly commited code must conform to them to pass a |~| review.
+Gramine. All newly committed code must conform to them to pass a |~| review.
 
 Automatic reformatting
 ----------------------

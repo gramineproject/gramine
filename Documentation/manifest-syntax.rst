@@ -94,8 +94,11 @@ path inside Gramine pointing to a mounted file. Relative paths will be
 interpreted as starting from the current working directory (i.e. from ``/`` by
 default, or ``fs.start_dir`` if specified).
 
-The recommended usage is to provide an absolute path, and mount the executable
-at that path. For example::
+The recommended usage is to provide an absolute path of the executable. This
+executable must also be in the Gramine's filesystem, either directly mounted or
+within a directory that is mounted. For example, if one wishes to execute the
+Python 3.8 interpreter, one would specify it as the entrypoint and mount the
+Python executable at the expected path within the Gramine filesystem::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
@@ -168,7 +171,7 @@ This option will generate the following extra configuration:
 The functionality is achieved by taking the host's configuration via various
 APIs and reading the host's configuration files. In the case of Linux PAL,
 most information comes from the host's ``/etc``. The gathered information is
-used to create ``/etc`` files inside Gramine's file system, or change Gramine
+used to create ``/etc`` files inside Gramine's filesystem, or change Gramine
 process configuration. For security-enforcing modes (such as SGX), Gramine
 additionally sanitizes the information gathered from the host. Invalid host's
 configuration is reported as an error (e.g. invalid hostname, or invalid IPv4
@@ -251,7 +254,7 @@ User ID and Group ID
    (Default: 0)
 
 This specifies the initial, Gramine emulated user/group ID and effective
-user/group ID. It must be non-negative. By default Gramine emulates the
+user/group ID. It must be non-negative. By default, Gramine emulates the
 user/group ID and effective user/group ID as the root user (uid = gid = 0).
 
 
@@ -366,7 +369,7 @@ Root FS mount point
     fs.root.type = "[chroot|...]"
     fs.root.uri  = "[URI]"
 
-This syntax specifies the root file system to be mounted inside the library OS.
+This syntax specifies the root filesystem to be mounted inside the library OS.
 Both parameters are optional. If not specified, then Gramine mounts the current
 working directory as the root.
 
@@ -394,7 +397,7 @@ Or, as separate sections:
     path = "[PATH]"
     uri  = "[URI]"
 
-This syntax specifies how file systems are mounted inside the library OS. For
+This syntax specifies how filesystems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
 required in the manifest (the mount point of linked libraries). The filesystems
 will be mounted in the order in which they appear in the manifest.
@@ -404,7 +407,7 @@ will be mounted in the order in which they appear in the manifest.
    ``{ path = "...", uri = "...", }`` is a syntax error.
 
 The ``type`` parameter specifies the mount point type. If omitted, it defaults
-to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e. must
+to ``"chroot"``. The ``path`` parameter must be an absolute path (i.e., must
 begin with ``/``).
 
 Gramine currently supports the following types of mount points:
@@ -424,12 +427,12 @@ Gramine currently supports the following types of mount points:
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
   empty on Gramine instance startup) and are destroyed when a Gramine instance
-  terminates. The ``[URI]`` parameter is always ignored, and can be omitted.
+  terminates. The ``[URI]`` parameter is always ignored and can be omitted.
 
   ``tmpfs`` is especially useful in trusted environments (like Intel SGX) for
   securely storing temporary files. This concept is similar to Linux's tmpfs.
   Files under ``tmpfs`` mount points currently do *not* support mmap and each
-  process has its own, non-shared tmpfs (i.e. processes don't see each other's
+  process has its own, non-shared tmpfs (i.e., processes don't see each other's
   files).
 
 Start (current working) directory
@@ -582,8 +585,8 @@ threads. This allows "exitless" design when application threads never leave
 the enclave (except for a few syscalls where there is no benefit, e.g.,
 ``nanosleep()``).
 
-If user specifies ``0`` or omits this directive, then no RPC threads are
-created and all system calls perform an enclave exit ("normal" execution).
+If the user specifies ``0`` or omits this directive, then no RPC threads are
+created, and all system calls perform an enclave exit ("normal" execution).
 
 Note that the number of created RPC threads should match the maximum number of
 simultaneous enclave threads. If there are more RPC threads, then CPU time is
@@ -693,15 +696,15 @@ Trusted files
     uri = "[URI]"
     sha256 = "[HASH]"
 
-This syntax specifies the files to be cryptographically hashed at build time,
-and allowed to be accessed by the app in runtime only if their hashes match.
-This implies that trusted files can be only opened for reading (not for writing)
-and cannot be created if they do not exist already. The signer tool will
-automatically generate hashes of these files and add them to the SGX-specific
-manifest (``.manifest.sgx``). The manifest writer may also specify the hash for
-a file using the TOML-table syntax, in the field ``sha256``; in this case,
-hashing of the file will be skipped by the signer tool and the value in
-``sha256`` field will be used instead.
+This syntax specifies the files to be cryptographically hashed at build time; at
+runtime, these files may only be accessed by the app if the files' hashes match
+what is stored in the manifest. This implies that trusted files can be only
+opened for reading (not for writing) and cannot be created if they do not exist
+already. The signer tool will automatically generate hashes of these files and
+add them to the SGX-specific manifest (``.manifest.sgx``). The manifest writer
+may also specify the hash for a file using the TOML-table syntax, in the field
+``sha256``; in this case, hashing of the file will be skipped by the signer tool
+and the value in ``sha256`` field will be used instead.
 
 Marking files as trusted is especially useful for shared libraries: a |~|
 trusted library cannot be silently replaced by a malicious host because the hash
@@ -810,7 +813,7 @@ Attestation and quotes
     sgx.ra_client_spid     = "[HEX]"
     (Only for EPID based attestation)
 
-This syntax specifies the parameters for remote attestation. By default it is
+This syntax specifies the parameters for remote attestation. By default, it is
 not enabled.
 
 For :term:`EPID` based attestation, ``remote_attestation`` must be set to
@@ -910,7 +913,7 @@ Specifies what events to record:
 
 * ``ocall_inner``: Records enclave state during OCALL.
 
-* ``ocall_outer``: Records the outer OCALL function, i.e. what OCALL handlers
+* ``ocall_outer``: Records the outer OCALL function, i.e., what OCALL handlers
   are going to be executed. Does not include stack information (cannot be used
   with ``sgx.profile.with_stack = true``).
 

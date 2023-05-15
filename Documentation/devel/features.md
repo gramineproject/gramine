@@ -1961,7 +1961,7 @@ Gramine does *not* currently implement user/group ID fields in the `/proc/[pid]/
 
 ### File systems
 
-Gramine implements file system operations, but with several peculiarities and limitations.
+Gramine implements filesystem operations, but with several peculiarities and limitations.
 
 The most important peculiarity is that Gramine does *not* simply mirror the host OS's directory
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
@@ -2014,7 +2014,7 @@ General FS limitations in Gramine include:
 - no operations across mounts, e.g., no rename of file located in one mount to another one (note
   that Linux also doesn't support such operations);
 - no synchronization of file offsets, file sizes, etc. between Gramine processes;
-- tmpfs mounts (in-memory file systems) are not shared by Gramine processes;
+- tmpfs mounts (in-memory filesystems) are not shared by Gramine processes;
 - File timestamps (access, modified, change timestamps) are not set/updated.
 
 <details><summary>Additional materials</summary>
@@ -2031,7 +2031,7 @@ task Gramine will tackle in the future. Below are some discussions and RFCs:
 
 #### File system operations
 
-Gramine implements all classic file system operations, but with limitations described below.
+Gramine implements all classic filesystem operations, but with limitations described below.
 
 Gramine supports opening files and directories (via `open()` and `openat()` system calls).
 `O_CLOEXEC`, `O_CREAT`, `O_DIRECTORY`, `O_EXCL`, `O_NOFOLLOW`, `O_PATH`, `O_TRUNC` flags are

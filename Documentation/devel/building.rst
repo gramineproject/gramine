@@ -1,5 +1,5 @@
-Building
-========
+Build and install Gramine from source
+=====================================
 
 .. highlight:: sh
 
@@ -10,19 +10,19 @@ Gramine consists of several components:
 - A patched C Library (shared library ``libc.so`` and possibly others).
   Currently there are two options: musl and GNU C Library (glibc).
 
-The build of Gramine implies building at least the first two components. The
+Building Gramine implies building at least the first two components. The
 build of the patched C library is optional but highly recommended for
 performance reasons. Both patched glibc and patched musl are built by default.
 
 Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
 building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
-higher. If you find problems with Gramine on other Linux distributions, please
-contact us with a |~| detailed `bug report
-<https://github.com/gramineproject/gramine/issues/new>`__.
+higher. If you find problems with Gramine on other Linux distributions, contact
+us with a |~| detailed `bug report
+<https://github.com/gramineproject/gramine/issues/new/choose>`__.
 
-Installing dependencies
------------------------
+Install dependencies
+--------------------
 
 .. _common-dependencies:
 
@@ -71,7 +71,7 @@ Kernel version can be checked using the following command::
 If your current kernel version is lower than 5.11, then you have two options:
 
 - Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,
-  you can follow e.g. `this tutorial
+  you can follow `this tutorial
   <https://itsfoss.com/upgrade-linux-kernel-ubuntu/>`__.
 
 - Install out-of-tree driver and use our provided patches to the Linux kernel
@@ -116,12 +116,12 @@ If you plan on enabling ``-Ddcap`` option, you need to install
    sudo apt-get update
    sudo apt-get install libsgx-dcap-quote-verify-dev
 
-Building
---------
+Build Gramine
+-------------
 
-In order to build Gramine, you need to first set up the build directory. In the
-root directory of Gramine repo, run the following command (recall that "direct"
-means non-SGX version)::
+To build Gramine, you need to first set up the build directory. In the root
+directory of Gramine repo, run the following command (recall that "direct" means
+non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
        -Dsgx_driver=<driver> -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
@@ -250,8 +250,8 @@ Additional build options
 
   .. _POSIX.1-2018 8.3: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_03
 
-  This very much depends on particular distribution, so please consult relevant
-  documentation provided by your distro.
+  This very much depends on a particular distribution, so please consult
+  relevant documentation provided by your distro.
 
 - To compile a patched version of GCC's OpenMP library (``libgomp``), install
   GCC's build prerequisites (see :ref:`common-dependencies`), and use
@@ -268,14 +268,14 @@ Additional build options
 Prepare a signing key
 ---------------------
 
-Only for SGX enclave development, and if you haven't already, run the following
-command::
+These instructions are only required for systems using Intel SGX that have not
+already created a signing key.
+
+The following command generates an |~| RSA 3072 key suitable for signing SGX
+enclaves and stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`.
+Protect this key and do not disclose it to anyone::
 
    gramine-sgx-gen-private-key
-
-This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
-stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
-be protected and should not be disclosed to anyone.
 
 After signing the application's manifest, users may ship the application and
 Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``

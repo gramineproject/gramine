@@ -3,9 +3,10 @@ Introduction to SGX
 
 .. highlight:: sh
 
-Gramine project uses :term:`SGX` to securely run software. SGX is
-a |~| complicated topic, which may be hard to learn, because the documentation
-is scattered through official/reference documentation, blogposts and academic
+The Gramine project uses the :term:`Intel SGX <SGX>` (Software Guard Extensions)
+technology to protect software running on untrusted hosts. SGX is a |~|
+complicated topic, which may be hard to learn, because the documentation is
+scattered through official/reference documentation, blogposts and academic
 papers. This page is an attempt to curate a |~| dossier of available reading
 material.
 

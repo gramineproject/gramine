@@ -3,36 +3,38 @@ PAL host ABI
 
 TODO: This document is outdated and needs a proper review.
 
-PAL Host ABI is the interface used by Gramine to interact with its host. It is translated into
-the host's native ABI (e.g. system calls for UNIX) by a layer called the Platform Adaptation Layer
-(PAL). A PAL not only exports a set of APIs (PAL APIs) that can be called by the library OS, but
-also acts as the loader that bootstraps the library OS. The design of PAL Host ABI strictly follows
+PAL Host ABI is the interface used by Gramine to interact with its host. It is
+translated into the host's native ABI (e.g. system calls for UNIX) by a layer
+called the Platform Adaptation Layer (PAL). A PAL not only exports a set of APIs
+(PAL APIs) that can be called by the library OS, but also acts as the loader
+that bootstraps the library OS. The design of PAL Host ABI strictly follows
 three primary principles, to guarantee functionality, security, and portability:
 
 * The host ABI must be stateless.
 * The host ABI must be a narrowed interface to reduce the attack surface.
-* The host ABI must be generic and independent from the native ABI of any of the supported hosts.
+* The host ABI must be generic and independent from the native ABI of any of the
+  supported hosts.
 
 Most of the PAL Host ABI is adapted from the Drawbridge library OS.
 
 PAL as loader
 -------------
 
-Regardless of the actual implementation, we require PAL to be able to load ELF-format binaries
-as executables or dynamic libraries, and perform the necessary dynamic relocation. PAL needs
-to look up all unresolved symbols in loaded binaries and resolve the ones matching the names of
-PAL APIs. PAL does not and will not resolve other unresolved symbols, so the loaded libraries and
-executables must resolve them afterwards.
+Each PAL implementation must support loading and dynamic relocation of
+ELF-format executables and dynamic libraries. PAL needs to look up all
+unresolved symbols in loaded binaries and resolve the ones matching the names of
+PAL APIs. PAL does not and will not resolve other unresolved symbols, so the
+loaded libraries and executables must resolve them afterwards.
 
-After loading the binaries, PAL needs to load and interpret the manifest files. The manifest syntax
-is described in :doc:`../manifest-syntax`.
+After loading the binaries, PAL needs to load and interpret the manifest files.
+The manifest syntax is described in :doc:`../manifest-syntax`.
 
 Manifest and executable loading
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-To run a program in Gramine the PAL loader needs a manifest, which will
-describe the whole environment inside Gramine namespace. It also describes
-which executable to start first (via ``libos.entrypoint``).
+To run a program in Gramine the PAL loader needs a manifest, which will describe
+the whole environment inside Gramine namespace. It also describes which
+executable to start first (via ``libos.entrypoint``).
 
 Data types and variables
 ------------------------
@@ -45,9 +47,9 @@ PAL handles
 
 ``PAL_HANDLE`` is the type of identifiers that are returned by PAL when opening
 or creating resources. It is an opaque type, that should not be accessed outside
-of PAL and its details depend on the actual PAL version (host).
-There is a common header (present on all PAL hosts) accessible from PAL code,
-which allows for checking the handle type::
+of PAL and its details depend on the actual PAL version (host). There is a
+common header (present on all PAL hosts) accessible from PAL code, which allows
+for checking the handle type::
 
    typedef struct {
        struct {
@@ -71,9 +73,9 @@ PAL public state
 ^^^^^^^^^^^^^^^^
 
 All PALs in Gramine expose a structure that provides static immutable
-information about the current process and its host. The address of the
-structure can be retrieved via :func:`PalGetPalPublicState()` and can be
-memorized in a global variable for ease of use.
+information about the current process and its host. The address of the structure
+can be retrieved via :func:`PalGetPalPublicState()` and can be memoized in a
+global variable for ease of use.
 
 .. doxygenstruct:: pal_public_state
    :project: pal
@@ -141,10 +143,10 @@ creation.
 Stream creation/connect/open
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The stream ABI includes nine calls to open, read, write, map, unmap,
-truncate, flush, delete and wait for I/O streams and three calls to
-access metadata about an I/O stream. The ABI purposefully does not
-provide an ioctl call. Supported URI schemes include:
+The stream ABI includes nine calls to open, read, write, map, unmap, truncate,
+flush, delete and wait for I/O streams and three calls to access metadata about
+an I/O stream. The ABI purposefully does not provide an ioctl call. Supported
+URI schemes include:
 ``file:``,
 ``pipe:``,
 ``http:``,
@@ -331,10 +333,8 @@ Objects
 Miscellaneous
 ^^^^^^^^^^^^^
 
-The ABI includes seven assorted calls to get wall clock time, generate
-cryptographically-strong random bits, flush portions of instruction caches,
-increment and decrement the reference counts on objects shared between threads,
-and to obtain an attestation report and quote.
+The ABI includes calls to get wall clock time, generate cryptographically-strong
+random bits, to obtain an attestation report and quote, etc.
 
 .. doxygenfunction:: PalDebugLog
    :project: pal
