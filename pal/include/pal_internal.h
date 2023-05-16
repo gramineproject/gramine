@@ -285,15 +285,6 @@ void* malloc_copy(const void* mem, size_t size);
 void* calloc(size_t num, size_t size);
 void free(void* mem);
 
-#ifdef __GNUC__
-#define __attribute_hidden        __attribute__((visibility("hidden")))
-#define __attribute_always_inline __attribute__((always_inline))
-#define __attribute_unused        __attribute__((unused))
-#define __attribute_noinline      __attribute__((noinline))
-#else
-#error Unsupported compiler
-#endif
-
 int _PalInitDebugStream(const char* path);
 int _PalDebugLog(const void* buf, size_t size);
 
