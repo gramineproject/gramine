@@ -86,25 +86,26 @@ static int writer_(void* args_) {
 static void run_test(size_t iterations, size_t readers_num, size_t writers_num,
                      size_t writers_delay_us) {
     struct shared_state m = {1, 0, 0, 1};
-    void* lock;
-    if (!gramine_rwlock_create(&lock))
-        errx(1, "gramine_rwlock_create failed");
-
-    thrd_t* threads = calloc(sizeof(*threads), readers_num + writers_num);
-    if (!threads)
-        errx(1, "calloc failed");
-
     struct reader_args reader_args = {
-        .lock = lock,
         .m = &m,
         .total_iterations = iterations * writers_num,
     };
     struct writer_args writer_args = {
-        .lock = lock,
         .m = &m,
         .iterations = iterations,
         .writers_delay_us = writers_delay_us,
     };
+
+    void* lock;
+    if (!gramine_rwlock_create(&lock))
+        errx(1, "gramine_rwlock_create failed");
+
+    reader_args.lock = lock;
+    writer_args.lock = lock;
+
+    thrd_t* threads = calloc(sizeof(*threads), readers_num + writers_num);
+    if (!threads)
+        errx(1, "calloc failed");
 
     /* Spawn readers */
     for (size_t i = 0; i < readers_num; i++) {
