@@ -70,7 +70,9 @@ static inline int gramine_call(int number, unsigned long arg1, unsigned long arg
         "GRAMINE_SYSCALL"
         : "=a"(ret)
         : "0"(GRAMINE_CUSTOM_SYSCALL_NR), "D"(number), "S"(arg1), "d"(arg2)
-        : "rcx", "r11", "memory");
+        : "rcx", "r11", "memory",
+          "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7", "xmm8", "xmm9", "xmm10",
+          "xmm11", "xmm12", "xmm13", "xmm14", "xmm15");
     return ret;
 }
 
