@@ -43,6 +43,20 @@ __asm__(
     ".endm\n"
 );
 
+/* Magic syscall number for Gramine custom calls */
+#define GRAMINE_CUSTOM_SYSCALL_NR 0x100000
+
+/* Some GCC versions warn about unused parameters in naked functions. Bug? */
+__attribute__((naked)) static int gramine_call(int number __attribute__((unused)),
+                                               unsigned long arg1 __attribute__((unused)),
+                                               unsigned long arg2 __attribute__((unused))) {
+    __asm__ (
+        "mov $" GRAMINE_XSTR(GRAMINE_CUSTOM_SYSCALL_NR) ", %eax\n"
+        "GRAMINE_SYSCALL\n"
+        "ret\n"
+    );
+}
+
 #undef GRAMINE_XSTR
 #undef GRAMINE_STR
 
@@ -60,19 +74,6 @@ enum {
     GRAMINE_CALL_RWLOCK_WRITE_LOCK,
     GRAMINE_CALL_RWLOCK_WRITE_UNLOCK,
 };
-
-/* Magic syscall number for Gramine custom calls */
-#define GRAMINE_CUSTOM_SYSCALL_NR 0x100000
-
-static inline int gramine_call(int number, unsigned long arg1, unsigned long arg2) {
-    int ret;
-    __asm__ volatile(
-        "GRAMINE_SYSCALL"
-        : "=a"(ret)
-        : "0"(GRAMINE_CUSTOM_SYSCALL_NR), "D"(number), "S"(arg1), "d"(arg2)
-        : "rcx", "r11", "memory");
-    return ret;
-}
 
 static inline int gramine_register_library(const char* name, unsigned long load_address) {
     return gramine_call(GRAMINE_CALL_REGISTER_LIBRARY, (unsigned long)name, load_address);
