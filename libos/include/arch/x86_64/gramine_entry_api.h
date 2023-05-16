@@ -64,7 +64,13 @@ enum {
 /* Magic syscall number for Gramine custom calls */
 #define GRAMINE_CUSTOM_SYSCALL_NR 0x100000
 
-static inline int gramine_call(int number, unsigned long arg1, unsigned long arg2) {
+/* It is important to *not* inline this function because in this case, an optimized application may
+ * end up with `jmpq *%gs:<gramine-syscall>` instruction in the middle of app-specific logic. This
+ * logic may involve XSAVE registers like XMM/YMM/etc. which are *not* required to be saved/restored
+ * across the `jmpq`. This is in contrast to the `call` instruction, which forces the compiler to
+ * save/restore XSAVE registers across `call` (according to the Sys-V x86-64 ABI). */
+__attribute__ ((noinline))
+static int gramine_call(int number, unsigned long arg1, unsigned long arg2) {
     int ret;
     __asm__ volatile(
         "GRAMINE_SYSCALL"
