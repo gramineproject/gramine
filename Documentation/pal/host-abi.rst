@@ -74,7 +74,7 @@ PAL public state
 
 All PALs in Gramine expose a structure that provides static immutable
 information about the current process and its host. The address of the structure
-can be retrieved via :func:`PalGetPalPublicState()` and can be memorized in a
+can be retrieved via :func:`PalGetPalPublicState()` and can be memoized in a
 global variable for ease of use.
 
 .. doxygenstruct:: pal_public_state

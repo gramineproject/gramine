@@ -93,7 +93,7 @@ installation. To clone the Gramine repo, use the following command:
 
    git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
 
-Don't build Gramine as it is already installed on the system. Instead,
+Don't build Gramine, because it is already installed on the system. Instead,
 build and run the HelloWorld example. To build the HelloWorld application,
 install the ``gcc`` compiler and the ``make`` build system by entering the
 following::
