@@ -94,8 +94,11 @@ path inside Gramine pointing to a mounted file. Relative paths will be
 interpreted as starting from the current working directory (i.e. from ``/`` by
 default, or ``fs.start_dir`` if specified).
 
-The recommended usage is to provide an absolute path and mount the executable
-at that path. For example::
+The recommended usage is to provide an absolute path of the executable. This
+executable must also be in the Gramine's file system, either directly mounted or
+within a directory that is mounted. For example, if one wishes to execute the
+Python 3.8 interpreter, one would specify it as the entrypoint and mount the
+Python executable at the expected path within the Gramine file system::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
@@ -693,15 +696,15 @@ Trusted files
     uri = "[URI]"
     sha256 = "[HASH]"
 
-This syntax specifies the files to be cryptographically hashed at build time
-and allowed to be accessed by the app in runtime only if their hashes match.
-This implies that trusted files can be only opened for reading (not for writing)
-and cannot be created if they do not exist already. The signer tool will
-automatically generate hashes of these files and add them to the SGX-specific
-manifest (``.manifest.sgx``). The manifest writer may also specify the hash for
-a file using the TOML-table syntax, in the field ``sha256``; in this case,
-hashing of the file will be skipped by the signer tool and the value in
-``sha256`` field will be used instead.
+This syntax specifies the files to be cryptographically hashed at build time; at
+runtime, these files may only be accessed by the app if the files' hashes match
+what is stored in the manifest. This implies that trusted files can be only
+opened for reading (not for writing) and cannot be created if they do not exist
+already. The signer tool will automatically generate hashes of these files and
+add them to the SGX-specific manifest (``.manifest.sgx``). The manifest writer
+may also specify the hash for a file using the TOML-table syntax, in the field
+``sha256``; in this case, hashing of the file will be skipped by the signer tool
+and the value in ``sha256`` field will be used instead.
 
 Marking files as trusted is especially useful for shared libraries: a |~|
 trusted library cannot be silently replaced by a malicious host because the hash
