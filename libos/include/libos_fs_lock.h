@@ -36,8 +36,6 @@ int init_fs_lock(void);
  * - There is no deadlock detection (EDEADLK).
  * - The lock requests cannot be interrupted (EINTR).
  * - The locks work only on files that have a dentry (no pipes, sockets etc.).
- * - The flock-type locks do not support the case when a file was mapped and then unmapped
- *   (in that case, the lock should be released on the last unmap).
  */
 
 DEFINE_LISTP(posix_lock);
