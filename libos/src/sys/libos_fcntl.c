@@ -282,10 +282,6 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     return ret;
 }
 
-/* The current implementation does not cover the `mmap` case. In Linux, when a mapped file is
- * unlocked, the lock will remain in effect until the file is unmapped. But in Gramine the
- * `mmap` doesn't influence the lock's state.
- */
 long libos_syscall_flock(int fd, unsigned int cmd) {
     int ret;
 
