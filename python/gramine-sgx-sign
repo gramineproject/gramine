@@ -98,7 +98,7 @@ def main(with_, output, libpal, manifest_file, sigfile, depfile, verbose, plugin
         # Dependencies:
         #
         # - `.manifest.sgx` depends on all files we just expanded
-        # - `.sig` additionally depends on libpal and key
+        # - `.sig` additionally depends on libpal
         #
         # TODO (Ninja 1.10): We print all these as dependencies for `.manifest.sgx`. This will still
         # cause `.sig` to be rebuilt when necessary: we build both these files together, so it's not

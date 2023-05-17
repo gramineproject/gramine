@@ -4,10 +4,10 @@
 Writing plugins for signing SGX enclaves
 ========================================
 
-SGX cryptosystem uses RSA-3072 with modulus 3 for signing SIGSTRUCT. However
+SGX cryptosystem uses RSA-3072 with modulus 3 for signing a SIGSTRUCT. However
 there are different arrangements where suitable keys are kept and used for
 operations. Keyfile is not always available (e.g. HSMs explicitly prevent users
-from extracting keys), so we need adaptable ways of signing the enclaves. This
+from extracting keys), so we need adaptable ways of signing enclaves. This
 document describes how to implement a |~| plugin that allows Gramine to access
 different APIs for signing SGX enclaves.
 
@@ -15,7 +15,7 @@ You need to provide a |~| click subcommand, which is a |~| Python function
 wrapped in :func:`click.command` decorator. It will be called with
 ``standalone_mode=False``.
 
-The command needs to return singing function that will be passed to
+The command needs to return signing function that will be passed to
 ``Sigstruct.sign``. It returns 3-tuple:
 
 - exponent (always ``3``)
