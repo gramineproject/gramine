@@ -19,7 +19,7 @@ tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
 building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
 higher. If you find problems with Gramine on other Linux distributions, contact
 us with a |~| detailed `bug report
-<https://github.com/gramineproject/gramine/issues/new>`__.
+<https://github.com/gramineproject/gramine/issues/new/choose>`__.
 
 Install dependencies
 --------------------

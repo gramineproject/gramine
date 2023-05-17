@@ -16,7 +16,7 @@ Glossary
          https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/asplos2011-drawbridge.pdf
 
       Whenever Gramine requires a service from the host platform (memory
-      allocation, thread management and synchronization, file system and network
+      allocation, thread management and synchronization, filesystem and network
       stacks, etc.), it calls the corresponding PAL functionality. The PAL ABI
       is host-platform agnostic and is backed by the host-platform specific PAL,
       for example, the Linux-SGX PAL.

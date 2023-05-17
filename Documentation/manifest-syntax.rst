@@ -95,10 +95,10 @@ interpreted as starting from the current working directory (i.e. from ``/`` by
 default, or ``fs.start_dir`` if specified).
 
 The recommended usage is to provide an absolute path of the executable. This
-executable must also be in the Gramine's file system, either directly mounted or
+executable must also be in the Gramine's filesystem, either directly mounted or
 within a directory that is mounted. For example, if one wishes to execute the
 Python 3.8 interpreter, one would specify it as the entrypoint and mount the
-Python executable at the expected path within the Gramine file system::
+Python executable at the expected path within the Gramine filesystem::
 
    libos.entrypoint = "/usr/bin/python3.8"
 
@@ -135,7 +135,7 @@ of the three mutually exclusive options:
 - point ``loader.argv_src_file`` to a file
   containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
-If none of the above argument-handling manifest options are specified in the
+If none of the above arguments-handling manifest options is specified in the
 manifest, the application will get ``argv = [ <libos.entrypoint value> ]``.
 
 ``loader.argv_src_file`` is intended to point to either a trusted file or an
@@ -171,7 +171,7 @@ This option will generate the following extra configuration:
 The functionality is achieved by taking the host's configuration via various
 APIs and reading the host's configuration files. In the case of Linux PAL,
 most information comes from the host's ``/etc``. The gathered information is
-used to create ``/etc`` files inside Gramine's file system, or change Gramine
+used to create ``/etc`` files inside Gramine's filesystem, or change Gramine
 process configuration. For security-enforcing modes (such as SGX), Gramine
 additionally sanitizes the information gathered from the host. Invalid host's
 configuration is reported as an error (e.g. invalid hostname, or invalid IPv4
@@ -369,7 +369,7 @@ Root FS mount point
     fs.root.type = "[chroot|...]"
     fs.root.uri  = "[URI]"
 
-This syntax specifies the root file system to be mounted inside the library OS.
+This syntax specifies the root filesystem to be mounted inside the library OS.
 Both parameters are optional. If not specified, then Gramine mounts the current
 working directory as the root.
 
@@ -397,7 +397,7 @@ Or, as separate sections:
     path = "[PATH]"
     uri  = "[URI]"
 
-This syntax specifies how file systems are mounted inside the library OS. For
+This syntax specifies how filesystems are mounted inside the library OS. For
 dynamically linked binaries, usually at least one `chroot` mount point is
 required in the manifest (the mount point of linked libraries). The filesystems
 will be mounted in the order in which they appear in the manifest.
