@@ -719,6 +719,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
+            /* for simplicity, we try to get `array_len` field even for non-ptr sub regions; this
+             * will always return success (as we have a check on `array_len` existence above) and a
+             * dummy default `array_len = 1`, but it will be unused */
             ret = get_sub_region_array_len(toml_sub_region, &cur_sub_region->array_len);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'array_len' field failed");
