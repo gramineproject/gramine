@@ -10,7 +10,7 @@ installation. To clone the Gramine repo, use the following command:
 
    git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
 
-Don't build Gramine as it is already installed on the system.
+Don't build Gramine if it is already installed on the system.
 
 Build and run HelloWorld sample app
 -----------------------------------
@@ -41,11 +41,11 @@ Other sample applications
 Several applications that demonstrate Gramine usability are available in the
 :file:`CI-Examples` directory in the repository. Each application contains a
 short README file with instructions how to test it. We recommend starting with a
-simpler, thoroughly documented example of Redis to understand manifest options
-and Gramine features.
+thoroughly documented example of Redis to understand manifest options and
+Gramine features.
 
 Additional sample configurations for applications enabled in Gramine are
-available in a separate repository https://github.com/gramineproject/examples.
+available in a separate repository: https://github.com/gramineproject/examples.
 
 Please note that these sample applications are tested on Ubuntu. Most of these
 applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
