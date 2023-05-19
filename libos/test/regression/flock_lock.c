@@ -20,11 +20,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/file.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 #include "common.h"
 
 #define TEST_FILE "tmp/flock_file"
+#define FILE_SIZE 1024
 
 struct thread_args {
     int pipes[2][2];
@@ -103,6 +105,26 @@ static void test_flock_dup_open(void) {
     CHECK(close(fd3));
 }
 
+static void test_mmap_flock_close_unmap(void) {
+    printf("testing locks with the mmap and flock...\n");
+    int fd, fd2;
+    char *file_data;
+
+    fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    file_data = mmap(NULL, FILE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    if (file_data == MAP_FAILED) {
+        err(1, "mmap");
+    }
+    try_flock(fd, LOCK_EX, 0);
+    CHECK(close(fd));
+    
+    fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    try_flock(fd2, LOCK_EX | LOCK_NB, -1);
+    CHECK(munmap(file_data, FILE_SIZE));
+    try_flock(fd2, LOCK_EX, 0);
+    CHECK(close(fd2));
+}
+
 static void* thread_flock_first(void* arg) {
     struct thread_args* args = (struct thread_args*)arg;
 
@@ -161,6 +183,7 @@ int main(void) {
     setbuf(stdout, NULL);
 
     test_flock_dup_open();
+    test_mmap_flock_close_unmap();
     test_flock_multithread();
 
     CHECK(unlink(TEST_FILE));
