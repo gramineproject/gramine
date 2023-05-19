@@ -1,5 +1,5 @@
-Ready-made confidential protected images
-========================================
+Ready-made confidential compute images
+======================================
 
 .. note ::
    This is not an official part of Gramine. The offering mentioned here wasn't

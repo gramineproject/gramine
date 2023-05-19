@@ -37,15 +37,16 @@ Gramine Shielded Containers
 
 Docker images are used to run applications in the cloud. The Gramine Shielded
 Containers (GSC) tool transforms an original Docker image into a graminized
-Docker image that includes the Gramine Library OS and Intel SGX related data. It
-enables you to run an application in a Docker container and keep it protected.
+Docker image that includes the Gramine Library OS and the Gramine-specific app
+configuration. It enables you to run an application in a Docker container and
+keep it protected.
 
 - :doc:`gsc-installation` - Get an overview of the GSC installation process.
 - `Read GSC documentation <https://gramine.readthedocs.io/projects/gsc/>`_.
 - `Download GSC <https://github.com/gramineproject/gsc>`_.
 
-Ready-made protected applications
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Ready-made confidential compute images
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Confidential compute images are ready-made solutions for popular open source
 projects such as PyTorch and Redis. These images enable you to customize your
@@ -68,7 +69,8 @@ The following steps can be performed to protect your application with Gramine:
 - :doc:`Install Gramine<quickstart>` - Install the official Gramine packages
   from the repository of your operating system.
 - :doc:`Set up the environment<environment-setup>` - Set up the Gramine
-  environment to work with or without SGX and prepare a signing key.
+  environment to work with or without SGX and prepare a signing key (only for
+  SGX).
 - :doc:`Run a sample application<run-sample-application>` - Run a sample
   application to ensure your environment is running correctly.
 
@@ -132,6 +134,16 @@ Gramine development.
   Gramine user-groups page lists the user groups you can join to help you get up
   to speed with developing Gramine.
 
+Gramine design and features
+---------------------------
+
+The Gramine Library OS is a complex software. The below articles provide an
+overview of Gramine design and implemented/unimplemented features.
+
+- :doc:`devel/features` -- This page has a comprehensive description of
+  implemented and unimplemented features of Gramine, including the lists of
+  available system calls and pseudo-files.
+
 Resources
 ---------
 
@@ -143,6 +155,7 @@ glossary to help you with any questions you may have.
 - :doc:`gramine-users` - See what companies are using Gramine for their
   confidential computing needs.
 - :doc:`docker-image-installation` - Use the official Gramine Docker image.
+- :doc:`sgx-intro` - Learn about the Intel SGX technology and software stack.
 - :doc:`glossary` - Become familiar with the terms used for Gramine.
 
 Getting help
@@ -215,11 +228,10 @@ Indices and tables
 
 .. toctree::
    :hidden:
-   :caption: Gramine design and concepts
+   :caption: Gramine design and features
    :maxdepth: 1
 
    devel/features
-   sgx-intro
 
 .. toctree::
    :hidden:
@@ -229,4 +241,5 @@ Indices and tables
    management-team
    gramine-users
    docker-image-installation
+   sgx-intro
    glossary

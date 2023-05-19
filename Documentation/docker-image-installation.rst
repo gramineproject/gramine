@@ -26,4 +26,6 @@ profile using::
     --security-opt seccomp=<profile_file>
 
 You can download the profile file from
-https://github.com/gramineproject/gramine/blob/master/scripts/docker_seccomp.json.
+https://github.com/gramineproject/gramine/blob/master/scripts. Two profile files
+are available: ``docker_seccomp_mar_2021.json`` (for older Docker versions) and
+``docker_seccomp_aug_2022.json`` (for newer Docker versions).
