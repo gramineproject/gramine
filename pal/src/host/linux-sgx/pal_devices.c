@@ -234,7 +234,7 @@ struct handle_ops g_dev_ops = {
  *   struct pascal_str { uint8_t len; char str[]; };
  *   struct c_str { char str[]; };
  *   struct root { struct pascal_str* s1;
- *                 struct c_str* s2; uint64_t s2_size;
+ *                 struct c_str* s2; uint64_t s2_buf_size;
  *                 int8_t x; int8_t y; };
  *
  *   alignas(128) struct root obj;
@@ -243,13 +243,13 @@ struct handle_ops g_dev_ops = {
  * The example IOCTL takes as a third argument a pointer to an object of type `struct root` that
  * contains two pointers to other objects (pascal-style string and a C-style string) and embeds two
  * integers `x` and `y`. The two strings reside in separate memory regions in enclave memory. Note
- * that the size of the allocated buffer for the C-style string is stored in the `s2_size` field of
- * the root object. The `pascal_str` string is an input to the IOCTL, the `c_str` string and its
- * actual size `s2_size` are the outputs of the IOCTL, and the integers `x` and `y` are also outputs
- * of the IOCTL. Also note that the root object is 128B-aligned (for illustration purposes). This
- * IOCTL could for example be used to convert a Pascal string into a C string (C string will be
- * truncated to user-specified `s2_size` if greater than this limit), and find the indices of the
- * first occurrences of chars "x" and "y" in the Pascal string.
+ * that the size of the allocated buffer for the C-style string is stored in the `s2_buf_size` field
+ * of the root object. The `pascal_str` string is an input to the IOCTL, the `c_str` string and its
+ * actual size `s2_buf_size` are the outputs of the IOCTL, and the integers `x` and `y` are also
+ * outputs of the IOCTL. Also note that the root object is 128B-aligned (for illustration purposes).
+ * This IOCTL could for example be used to convert a Pascal string into a C string (C string will be
+ * truncated to user-specified `s2_buf_size` if greater than this limit), and find the indices of
+ * the first occurrences of chars "x" and "y" in the Pascal string.
  *
  * The corresponding manifest entries describing these structs look like this:
  *
@@ -259,9 +259,9 @@ struct handle_ops g_dev_ops = {
  *                            { name = "pascal-str", size = "pascal-str-len", direction = "out"}
  *                        ] },
  *     { ptr = [
- *           { name = "c-str", size = "c-str-size", direction = "in" }
+ *           { name = "c-str", size = "c-buf-size", direction = "in" }
  *       ] },
- *     { name = "c-str-size", size = 8, direction = "inout" },
+ *     { name = "c-buf-size", size = 8, direction = "inout" },
  *     { size = 2, direction = "in" }  # x and y fields
  *   ]
  *
@@ -305,28 +305,27 @@ struct handle_ops g_dev_ops = {
  * untrusted memory (right side). MR stands for "memory region", SR stands for "sub-region". Note
  * how enclave pointers are copied and rewired to point to untrusted memory regions.
  *
- *      struct root (MR1)                   |       deep-copied struct (aligned at 128B)
- *      +----------------------+            |       +-----------------------------+
- *  +----+ pascal_str* s1      |     SR1    |    +----+ pascal_str* s1    (MR1)   |
- *  |   |                      |            |    |  |                             |
- *  |   |  c_str* s2 +-----------+   SR2    |    |  |   c_str* s2 +------------------+
- *  |   |                      | |          |    |  |                             |  |
- *  |   |  uint64_t s2_size    | |   SR3    |    |  |   uint64_t s2_size          |  |
- *  |   |                      | |          |    |  |                             |  |
- *  |   |  int8_t x, y         | |   SR4    |    |  |   int8_t x, y               |  |
- *  |   +----------------------+ |          |    |  +-----------------------------+  |
- *  |                            |          |    +->|   uint8_t len         (MR2) |  |
- *  v (MR2)                      |          |       |                             |  |
- * +-------------+               |          |       |   char str[len]             |  |
- * | uint8_t len |               |   SR5    |       +-----------------------------+  |
- * |             |               |          |       |  char str[s2_size]    (MR3) |<-+
- * | char str[]  |               |   SR6    |       +-----------------------------+
- * +-------------+               |          |
- *                      (MR3)    v          |
- *                    +----------+-+        |
- *                    | char str[] | SR7    |
- *                    +------------+        |
- *
+ *      struct root (MR1)                    |       deep-copied struct (aligned at 128B)
+ *      +-----------------------+            |       +------------------------------+
+ *  +----+ pascal_str* s1       |     SR1    |    +----+ pascal_str* s1       (MR1) |
+ *  |   |                       |            |    |  |                              |
+ *  |   |  c_str* s2 +------------+   SR2    |    |  |   c_str* s2 +-------------------+
+ *  |   |                       | |          |    |  |                              |  |
+ *  |   |  uint64_t s2_buf_size | |   SR3    |    |  |   uint64_t s2_buf_size       |  |
+ *  |   |                       | |          |    |  |                              |  |
+ *  |   |  int8_t x, y          | |   SR4    |    |  |   int8_t x, y                |  |
+ *  |   +-----------------------+ |          |    |  +------------------------------+  |
+ *  |                             |          |    +->|   uint8_t len          (MR2) |  |
+ *  v (MR2)                       |          |       |                              |  |
+ * +-------------+                |          |       |   char str[len]              |  |
+ * | uint8_t len |                |   SR5    |       +------------------------------+  |
+ * |             |                |          |       |  char str[s2_buf_size] (MR3) |<-+
+ * | char str[]  |                |   SR6    |       +------------------------------+
+ * +-------------+                |          |
+ *                       (MR3)    v          |
+ *                     +----------+-+        |
+ *                     | char str[] | SR7    |
+ *                     +------------+        |
  */
 
 /* for simplicity, we limit the number of memory and sub-regions; these limits should be enough for
@@ -676,13 +675,11 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                     ret = -PAL_ERROR_INVAL;
                     goto out;
                 }
-            } else {
-                if (toml_raw_in(toml_sub_region, "array_len")) {
+            } else if (toml_raw_in(toml_sub_region, "array_len")) {
                     log_error("IOCTL: non-'ptr' field cannot specify 'array_len' (did you mean"
                               " 'size'?)");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
-                }
             }
 
             ret = get_sub_region_name(toml_sub_region, &cur_sub_region->name);
@@ -794,21 +791,21 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 };
             }
 
-            for (size_t k = 0; k < sub_regions[i].array_len.value; k++) {
-                if (mem_regions_cnt == max_mem_regions) {
-                    log_error("IOCTL: too many memory regions (max is %zu)", max_mem_regions);
-                    ret = -PAL_ERROR_NOMEM;
-                    goto out;
+            /* add nested mem regions only if this pointer/array sub region value is not NULL */
+            void* mem_region_addr = *((void**)sub_regions[i].enclave_addr);
+            if (mem_region_addr) {
+                for (size_t k = 0; k < sub_regions[i].array_len.value; k++) {
+                    if (mem_regions_cnt == max_mem_regions) {
+                        log_error("IOCTL: too many memory regions (max is %zu)", max_mem_regions);
+                        ret = -PAL_ERROR_NOMEM;
+                        goto out;
+                    }
+
+                    mem_regions[mem_regions_cnt].toml_mem_region = sub_regions[i].toml_mem_region;
+                    mem_regions[mem_regions_cnt].enclave_addr    = mem_region_addr;
+                    mem_regions[mem_regions_cnt].adjacent        = k > 0;
+                    mem_regions_cnt++;
                 }
-
-                void* mem_region_addr = *((void**)sub_regions[i].enclave_addr);
-                if (!mem_region_addr)
-                    continue;
-
-                mem_regions[mem_regions_cnt].toml_mem_region = sub_regions[i].toml_mem_region;
-                mem_regions[mem_regions_cnt].enclave_addr    = mem_region_addr;
-                mem_regions[mem_regions_cnt].adjacent        = k > 0;
-                mem_regions_cnt++;
             }
         }
     }
@@ -832,7 +829,7 @@ out:
 static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t sub_regions_cnt,
                                          void* untrusted_addr) {
     /* we rely on the fact that the untrusted memory region was zeroed out: we can simply "jump
-     * over" untrusted memory when doing alignment and when direction of copy is in or none */
+     * over" untrusted memory when doing alignment and when direction of copy is `in` or `none` */
     char* cur_untrusted_addr = untrusted_addr;
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         if (!sub_regions[i].size)
@@ -909,10 +906,8 @@ static int get_ioctl_struct(toml_table_t* manifest_sgx, toml_table_t* toml_ioctl
 
     char* ioctl_struct_str = NULL;
     int ret = toml_rtos(toml_ioctl_struct_raw, &ioctl_struct_str);
-    if (ret < 0) {
-        ret = -PAL_ERROR_INVAL;
-        goto out;
-    }
+    if (ret < 0)
+        return -PAL_ERROR_INVAL;
 
     if (strcmp(ioctl_struct_str, "") == 0) {
         /* empty string instead of struct name -> base-type or ignored IOCTL argument */
@@ -1028,7 +1023,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         /* overapproximation since alignment doesn't necessarily increase sub-region's size */
-        untrusted_size += sub_regions[i].size + sub_regions[i].alignment;
+        untrusted_size += sub_regions[i].size + sub_regions[i].alignment - 1;
     }
 
     ret = ocall_mmap_untrusted(&untrusted_addr, ALLOC_ALIGN_UP(untrusted_size),

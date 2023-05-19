@@ -30,7 +30,7 @@ sgx.ioctl_structs.negative_size = [
     { size = -16 },
 ]
 
-# Buffer is defined before its size is defined (parser doesn't "know" when buffer ends and fails)
+# Buffer is defined before its size is defined (parser doesn't "know" where buffer ends and fails)
 sgx.ioctl_structs.size_after_buffer_fail = [
     { size = "buf_size", direction = "out" },
     { size = 8, direction = "out", name = "buf_size" },
