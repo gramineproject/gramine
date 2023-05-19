@@ -3,25 +3,27 @@ Quick start
 
 .. highlight:: sh
 
-Prerequisites
--------------
+Gramine installation options
+----------------------------
 
-Gramine without SGX has no special requirements.
+There are three options to choose from when using Gramine to protect your
+application. The option you choose depends on how you are running your
+application.
 
-Gramine with SGX support requires several features from your system:
+- :doc:`Install Gramine<quickstart>` - This option is explained on this page.
+  It involves installing the official Gramine packages from the repository of
+  your operating system.
 
-- Linux kernel version at least 5.11 (with SGX driver enabled);
-- Intel SGX PSW and (optionally) Intel DCAP must be installed and configured.
+- :doc:`docker-image-installation` - With this option, you protect your
+  application using a prepared Docker image that provides a minimal
+  distribution of Gramine.
 
-If your system doesn't meet these requirements, please refer to more detailed
-descriptions in :doc:`devel/building`.
+- :doc:`devel/building` - This option is mainly used for assisting in Gramine
+  development. This option is intended for Gramine developers and is much more
+  involved than the other two options.
 
-We supply a tool :doc:`manpages/is-sgx-available`, which you can use to check
-your hardware and system. It's installed together with the respective gramine
-package (see below).
-
-Install Gramine
----------------
+Install Gramine packages
+------------------------
 
 Debian 11
 ^^^^^^^^^
@@ -59,10 +61,12 @@ Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
    sudo apt-get update
    sudo apt-get install gramine
 
-RHEL-like distributions version 8 (and experimentally also version 9)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RHEL-like distributions version 8
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-(like AlmaLinux, Rocky Linux, ...)
+These are distributions like AlmaLinux, Rocky Linux, etc.
+
+We also *experimentally* support RHEL-like distributions version 9.
 
 1. Install EPEL repository as described here:
    https://docs.fedoraproject.org/en-US/epel/
@@ -71,73 +75,3 @@ RHEL-like distributions version 8 (and experimentally also version 9)
 
       sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
       sudo dnf install gramine
-
-Prepare a signing key
----------------------
-
-Only for SGX, and if you haven't already::
-
-   gramine-sgx-gen-private-key
-
-This command generates an |~| RSA 3072 key suitable for signing SGX enclaves and
-stores it in :file:`{HOME}/.config/gramine/enclave-key.pem`. This key needs to
-be protected and should not be disclosed to anyone.
-
-Run a sample application
-------------------------
-
-The core Gramine repository contains sample applications to test the Gramine
-installation. To clone the Gramine repo, use the following command:
-
-.. parsed-literal::
-
-   git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/gramine.git
-
-Don't build Gramine, because it is already installed on the system. Instead,
-build and run the HelloWorld example. To build the HelloWorld application,
-install the ``gcc`` compiler and the ``make`` build system by entering the
-following::
-
-   sudo apt-get install gcc make  # for Ubuntu distribution
-   sudo dnf install gcc make      # for RHEL-like distribution
-
-Go to the HelloWorld example directory::
-
-   cd gramine/CI-Examples/helloworld
-
-Build and run without SGX::
-
-   make
-   gramine-direct helloworld
-
-Build and run with SGX::
-
-   make SGX=1
-   gramine-sgx helloworld
-
-Other sample applications
--------------------------
-
-Several applications that demonstrate Gramine usability are available in the
-:file:`CI-Examples` directory in the repository. Each application contains a
-short README file with instructions how to test it. We recommend starting
-with a simpler, thoroughly documented example of Redis to
-understand manifest options and Gramine features.
-
-Additional sample configurations for applications enabled in Gramine can be
-found in a separate repository https://github.com/gramineproject/examples.
-
-Please note that these sample applications are tested on Ubuntu. Most of these
-applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
-Linux, but with caveats. One caveat is that Makefiles should be invoked with
-``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications that rely on
-specific versions/builds of Glibc may break (our GCC example is known to work
-only on Ubuntu).
-
-glibc vs musl
--------------
-
-Most of the examples we provide use GNU C Library (glibc). If your application
-is built against musl libc, you can pass ``'musl'`` to
-:py:func:`gramine.runtimedir()` when generating the manifest from a template,
-which will mount musl libc (instead of the default glibc).
