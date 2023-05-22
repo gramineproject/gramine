@@ -11,16 +11,17 @@ application. The option you choose depends on how you are running your
 application.
 
 - :doc:`Install Gramine<quickstart>` - This option is explained on this page.
-  It involves installing the official Gramine packages from the repository of
-  your operating system.
+  It installs the official Gramine packages from the repository of your
+  operating system.
 
 - :doc:`docker-image-installation` - With this option, you protect your
-  application using a prepared Docker image that provides a minimal
-  distribution of Gramine.
+  application using a Docker image that provides a minimal distribution of
+  Gramine.
 
 - :doc:`devel/building` - This option is mainly used for assisting in Gramine
-  development. This option is intended for Gramine developers and is much more
-  involved than the other two options.
+  development. This option is recommended for advanced users who want to get all
+  current bugfixes and improvements without waiting for a next release. This
+  option is much more involved than the other two options.
 
 Install Gramine packages
 ------------------------

@@ -44,8 +44,8 @@ short README file with instructions how to test it. We recommend starting with a
 thoroughly documented example of Redis to understand manifest options and
 Gramine features.
 
-Additional sample configurations for applications enabled in Gramine are
-available in a separate repository: https://github.com/gramineproject/examples.
+Additional sample Gramine configurations for applications are available in a
+separate repository: https://github.com/gramineproject/examples.
 
 Please note that these sample applications are tested on Ubuntu. Most of these
 applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky

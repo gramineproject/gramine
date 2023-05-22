@@ -1,5 +1,5 @@
 *********************
-Gramine Documentation
+Gramine documentation
 *********************
 
 Gramine is a lightweight guest OS that's designed to run a single Linux
@@ -14,9 +14,9 @@ applications inside SGX enclaves, without the toll of manually porting the
 application to the SGX environment. For more information, refer to the
 :doc:`sgx-intro` article.
 
-This page provides an overview of this site. Each section is outlined below with
-a brief explanation and links to specific sub-sections. This page mimics the
-table of contents in the left-side menu.
+This page provides an overview of this documentation. Each section is outlined
+below with a brief explanation and links to specific sub-sections. This page
+mimics the table of contents in the left-side menu.
 
 Gramine deployment options
 --------------------------
@@ -29,63 +29,60 @@ Protect your container
 ======================
 
 In this section, we describe how you can protect your Docker container using
-Gramine Shielded Containers (GSC) and how you can use ready-made solutions for
+Gramine Shielded Containers (GSC) and how you can use ready-made SGX images for
 popular open source projects.
 
-Gramine Shielded Containers
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Gramine Shielded Containers
 
-Docker images are used to run applications in the cloud. The Gramine Shielded
-Containers (GSC) tool transforms an original Docker image into a graminized
-Docker image that includes the Gramine Library OS and the Gramine-specific app
-configuration. It enables you to run an application in a Docker container and
-keep it protected.
+  Docker images are used to run applications in the cloud. The Gramine Shielded
+  Containers (GSC) tool transforms a regular Docker image into a graminized
+  Docker image that includes the Gramine Library OS and the Gramine-specific app
+  configuration. It enables you to run an application in a Docker container and
+  keep it protected.
 
-- :doc:`gsc-installation` - Get an overview of the GSC installation process.
-- `Read GSC documentation <https://gramine.readthedocs.io/projects/gsc/>`_.
-- `Download GSC <https://github.com/gramineproject/gsc>`_.
+  - :doc:`gsc-installation` - Get an overview of the GSC installation process.
+  - `Read GSC documentation <https://gramine.readthedocs.io/projects/gsc/>`_.
+  - `Download GSC <https://github.com/gramineproject/gsc>`_.
 
-Ready-made confidential compute images
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+- Ready-made SGX images
 
-Confidential compute images are ready-made solutions for popular open source
-projects such as PyTorch and Redis. These images enable you to customize your
-environment through interactive scripts. The result is an image that includes
-your specific application, common dependencies, and a manifest file.
+  Users can create ready-made SGX Docker images with the help of the
+  `Confidential Compute for X
+  <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X>`_
+  project. This project provides an interactive script to transform regular
+  Docker images to Gramine-protected Docker images. See the
+  :doc:`curated-installation` article for more information.
 
-See the :doc:`curated-installation` article for more information.
-
-.. note ::
-   Confidential compute images is not an official part of Gramine.
+  .. note ::
+     "Confidential Compute for X" project is not an official part of Gramine.
 
 Protect your application
 ========================
 
 Use this option to protect an existing application with Gramine. Little to no
-additional modification of your application is needed.
+additional modification of your application is usually needed.
 
 The following steps can be performed to protect your application with Gramine:
 
 - :doc:`Install Gramine<quickstart>` - Install the official Gramine packages
   from the repository of your operating system.
-- :doc:`Set up the environment<environment-setup>` - Set up the Gramine
-  environment to work with or without SGX and prepare a signing key (only for
-  SGX).
+- :doc:`Set up the SGX environment<sgx-setup>` - Set up the SGX environment and
+  prepare a signing key.
 - :doc:`Run a sample application<run-sample-application>` - Run a sample
-  application to ensure your environment is running correctly.
+  application to ensure your environment is configured correctly.
 
 You can also check :doc:`Gramine tutorials<tutorials-index>`.
 
-Configure your application
---------------------------
+Configure Gramine
+-----------------
 
-To protect an existing application, you should configure your application
-correctly:
+To achieve security and performance guarantees, Gramine must be configured
+appropriately for each application.
 
 - :doc:`Provide an application-specific configuration file<manifest-syntax>` -
   Gramine requires a so-called manifest file for each application.
-- :doc:`Provide attestation configuration<attestation>` -- If you intend to use
-  remote attestation, you should also provide attestation parameters.
+- :doc:`Set up attestation<attestation>` -- If you intend to use remote
+  attestation, you should set up attestation infrastructure.
 - :doc:`Tune performance of application<performance>` - You may want to tune the
   performance of your application under Gramine.
 
@@ -98,10 +95,9 @@ debugging and other processes necessary for Gramine development.
 
 - :doc:`Build Gramine from source files<devel/building>` - Build Gramine and
   ensure all the dependencies are installed.
-- :doc:`Set up debugging<devel/debugging>` - Run Gramine with GNU Debugger
-  (GDB).
+- :doc:`Set up debugging<devel/debugging>` - Run Gramine with GDB.
 - :doc:`Learn about packaging<devel/packaging>` - Package and distribute Gramine
-  on different OS distributions.
+  on different Linux distributions.
 - :doc:`Use Python API<python/api>` - Use Python API provided by Gramine.
 
 We also provide :doc:`manual pages for Gramine tools<manpages/index>`.
@@ -109,11 +105,8 @@ We also provide :doc:`manual pages for Gramine tools<manpages/index>`.
 Contribute to Gramine
 ---------------------
 
-We encourage anyone who is interested to contribute to Gramine. We offer
-procedures and user groups that help you getting started.
-
-These articles contain helpful material for users who want to contribute to
-Gramine development.
+We encourage anyone who is interested to contribute to Gramine. The below
+articles contain helpful material for prospective contributors:
 
 - :doc:`devel/contributing` - The Contributing to Gramine page outlines the
   procedures for performing pull requests, reviews, and regression tests.
@@ -130,15 +123,14 @@ Gramine development.
 - :doc:`devel/DCO/index` - Affirm that the source code you will submit was
   originated by you and/or that you have permission to submit it to the Gramine
   project.
-- `Gramine User Groups <https://groups.google.com/g/gramine-users>`_ - The
-  Gramine user-groups page lists the user groups you can join to help you get up
-  to speed with developing Gramine.
+- `Gramine Users mailing list <https://groups.google.com/g/gramine-users>`_ - If
+  you prefer emails, send them to the Gramine Users mailing list.
 
 Gramine design and features
 ---------------------------
 
 The Gramine Library OS is a complex software. The below articles provide an
-overview of Gramine design and implemented/unimplemented features.
+overview of Gramine design and implemented/unimplemented features:
 
 - :doc:`devel/features` -- This page has a comprehensive description of
   implemented and unimplemented features of Gramine, including the lists of
@@ -156,7 +148,7 @@ glossary to help you with any questions you may have.
   confidential computing needs.
 - :doc:`docker-image-installation` - Use the official Gramine Docker image.
 - :doc:`sgx-intro` - Learn about the Intel SGX technology and software stack.
-- :doc:`glossary` - Become familiar with the terms used for Gramine.
+- :doc:`glossary` - Become familiar with the terms used in Gramine.
 
 Getting help
 ------------
@@ -187,7 +179,7 @@ Indices and tables
    :maxdepth: 1
 
    quickstart
-   environment-setup
+   sgx-setup
    run-sample-application
    tutorials-index
 
