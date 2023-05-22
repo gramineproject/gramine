@@ -43,14 +43,9 @@ popular open source projects.
 - **Ready-made SGX images**
 
   Users can create ready-made SGX Docker images with the help of the
-  `Confidential Compute for X
-  <https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X>`_
-  project. This project provides an interactive script to transform regular
-  Docker images to Gramine-protected Docker images. See the
-  :doc:`curated-installation` article for more information.
-
-  .. note ::
-     "Confidential Compute for X" project is not an official part of Gramine.
+  "Confidential Compute for X" project. This project provides an interactive
+  script to transform regular Docker images to Gramine-protected Docker images.
+  See the :doc:`curated-installation` article for more information.
 
 Protect your application
 ========================
@@ -60,27 +55,20 @@ additional modification of your application is usually needed.
 
 The following steps can be performed to protect your application with Gramine:
 
-- :doc:`Install Gramine<quickstart>` - Install official Gramine packages from
+- :doc:`Install Gramine<installation>` - Install official Gramine packages from
   the repository of your Linux distribution.
 - :doc:`Set up the SGX environment<sgx-setup>` - Set up the SGX environment and
   prepare a signing key.
 - :doc:`Run a sample application<run-sample-application>` - Run a sample
   application to ensure your environment is configured correctly.
-
-You can also check :doc:`Gramine tutorials<tutorials-index>`.
-
-Configure Gramine
------------------
-
-To achieve security and performance guarantees, Gramine must be configured
-appropriately for each application.
-
 - :doc:`Provide an application-specific configuration file<manifest-syntax>` -
   Gramine requires a so-called manifest file for each application.
 - :doc:`Set up attestation<attestation>` -- If you intend to use remote
   attestation, you should set up attestation infrastructure.
 - :doc:`Tune performance of application<performance>` - You may want to tune the
   performance of your application under Gramine.
+
+You can also check :doc:`Gramine tutorials<tutorials-index>`.
 
 Develop Gramine
 ---------------
@@ -122,17 +110,6 @@ articles contain helpful material for prospective contributors:
 - `Gramine Users mailing list <https://groups.google.com/g/gramine-users>`_ - If
   you prefer emails, send them to the Gramine Users mailing list.
 
-Gramine design and features
----------------------------
-
-The Gramine Library OS is a complex software. The below articles provide an
-overview of Gramine design and implemented/unimplemented features:
-
-- :doc:`devel/features` -- This page has a comprehensive description of
-  implemented and unimplemented features of Gramine, including the lists of
-  available system calls and pseudo-files.
-- *More articles to follow in the future*...
-
 Resources
 ---------
 
@@ -143,9 +120,11 @@ glossary to help you with any questions you may have.
 - :doc:`management-team` - This page lists maintainers of Gramine.
 - :doc:`gramine-users` - See what companies use Gramine for their confidential
   computing needs.
-- :doc:`docker-image-installation` - Use the official Gramine Docker image.
 - :doc:`sgx-intro` - Learn about the Intel SGX technology and software stack.
 - :doc:`glossary` - Become familiar with the terms used in Gramine.
+- :doc:`devel/features` -- This page has a comprehensive description of
+  implemented and unimplemented features of Gramine, including the lists of
+  available system calls and pseudo-files.
 
 Getting help
 ------------
@@ -174,19 +153,13 @@ Indices and tables
    :caption: Protect your application
    :maxdepth: 1
 
-   quickstart
+   installation
    sgx-setup
    run-sample-application
-   tutorials-index
-
-.. toctree::
-   :hidden:
-   :caption: Configure application
-   :maxdepth: 1
-
    manifest-syntax
    attestation
    performance
+   tutorials-index
 
 .. toctree::
    :hidden:
@@ -216,18 +189,11 @@ Indices and tables
 
 .. toctree::
    :hidden:
-   :caption: Gramine design and features
-   :maxdepth: 1
-
-   devel/features
-
-.. toctree::
-   :hidden:
    :caption: Resources
    :maxdepth: 1
 
    management-team
    gramine-users
-   docker-image-installation
    sgx-intro
    glossary
+   devel/features

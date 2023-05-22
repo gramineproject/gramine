@@ -1,20 +1,17 @@
-Quick start
-===========
+Gramine installation options
+============================
 
 .. highlight:: sh
 
-Gramine installation options
-----------------------------
-
 There are three options to choose from when using Gramine to protect your
 application. The option you choose depends on how you are running your
-application.
+application. The first two options are explained on this page and the third
+option on a dedicated page.
 
-- :doc:`Install Gramine<quickstart>` - This option is explained on this page.
-  It installs the official Gramine packages from the repository of your
-  operating system.
+- :ref:`install-gramine-packages` - This option installs the official Gramine
+  packages from the repository of your operating system.
 
-- :doc:`docker-image-installation` - With this option, you protect your
+- :ref:`use-gramine-docker-image` - With this option, you protect your
   application using a Docker image that provides a minimal distribution of
   Gramine.
 
@@ -22,6 +19,8 @@ application.
   development. This option is recommended for advanced users who want to get all
   current bugfixes and improvements without waiting for a next release. This
   option is much more involved than the other two options.
+
+.. _install-gramine-packages:
 
 Install Gramine packages
 ------------------------
@@ -76,3 +75,37 @@ We also *experimentally* support RHEL-like distributions version 9.
 
       sudo curl -fsSLo /etc/yum.repos.d/gramine.repo https://packages.gramineproject.io/rpm/gramine.repo
       sudo dnf install gramine
+
+.. _use-gramine-docker-image:
+
+Use Gramine Docker image
+------------------------
+
+The Gramine team publishes a base Gramine Docker image at
+https://hub.docker.com/r/gramineproject/gramine.
+
+This Gramine image is a minimal distribution of Gramine: it contains only
+Gramine binaries and tools, as well as the pre-requisite packages to run
+applications under Gramine. The only currently available Gramine image is based
+on Ubuntu 20.04. The only requirement on the host system is a Linux kernel with
+in-kernel SGX driver (available from version 5.11 onward).
+
+This Gramine image can be used as a disposable playground environment, to
+quickly test Gramine with your applications and workloads. This image can also
+be used as a base for your workflows to produce production-ready Docker images
+for your SGX applications.
+
+To run the Gramine image via Docker, the recommended command is::
+
+    docker run --device /dev/sgx_enclave -it gramineproject/gramine
+
+If you want to run :program:`gramine-direct` in addition to
+:program:`gramine-sgx`, then you should run Docker with our custom seccomp
+profile using::
+
+    --security-opt seccomp=<profile_file>
+
+You can download the profile file from
+https://github.com/gramineproject/gramine/blob/master/scripts. Two profile files
+are available: ``docker_seccomp_mar_2021.json`` (for older Docker versions) and
+``docker_seccomp_aug_2022.json`` (for newer Docker versions).
