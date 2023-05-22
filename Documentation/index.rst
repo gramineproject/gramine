@@ -32,19 +32,15 @@ In this section, we describe how you can protect your Docker container using
 Gramine Shielded Containers (GSC) and how you can use ready-made SGX images for
 popular open source projects.
 
-- Gramine Shielded Containers
+- **Gramine Shielded Containers**
 
   Docker images are used to run applications in the cloud. The Gramine Shielded
   Containers (GSC) tool transforms a regular Docker image into a graminized
   Docker image that includes the Gramine Library OS and the Gramine-specific app
   configuration. It enables you to run an application in a Docker container and
-  keep it protected.
+  keep it protected. See the :doc:`gsc-installation` article for more information.
 
-  - :doc:`gsc-installation` - Get an overview of the GSC installation process.
-  - `Read GSC documentation <https://gramine.readthedocs.io/projects/gsc/>`_.
-  - `Download GSC <https://github.com/gramineproject/gsc>`_.
-
-- Ready-made SGX images
+- **Ready-made SGX images**
 
   Users can create ready-made SGX Docker images with the help of the
   `Confidential Compute for X
@@ -64,8 +60,8 @@ additional modification of your application is usually needed.
 
 The following steps can be performed to protect your application with Gramine:
 
-- :doc:`Install Gramine<quickstart>` - Install the official Gramine packages
-  from the repository of your operating system.
+- :doc:`Install Gramine<quickstart>` - Install official Gramine packages from
+  the repository of your Linux distribution.
 - :doc:`Set up the SGX environment<sgx-setup>` - Set up the SGX environment and
   prepare a signing key.
 - :doc:`Run a sample application<run-sample-application>` - Run a sample
@@ -135,6 +131,7 @@ overview of Gramine design and implemented/unimplemented features:
 - :doc:`devel/features` -- This page has a comprehensive description of
   implemented and unimplemented features of Gramine, including the lists of
   available system calls and pseudo-files.
+- *More articles to follow in the future*...
 
 Resources
 ---------
@@ -144,8 +141,8 @@ The resources page contains a list of maintainers, users of Gramine, and a
 glossary to help you with any questions you may have.
 
 - :doc:`management-team` - This page lists maintainers of Gramine.
-- :doc:`gramine-users` - See what companies are using Gramine for their
-  confidential computing needs.
+- :doc:`gramine-users` - See what companies use Gramine for their confidential
+  computing needs.
 - :doc:`docker-image-installation` - Use the official Gramine Docker image.
 - :doc:`sgx-intro` - Learn about the Intel SGX technology and software stack.
 - :doc:`glossary` - Become familiar with the terms used in Gramine.
@@ -153,10 +150,9 @@ glossary to help you with any questions you may have.
 Getting help
 ------------
 
-For any questions, please send an email to users@gramineproject.io
-or join us on our `Gitter chat <https://gitter.im/gramineproject/community>`__.
-
-For bug reports, post an issue on our GitHub repository:
+For any questions, please send an email to users@gramineproject.io or join us on
+our `Gitter chat <https://gitter.im/gramineproject/community>`__.  For bug
+reports, post an issue on our GitHub repository:
 https://github.com/gramineproject/gramine/issues.
 
 Indices and tables

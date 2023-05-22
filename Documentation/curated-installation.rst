@@ -6,8 +6,8 @@ Ready-made SGX images
    thoroughly reviewed by the Gramine maintainers. Use at your own risk!
 
 Users can create ready-made SGX Docker images with the help of the `Confidential
-Compute for
-X<https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X>`_
+Compute for X
+<https://github.com/gramineproject/contrib/tree/master/Intel-Confidential-Compute-for-X>`_
 project. This project provides an interactive script to transform regular Docker
 images to Gramine-protected Docker images. The transformation adds important
 features, e.g., attestation, to the original Docker image to enable secure
