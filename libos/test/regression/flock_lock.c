@@ -107,17 +107,16 @@ static void test_flock_dup_open(void) {
 
 static void test_mmap_flock_close_unmap(void) {
     printf("testing locks with the mmap and flock...\n");
-    int fd, fd2;
-    char *file_data;
+    int fd1, fd2;
+    void* file_data;
 
-    fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
-    file_data = mmap(NULL, FILE_SIZE, PROT_READ, MAP_SHARED, fd, 0);
+    fd1 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    file_data = mmap(NULL, FILE_SIZE, PROT_READ, MAP_SHARED, fd1, 0);
     if (file_data == MAP_FAILED) {
         err(1, "mmap");
     }
-    try_flock(fd, LOCK_EX, 0);
-    CHECK(close(fd));
-    
+    try_flock(fd1, LOCK_EX, 0);
+    CHECK(close(fd1));
     fd2 = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     try_flock(fd2, LOCK_EX | LOCK_NB, -1);
     CHECK(munmap(file_data, FILE_SIZE));
