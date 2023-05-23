@@ -7,8 +7,8 @@
  * Test for `flock` syscall (`flock(LOCK_EX/LOCK_SH/LOCK_UN`). We assert that the calls succeed (or
  * taking a lock fails), and log all details for debugging purposes.
  *
- * The tests involve multithreaded and dup case. We don't add multi-process cases here because
- * they are already covered by LTP tests `flock03` and `flock04`.
+ * The tests involve multithreaded, dup and file-backed mmap cases. We don't add multi-process cases 
+ * here because they are already covered by LTP tests `flock03` and `flock04`.
  */
 
 #define _GNU_SOURCE
