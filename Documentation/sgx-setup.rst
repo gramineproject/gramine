@@ -29,6 +29,13 @@ Only for SGX, and if you haven't already, enter the following:
     gramine-sgx-gen-private-key
 
 This command generates an RSA 3072 key suitable for signing SGX enclaves and
-stores it in ``$XDG_CONFIG_HOME/gramine/enclave-key.pem``. Protect this key and
-do not disclose it to anyone. See also
-:doc:`manpages/gramine-sgx-gen-private-key`.
+stores it in ``$HOME/.config/gramine/enclave-key.pem``. Protect this key and do
+not disclose it to anyone. See also :doc:`manpages/gramine-sgx-gen-private-key`.
+
+Signing an SGX enclave is critical to enforcing its security. First, only signed
+enclaves are allowed to be loaded on an SGX platform. Second, the enclave's
+signed structure (so-called SIGSTRUCT) includes a measurement of the enclave
+code (so-called MRENCLAVE) and metadata; thus, the process of enclave signing
+guarantees the expected initial state of the loaded enclave. Third, the
+derivative of the public key (so-called MRSIGNER) is reported during SGX
+attestation.
