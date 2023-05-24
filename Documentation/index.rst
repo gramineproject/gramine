@@ -11,8 +11,9 @@ host OSes, and process migration.
 Gramine supports running Linux applications using the :term:`Intel SGX <SGX>`
 (Software Guard Extensions) technology. Gramine is able to run unmodified
 applications inside SGX enclaves, without the toll of manually porting the
-application to the SGX environment. For more information, refer to the
-:doc:`sgx-intro` article.
+application to the SGX environment. Applications running inside the Gramine SGX
+enclave become protected against a malicious host. For more information, refer
+to the :doc:`sgx-intro` article.
 
 This page provides an overview of this documentation. Each section is outlined
 below with a brief explanation and links to specific sub-sections. This page
@@ -35,23 +36,25 @@ popular open source projects.
 - **Gramine Shielded Containers**
 
   Docker images are used to run applications in the cloud. The Gramine Shielded
-  Containers (GSC) tool transforms a regular Docker image into a graminized
-  Docker image that includes the Gramine Library OS and the Gramine-specific app
+  Containers (GSC) tool transforms a base Docker image into a graminized Docker
+  image that includes the Gramine Library OS and the Gramine-specific app
   configuration. It enables you to run an application in a Docker container and
-  keep it protected. See the :doc:`gsc-installation` article for more information.
+  keep it protected against a malicious host. See the :doc:`gsc-installation`
+  article for more information.
 
 - **Ready-made SGX images**
 
   Users can create ready-made SGX Docker images with the help of the
   "Confidential Compute for X" project. This project provides an interactive
-  script to transform regular Docker images to Gramine-protected Docker images.
+  script to transform base Docker images to Gramine-protected Docker images.
   See the :doc:`curated-installation` article for more information.
 
 Protect your application
 ========================
 
-Use this option to protect an existing application with Gramine. Little to no
-additional modification of your application is usually needed.
+Use this option to protect an existing application against a malicious host with
+Gramine. Little to no additional modification of your application is usually
+needed.
 
 The following steps can be performed to protect your application with Gramine:
 
@@ -114,17 +117,18 @@ Resources
 ---------
 
 The Gramine project provides resources to help you understand and develop it.
-The resources page contains a list of maintainers, users of Gramine, and a
-glossary to help you with any questions you may have.
+The resources page contains a description of features of Gramine, a list of
+maintainers, a list of users of Gramine, introduction to the Intel SGX
+technology and a glossary to help you with any questions you may have.
 
+- :doc:`devel/features` -- This page has a comprehensive description of
+  implemented and unimplemented features of Gramine, including the lists of
+  available system calls and pseudo-files.
 - :doc:`management-team` - This page lists maintainers of Gramine.
 - :doc:`gramine-users` - See what companies use Gramine for their confidential
   computing needs.
 - :doc:`sgx-intro` - Learn about the Intel SGX technology and software stack.
 - :doc:`glossary` - Become familiar with the terms used in Gramine.
-- :doc:`devel/features` -- This page has a comprehensive description of
-  implemented and unimplemented features of Gramine, including the lists of
-  available system calls and pseudo-files.
 
 Getting help
 ------------
@@ -192,8 +196,8 @@ Indices and tables
    :caption: Resources
    :maxdepth: 1
 
+   devel/features
    management-team
    gramine-users
    sgx-intro
    glossary
-   devel/features
