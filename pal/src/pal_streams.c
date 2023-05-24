@@ -14,6 +14,7 @@
  * are not streams, so they need no handler. Sockets have their own table. */
 extern struct handle_ops g_file_ops;
 extern struct handle_ops g_pipe_ops;
+extern struct handle_ops g_pipe_raw_ops;
 extern struct handle_ops g_dev_ops;
 extern struct handle_ops g_dir_ops;
 extern struct handle_ops g_thread_ops;
@@ -22,16 +23,19 @@ extern struct handle_ops g_event_ops;
 extern struct handle_ops g_eventfd_ops;
 
 const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
-    [PAL_TYPE_FILE]    = &g_file_ops,
-    [PAL_TYPE_PIPE]    = &g_pipe_ops,
-    [PAL_TYPE_PIPESRV] = &g_pipe_ops,
-    [PAL_TYPE_PIPECLI] = &g_pipe_ops,
-    [PAL_TYPE_DEV]     = &g_dev_ops,
-    [PAL_TYPE_DIR]     = &g_dir_ops,
-    [PAL_TYPE_PROCESS] = &g_proc_ops,
-    [PAL_TYPE_THREAD]  = &g_thread_ops,
-    [PAL_TYPE_EVENT]   = &g_event_ops,
-    [PAL_TYPE_EVENTFD] = &g_eventfd_ops,
+    [PAL_TYPE_FILE]       = &g_file_ops,
+    [PAL_TYPE_PIPE]       = &g_pipe_ops,
+    [PAL_TYPE_PIPESRV]    = &g_pipe_ops,
+    [PAL_TYPE_PIPECLI]    = &g_pipe_ops,
+    [PAL_TYPE_PIPERAW]    = &g_pipe_raw_ops,
+    [PAL_TYPE_PIPERAWSRV] = &g_pipe_raw_ops,
+    [PAL_TYPE_PIPERAWCLI] = &g_pipe_raw_ops,
+    [PAL_TYPE_DEV]        = &g_dev_ops,
+    [PAL_TYPE_DIR]        = &g_dir_ops,
+    [PAL_TYPE_PROCESS]    = &g_proc_ops,
+    [PAL_TYPE_THREAD]     = &g_thread_ops,
+    [PAL_TYPE_EVENT]      = &g_event_ops,
+    [PAL_TYPE_EVENTFD]    = &g_eventfd_ops,
 };
 
 /* parse_stream_uri scan the uri, seperate prefix and search for
@@ -80,9 +84,19 @@ static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops**
 
         case 9: ;
             static_assert(static_strlen(URI_PREFIX_PIPE_SRV) == 9, "URI_PREFIX_PIPE_SRV has unexpected length");
+            static_assert(static_strlen(URI_PREFIX_PIPE_RAW) == 9, "URI_PREFIX_PIPE_RAW has unexpected length");
 
             if (strstartswith(u, URI_PREFIX_PIPE_SRV))
                 hops = &g_pipe_ops;
+            else if (strstartswith(u, URI_PREFIX_PIPE_RAW))
+                hops = &g_pipe_raw_ops;
+            break;
+
+        case 13: ;
+            static_assert(static_strlen(URI_PREFIX_PIPE_RAW_SRV) == 13, "URI_PREFIX_PIPE_RAW_SRV has unexpected length");
+
+            if (strstartswith(u, URI_PREFIX_PIPE_RAW_SRV))
+                hops = &g_pipe_raw_ops;
             break;
 
         default:

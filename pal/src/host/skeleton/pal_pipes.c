@@ -62,3 +62,12 @@ struct handle_ops g_pipe_ops = {
     .close         = &pipe_close,
     .delete        = &pipe_delete,
 };
+
+struct handle_ops g_pipe_raw_ops = {
+    .open          = &pipe_open,
+    .waitforclient = &pipe_waitforclient,
+    .read          = &pipe_read,
+    .write         = &pipe_write,
+    .close         = &pipe_close,
+    .delete        = &pipe_delete,
+};

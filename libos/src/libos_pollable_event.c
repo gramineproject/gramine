@@ -14,7 +14,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];
     PAL_HANDLE srv_handle;
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
-                          /*use_vmid_for_name=*/false);
+                          /*use_vmid_for_name=*/false, /*encrypted*/false);
     if (ret < 0) {
         log_error("create_pipe failed: %s", unix_strerror(ret));
         return ret;

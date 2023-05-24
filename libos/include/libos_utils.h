@@ -50,7 +50,7 @@ void append_r_debug(const char* uri, void* addr);
 void clean_link_map_list(void);
 
 /* create unique files/pipes */
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name);
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name, bool encrypted);
 
 /* Asynchronous event support */
 int init_async_worker(void);

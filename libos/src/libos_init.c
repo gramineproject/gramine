@@ -534,7 +534,8 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
     return 0;
 }
 
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name) {
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name,
+                bool encrypted) {
     int ret;
     size_t len;
     char pipename[PIPE_URI_SIZE];
@@ -558,8 +559,12 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
                 return ret;
         }
 
-        log_debug("Creating pipe: " URI_PREFIX_PIPE_SRV "%s", pipename);
-        len = snprintf(uri, size, URI_PREFIX_PIPE_SRV "%s", pipename);
+        log_debug(encrypted ?
+                  "Creating pipe: " URI_PREFIX_PIPE_SRV "%s" :
+                  "Creating pipe: " URI_PREFIX_PIPE_RAW_SRV "%s", pipename);
+        len = snprintf(uri, size,
+                       encrypted ? URI_PREFIX_PIPE_SRV "%s" : URI_PREFIX_PIPE_RAW_SRV "%s",
+                       pipename);
         if (len >= size)
             return -ERANGE;
 
@@ -578,7 +583,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     /* output generated pipe handle, URI, and name */
     *hdl = pipe;
-    len = snprintf(uri, size, URI_PREFIX_PIPE "%s", pipename);
+    len = snprintf(uri, size, encrypted ? URI_PREFIX_PIPE "%s" : URI_PREFIX_PIPE_RAW "%s", pipename);
     if (name)
         memcpy(name, pipename, sizeof(pipename));
     return 0;
