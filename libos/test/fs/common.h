@@ -27,6 +27,10 @@
         __builtin_add_overflow((val), 0, &__dummy); \
     })
 
+#ifndef ACCESSPERMS
+#define ACCESSPERMS (S_IRWXU|S_IRWXG|S_IRWXO)
+#endif
+
 noreturn void fatal_error(const char* fmt, ...);
 void setup(void);
 int open_input_fd(const char* path);
