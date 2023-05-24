@@ -71,7 +71,9 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     zlib1g-dev
 
 # Needed by DCAP attestation e.g. in "CI-Examples/ra-tls-mbedtls"
-RUN curl -fsSL https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key | apt-key add -
+# Intel's RSA-2048 key signing the intel-sgx/sgx_repo repository. Expires 2027-03-20.
+# https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+COPY .ci/intel-sgx-deb.key /etc/apt/trusted.gpg.d/intel-sgx-deb.asc
 RUN echo 'deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main' > /etc/apt/sources.list.d/intel-sgx.list
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libsgx-dcap-default-qpl \
