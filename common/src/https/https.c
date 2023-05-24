@@ -9,6 +9,9 @@
  */
 
 #include "https.h"
+#include "log.h"
+#include "mbedtls/ssl.h"
+#include "pal_error.h"
 
 /*---------------------------------------------------------------------*/
 static int _error;
@@ -33,7 +36,7 @@ static int http_parse(HTTP_INFO *hi);
 
 static int https_init(HTTP_INFO *hi, BOOL https, BOOL verify);
 static int https_close(HTTP_INFO *hi);
-static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo);
+static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo, const char *cacerts_buf, size_t cacerts_bufsz);
 static int https_write(HTTP_INFO *hi, const char *buffer, int len);
 static int https_read(HTTP_INFO *hi, char *buffer, int len);
 
@@ -712,14 +715,32 @@ static int mbedtls_pal_connect(HTTP_INFO *hi, const char *host, const char *port
 
 /*---------------------------------------------------------------------*/
 /* the TCP connection is established through PAL api */
-static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo)
+static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo, const char *cacerts_buf, size_t cacerts_bufsz)
 {
-    int ret, https;
+    int ret = PAL_ERROR_INVAL, https, actcerts = FALSE;
+    char errbuf[256];
 
     https = hi->url.https;
 
     if(https == 1)
     {
+        if (hi->tls.verify) {
+            actcerts = cacerts_buf != NULL && cacerts_bufsz > 0;
+            if (!actcerts) {
+                log_error("The TLS certificates are not configured correctly");
+                return PAL_ERROR_INVAL;
+            }
+            /*
+             * contain either PEM or DER encoded data.
+             * A terminating null byte is always appended. It is included in the announced
+             * length only if the data looks like it is PEM encoded.
+             */
+            if (actcerts && strstr(cacerts_buf, "-----BEGIN ") != NULL) {
+                // It assumes that a trailing NULL has been accounted by update_buffer(...)
+                ++cacerts_bufsz;
+            }
+            // log_always("----> %ld, %ld", cacerts_bufsz, strlen(cacerts_buf));
+        }
         mbedtls_entropy_init( &hi->tls.entropy );
 
         ret = mbedtls_ctr_drbg_seed( &hi->tls.ctr_drbg, mbedtls_entropy_func, &hi->tls.entropy, NULL, 0);
@@ -746,10 +767,20 @@ static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo)
             return ret;
         }
 
-        /* OPTIONAL is not optimal for security,
-         * but makes interop easier in this simplified example */
-        mbedtls_ssl_conf_authmode( &hi->tls.conf, MBEDTLS_SSL_VERIFY_OPTIONAL );
-        // mbedtls_ssl_conf_ca_chain( &hi->tls.conf, &hi->tls.cacert, NULL );
+        mbedtls_ssl_conf_authmode( &hi->tls.conf, actcerts ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_OPTIONAL);
+        if (actcerts) {
+            ret = mbedtls_x509_crt_parse(&hi->tls.cacert, (const unsigned char *)cacerts_buf, cacerts_bufsz);
+            if (ret == 0)
+                log_debug("All certificates were parsed successfully");
+            if (ret > 0)
+                log_warning("%d certificates that couldn't be parsed", ret);
+            if (ret < 0) {
+                mbedtls_strerror(ret, errbuf, 256);
+                log_error("Parse certs failed with error code %d: %s", ret, errbuf);
+                return ret;
+            }
+            mbedtls_ssl_conf_ca_chain( &hi->tls.conf, &hi->tls.cacert, NULL);
+        }
         mbedtls_ssl_conf_rng( &hi->tls.conf, mbedtls_ctr_drbg_random, &hi->tls.ctr_drbg );
         mbedtls_ssl_conf_read_timeout( &hi->tls.conf, 5000 );
  
@@ -766,6 +797,7 @@ static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo)
             log_error("mbedtls_ssl_set_hostname failed: %d", ret);
             return ret;
         }
+        // log_always("TLS hostname set: %s", urlinfo->host);
         // mbedtls_debug_set_threshold( 5 );
         // mbedtls_ssl_conf_dbg(&hi->tls.conf, my_debug, NULL );
     }
@@ -783,14 +815,27 @@ static int https_connect(HTTP_INFO *hi, HTTP_URL const *urlinfo)
 
     while ((ret = mbedtls_ssl_handshake(&hi->tls.ssl)) != 0) {
         if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-            log_error("mbedtls_ssl_handshake failed: %d", ret);
+            mbedtls_strerror(ret, errbuf, 256);
+            log_error("mbedtls_ssl_handshake failed with error %d: %s", ret, errbuf);
+            if (ret == MBEDTLS_ERR_X509_CERT_VERIFY_FAILED) {
+                if (actcerts) {
+                    int ret2 = mbedtls_ssl_get_verify_result(&hi->tls.ssl);
+                    if (ret2 != 0) {
+                        if (ret2 == -1) {
+                            log_error("mbedtls_ssl_get_verify_result failed with unknown reasons");
+                        } else {
+                            log_error("mbedtls_ssl_get_verify_result failed with error code %d", ret2);
+                            if (mbedtls_x509_crt_verify_info(errbuf, 256, ">> ", ret2) >= 0)
+                                log_error("%s", errbuf);
+                            else {
+                                log_error("Failed to retrieve verification info");
+                            }
+                        }
+                    }
+                }
+            }
             return ret;
         }
-    }
-
-    if (hi->tls.verify && (mbedtls_ssl_get_verify_result(&hi->tls.ssl) != 0)) {
-        log_error("TLS verification failed");
-        return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;
     }
 
     return 0;
@@ -835,7 +880,7 @@ int http_close(HTTP_INFO *hi)
 }
 
 /*---------------------------------------------------------------------*/
-int http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response, int size)
+int http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response, int size, const char *cacerts_buf, size_t cacerts_bufsz)
 {
     char        request[1024], err[100];
     HTTP_URL    url_info;
@@ -853,7 +898,7 @@ int http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response,
 
         // https_init(hi, url_info.https, verify);
 
-        if((ret=https_connect(hi, &url_info)) < 0)
+        if((ret=https_connect(hi, &url_info, cacerts_buf, cacerts_bufsz)) < 0)
         {
             https_close(hi);
 
@@ -953,7 +998,7 @@ int http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response,
 }
 
 /*---------------------------------------------------------------------*/
-int http_post(HTTP_INFO *hi, const char *ipaddr, char *url, char *data, char *response, int size)
+int http_post(HTTP_INFO *hi, const char *ipaddr, char *url, char *data, char *response, int size, const char *cacerts_buf, size_t cacerts_bufsz)
 {
     char*       req_buf = NULL;
     size_t      req_bufsz = 0;
@@ -972,7 +1017,7 @@ int http_post(HTTP_INFO *hi, const char *ipaddr, char *url, char *data, char *re
 
         // https_init(hi, url_info.https, verify);
 
-        if((ret=https_connect(hi, &url_info)) < 0)
+        if((ret=https_connect(hi, &url_info, cacerts_buf, cacerts_bufsz)) < 0)
         {
             https_close(hi);
 
@@ -1093,7 +1138,7 @@ void http_strerror(char *buf, int len)
 }
 
 /*---------------------------------------------------------------------*/
-int http_open(HTTP_INFO *hi, const char *ipaddr, char *url)
+int http_open(HTTP_INFO *hi, const char *ipaddr, char *url, const char *cacerts_buf, size_t cacerts_bufsz )
 {
     HTTP_URL    urlinfo;
     int         verify;
@@ -1109,7 +1154,7 @@ int http_open(HTTP_INFO *hi, const char *ipaddr, char *url)
 
         https_init(hi, urlinfo.https, verify);
 
-        if ((ret = https_connect(hi, &urlinfo)) < 0)
+        if ((ret = https_connect(hi, &urlinfo, cacerts_buf, cacerts_bufsz)) < 0)
         {
             https_close(hi);
 

@@ -119,11 +119,11 @@ int strncasecmp(const char* s1, const char* s2, size_t n);
 
 int  http_init(HTTP_INFO *hi, BOOL verify);
 int  http_close(HTTP_INFO *hi);
-int  http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response, int size);
-int  http_post(HTTP_INFO *hi, const char *ipaddr, char *url, char *data, char *response, int size);
+int  http_get(HTTP_INFO *hi, const char *ipaddr, const char *url, char *response, int size, const char *cacerts_buf, size_t cacerts_bufsz);
+int  http_post(HTTP_INFO *hi, const char *ipaddr, char *url, char *data, char *response, int size, const char *cacerts_buf, size_t cacerts_bufsz);
 
 void http_strerror(char *buf, int len);
-int  http_open(HTTP_INFO *hi, const char *ipaddr, char *url);
+int  http_open(HTTP_INFO *hi, const char *ipaddr, char *url, const char *cacerts_buf, size_t cacerts_bufsz);
 int  http_write_header(HTTP_INFO *hi);
 int  http_write(HTTP_INFO *hi, char *data, int len);
 int  http_write_end(HTTP_INFO *hi);

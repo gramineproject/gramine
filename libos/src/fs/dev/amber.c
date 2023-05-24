@@ -132,6 +132,7 @@ amber_var(user_report_data, USER_REPORT_DATA, 256);
 amber_var(token, TOKEN, 4096);
 amber_var(secret, SECRET, 2048);
 amber_var(status, STATUS, 1024);
+amber_var(cacerts, CACERTS, 10240);
 #pragma GCC diagnostic pop
 
 /* the code for debug purpose */
@@ -149,6 +150,7 @@ static void log_global_vars(void) {
     log_debug("g_amber_token sz: %ld = %s", g_amber_token_size, g_amber_token);
     log_debug("g_amber_secret sz: %ld = %s", g_amber_secret_size, g_amber_secret);
     log_debug("g_amber_status sz: %ld = %s", g_amber_status_size, g_amber_status);
+    log_debug("g_amber_cacerts sz: %ld = %s", g_amber_cacerts_size, g_amber_cacerts);
 }
 
 static int jsoneq(const char* json, jsmntok_t* tok, const char* s) {
@@ -199,6 +201,7 @@ get_amber_func(userdata)
 get_amber_func(token)
 get_amber_func(secret)
 get_amber_func(status)
+get_amber_func(cacerts)
 
 /* define set function for each amber variable */
 set_amber_func(endpoint_ip, ENDPOINT_IP)
@@ -213,6 +216,7 @@ set_amber_func(quote, QUOTE)
 set_amber_func(token, TOKEN)
 set_amber_func(secret, SECRET)
 set_amber_func(status, STATUS)
+set_amber_func(cacerts, CACERTS)
 
 static size_t amber_status_write(const char* prefix, const char* fmt, va_list ap, const char* suffix) {
     char msgbuf[256];
@@ -255,6 +259,7 @@ static int init_amber_client(void) {
     char* ip  = NULL, *kbs_ip = NULL;
     char* url = NULL, *kbs_url = NULL;
     char* apikey = NULL, *userdata = NULL, *kbs_keyid = NULL;
+    char* cacerts = NULL;
     if (g_pal_public_state) {
         ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.amber_ip", &ip);
         if (ret < 0) {
@@ -266,32 +271,37 @@ static int init_amber_client(void) {
             log_error("Cannot parse 'sgx.amber_url'");
             return -PAL_ERROR_INVAL;
         }
-        ret = toml_string_in(g_pal_public_state->manifest_root,
-                        "sgx.kbs_ip", &kbs_ip);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.kbs_ip'");
-            return -PAL_ERROR_INVAL;
-        }
-        ret = toml_string_in(g_pal_public_state->manifest_root,
-                             "sgx.kbs_url", &kbs_url);
-        if (ret < 0) {
-            log_error("Cannot parse 'sgx.kbs_url'");
-            return -PAL_ERROR_INVAL;
-        }
         ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.amber_apikey", &apikey);
         if (ret < 0) {
             log_error("Cannot parse 'sgx.amber_apikey'");
             return -PAL_ERROR_INVAL;
         }
-        ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.kbs_keyid", &kbs_keyid);
+        ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.amber_cacerts", &cacerts);
         if (ret < 0) {
-            log_error("Cannot parse 'sgx.kbs_keyid'");
-            return -PAL_ERROR_INVAL;
+            log_warning("No 'sgx.amber_cacerts' found, the TLS verify will be skipped");
         }
         ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.amber_userdata", &userdata);
         if (ret < 0) {
             log_error("Cannot parse 'sgx.amber_userdata'");
             return -PAL_ERROR_INVAL;
+        }
+        ret = toml_string_in(g_pal_public_state->manifest_root,
+                             "sgx.kbs_url", &kbs_url);
+        if (ret < 0) {
+            log_warning("'sgx.kbs_url' is not configured, skipped");
+        } else {
+            ret = toml_string_in(g_pal_public_state->manifest_root,
+                            "sgx.kbs_ip", &kbs_ip);
+            if (ret < 0) {
+                log_error("Cannot parse 'sgx.kbs_ip'");
+                return -PAL_ERROR_INVAL;
+            } else {
+                ret = toml_string_in(g_pal_public_state->manifest_root, "sgx.kbs_keyid", &kbs_keyid);
+                if (ret < 0) {
+                    log_error("Cannot parse 'sgx.kbs_keyid'");
+                    return -PAL_ERROR_INVAL;
+                }
+            }
         }
     } else {
         log_error("Global state is NULL");
@@ -304,14 +314,21 @@ static int init_amber_client(void) {
     if (url) {
         set_amber_endpoint_ip(ip, ip ? strlen(ip) : 0);
         set_amber_endpoint_url(url, url ? strlen(url) : 0);
-        set_amber_kbs_ip(kbs_ip, kbs_ip ? strlen(kbs_ip) : 0);
-        set_amber_kbs_url(kbs_url, kbs_url ? strlen(kbs_url) : 0);
         set_amber_endpoint_apikey(apikey, apikey ? strlen(apikey) : 0);
-        set_amber_kbs_keyid(kbs_keyid, kbs_keyid ? strlen(kbs_keyid) : 0);
         set_amber_userdata(userdata, userdata ? strlen(userdata) : 0);
         set_amber_token("", 0);
         set_amber_secret("", 0);
         set_amber_renew("", 0);
+
+        if (kbs_url) {
+            set_amber_kbs_ip(kbs_ip, kbs_ip ? strlen(kbs_ip) : 0);
+            set_amber_kbs_url(kbs_url, kbs_url ? strlen(kbs_url) : 0);
+            set_amber_kbs_keyid(kbs_keyid, kbs_keyid ? strlen(kbs_keyid) : 0);
+        }
+
+        if (cacerts) {
+            set_amber_cacerts(cacerts, cacerts ? strlen(cacerts) : 0);
+        }
 
         g_amber_client_initialized = TRUE;
         amber_status_info(AMBER_STATUS_INITIALIZED);
@@ -325,7 +342,7 @@ static int amber_http_get(const char* path, char* response, size_t resp_size) {
     int ret = -1;
     HTTP_INFO hi;
     hi.initialized = FALSE;
-    http_init(&hi, FALSE);
+    http_init(&hi, g_amber_cacerts_size > 0);
 
     char* url = g_amber_endpoint_url;
     char* apikey = g_amber_endpoint_apikey;
@@ -343,7 +360,7 @@ static int amber_http_get(const char* path, char* response, size_t resp_size) {
                  "Accept: application/json\r\n"
                  "x-api-key: %s\r\n", apikey);
         log_debug("HTTP GET (%s): %s with apikey: %s", g_amber_endpoint_ip, url, apikey);
-        ret = http_get(&hi, g_amber_endpoint_ip, url, response, resp_size);
+        ret = http_get(&hi, g_amber_endpoint_ip, url, response, resp_size, g_amber_cacerts, g_amber_cacerts_size);
         if (path && url)
             free(url);
     } else {
@@ -360,7 +377,7 @@ static int amber_http_post(const char* path, const char* post_data, char* respon
     int ret = -1;
     HTTP_INFO hi;
     hi.initialized = FALSE;
-    http_init(&hi, FALSE);
+    http_init(&hi, g_amber_cacerts_size > 0);
 
     char* url = g_amber_endpoint_url;
     char* apikey = g_amber_endpoint_apikey;
@@ -379,7 +396,7 @@ static int amber_http_post(const char* path, const char* post_data, char* respon
                  "Content-Type: application/json\r\n"
                  "x-api-key: %s\r\n", apikey);
         log_debug("HTTP POST (%s): %s with apikey: %s", g_amber_endpoint_ip, url, apikey);
-        ret = http_post(&hi, g_amber_endpoint_ip, url, (char*)post_data, response, resp_size);
+        ret = http_post(&hi, g_amber_endpoint_ip, url, (char*)post_data, response, resp_size, g_amber_cacerts, g_amber_cacerts_size);
         if (path && url)
             free(url);
     } else {
@@ -415,7 +432,7 @@ static int kbs_http_post(const char* path, const char* post_data, char* response
                  "Accept: application/json\r\n"
                  "Content-Type: application/json\r\n");
         log_debug("HTTP POST (%s): %s with keyid: %s", g_amber_kbs_ip, url, keyid);
-        ret = http_post(&hi, g_amber_kbs_ip, url, (char*)post_data, response, resp_size);
+        ret = http_post(&hi, g_amber_kbs_ip, url, (char*)post_data, response, resp_size, g_amber_cacerts, g_amber_cacerts_size);
         if (url)
             free(url);
     } else {
@@ -868,6 +885,10 @@ static int amber_status_load_event(void) {
     return 0;
 }
 
+static int amber_cacerts_load_event(void) {
+    return 0;
+}
+
 /*
  *  Define save event here for each amber pseudo-files
  */
@@ -912,6 +933,8 @@ amber_load_func(secret)
 
 amber_load_func(status)
 
+amber_load_func(cacerts)
+
 int init_amber(struct pseudo_node* dev) {
 
     if (!strcmp(g_pal_public_state->host_type, "Linux-SGX")) {
@@ -925,7 +948,7 @@ int init_amber(struct pseudo_node* dev) {
         }
 
         log_always(
-            "host is Linux-SGX, adding SGX-specific /dev/amber files: "
+            "host is Linux-SGX, adding SGX-specific /dev/amber pseudo files: "
             "endpoint_url, token, etc.");
 
         /* construct amber pseudo-files here */
@@ -941,6 +964,7 @@ int init_amber(struct pseudo_node* dev) {
         amber_dev_ro(token)
         amber_dev_ro(secret)
         amber_dev_ro(status)
+        amber_dev_ro(cacerts)
 
     }
 
