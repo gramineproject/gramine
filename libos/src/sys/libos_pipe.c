@@ -29,7 +29,7 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
     PAL_HANDLE hdl2 = NULL; /* other pipe end (connects to hdl0 and talks to hdl1) */
 
     ret = create_pipe(name, uri, PIPE_URI_SIZE, &hdl0, /*use_vmid_for_name=*/false,
-                      /*passthrough*/false);
+                      /*passthrough=*/false);
     if (ret < 0) {
         log_error("pipe creation failure");
         return ret;

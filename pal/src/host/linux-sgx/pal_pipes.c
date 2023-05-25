@@ -3,6 +3,18 @@
 
 /*
  * This file contains operands to handle streams with URIs that start with "pipe:" or "pipe.srv:".
+ *
+ * Pipes can be of two types: encrypted and unencrypted (passthrough), which is regulated by the
+ * `PASSTHROUGH` option during pipe creation.
+ *
+ * The unencrypted/passthrough pipes have better performance than the encrypted ones (especially
+ * during pipe creation, which don't require an expensive TLS handshake phase that involves creating
+ * a helper enclave thread).
+ *
+ * Note that unencrypted/passthrough pipes MUST be used only for cases where no sensitive data will
+ * be transferred. For example, in the case of `libos_pollable_event` (see
+ * "libos/src/libos_pollable_event.c"), the pipes are used purely as a sync primitive, with only
+ * dummy data transferred.
  */
 
 #include <asm/fcntl.h>
@@ -104,7 +116,7 @@ static noreturn int thread_handshake_func(void* param) {
  *
  * \param[out] handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
  * \param      name     String uniquely identifying the pipe.
- * \param      options  May contain PAL_OPTION_NONBLOCK.
+ * \param      options  May contain PAL_OPTION_NONBLOCK, PAL_OPTION_PASSTHROUGH.
  *
  * \returns 0 on success, negative PAL error code otherwise.
  *
@@ -115,6 +127,7 @@ static noreturn int thread_handshake_func(void* param) {
  * PAL handle are created, and this `pipesrv` handle can be closed.
  */
 static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
     int ret;
 
     struct sockaddr_un addr;
@@ -123,10 +136,9 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
         return -PAL_ERROR_DENIED;
 
     size_t addrlen = sizeof(struct sockaddr_un);
-    int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
+    int type = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_STREAM | SOCK_CLOEXEC;
 
-    ret = ocall_listen(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | nonblock, 0, /*ipv6_v6only=*/0,
-                       (struct sockaddr*)&addr, &addrlen);
+    ret = ocall_listen(AF_UNIX, type, 0, /*ipv6_v6only=*/0, (struct sockaddr*)&addr, &addrlen);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -142,7 +154,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     hdl->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
     hdl->pipe.passthrough = !!(options & PAL_OPTION_PASSTHROUGH);
 
-    if (!(options & PAL_OPTION_PASSTHROUGH)) {
+    if (!hdl->pipe.passthrough) {
         /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
         hdl->pipe.ssl_ctx        = NULL;
         hdl->pipe.is_server      = false;
@@ -164,7 +176,8 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * \brief Accept the other end of the pipe and create PAL handle for our end of the pipe.
  *
  * \param      handle   PAL handle of type `pipesrv` with abstract UNIX socket opened for listening.
- * \param[out] client   PAL handle of type `pipecli` connected to the other end of the pipe (`pipe`).
+ * \param[out] client   PAL handle of type `pipecli` connected to the other end of the pipe
+ *                      (`pipe`).
  * \param      options  flags to set on \p client handle.
  *
  * \returns 0 on success, negative PAL error code otherwise.
@@ -183,7 +196,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
         return -PAL_ERROR_DENIED;
 
     assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
-    bool passthrough = options & PAL_OPTION_PASSTHROUGH;
+    bool passthrough = !!(options & PAL_OPTION_PASSTHROUGH);
 
     /* For encrypted pipes, we do not take `nonblocking` into account here - it will be set after
      * the TLS handshake below if needed. */
@@ -207,8 +220,8 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     clnt->pipe.passthrough = passthrough;
 
     if (!passthrough) {
-        /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
-         * lazily on first read/write on this pipe */
+        /* create the SSL pre-shared key for this end of the pipe; note that SSL context is
+         * initialized lazily on first read/write on this pipe */
         clnt->pipe.ssl_ctx        = NULL;
         clnt->pipe.is_server      = false;
         clnt->pipe.handshake_done = false;
@@ -244,9 +257,10 @@ out_err:
 /*!
  * \brief Connect to the other end of the pipe and create PAL handle for our end of the pipe.
  *
- * \param[out] handle   PAL handle of type `pipe` with abstract UNIX socket connected to another end.
+ * \param[out] handle   PAL handle of type `pipe` with abstract UNIX socket connected to another
+ *                      end.
  * \param      name     String uniquely identifying the pipe.
- * \param      options  May contain PAL_OPTION_NONBLOCK.
+ * \param      options  May contain PAL_OPTION_NONBLOCK, PAL_OPTION_PASSTHROUGH.
  *
  * \returns 0 on success, negative PAL error code otherwise.
  *
@@ -256,6 +270,7 @@ out_err:
  * The other end of the pipe is typically of type `pipecli`.
  */
 static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
     int ret;
 
     struct sockaddr_un addr;
@@ -263,14 +278,13 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
     unsigned int addrlen = sizeof(struct sockaddr_un);
-    int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
-    bool passthrough = options & PAL_OPTION_PASSTHROUGH;
+    bool passthrough = !!(options & PAL_OPTION_PASSTHROUGH);
 
     /* For encrypted pipes, we do not take `nonblocking` into account here - it will be set by
      * `thread_handshake_func` later if needed. */
-    int type = passthrough ? SOCK_STREAM | SOCK_CLOEXEC | nonblock : SOCK_STREAM | SOCK_CLOEXEC;
+    int type = passthrough ? PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_STREAM | SOCK_CLOEXEC :
+                             SOCK_STREAM | SOCK_CLOEXEC;
 
     ret = ocall_connect(AF_UNIX, type, 0, /*ipv6_v6only=*/0, (const struct sockaddr*)&addr, addrlen,
                         NULL, NULL);
@@ -315,7 +329,8 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
             return -PAL_ERROR_DENIED;
         }
 
-        /* inform helper thread about its PAL thread handle `thread_hdl`; see thread_handshake_func() */
+        /* inform helper thread about its PAL thread handle `thread_hdl`; see
+         * thread_handshake_func() */
         __atomic_store_n(&hdl->pipe.handshake_helper_thread_hdl, thread_hdl, __ATOMIC_RELEASE);
     }
 
@@ -332,7 +347,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * \param      access   Not used.
  * \param      share    Not used.
  * \param      create   Not used.
- * \param      options  May contain PAL_OPTION_NONBLOCK.
+ * \param      options  May contain PAL_OPTION_NONBLOCK, PAL_OPTION_PASSTHROUGH.
  *
  * \returns 0 on success, negative PAL error code otherwise.
  *
@@ -351,6 +366,7 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     __UNUSED(access);
     __UNUSED(create);
     assert(create == PAL_CREATE_IGNORED);
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
         return -PAL_ERROR_INVAL;
@@ -394,6 +410,7 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
         bytes = _PalStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
                                      /*is_blocking=*/!handle->pipe.nonblocking);
     } else {
+        /* reading plaintext data */
         bytes = ocall_read(handle->pipe.fd, buffer, len);
         if (bytes < 0)
             return unix_to_pal_error(bytes);
@@ -432,6 +449,7 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
         bytes = _PalStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
                                       /*is_blocking=*/!handle->pipe.nonblocking);
     } else {
+        /* writing plaintext data */
         bytes = ocall_write(handle->pipe.fd, buffer, len);
         if (bytes < 0)
             return unix_to_pal_error(bytes);

@@ -324,8 +324,8 @@ enum pal_create_mode {
 typedef uint32_t pal_stream_options_t; /* bitfield */
 #define PAL_OPTION_EFD_SEMAPHORE   0x1 /*!< specific to `eventfd` syscall */
 #define PAL_OPTION_NONBLOCK        0x2
-#define PAL_OPTION_PASSTHROUGH     0x4 /*!< Disregard `sgx.{allowed,trusted}_files` for files;
-                                            non-encryption for pipes on Linux-SGX PAL */
+#define PAL_OPTION_PASSTHROUGH     0x4 /*!< Disregard `sgx.{allowed,trusted}_files` for files.
+                                            Don't apply encryption for pipes (if applicable). */
 #define PAL_OPTION_MASK            0x7
 
 /*!
