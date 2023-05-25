@@ -13,8 +13,8 @@
 int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];
     PAL_HANDLE srv_handle;
-    /* we use `passthrough` pipes for performance reasons (we save on secure initialization of pipes
-     * and on encryption of pipe data on PALs that support encrypted pipes). */
+    /* We use `passthrough` pipes here for performance reasons (we save on secure initialization of
+     * pipes and on encryption of pipe data on PALs that support encrypted pipes). */
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
                           /*use_vmid_for_name=*/false, /*passthrough=*/true);
     if (ret < 0) {
