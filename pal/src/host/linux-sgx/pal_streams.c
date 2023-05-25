@@ -51,7 +51,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to serialize SSL context */
-            if (handle->pipe.ssl_ctx) {
+            if (!handle->pipe.passthrough && handle->pipe.ssl_ctx) {
                 free_field = true;
                 ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&field,
                                            &field_size);
@@ -62,11 +62,6 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
             break;
         case PAL_TYPE_PIPESRV:
             /* no need to serialize ssl_ctx and handshake_helper_thread_hdl */
-            break;
-        case PAL_TYPE_PIPERAW:
-        case PAL_TYPE_PIPERAWCLI:
-        case PAL_TYPE_PIPERAWSRV:
-            /* raw pipes have no fields to serialize */
             break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
@@ -164,10 +159,6 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PIPESRV:
             hdl->pipe.ssl_ctx = NULL;
             hdl->pipe.handshake_helper_thread_hdl = NULL;
-            break;
-        case PAL_TYPE_PIPERAW:
-        case PAL_TYPE_PIPERAWCLI:
-        case PAL_TYPE_PIPERAWSRV:
             break;
         case PAL_TYPE_DEV:
             break;

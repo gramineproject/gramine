@@ -140,17 +140,20 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     hdl->flags |= PAL_HANDLE_FD_READABLE; /* cannot write to a listening socket */
     hdl->pipe.fd          = ret;
     hdl->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
+    hdl->pipe.passthrough = !!(options & PAL_OPTION_PASSTHROUGH);
 
-    /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
-    hdl->pipe.ssl_ctx        = NULL;
-    hdl->pipe.is_server      = false;
-    hdl->pipe.handshake_done = true; /* pipesrv doesn't do any handshake so consider it done */
+    if (!(options & PAL_OPTION_PASSTHROUGH)) {
+        /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
+        hdl->pipe.ssl_ctx        = NULL;
+        hdl->pipe.is_server      = false;
+        hdl->pipe.handshake_done = true; /* pipesrv doesn't do any handshake so consider it done */
 
-    ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
-    if (ret < 0) {
-        ocall_close(hdl->pipe.fd);
-        free(hdl);
-        return -PAL_ERROR_DENIED;
+        ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
+        if (ret < 0) {
+            ocall_close(hdl->pipe.fd);
+            free(hdl);
+            return -PAL_ERROR_DENIED;
+        }
     }
 
     *handle = hdl;
@@ -179,12 +182,15 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (handle->pipe.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK));
-    bool nonblocking = options & PAL_OPTION_NONBLOCK;
-    /* We do not take `nonblocking` into account here - it will be set after the TLS handshake below
-     * if needed. */
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
+    bool passthrough = options & PAL_OPTION_PASSTHROUGH;
+
+    /* For encrypted pipes, we do not take `nonblocking` into account here - it will be set after
+     * the TLS handshake below if needed. */
+    int flags = passthrough ? PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC : SOCK_CLOEXEC;
+
     int ret = ocall_accept(handle->pipe.fd, /*addr=*/NULL, /*addrlen=*/NULL, /*local_addr=*/NULL,
-                           /*local_addrlen=*/NULL, SOCK_CLOEXEC);
+                           /*local_addrlen=*/NULL, flags);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -197,28 +203,31 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     init_handle_hdr(clnt, PAL_TYPE_PIPECLI);
     clnt->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     clnt->pipe.fd          = ret;
-    clnt->pipe.nonblocking = nonblocking;
+    clnt->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
+    clnt->pipe.passthrough = passthrough;
 
-    /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
-     * lazily on first read/write on this pipe */
-    clnt->pipe.ssl_ctx        = NULL;
-    clnt->pipe.is_server      = false;
-    clnt->pipe.handshake_done = false;
-    COPY_ARRAY(clnt->pipe.session_key, handle->pipe.session_key);
+    if (!passthrough) {
+        /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
+         * lazily on first read/write on this pipe */
+        clnt->pipe.ssl_ctx        = NULL;
+        clnt->pipe.is_server      = false;
+        clnt->pipe.handshake_done = false;
+        COPY_ARRAY(clnt->pipe.session_key, handle->pipe.session_key);
 
-    ret = _PalStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
-                               (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
-    if (ret < 0) {
-        goto out_err;
-    }
-    if (clnt->pipe.nonblocking) {
-        ret = ocall_fsetnonblock(clnt->pipe.fd, /*nonblocking=*/1);
+        ret = _PalStreamSecureInit(clnt, clnt->pipe.is_server, &clnt->pipe.session_key,
+                                   (LIB_SSL_CONTEXT**)&clnt->pipe.ssl_ctx, NULL, 0);
         if (ret < 0) {
-            ret = unix_to_pal_error(ret);
             goto out_err;
         }
+        if (clnt->pipe.nonblocking) {
+            ret = ocall_fsetnonblock(clnt->pipe.fd, /*nonblocking=*/1);
+            if (ret < 0) {
+                ret = unix_to_pal_error(ret);
+                goto out_err;
+            }
+        }
+        __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
     }
-    __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
 
     *client = clnt;
     return 0;
@@ -254,13 +263,17 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     if (ret < 0)
         return -PAL_ERROR_DENIED;
 
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK));
+    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
     unsigned int addrlen = sizeof(struct sockaddr_un);
-    bool nonblocking = options & PAL_OPTION_NONBLOCK;
-    /* We do not take `nonblocking` into account here - it will be set by `thread_handshake_func`
-     * later if needed. */
-    ret = ocall_connect(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, /*ipv6_v6only=*/0,
-                        (const struct sockaddr*)&addr, addrlen, NULL, NULL);
+    int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
+    bool passthrough = options & PAL_OPTION_PASSTHROUGH;
+
+    /* For encrypted pipes, we do not take `nonblocking` into account here - it will be set by
+     * `thread_handshake_func` later if needed. */
+    int type = passthrough ? SOCK_STREAM | SOCK_CLOEXEC | nonblock : SOCK_STREAM | SOCK_CLOEXEC;
+
+    ret = ocall_connect(AF_UNIX, type, 0, /*ipv6_v6only=*/0, (const struct sockaddr*)&addr, addrlen,
+                        NULL, NULL);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -273,35 +286,38 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     init_handle_hdr(hdl, PAL_TYPE_PIPE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
     hdl->pipe.fd            = ret;
-    hdl->pipe.nonblocking   = nonblocking;
+    hdl->pipe.nonblocking   = !!(options & PAL_OPTION_NONBLOCK);
+    hdl->pipe.passthrough   = passthrough;
 
-    /* create the SSL pre-shared key for this end of the pipe and initialize SSL context */
-    ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
-    if (ret < 0) {
-        ocall_close(hdl->pipe.fd);
-        free(hdl);
-        return -PAL_ERROR_DENIED;
+    if (!passthrough) {
+        /* create the SSL pre-shared key for this end of the pipe and initialize SSL context */
+        ret = pipe_session_key(name, strlen(name) + 1, &hdl->pipe.session_key);
+        if (ret < 0) {
+            ocall_close(hdl->pipe.fd);
+            free(hdl);
+            return -PAL_ERROR_DENIED;
+        }
+
+        hdl->pipe.handshake_helper_thread_hdl = NULL;
+        hdl->pipe.ssl_ctx        = NULL;
+        hdl->pipe.is_server      = true;
+        hdl->pipe.handshake_done = false;
+
+        /* create a helper thread to initialize the SSL context (by performing SSL handshake);
+         * we need a separate thread because the underlying handshake implementation is blocking
+         * and assumes that client and server are two parallel entities (e.g., two threads) */
+        PAL_HANDLE thread_hdl;
+
+        ret = _PalThreadCreate(&thread_hdl, thread_handshake_func, /*param=*/hdl);
+        if (ret < 0) {
+            ocall_close(hdl->pipe.fd);
+            free(hdl);
+            return -PAL_ERROR_DENIED;
+        }
+
+        /* inform helper thread about its PAL thread handle `thread_hdl`; see thread_handshake_func() */
+        __atomic_store_n(&hdl->pipe.handshake_helper_thread_hdl, thread_hdl, __ATOMIC_RELEASE);
     }
-
-    hdl->pipe.handshake_helper_thread_hdl = NULL;
-    hdl->pipe.ssl_ctx        = NULL;
-    hdl->pipe.is_server      = true;
-    hdl->pipe.handshake_done = false;
-
-    /* create a helper thread to initialize the SSL context (by performing SSL handshake);
-     * we need a separate thread because the underlying handshake implementation is blocking
-     * and assumes that client and server are two parallel entities (e.g., two threads) */
-    PAL_HANDLE thread_hdl;
-
-    ret = _PalThreadCreate(&thread_hdl, thread_handshake_func, /*param=*/hdl);
-    if (ret < 0) {
-        ocall_close(hdl->pipe.fd);
-        free(hdl);
-        return -PAL_ERROR_DENIED;
-    }
-
-    /* inform helper thread about its PAL thread handle `thread_hdl`; see thread_handshake_func() */
-    __atomic_store_n(&hdl->pipe.handshake_helper_thread_hdl, thread_hdl, __ATOMIC_RELEASE);
 
     *handle = hdl;
     return 0;
@@ -366,15 +382,22 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes;
-    /* use a secure session (should be already initialized) */
-    while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
-        CPU_RELAX();
 
-    if (!handle->pipe.ssl_ctx)
-        return -PAL_ERROR_NOTCONNECTION;
+    if (!handle->pipe.passthrough) {
+        /* use a secure session (should be already initialized) */
+        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+            CPU_RELAX();
 
-    bytes = _PalStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
-                                 /*is_blocking=*/!handle->pipe.nonblocking);
+        if (!handle->pipe.ssl_ctx)
+            return -PAL_ERROR_NOTCONNECTION;
+
+        bytes = _PalStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
+                                     /*is_blocking=*/!handle->pipe.nonblocking);
+    } else {
+        bytes = ocall_read(handle->pipe.fd, buffer, len);
+        if (bytes < 0)
+            return unix_to_pal_error(bytes);
+    }
 
     return bytes;
 }
@@ -397,15 +420,22 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
         return -PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes;
-    /* use a secure session (should be already initialized) */
-    while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
-        CPU_RELAX();
 
-    if (!handle->pipe.ssl_ctx)
-        return -PAL_ERROR_NOTCONNECTION;
+    if (!handle->pipe.passthrough) {
+        /* use a secure session (should be already initialized) */
+        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+            CPU_RELAX();
 
-    bytes = _PalStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
-                                  /*is_blocking=*/!handle->pipe.nonblocking);
+        if (!handle->pipe.ssl_ctx)
+            return -PAL_ERROR_NOTCONNECTION;
+
+        bytes = _PalStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
+                                      /*is_blocking=*/!handle->pipe.nonblocking);
+    } else {
+        bytes = ocall_write(handle->pipe.fd, buffer, len);
+        if (bytes < 0)
+            return unix_to_pal_error(bytes);
+    }
 
     return bytes;
 }
@@ -419,12 +449,14 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
  */
 static int pipe_close(PAL_HANDLE handle) {
     if (handle->pipe.fd != PAL_IDX_POISON) {
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
-            CPU_RELAX();
+        if (!handle->pipe.passthrough) {
+            while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+                CPU_RELAX();
 
-        if (handle->pipe.ssl_ctx) {
-            _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
-            handle->pipe.ssl_ctx = NULL;
+            if (handle->pipe.ssl_ctx) {
+                _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
+                handle->pipe.ssl_ctx = NULL;
+            }
         }
         ocall_close(handle->pipe.fd);
         handle->pipe.fd = PAL_IDX_POISON;
@@ -457,9 +489,11 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    /* This pipe might use a secure session, make sure all initial work is done. */
-    while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
-        CPU_RELAX();
+    if (!handle->pipe.passthrough) {
+        /* This pipe might use a secure session, make sure all initial work is done. */
+        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE)) {
+            CPU_RELAX();
+        }
     }
 
     /* other types of pipes have a single underlying FD, shut it down */

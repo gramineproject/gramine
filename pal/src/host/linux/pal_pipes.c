@@ -173,8 +173,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * \brief Create PAL handle of type `pipesrv` or `pipe` depending on `type` and `uri`.
  *
  * \param[out] handle   Created PAL handle of type `pipesrv` or `pipe`.
- * \param      type     Can be URI_TYPE_PIPE, URI_TYPE_PIPE_RAW, URI_TYPE_PIPE_SRV or
- *                      URI_TYPE_PIPE_RAW_SRV.
+ * \param      type     Can be URI_TYPE_PIPE or URI_TYPE_PIPE_SRV.
  * \param      uri      Content is either NUL (for anonymous pipe) or a string with pipe name.
  * \param      access   Not used.
  * \param      share    Not used.
@@ -185,14 +184,12 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  *
  * Depending on the combination of `type` and `uri`, the following PAL handles are created:
  *
- * - `type` is URI_TYPE_PIPE_SRV
- *          or URI_TYPE_PIPE_RAW_SRV: create `pipesrv` handle (intermediate listening socket) with
- *                                    the name created by `get_gramine_unix_socket_addr`. Caller is
- *                                    expected to call pipe_waitforclient() afterwards.
+ * - `type` is URI_TYPE_PIPE_SRV: create `pipesrv` handle (intermediate listening socket) with
+ *                                the name created by `get_gramine_unix_socket_addr`. Caller is
+ *                                expected to call pipe_waitforclient() afterwards.
  *
- * - `type` is URI_TYPE_PIPE
- *          or URI_TYPE_PIPE_RAW: create `pipe` handle (connecting socket) with the name created by
- *                                `get_gramine_unix_socket_addr`.
+ * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
+ *                            `get_gramine_unix_socket_addr`.
  */
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
@@ -204,10 +201,10 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
         return -PAL_ERROR_INVAL;
 
-    if (!strcmp(type, URI_TYPE_PIPE_SRV) || !strcmp(type, URI_TYPE_PIPE_RAW_SRV))
+    if (!strcmp(type, URI_TYPE_PIPE_SRV))
         return pipe_listen(handle, uri, options);
 
-    if (!strcmp(type, URI_TYPE_PIPE) || !strcmp(type, URI_TYPE_PIPE_RAW))
+    if (!strcmp(type, URI_TYPE_PIPE))
         return pipe_connect(handle, uri, options);
 
     return -PAL_ERROR_INVAL;
@@ -366,18 +363,6 @@ static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 struct handle_ops g_pipe_ops = {
-    .open           = &pipe_open,
-    .waitforclient  = &pipe_waitforclient,
-    .read           = &pipe_read,
-    .write          = &pipe_write,
-    .close          = &pipe_close,
-    .delete         = &pipe_delete,
-    .attrquerybyhdl = &pipe_attrquerybyhdl,
-    .attrsetbyhdl   = &pipe_attrsetbyhdl,
-};
-
-/* simply remap raw pipes to pipes as they are essentially the same under Linux PAL */
-struct handle_ops g_pipe_raw_ops = {
     .open           = &pipe_open,
     .waitforclient  = &pipe_waitforclient,
     .read           = &pipe_read,

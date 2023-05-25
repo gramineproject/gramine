@@ -535,7 +535,7 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
 }
 
 int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name,
-                bool encrypted) {
+                bool passthrough) {
     int ret;
     size_t len;
     char pipename[PIPE_URI_SIZE];
@@ -559,17 +559,13 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
                 return ret;
         }
 
-        log_debug(encrypted ?
-                  "Creating pipe: " URI_PREFIX_PIPE_SRV "%s" :
-                  "Creating pipe: " URI_PREFIX_PIPE_RAW_SRV "%s", pipename);
-        len = snprintf(uri, size,
-                       encrypted ? URI_PREFIX_PIPE_SRV "%s" : URI_PREFIX_PIPE_RAW_SRV "%s",
-                       pipename);
+        log_debug("Creating pipe: " URI_PREFIX_PIPE_SRV "%s", pipename);
+        len = snprintf(uri, size, URI_PREFIX_PIPE_SRV "%s", pipename);
         if (len >= size)
             return -ERANGE;
 
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            /*options=*/0, &pipe);
+                            passthrough ? PAL_OPTION_PASSTHROUGH : 0, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */
@@ -583,7 +579,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     /* output generated pipe handle, URI, and name */
     *hdl = pipe;
-    len = snprintf(uri, size, encrypted ? URI_PREFIX_PIPE "%s" : URI_PREFIX_PIPE_RAW "%s", pipename);
+    len = snprintf(uri, size, URI_PREFIX_PIPE "%s", pipename);
     if (name)
         memcpy(name, pipename, sizeof(pipename));
     return 0;

@@ -53,11 +53,6 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PIPECLI:
             /* pipes have no fields to serialize */
             break;
-        case PAL_TYPE_PIPERAW:
-        case PAL_TYPE_PIPERAWSRV:
-        case PAL_TYPE_PIPERAWCLI:
-            /* raw pipes have no fields to serialize */
-            break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
             break;
@@ -122,10 +117,6 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
         case PAL_TYPE_PIPECLI:
-            break;
-        case PAL_TYPE_PIPERAW:
-        case PAL_TYPE_PIPERAWSRV:
-        case PAL_TYPE_PIPERAWCLI:
             break;
         case PAL_TYPE_DEV:
             break;
