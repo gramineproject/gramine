@@ -5,7 +5,7 @@
  * This file contains operands to handle streams with URIs that start with "pipe:" or "pipe.srv:".
  *
  * Pipes can be of two types: encrypted and unencrypted (passthrough), which is regulated by the
- * `PASSTHROUGH` option during pipe creation.
+ * `PAL_OPTION_PASSTHROUGH` option during pipe creation.
  *
  * The unencrypted/passthrough pipes have better performance than the encrypted ones (especially
  * during pipe creation, which don't require an expensive TLS handshake phase that involves creating
