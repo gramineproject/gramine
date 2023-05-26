@@ -856,6 +856,11 @@ static void parse_mmap_flags(struct print_buf* buf, va_list* ap) {
         flags &= ~MAP_FIXED;
     }
 
+    if (flags & MAP_FIXED_NOREPLACE) {
+        buf_puts(buf, "|MAP_FIXED_NOREPLACE");
+        flags &= ~MAP_FIXED_NOREPLACE;
+    }
+
 #ifdef CONFIG_MMAP_ALLOW_UNINITIALIZED
     if (flags & MAP_UNINITIALIZED) {
         buf_puts(buf, "|MAP_UNINITIALIZED");
