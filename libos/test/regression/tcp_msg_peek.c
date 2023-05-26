@@ -103,10 +103,6 @@ static void client(int pipefd) {
     struct sockaddr_in sa = {
         .sin_family = AF_INET,
         .sin_port = htons(PORT),
-        .sin_addr = {
-            /* TODO: remove this once Ubuntu 18.04 is deprecated. */
-            .s_addr = 0,
-        },
     };
     if (inet_aton(SRV_IP, &sa.sin_addr) != 1) {
         CHECK(-1);
