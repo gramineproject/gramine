@@ -637,9 +637,7 @@ const char* const siglist[SIGRTMIN] = {
 #undef S
 };
 
-/* 6 bytes should be sufficient for "SIGxx", but gcc 7.5.0 (Ubuntu 18.04) warns that output can be
- * truncated. */
-#define SIGNAL_NAME_SIZE 7
+#define SIGNAL_NAME_SIZE 6
 
 static const char* signal_name(int sig, char str[SIGNAL_NAME_SIZE]) {
     if (sig <= 0 || sig > SIGS_CNT) {
