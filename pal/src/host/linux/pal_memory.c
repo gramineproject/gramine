@@ -34,12 +34,14 @@ int _PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
     int flags = PAL_MEM_FLAGS_TO_LINUX(prot);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
-    flags |= MAP_ANONYMOUS | MAP_FIXED;
-    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
+    flags |= MAP_ANONYMOUS | MAP_FIXED_NOREPLACE;
+    void* res_addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
 
-    if (IS_PTR_ERR(addr)) {
-        return unix_to_pal_error(PTR_TO_ERR(addr));
+    if (IS_PTR_ERR(res_addr)) {
+        return unix_to_pal_error(PTR_TO_ERR(res_addr));
     }
+
+    assert(res_addr == addr);
 
     return 0;
 }

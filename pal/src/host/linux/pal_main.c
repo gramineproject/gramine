@@ -111,7 +111,7 @@ __attribute_no_stack_protector
 __attribute_no_sanitize_address
 static void setup_asan(void) {
     int prot = PROT_READ | PROT_WRITE;
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE;
     void* addr = (void*)DO_SYSCALL(mmap, (void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, prot, flags,
                                    /*fd=*/-1, /*offset=*/0);
     if (IS_PTR_ERR(addr)) {

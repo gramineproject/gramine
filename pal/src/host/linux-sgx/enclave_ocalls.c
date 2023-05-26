@@ -194,7 +194,7 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
 
     void* requested_addr = *addrptr;
 
-    if (flags & MAP_FIXED) {
+    if (flags & MAP_FIXED || flags & MAP_FIXED_NOREPLACE) {
         if (!sgx_is_valid_untrusted_ptr(requested_addr, size, PAGE_SIZE)) {
             sgx_reset_ustack(old_ustack);
             return -EINVAL;
@@ -224,7 +224,7 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
     }
 
     void* returned_addr = COPY_UNTRUSTED_VALUE(&ocall_mmap_args->addr);
-    if (flags & MAP_FIXED) {
+    if (flags & MAP_FIXED || flags & MAP_FIXED_NOREPLACE) {
         /* addrptr already contains the mmap'ed address, no need to update it */
         if (returned_addr != requested_addr) {
             sgx_reset_ustack(old_ustack);
