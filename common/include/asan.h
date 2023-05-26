@@ -29,7 +29,7 @@
  * - Make sure the program maps the shadow memory area at startup. This will be something like:
  *
  *       mmap((void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, PROT_READ | PROT_WRITE,
- *            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED,
+ *            MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE,
  *            -1, 0);
  *
  * - Annotate all functions that shouldn't perform sanitized memory access with
