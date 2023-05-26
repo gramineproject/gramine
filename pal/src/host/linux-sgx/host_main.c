@@ -572,10 +572,14 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     struct enclave_dbginfo* dbg = (void*)DO_SYSCALL(mmap, DBGINFO_ADDR,
                                                     sizeof(struct enclave_dbginfo),
                                                     PROT_READ | PROT_WRITE,
-                                                    MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+                                                    MAP_PRIVATE | MAP_ANONYMOUS
+                                                        | MAP_FIXED_NOREPLACE,
+                                                    /*fd=*/-1,
+                                                    /*offset=*/0);
     if (IS_PTR_ERR(dbg)) {
         log_warning("Cannot allocate debug information (GDB will not work)");
     } else {
+        assert(dbg == (void*)DBGINFO_ADDR);
         dbg->pid            = g_host_pid;
         dbg->base           = enclave->baseaddr;
         dbg->size           = enclave->size;
@@ -1119,10 +1123,10 @@ __attribute((constructor(0)))
 __attribute_no_sanitize_address
 static void setup_asan(void) {
     int prot = PROT_READ | PROT_WRITE;
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE;
     void* addr = (void*)DO_SYSCALL(mmap, (void*)ASAN_SHADOW_START, ASAN_SHADOW_LENGTH, prot, flags,
                                    /*fd=*/-1, /*offset=*/0);
-    if (IS_PTR_ERR(addr)) {
+    if (IS_PTR_ERR(addr) || addr != (void*)ASAN_SHADOW_START) {
         int err = PTR_TO_ERR(addr);
         log_error("asan: error setting up shadow memory: %s", unix_strerror(err));
         DO_SYSCALL(exit_group, unix_to_pal_error(err));

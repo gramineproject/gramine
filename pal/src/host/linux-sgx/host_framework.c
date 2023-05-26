@@ -189,7 +189,7 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
 #endif
 
     uint64_t addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
-                               PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED | MAP_SHARED,
+                               PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED_NOREPLACE | MAP_SHARED,
                                g_isgx_device, 0);
     if (IS_PTR_ERR(addr)) {
         int ret = PTR_TO_ERR(addr);
@@ -201,7 +201,6 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
         log_error("Allocation of EPC memory failed: %s", unix_strerror(ret));
         return ret;
     }
-
     assert(addr == request_mmap_addr);
 
     struct sgx_enclave_create param = {
