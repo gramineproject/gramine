@@ -194,7 +194,7 @@ static long int host_ptrace(gramine_ptrace_request request, pid_t tid, void* add
 }
 
 /* Update GDB's copy of ei.thread_tids with current enclave's ei.thread_tids */
-static int update_thread_tids(struct enclave_dbginfo* ei) {
+static int update_thread_tids(struct enclave_dbginfo* ei, pid_t tid) {
     long int res;
     void* src = (void*)DBGINFO_ADDR + offsetof(struct enclave_dbginfo, thread_tids);
     void* dst = (void*)ei + offsetof(struct enclave_dbginfo, thread_tids);
@@ -204,7 +204,7 @@ static int update_thread_tids(struct enclave_dbginfo* ei) {
 
     for (size_t off = 0; off < sizeof(ei->thread_tids); off += sizeof(long)) {
         errno = 0;
-        res = host_ptrace(PTRACE_PEEKDATA, ei->pid, src + off, NULL);
+        res = host_ptrace(PTRACE_PEEKDATA, tid, src + off, NULL);
         if (res < 0 && errno != 0) {
             /* benign failure: enclave is not yet initialized */
             return -1;
@@ -392,7 +392,7 @@ static int open_memdevice(pid_t tid, int* out_memdev, struct enclave_dbginfo** o
         if (g_memdevs[i].pid == tid) {
             *out_memdev = g_memdevs[i].memdev;
             *out_ei = &g_memdevs[i].ei;
-            return update_thread_tids(*out_ei);
+            return update_thread_tids(*out_ei, tid);
         }
     }
 
@@ -424,7 +424,7 @@ static int open_memdevice(pid_t tid, int* out_memdev, struct enclave_dbginfo** o
         if (g_memdevs[i].pid == ei->pid) {
             *out_memdev = g_memdevs[i].memdev;
             *out_ei = &g_memdevs[i].ei;
-            ret = update_thread_tids(*out_ei);
+            ret = update_thread_tids(*out_ei, tid);
             goto out;
         }
     }
