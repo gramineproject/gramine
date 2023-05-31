@@ -298,10 +298,10 @@ int debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     ret = find_in_symbol_map(name, offset, buf, buf_size);
     if (ret < 0) {
         /* parsing symbol map failed, display just name and offset */
-        snprintf(buf, buf_size, "%s+0x%lx", basename, offset);
+        snprintf(buf, buf_size, "%s+0x%lx (addr = 0x%lx)", basename, offset, addr);
     } else {
         size_t len = strlen(buf);
-        snprintf(&buf[len], buf_size - len, ", %s+0x%lx", basename, offset);
+        snprintf(&buf[len], buf_size - len, ", %s+0x%lx (addr = 0x%lx)", basename, offset, addr);
     }
 
     free(name);
