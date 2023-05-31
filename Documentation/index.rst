@@ -60,18 +60,26 @@ The following steps can be performed to protect your application with Gramine:
 
 - :doc:`Install Gramine<installation>` - Install official Gramine packages from
   the repository of your Linux distribution.
-- :doc:`Set up the SGX environment<sgx-setup>` - Set up the SGX environment and
-  prepare a signing key.
 - :doc:`Run a sample application<run-sample-application>` - Run a sample
   application to ensure your environment is configured correctly.
+
+You can also check :doc:`Gramine tutorials<tutorials-index>`.
+
+Configure Gramine
+-----------------
+
+To achieve security and performance guarantees, Gramine must be configured
+appropriately for each application. Also, the host platform must be correctly
+set up.
+
+- :doc:`Set up the host environment<sgx-setup>` - Set up the host environment
+  and prepare a signing key.
 - :doc:`Provide an application-specific configuration file<manifest-syntax>` -
   Gramine requires a so-called manifest file for each application.
 - :doc:`Set up attestation<attestation>` -- If you intend to use remote
   attestation, you should set up attestation infrastructure.
 - :doc:`Tune performance of application<performance>` - You may want to tune the
   performance of your application under Gramine.
-
-You can also check :doc:`Gramine tutorials<tutorials-index>`.
 
 Develop Gramine
 ---------------
@@ -158,12 +166,18 @@ Indices and tables
    :maxdepth: 1
 
    installation
-   sgx-setup
    run-sample-application
+   tutorials-index
+
+.. toctree::
+   :hidden:
+   :caption: Configure Gramine
+   :maxdepth: 1
+
+   sgx-setup
    manifest-syntax
    attestation
    performance
-   tutorials-index
 
 .. toctree::
    :hidden:

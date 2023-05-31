@@ -1,5 +1,9 @@
-Set up the SGX environment
-==========================
+Set up the host environment
+===========================
+
+.. note ::
+   Currently, Gramine has only the SGX backend. This page describes how to set
+   up the SGX environment on your platform.
 
 Gramine with SGX support requires several features from your system:
 
