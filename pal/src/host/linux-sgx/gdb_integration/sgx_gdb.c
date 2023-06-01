@@ -52,7 +52,7 @@ static struct {
 } g_memdevs[32];
 
 #if DEBUG_GDB_PTRACE == 1
-static char* str_ptrace_request(gramine_ptrace_request request) {
+static const char* str_ptrace_request(gramine_ptrace_request request) {
     static char buf[50];
     int prev_errno;
 
@@ -95,7 +95,7 @@ static char* str_ptrace_request(gramine_ptrace_request request) {
     prev_errno = errno; /* snprintf can contaminate errno */
     snprintf(buf, sizeof(buf), "0x%x", request);
     errno = prev_errno;
-    return buf;
+    return (const char*)buf;
 }
 #endif
 
