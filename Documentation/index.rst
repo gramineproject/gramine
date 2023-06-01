@@ -68,9 +68,9 @@ You can also check :doc:`Gramine tutorials<tutorials-index>`.
 Configure Gramine
 -----------------
 
-To achieve security and performance guarantees, Gramine must be configured
-appropriately for each application. Also, the host platform must be correctly
-set up.
+To run an application with Gramine, the host platform must be correctly set up
+first. Further, to achieve security and performance guarantees, Gramine must be
+configured appropriately for each application.
 
 - :doc:`Set up the host environment<sgx-setup>` - Set up the host environment
   and prepare a signing key.

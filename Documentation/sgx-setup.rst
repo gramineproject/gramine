@@ -2,8 +2,10 @@ Set up the host environment
 ===========================
 
 .. note ::
-   Currently, Gramine has only the SGX backend. This page describes how to set
-   up the SGX environment on your platform.
+   Currently, Gramine has two backends: `direct` (execution on the host Linux
+   OS) and `sgx` (execution inside an SGX enclave). The `direct` backend doesn't
+   require any specific environment. Thus, this page describes how to set up
+   the SGX environment on your platform.
 
 Gramine with SGX support requires several features from your system:
 
