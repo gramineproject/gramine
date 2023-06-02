@@ -131,7 +131,7 @@ class Manifest:
         self._manifest[key] = val
 
     @classmethod
-    def from_template(cls, template, variables=None):
+    def from_template(cls, in_template, variables=None):
         """Render template into Manifest.
 
         Creates a manifest from the jinja template given as string. Optional variables may be given
@@ -145,6 +145,16 @@ class Manifest:
         Returns:
             Manifest: instance created from rendered template.
         """
+        template = ''
+        for line in in_template.splitlines():
+            if line.lstrip().startswith('#'):
+                line = line.replace(line, '')
+            else:
+                line = line + '\n'
+            template = template + line
+
+        template = template.replace('\n\n','\n')
+
         return cls(_env.from_string(template).render(**(variables or {})))
 
     @classmethod
