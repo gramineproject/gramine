@@ -225,11 +225,15 @@ struct handle_ops g_dev_ops = {
 
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     int ret;
-
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    int fd;
+    if (handle->hdr.type == PAL_TYPE_DEV)
+        fd = handle->dev.fd;
+    else if (handle->hdr.type == PAL_TYPE_SOCKET)
+        fd = handle->sock.fd;
+    else
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.fd == PAL_IDX_POISON)
+    if ((PAL_IDX)fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
     /* find this IOCTL request in the manifest */
@@ -244,7 +248,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
-        *out_ret = ocall_ioctl(handle->dev.fd, cmd, arg);
+        *out_ret = ocall_ioctl(fd, cmd, arg);
         return 0;
     }
 
@@ -303,7 +307,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     if (ret < 0)
         goto out;
 
-    int ioctl_ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)host_addr);
+    int ioctl_ret = ocall_ioctl(fd, cmd, (unsigned long)host_addr);
 
     ret = ioctls_copy_sub_regions_to_gramine(sub_regions, sub_regions_cnt, sgx_copy_to_enclave);
     if (ret < 0)

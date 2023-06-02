@@ -456,9 +456,10 @@ Allowed IOCTLs
       { request_code = [NUM], struct = "[identifier-of-ioctl-struct]" },
     ]
 
-By default, Gramine disables all device-backed IOCTLs. This syntax allows to
-explicitly allow a set of IOCTLs on devices (devices must be explicitly mounted
-via ``fs.mounts`` manifest syntax). Only IOCTLs with the ``request_code``
+By default, Gramine disables all device-backed and socket IOCTLs. This syntax
+allows to explicitly allow a set of IOCTLs on devices (devices must be
+explicitly mounted via ``fs.mounts`` manifest syntax) and sockets (e.g. for
+``SIOCGIFCONF`` and ``SIOCGIFHWADDR``). Only IOCTLs with the ``request_code``
 argument found among the manifest-listed IOCTLs are allowed to pass-through to
 the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
 the ``struct`` field, in case the third IOCTL argument is intended to be

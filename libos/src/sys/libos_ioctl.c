@@ -154,9 +154,15 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             ret = 0;
             break;
         }
-        default:
-            ret = -ENOSYS;
+        default: {
+            struct libos_fs* fs = hdl->fs;
+            if (!fs || !fs->fs_ops || !fs->fs_ops->ioctl) {
+                ret = -ENOTTY;
+                break;
+            }
+            ret = fs->fs_ops->ioctl(hdl, cmd, arg);
             break;
+        }
     }
 
 out:

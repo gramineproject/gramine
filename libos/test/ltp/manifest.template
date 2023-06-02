@@ -37,3 +37,16 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir() }}/librt.so.1",
   "file:{{ coreutils_libdir }}/libstdbuf.so",
 ]
+
+# below IOCTL is for socket ioctl tests (e.g. `sockioctl01`); note that there is no additional
+# sanitization of these IOCTLs but this is only for testing anyway
+sys.ioctl_structs.ifconf = [
+  # When ifc_req is NULL, direction of ifc_len is out. Otherwise, direction is in.
+  { size = 4, direction = "inout", name = "ifc_len" },  # ifc_len
+  { size = 4, direction = "none" },                     # padding
+  { ptr = [ { size = "ifc_len", direction = "in" } ] }, # ifc_req
+]
+
+sys.allowed_ioctls = [
+  { request_code = 0x8912, struct = "ifconf" }, # SIOCGIFCONF
+]
