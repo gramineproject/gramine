@@ -226,10 +226,15 @@ static bool memcpy_to_gramine(void* ptr, size_t max_size, const void* host_ptr, 
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     int ret;
 
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    int fd;
+    if (handle->hdr.type == PAL_TYPE_DEV)
+        fd = handle->dev.fd;
+    else if (handle->hdr.type == PAL_TYPE_SOCKET)
+        fd = handle->sock.fd;
+    else
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.fd == PAL_IDX_POISON)
+    if ((PAL_IDX)fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
     /* find this IOCTL request in the manifest */
@@ -244,7 +249,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
-        *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
+        *out_ret = DO_SYSCALL(ioctl, fd, cmd, arg);
         return 0;
     }
 
@@ -288,7 +293,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     /* note that if the host returned a negative value (typically means an error, but not always
      * since this is completely device-specific), then we still return success and forward the value
      * as-is to the LibOS and ultimately to the app */
-    int ioctl_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, (unsigned long)host_addr);
+    int ioctl_ret = DO_SYSCALL(ioctl, fd, cmd, (unsigned long)host_addr);
 
     ret = ioctls_copy_sub_regions_to_gramine(sub_regions, sub_regions_cnt, memcpy_to_gramine);
     if (ret < 0)

@@ -1,0 +1,36 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
+
+sgx.max_threads = 4
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
+
+sys.ioctl_structs.ifconf = [
+  # When ifc_req is NULL, direction of ifc_len is out. Otherwise, direction is in.
+  { size = 4, direction = "inout", name = "ifc_len" },  # ifc_len
+  { size = 4, direction = "none" },                     # padding
+  { ptr = [ { size = "ifc_len", direction = "in" } ] }, # ifc_req
+]
+
+sys.ioctl_structs.ifreq = [
+  { size = 16, direction = "out" }, # ifr_name
+  { size = 24, direction = "in" },  # ifr_hwaddr
+]
+
+sys.allowed_ioctls = [
+  { request_code = 0x8912, struct = "ifconf" }, # SIOCGIFCONF
+  { request_code = 0x8927, struct = "ifreq" },  # SIOCGIFHWADDR
+]
