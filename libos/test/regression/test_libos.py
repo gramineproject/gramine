@@ -1379,6 +1379,10 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['tcp_ipv6_v6only'], timeout=50)
         self.assertIn('test completed successfully', stdout)
 
+    def test_320_socket_ioctl(self):
+        stdout, _ = self.run_binary(['socket_ioctl'], timeout=50)
+        self.assertIn('interface lo: inet 127.0.0.1 ether 00:00:00:00:00:00', stdout)
+
 @unittest.skipUnless(HAS_SGX,
     'This test is only meaningful on SGX PAL because only SGX emulates CPUID.')
 class TC_90_CpuidSGX(RegressionTestCase):

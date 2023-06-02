@@ -740,3 +740,16 @@ int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t*
     }
     return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }
+
+int _PalSocketIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
+    if (handle->sock.fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
+
+    int ret = DO_SYSCALL(ioctl, handle->sock.fd, cmd, arg);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    *out_ret = ret;
+    return 0;
+}

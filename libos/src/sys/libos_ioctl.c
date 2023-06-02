@@ -13,6 +13,7 @@
 #include "linux_abi/errors.h"
 #include "linux_abi/ioctl.h"
 #include "pal.h"
+#include "socket_utils.h"
 #include "stat.h"
 
 static void signal_io(IDTYPE caller, void* arg) {
@@ -149,6 +150,27 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
 
             *(int*)arg = size - offset;
             ret = 0;
+            break;
+        }
+        case SIOCGIFCONF:
+            /* fallthrough */
+        case SIOCGIFHWADDR:{
+            if (!is_user_memory_writable((void*)arg, sizeof(int))) {
+                ret = -EFAULT;
+                break;
+            }
+
+            struct libos_fs* fs = hdl->fs;
+            if (!fs || !fs->fs_ops) {
+                ret = -ENOTTY;
+                break;
+            }
+
+            if (fs->fs_ops->ioctl) {
+                ret = fs->fs_ops->ioctl(hdl, cmd, arg);
+            } else {
+                ret = -ENOSYS;
+            }
             break;
         }
         default:
