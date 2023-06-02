@@ -985,12 +985,21 @@ static int get_allowed_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_
 
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     int ret;
-
-    if (handle->hdr.type != PAL_TYPE_DEV)
-        return -PAL_ERROR_INVAL;
-
-    if (handle->dev.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_DENIED;
+    int fd;
+    switch (handle->hdr.type) {
+        case PAL_TYPE_DEV:
+            if (handle->dev.fd == PAL_IDX_POISON)
+                return -PAL_ERROR_DENIED;
+            fd = handle->dev.fd;
+            break;
+        case PAL_TYPE_SOCKET:
+            if (handle->sock.fd == PAL_IDX_POISON)
+                return -PAL_ERROR_DENIED;
+            fd = handle->sock.fd;
+            break;
+        default:
+            return -PAL_ERROR_INVAL;
+    }
 
     toml_array_t* toml_ioctl_struct = NULL;
     ret = get_allowed_ioctl_struct(cmd, &toml_ioctl_struct);
@@ -999,7 +1008,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
-        *out_ret = ocall_ioctl(handle->dev.fd, cmd, arg);
+        *out_ret = ocall_ioctl(fd, cmd, arg);
         return 0;
     }
 
@@ -1042,7 +1051,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     if (ret < 0)
         goto out;
 
-    int ioctl_ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)untrusted_addr);
+    int ioctl_ret = ocall_ioctl(fd, cmd, (unsigned long)untrusted_addr);
 
     ret = copy_sub_regions_to_enclave(sub_regions, sub_regions_cnt);
     if (ret < 0)

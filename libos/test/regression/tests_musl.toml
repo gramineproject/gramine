@@ -107,6 +107,7 @@ manifests = [
   "sighandler_sigpipe",
   "signal_multithread",
   "sigprocmask_pending",
+  "socket_ioctl",
   "spinlock",
   "stat_invalid_args",
   "synthetic",

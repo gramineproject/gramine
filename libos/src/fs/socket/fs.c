@@ -167,6 +167,21 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
             }
             *(int*)arg = size;
             return 0;
+        case SIOCGIFCONF:;
+            /* fallthrough */
+        case SIOCGIFHWADDR:;
+           PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
+            if (!pal_handle) {
+                return -EINVAL;
+            }
+            int cmd_ret;
+            ret = PalDeviceIoControl(pal_handle, cmd, arg, &cmd_ret);
+            if (ret < 0) {
+                return pal_to_unix_errno(ret);
+            }
+
+            assert(ret == 0);
+            return cmd_ret;
         default:
             return -ENOTTY;
     }

@@ -151,6 +151,22 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             ret = 0;
             break;
         }
+        case SIOCGIFCONF:
+            /* fallthrough */
+        case SIOCGIFHWADDR: {
+            struct libos_fs* fs = hdl->fs;
+            if (!fs || !fs->fs_ops) {
+                ret = -ENOTTY;
+                break;
+            }
+
+            if (fs->fs_ops->ioctl) {
+                ret = fs->fs_ops->ioctl(hdl, cmd, arg);
+            } else {
+                ret = -ENOSYS;
+            }
+            break;
+        }
         default:
             ret = -ENOSYS;
             break;
