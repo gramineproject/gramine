@@ -168,22 +168,23 @@ static int mount_dev_shm(void) {
         return ret;
     }
 
-    if (shared_memory_str) {
-        if (!strcmp(shared_memory_str, "none")) {
-            /* do nothing */
-            ret = 0;
-        } else if (!strcmp(shared_memory_str, "passthrough")) {
-            ret = mount_fs(&(struct libos_mount_params){
-                .type = "shm",
-                .path = "/dev/shm",
-                .uri = URI_PREFIX_DEV "/dev/shm",
-            });
-        } else {
-            log_error("Unknown 'sys.insecure__shared_memory'");
-            ret = -EINVAL;
-        }
-        free(shared_memory_str);
+    if (!shared_memory_str)
+        return 0;
+
+    if (!strcmp(shared_memory_str, "none")) {
+        /* do nothing */
+        ret = 0;
+    } else if (!strcmp(shared_memory_str, "passthrough")) {
+        ret = mount_fs(&(struct libos_mount_params){
+            .type = "shm",
+            .path = "/dev/shm",
+            .uri = URI_PREFIX_DEV "/dev/shm",
+        });
+    } else {
+        log_error("Unknown 'sys.insecure__shared_memory' value");
+        ret = -EINVAL;
     }
+    free(shared_memory_str);
     return ret;
 }
 

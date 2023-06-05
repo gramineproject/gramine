@@ -18,6 +18,7 @@
 #include "pal_linux.h"
 #include "path_utils.h"
 #include "perm.h"
+#include "stat.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -85,6 +86,16 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
+        struct stat st;
+        ret = DO_SYSCALL(fstat, hdl->dev.fd, &st);
+        if (ret < 0) {
+            DO_SYSCALL(close, hdl->dev.fd);
+            ret = unix_to_pal_error(ret);
+            goto fail;
+        }
+
+        hdl->dev.seekable = !S_ISFIFO(st.st_mode);
+
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
         } else if (access == PAL_ACCESS_WRONLY) {
@@ -113,17 +124,18 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    int64_t bytes;
     if (!handle->dev.realpath) {
         /* tty doesn't have offsets */
         if (offset)
             return -PAL_ERROR_INVAL;
 
-        int64_t bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
-        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+        bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
+    } else if (handle->dev.seekable) {
+        bytes = DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset);
+    } else {
+        bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
     }
-
-    /* host devices use offset */
-    int64_t bytes = DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -137,17 +149,19 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    int64_t bytes;
     if (!handle->dev.realpath) {
         /* tty doesn't have offsets */
         if (offset)
             return -PAL_ERROR_INVAL;
 
-        int64_t bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
+        bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
         return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+    } else if (handle->dev.seekable) {
+        bytes = DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset);
+    } else {
+        bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
     }
-
-    /* host devices use offset */
-    int64_t bytes = DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -172,16 +186,19 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.realpath) {
-        int ret = DO_SYSCALL(unlink, handle->dev.realpath);
-        return ret < 0 ? unix_to_pal_error(ret) : ret;
-    }
-    return 0;
+    if (!handle->dev.realpath)
+        return -PAL_ERROR_INVAL;
+
+    int ret = DO_SYSCALL(unlink, handle->dev.realpath);
+    return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
 static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                    uint64_t size) {
     if (handle->hdr.type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (!handle->dev.realpath)
         return -PAL_ERROR_INVAL;
 
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
@@ -191,14 +208,12 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
-    if (!handle->dev.realpath)
-        return -PAL_ERROR_INVAL;
+    void* mapped_addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot),
+                                          MAP_SHARED | MAP_FIXED, handle->dev.fd, offset);
+    if (IS_PTR_ERR(mapped_addr))
+        return unix_to_pal_error(PTR_TO_ERR(mapped_addr));
 
-    addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
-                             handle->dev.fd, offset);
-    if (IS_PTR_ERR(addr))
-        return unix_to_pal_error(PTR_TO_ERR(addr));
-
+    assert(mapped_addr == addr);
     return 0;
 }
 
@@ -274,6 +289,7 @@ static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
             return -PAL_ERROR_INVAL;
         return 0;
     }
+
     int ret = DO_SYSCALL(ftruncate, handle->dev.fd, length);
     if (ret < 0)
         return unix_to_pal_error(ret);

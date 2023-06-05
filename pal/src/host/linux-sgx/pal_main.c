@@ -406,6 +406,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool encrypted_files_keys = false;
 
     char* log_level_str = NULL;
+    char* shared_memory_str = NULL;
 
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
@@ -438,14 +439,12 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
-    char* shared_memory_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "sys.insecure__shared_memory",
                          &shared_memory_str);
     if (ret < 0)
         goto out;
     if (shared_memory_str && !strcmp(shared_memory_str, "passthrough"))
         allow_shared_memory = true;
-    free(shared_memory_str);
 
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
@@ -523,6 +522,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     ret = 0;
 out:
     free(log_level_str);
+    free(shared_memory_str);
     return ret;
 }
 

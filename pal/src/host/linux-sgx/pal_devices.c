@@ -19,6 +19,7 @@
 #include "pal_linux_error.h"
 #include "path_utils.h"
 #include "perm.h"
+#include "stat.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -89,6 +90,16 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
+        struct stat st;
+        ret = ocall_fstat(hdl->dev.fd, &st);
+        if (ret < 0) {
+            ocall_close(hdl->dev.fd);
+            ret = unix_to_pal_error(ret);
+            goto fail;
+        }
+
+        hdl->dev.seekable = !S_ISFIFO(st.st_mode);
+
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
         } else if (access == PAL_ACCESS_WRONLY) {
@@ -117,17 +128,18 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    int64_t bytes;
     if (!handle->dev.realpath) {
         /* tty doesn't have offsets */
         if (offset)
             return -PAL_ERROR_INVAL;
 
-        int64_t bytes = ocall_read(handle->dev.fd, buffer, size);
-        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+        bytes = ocall_read(handle->dev.fd, buffer, size);
+    } else if (handle->file.seekable) {
+        bytes = ocall_pread(handle->file.fd, buffer, size, offset);
+    } else {
+        bytes = ocall_read(handle->file.fd, buffer, size);
     }
-
-    /* host devices use offset */
-    int64_t bytes = ocall_pread(handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -141,17 +153,18 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    int64_t bytes;
     if (!handle->dev.realpath) {
         /* tty doesn't have offsets */
         if (offset)
             return -PAL_ERROR_INVAL;
 
-        int64_t bytes = ocall_write(handle->dev.fd, buffer, size);
-        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
+        bytes = ocall_write(handle->dev.fd, buffer, size);
+    } else if (handle->file.seekable) {
+        bytes = ocall_pwrite(handle->file.fd, buffer, size, offset);
+    } else {
+        bytes = ocall_write(handle->file.fd, buffer, size);
     }
-
-    /* host devices use offset */
-    int64_t bytes = ocall_pwrite(handle->dev.fd, buffer, size, offset);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -246,16 +259,19 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.realpath) {
-        int ret = ocall_delete(handle->dev.realpath);
-        return ret < 0 ? unix_to_pal_error(ret) : ret;
-    }
-    return 0;
+    if (!handle->dev.realpath)
+        return -PAL_ERROR_INVAL;
+
+    int ret = ocall_delete(handle->dev.realpath);
+    return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
 static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                    uint64_t size) {
     if (handle->hdr.type != PAL_TYPE_DEV)
+        return -PAL_ERROR_INVAL;
+
+    if (!handle->dev.realpath)
         return -PAL_ERROR_INVAL;
 
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
@@ -265,19 +281,17 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
-    if (!handle->dev.realpath)
-        return -PAL_ERROR_INVAL;
-
     /* can only map the file outside of enclave */
     if (addr < g_pal_public_state.shared_address_start
             || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
-        log_warning("it is impossible to map a device into the enclave");
+        log_warning("It is impossible to map a device into the enclave");
         return -PAL_ERROR_DENIED;
     }
 
     void* mem = addr;
     int ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
                                    handle->dev.fd, offset);
+    assert(mem == addr);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 

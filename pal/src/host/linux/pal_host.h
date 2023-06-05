@@ -52,6 +52,7 @@ typedef struct {
         struct {
             PAL_IDX fd;
             char* realpath;
+            bool seekable;
             bool nonblocking;
         } dev;
 
