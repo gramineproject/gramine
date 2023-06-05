@@ -118,8 +118,6 @@ articles contain helpful material for prospective contributors:
 - :doc:`devel/DCO/index` - Affirm that the source code you will submit was
   originated by you and/or that you have permission to submit it to the Gramine
   project.
-- `Gramine Users mailing list <https://groups.google.com/g/gramine-users>`_ - If
-  you prefer emails, send them to the Gramine Users mailing list.
 
 Resources
 ---------
@@ -141,10 +139,15 @@ technology and a glossary to help you with any questions you may have.
 Getting help
 ------------
 
-For any questions, please send an email to users@gramineproject.io or join us on
-our `Gitter chat <https://gitter.im/gramineproject/community>`__.  For bug
-reports, post an issue on our GitHub repository:
-https://github.com/gramineproject/gramine/issues.
+For any questions, please use `GitHub Discussions
+<https://github.com/gramineproject/gramine/discussions>`__ or join us on our
+`Gitter chat <https://gitter.im/gramineproject/community>`__.
+
+For bug reports and feature requests, `post an issue on our GitHub repository
+<https://github.com/gramineproject/gramine/issues>`__.
+
+If you prefer emails, please send them to users@gramineproject.io (`public
+archive <https://groups.google.com/g/gramine-users>`__).
 
 Indices and tables
 ------------------
