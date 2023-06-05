@@ -13,10 +13,9 @@ images to Gramine-protected Docker images. The transformation adds important
 features, e.g., attestation, to the base Docker image to enable secure
 end-to-end use cases. The interactive script asks users for necessary
 configurations, and provides these inputs to the :doc:`GSC<gsc-installation>`
-tool for the actual transformation. The result is a curated, confidentially
-protected image that includes your specific application, common dependencies,
-and a Gramine manifest file that specifies security policies to enforce for your
-workload.
+tool for the actual transformation. The result is a curated image that includes
+your specific application, common dependencies, and a Gramine manifest file that
+specifies security policies to enforce for your workload.
 
 Current list of solutions and installation instructions:
 

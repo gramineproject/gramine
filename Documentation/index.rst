@@ -2,7 +2,7 @@
 Gramine documentation
 *********************
 
-Gramine is a lightweight guest OS that's designed to run a single Linux
+Gramine is a lightweight guest OS that is designed to run a single Linux
 application with minimal host requirements. Gramine can run applications in an
 isolated environment with benefits comparable to running a complete OS in a
 virtual machine, including guest customization, ease of porting to different

@@ -38,11 +38,10 @@ This command generates an RSA 3072 key suitable for signing SGX enclaves and
 stores it in ``$HOME/.config/gramine/enclave-key.pem``. Protect this key and do
 not disclose it to anyone. See also :doc:`manpages/gramine-sgx-gen-private-key`.
 
-Signing an SGX enclave is a required step in Intel SGX. First, only signed
-enclaves are allowed to be loaded on an SGX platform. Second, the enclave's
-signed structure (so-called SIGSTRUCT) includes a measurement of the enclave
-code (so-called MRENCLAVE), the derivative of the public key (so-called
-MRSIGNER) and other metadata; thus, the process of enclave signing binds
-together these measurements of the loaded enclave, and subsequent SGX
-attestation can prove the genuineness of this enclave based on these
-measurements.
+Signing an SGX enclave is a required step in Intel SGX. First, SGX platforms
+only load signed enclave images. Second, the enclave's signed structure (called
+a SIGSTRUCT) includes a measurement of the enclave code (called an MRENCLAVE),
+the derivative of the public key (called an MRSIGNER) and other metadata; thus,
+the process of enclave signing binds together these measurements of the loaded
+enclave, and subsequent SGX attestation can prove the genuineness of this
+enclave based on these measurements.
