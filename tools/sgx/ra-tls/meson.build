@@ -212,3 +212,13 @@ pkgconfig.generate(
         # Secret Prov consists of multiple independent libs, let user decide which to link
     ],
 )
+
+executable('gramine-ratls',
+    'gramine-ratls.c',
+    link_with: libra_tls_attest,
+    dependencies: [
+        sgx_util_dep,
+        mbedtls_static_dep,
+    ],
+    install: true,
+)
