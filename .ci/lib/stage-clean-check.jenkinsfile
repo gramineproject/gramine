@@ -47,6 +47,7 @@ stage('clean-check') {
 
         make -C CI-Examples/ra-tls-mbedtls distclean
         make -C CI-Examples/ra-tls-secret-prov distclean
+        make -C CI-Examples/ra-tls-wrapper clean
 
         make -C libos/test/ltp clean
         # LTP's make clean is broken, see https://github.com/linux-test-project/ltp/issues/559
