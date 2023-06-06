@@ -108,6 +108,8 @@ int ocall_eventfd(int flags);
 
 int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
 
+off_t ocall_lseek(int fd, off_t offset, int whence);
+
 /*!
  * \brief Execute untrusted code in PAL to obtain a quote from the Quoting Enclave.
  *

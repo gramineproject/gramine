@@ -69,6 +69,7 @@ enum {
     OCALL_DEBUG_DESCRIBE_LOCATION,
     OCALL_EVENTFD,
     OCALL_IOCTL,
+    OCALL_LSEEK,
     OCALL_GET_QUOTE,
     OCALL_EDMM_RESTRICT_PAGES_PERM,
     OCALL_EDMM_MODIFY_PAGES_TYPE,
@@ -333,6 +334,12 @@ struct ocall_ioctl {
     int           fd;
     unsigned int  cmd;
     unsigned long arg;
+};
+
+struct ocall_lseek {
+    int   fd;
+    off_t offset;
+    int   whence;
 };
 
 struct ocall_get_quote {

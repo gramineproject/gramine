@@ -19,7 +19,6 @@
 #include "pal_linux_error.h"
 #include "path_utils.h"
 #include "perm.h"
-#include "stat.h"
 #include "toml.h"
 #include "toml_utils.h"
 
@@ -90,15 +89,9 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
-        struct stat st;
-        ret = ocall_fstat(hdl->dev.fd, &st);
-        if (ret < 0) {
-            ocall_close(hdl->dev.fd);
-            ret = unix_to_pal_error(ret);
-            goto fail;
-        }
-
-        hdl->dev.seekable = !S_ISFIFO(st.st_mode);
+        #define SEEK_CUR 1 /* seek relative to current file position */
+        off_t lseek_ret = ocall_lseek(hdl->dev.fd, 0, SEEK_CUR);
+        hdl->dev.seekable = lseek_ret >= 0;
 
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
@@ -135,10 +128,10 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
             return -PAL_ERROR_INVAL;
 
         bytes = ocall_read(handle->dev.fd, buffer, size);
-    } else if (handle->file.seekable) {
-        bytes = ocall_pread(handle->file.fd, buffer, size, offset);
+    } else if (handle->dev.seekable) {
+        bytes = ocall_pread(handle->dev.fd, buffer, size, offset);
     } else {
-        bytes = ocall_read(handle->file.fd, buffer, size);
+        bytes = ocall_read(handle->dev.fd, buffer, size);
     }
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
@@ -160,10 +153,10 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
             return -PAL_ERROR_INVAL;
 
         bytes = ocall_write(handle->dev.fd, buffer, size);
-    } else if (handle->file.seekable) {
-        bytes = ocall_pwrite(handle->file.fd, buffer, size, offset);
+    } else if (handle->dev.seekable) {
+        bytes = ocall_pwrite(handle->dev.fd, buffer, size, offset);
     } else {
-        bytes = ocall_write(handle->file.fd, buffer, size);
+        bytes = ocall_write(handle->dev.fd, buffer, size);
     }
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }

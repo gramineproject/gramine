@@ -2092,6 +2092,36 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
     return retval;
 }
 
+
+off_t ocall_lseek(int fd, off_t offset, int whence) {
+    int retval;
+    struct ocall_lseek* ocall_lseek_args;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ocall_lseek_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_lseek_args),
+                                                   alignof(*ocall_lseek_args));
+    if (!ocall_lseek_args) {
+        sgx_reset_ustack(old_ustack);
+        return -EPERM;
+    }
+
+    COPY_VALUE_TO_UNTRUSTED(&ocall_lseek_args->fd, fd);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_lseek_args->offset, offset);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_lseek_args->whence, whence);
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_LSEEK, ocall_lseek_args);
+    } while (retval == -EINTR);
+
+    if (retval < 0 && retval != -EBADF && retval != -EINVAL && retval != -ENXIO &&
+            retval != -EOVERFLOW && retval != -ESPIPE) {
+        retval = -EPERM;
+    }
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}
+
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                     const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
     int retval;
