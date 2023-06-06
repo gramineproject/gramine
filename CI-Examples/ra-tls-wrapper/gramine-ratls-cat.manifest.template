@@ -1,7 +1,7 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 loader.argv = [
-    "gramine-ratls", "/tmp/crt.der", "/tmp/key.der",
-    "cat", "/tmp/crt.der",
+    "gramine-ratls", "{{ format }}", "/tmp/crt", "/tmp/key",
+    "cat", "/tmp/crt",
 ]
 libos.entrypoint = "/gramine-ratls"
 loader.log_level = "{{ log_level }}"

@@ -8,18 +8,31 @@
 Synopsis
 ========
 
-:command:`gramine-ratls` <*CERTFILE*> <*KEYFILE*> [*COMMAND* *ARGS* ...]
+:command:`gramine-ratls` [*OPTIONS*] <*CERTFILE*> <*KEYFILE*> [*COMMAND* *ARGS* ...]
 
 Description
 ===========
 
 :program:`gramine-ratls` generates X.509 certificate and matching private key
-using RA-TLS library. It saves those as DER-encoded files under paths given as
-first two CLI arguments. If further arguments are passed, those are interpreted
-as a |~| command that is then executed using ``execvp()``.
+using RA-TLS library. It saves those as files (by default PEM encoded, but see
+option :option:`-D`) under paths given as first two CLI arguments. If further
+arguments are passed, those are interpreted as a |~| command that is then
+executed using ``execvp()``.
 
 It is intended to launch standalone TLS (HTTPS) servers which require cert and
 key passed as files.
+
+Options
+=======
+
+.. option:: -D
+
+    Write the certificate and key in DER format.
+
+.. option:: -P
+
+    Write the certificate and key in PEM format. This is the default, but can be
+    used to override :option:`-D`.
 
 Example
 =======
@@ -28,7 +41,6 @@ This manifest will run :program:`gramine-ratls` and write the contents of
 certificate file to standard output using the :program:`cat` utility:
 
 .. code-block:: jinja
-
 
     loader.entrypoint = "file:{{ gramine.libos }}"
     loader.argv = [
