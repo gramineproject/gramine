@@ -216,6 +216,9 @@ pkgconfig.generate(
 executable('gramine-ratls',
     'gramine-ratls.c',
     link_with: libra_tls_attest,
-    dependencies: sgx_util_dep,
+    dependencies: [
+        sgx_util_dep,
+        mbedtls_static_dep,
+    ],
     install: true,
 )
