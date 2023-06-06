@@ -172,7 +172,7 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
         case SIOCGIFHWADDR:;
            PAL_HANDLE pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
             if (!pal_handle) {
-                return -EINVAL;
+                return -ENOTCONN;
             }
             int cmd_ret;
             ret = PalDeviceIoControl(pal_handle, cmd, arg, &cmd_ret);

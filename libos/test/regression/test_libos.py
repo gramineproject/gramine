@@ -1380,7 +1380,7 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('test completed successfully', stdout)
 
     def test_320_socket_ioctl(self):
-        stdout, _ = self.run_binary(['socket_ioctl'], timeout=50)
+        stdout, _ = self.run_binary(['socket_ioctl'])
         self.assertIn('TEST OK', stdout)
 
 @unittest.skipUnless(HAS_SGX,

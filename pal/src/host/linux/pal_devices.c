@@ -211,27 +211,20 @@ struct handle_ops g_dev_ops = {
 };
 
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
-    switch (handle->hdr.type) {
-        case PAL_TYPE_DEV:
-            if (handle->dev.fd == PAL_IDX_POISON)
-                return -PAL_ERROR_DENIED;
+    int fd;
+    if (handle->hdr.type == PAL_TYPE_DEV)
+        fd = handle->dev.fd;
+    else if (handle->hdr.type == PAL_TYPE_SOCKET)
+        fd = handle->sock.fd;
+    else
+        return -PAL_ERROR_INVAL;
 
-            /* note that if the host returned a negative value (typically means an error, but not
-             * always since this is completely device-specific), then we still return success and
-             * forward the value as-is to the LibOS and ultimately to the app */
-            *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
-            break;
-        case PAL_TYPE_SOCKET:
-            if (handle->sock.fd == PAL_IDX_POISON)
-                return -PAL_ERROR_DENIED;
+    if ((PAL_IDX)fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
 
-            int ret = DO_SYSCALL(ioctl, handle->sock.fd, cmd, arg);
-            if (ret < 0)
-                return unix_to_pal_error(ret);
-            *out_ret = ret;
-            break;
-        default:
-            return -PAL_ERROR_INVAL;
-    }
+    /* note that if the host returned a negative value (typically means an error, but not always
+     * since this is completely device-specific), then we still return success and forward the value
+     * as-is to the LibOS and ultimately to the app */
+    *out_ret = DO_SYSCALL(ioctl, fd, cmd, arg);
     return 0;
 }

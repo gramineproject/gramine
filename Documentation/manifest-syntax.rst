@@ -928,6 +928,22 @@ all), then the ``struct`` key must be an empty string or not exist at all::
       { request_code = 0x87654321 },
     ]
 
+Device IOCTLs also can be used for socket IOCTLs (e.g. for `SIOCGIFCONF` and `SIOCGIFHWADDR`) by the following manifest syntax::
+
+    sgx.ioctl_structs.ifconf = [
+      { size = 4, direction = "inout", name = "ifc_len" },  # ifc_len
+      { size = 4, direction = "none" },                     # padding
+      { ptr = [ { size = "ifc_len", direction = "in" } ] }, # ifc_req
+    ]
+    sgx.ioctl_structs.ifreq = [
+      { size = 16, direction = "out" }, # ifr_name
+      { size = 24, direction = "in" },  # ifr_addr
+    ]
+    sgx.allowed_ioctls = [
+      { request_code = 0x8912, struct = "ifconf" }, # SIOCGIFCONF
+      { request_code = 0x8927, struct = "ifreq" },  # SIOCGIFHWADDR
+    ]
+
 .. note ::
    IOCTLs for device communication are pass-through and thus potentially
    insecure by themselves in SGX environments:

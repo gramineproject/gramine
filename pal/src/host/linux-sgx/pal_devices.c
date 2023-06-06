@@ -986,20 +986,15 @@ static int get_allowed_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
     int ret;
     int fd;
-    switch (handle->hdr.type) {
-        case PAL_TYPE_DEV:
-            if (handle->dev.fd == PAL_IDX_POISON)
-                return -PAL_ERROR_DENIED;
-            fd = handle->dev.fd;
-            break;
-        case PAL_TYPE_SOCKET:
-            if (handle->sock.fd == PAL_IDX_POISON)
-                return -PAL_ERROR_DENIED;
-            fd = handle->sock.fd;
-            break;
-        default:
-            return -PAL_ERROR_INVAL;
-    }
+    if (handle->hdr.type == PAL_TYPE_DEV)
+        fd = handle->dev.fd;
+    else if (handle->hdr.type == PAL_TYPE_SOCKET)
+        fd = handle->sock.fd;
+    else
+        return -PAL_ERROR_INVAL;
+
+    if ((PAL_IDX)fd == PAL_IDX_POISON)
+        return -PAL_ERROR_DENIED;
 
     toml_array_t* toml_ioctl_struct = NULL;
     ret = get_allowed_ioctl_struct(cmd, &toml_ioctl_struct);
