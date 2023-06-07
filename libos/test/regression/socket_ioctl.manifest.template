@@ -1,17 +1,11 @@
 loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
-loader.insecure__use_cmdline_argv = true
-
-# for eventfd test
-sys.insecure__allow_eventfd = true
+loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
-  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
 ]
 
 sgx.max_threads = 4
@@ -27,7 +21,7 @@ sgx.ioctl_structs.ifconf = [
 
 sgx.ioctl_structs.ifreq = [
   { size = 16, direction = "out" }, # ifr_name
-  { size = 24, direction = "in" },  # ifr_addr
+  { size = 24, direction = "in" },  # ifr_hwaddr
 ]
 
 sgx.allowed_ioctls = [
@@ -35,17 +29,8 @@ sgx.allowed_ioctls = [
   { request_code = 0x8927, struct = "ifreq" },  # SIOCGIFHWADDR
 ]
 
-sgx.allowed_files = [
-  "file:tmp/",
-  "file:root",     # for getdents test
-  "file:testfile", # for mmap_file test
-  "file:scripts/", # for exec_script test
-]
-
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
-  "file:{{ arch_libdir }}/libgcc_s.so.1",
-  "file:/usr{{ arch_libdir }}/libstdc++.so.6",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

@@ -13,7 +13,6 @@
 #include "common.h"
 
 int main(void) {
-    struct ifreq *ifr, *ifend;
     struct ifconf ifc;
     int s = CHECK(socket(AF_INET, SOCK_DGRAM, 0));
 
@@ -26,8 +25,8 @@ int main(void) {
 
     CHECK(ioctl(s, SIOCGIFCONF, &ifc));
 
-    ifend = ifc.ifc_req + (ifc.ifc_len / sizeof(struct ifreq));
-    for (ifr = ifc.ifc_req; ifr < ifend; ifr++) {
+    struct ifreq* ifend = ifc.ifc_req + (ifc.ifc_len / sizeof(struct ifreq));
+    for (struct ifreq* ifr = ifc.ifc_req; ifr < ifend; ifr++) {
         if (ifr->ifr_addr.sa_family == AF_INET) {
             struct ifreq ifreq;
             strncpy(ifreq.ifr_name, ifr->ifr_name, sizeof(ifreq.ifr_name));

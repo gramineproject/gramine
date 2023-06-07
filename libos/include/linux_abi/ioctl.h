@@ -7,8 +7,8 @@
 
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
-/* Exclude conflicting `ioctl' function and only include list of `ioctl' requests. */
-#ifndef	_SYS_IOCTL_H
-#define	_SYS_IOCTL_H 1
-#include <bits/ioctls.h>
-#endif
+
+#include <asm/ioctls.h>
+
+#define SIOCGIFCONF    0x8912  /* get iface list */
+#define SIOCGIFHWADDR  0x8927  /* get hardware address */

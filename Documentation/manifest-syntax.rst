@@ -812,9 +812,10 @@ Allowed IOCTLs
       { request_code = [NUM], struct = "[identifier-of-ioctl-struct]" },
     ]
 
-By default, Gramine disables all device-backed IOCTLs. This syntax allows to
-explicitly allow a set of IOCTLs on devices (devices must be explicitly mounted
-via ``fs.mounts`` manifest syntax). Only IOCTLs with the ``request_code``
+By default, Gramine disables all device-backed and socket IOCTLs. This syntax
+allows to explicitly allow a set of IOCTLs on devices (devices must be
+explicitly mounted via ``fs.mounts`` manifest syntax) and sockets (e.g. For
+``SIOCGIFCONF`` and ``SIOCGIFHWADDR``). Only IOCTLs with the ``request_code``
 argument found among the manifest-listed IOCTLs are allowed to pass-through to
 the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
 the ``struct`` field, in case the third IOCTL argument is intended to be
@@ -926,22 +927,6 @@ all), then the ``struct`` key must be an empty string or not exist at all::
     sgx.allowed_ioctls = [
       { request_code = 0x43218765, struct = "" },
       { request_code = 0x87654321 },
-    ]
-
-Device IOCTLs also can be used for socket IOCTLs (e.g. for `SIOCGIFCONF` and `SIOCGIFHWADDR`) by the following manifest syntax::
-
-    sgx.ioctl_structs.ifconf = [
-      { size = 4, direction = "inout", name = "ifc_len" },  # ifc_len
-      { size = 4, direction = "none" },                     # padding
-      { ptr = [ { size = "ifc_len", direction = "in" } ] }, # ifc_req
-    ]
-    sgx.ioctl_structs.ifreq = [
-      { size = 16, direction = "out" }, # ifr_name
-      { size = 24, direction = "in" },  # ifr_addr
-    ]
-    sgx.allowed_ioctls = [
-      { request_code = 0x8912, struct = "ifconf" }, # SIOCGIFCONF
-      { request_code = 0x8927, struct = "ifreq" },  # SIOCGIFHWADDR
     ]
 
 .. note ::
