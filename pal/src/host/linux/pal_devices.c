@@ -18,6 +18,7 @@
 #include "pal_linux.h"
 #include "path_utils.h"
 #include "perm.h"
+#include "stat.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -85,9 +86,15 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
-        #define SEEK_CUR 1 /* seek relative to current file position */
-        int lseek_ret = DO_SYSCALL(lseek, hdl->dev.fd, 0, SEEK_CUR);
-        hdl->dev.seekable = lseek_ret >= 0;
+        struct stat st;
+        ret = DO_SYSCALL(fstat, hdl->dev.fd, &st);
+        if (ret < 0) {
+            DO_SYSCALL(close, hdl->dev.fd);
+            ret = unix_to_pal_error(ret);
+            goto fail;
+        }
+
+        hdl->dev.seekable = !S_ISFIFO(st.st_mode);
 
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
