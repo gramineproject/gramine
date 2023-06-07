@@ -1,0 +1,62 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+loader.argv = [
+    "gramine-ratls", "/tmp/crt.pem", "/tmp/key.pem", "--",
+    "/usr/sbin/nginx", "-p", "/etc/nginx", "-c", "nginx.conf",
+]
+libos.entrypoint = "/gramine-ratls"
+loader.log_level = "{{ log_level }}"
+
+loader.env.LD_LIBRARY_PATH = "/usr/local/lib:/usr{{ arch_libdir }}:{{ arch_libdir }}"
+
+loader.uid = 65534
+loader.gid = 65534
+
+fs.mounts = [
+    { path = "/gramine-ratls", uri = "file:{{ entrypoint }}" },
+    { path = "/usr/sbin", uri = "file:/usr/sbin" },
+
+    { path = "/etc/nginx/nginx.conf", uri = "file:nginx.conf" },
+    { path = "/srv/www/html", uri = "file:html/" },
+
+    { path = "/lib", uri = "file:/lib" },
+    { path = "/usr/lib", uri = "file:/usr/lib" },
+    { path = "/usr/local/lib", uri = "file:{{ gramine.runtimedir() }}" },
+
+    { path = "/tmp", type = "tmpfs" },
+
+    {#
+     # Temporary directories for nginx (cf. nginx.conf). Nginx can't mkdir() those directories,
+     # and we can't create them from the glue script either, because they wouldn't survive `fork()`.
+     # This is one way to create them.
+    -#}
+    { path = "/tmp/nginx/body", type = "tmpfs" },
+    { path = "/tmp/nginx/fastcgi", type = "tmpfs" },
+    { path = "/tmp/nginx/proxy", type = "tmpfs" },
+    { path = "/tmp/nginx/scgi", type = "tmpfs" },
+    { path = "/tmp/nginx/uwsgi", type = "tmpfs" },
+]
+
+sgx.remote_attestation = "{{ ra_type }}"
+{%- if ra_type == "epid" %}
+sgx.ra_client_spid = "{{ ra_client_spid }}"
+sgx.ra_client_linkable = {{ 'true' if ra_client_linkable else 'false' }}
+{%- endif %}
+
+sgx.edmm_enable = {{ "true" if env.get("EDMM", "0") | int > 0 else "false" }}
+sys.enable_sigterm_injection = true
+
+sgx.debug = true
+
+sgx.trusted_files = [
+    "file:{{ gramine.libos }}",
+    "file:{{ gramine.runtimedir() }}/",
+
+    "file:{{ entrypoint }}",
+    "file:/usr/sbin/nginx",
+
+    "file:html/",
+    "file:nginx.conf",
+
+    "file:/usr{{ arch_libdir }}/",
+    "file:{{ arch_libdir }}/",
+]

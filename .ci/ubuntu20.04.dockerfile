@@ -40,6 +40,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     nasm \
     net-tools \
     netcat-openbsd \
+    nginx \
     ninja-build \
     pkg-config \
     protobuf-c-compiler \
