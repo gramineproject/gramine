@@ -167,6 +167,15 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
             }
             *(int*)arg = size;
             return 0;
+
+        /*
+         * SIOCGIFCONF and SIOCGIFHWADDR use the generic-IOCTL feature, and for secure execution
+         * they require two actions from the app:
+         *   - the app must allow these IOCTLs in the manifest (with corresponding data structs),
+         *   - the app must contain sanitization code for these IOCTLs.
+         *
+         * Example of such an app is libos/regression/test/socket_ioctl.
+         */
         case SIOCGIFCONF:;
             /* fallthrough */
         case SIOCGIFHWADDR:;
@@ -182,6 +191,7 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
 
             assert(ret == 0);
             return cmd_ret;
+
         default:
             return -ENOTTY;
     }
