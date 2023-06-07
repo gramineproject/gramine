@@ -18,7 +18,6 @@
 #include "pal_linux.h"
 #include "path_utils.h"
 #include "perm.h"
-#include "stat.h"
 
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
@@ -86,16 +85,6 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         hdl->dev.realpath = normpath;
         hdl->dev.fd       = ret;
 
-        struct stat st;
-        ret = DO_SYSCALL(fstat, hdl->dev.fd, &st);
-        if (ret < 0) {
-            DO_SYSCALL(close, hdl->dev.fd);
-            ret = unix_to_pal_error(ret);
-            goto fail;
-        }
-
-        hdl->dev.seekable = !S_ISFIFO(st.st_mode);
-
         if (access == PAL_ACCESS_RDONLY) {
             hdl->flags |= PAL_HANDLE_FD_READABLE;
         } else if (access == PAL_ACCESS_WRONLY) {
@@ -115,7 +104,7 @@ fail:
 }
 
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    if (offset || handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
@@ -124,23 +113,12 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes;
-    if (!handle->dev.realpath) {
-        /* tty doesn't have offsets */
-        if (offset)
-            return -PAL_ERROR_INVAL;
-
-        bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
-    } else if (handle->dev.seekable) {
-        bytes = DO_SYSCALL(pread64, handle->dev.fd, buffer, size, offset);
-    } else {
-        bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
-    }
+    int64_t bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
 static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
-    if (handle->hdr.type != PAL_TYPE_DEV)
+    if (offset || handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
@@ -149,19 +127,7 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
-    int64_t bytes;
-    if (!handle->dev.realpath) {
-        /* tty doesn't have offsets */
-        if (offset)
-            return -PAL_ERROR_INVAL;
-
-        bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
-        return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
-    } else if (handle->dev.seekable) {
-        bytes = DO_SYSCALL(pwrite64, handle->dev.fd, buffer, size, offset);
-    } else {
-        bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
-    }
+    int64_t bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 

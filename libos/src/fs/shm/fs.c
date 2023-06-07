@@ -26,40 +26,6 @@ static int shm_mount(struct libos_mount_params* params, void** mount_data) {
     return 0;
 }
 
-static ssize_t shm_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
-    assert(hdl->type == TYPE_SHM);
-
-    size_t actual_count = count;
-    int ret = PalStreamRead(hdl->pal_handle, *pos, &actual_count, buf);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-    assert(actual_count <= count);
-    *pos += actual_count;
-    return actual_count;
-}
-
-static ssize_t shm_write(struct libos_handle* hdl, const void* buf, size_t count,
-                         file_off_t* pos) {
-    assert(hdl->type == TYPE_SHM);
-
-    size_t actual_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-    assert(actual_count <= count);
-
-    *pos += actual_count;
-    /* Update file size if we just wrote past the end of file */
-    lock(&hdl->inode->lock);
-    if (hdl->inode->size < *pos)
-        hdl->inode->size = *pos;
-    unlock(&hdl->inode->lock);
-
-    return actual_count;
-}
-
 static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                     uint64_t offset) {
     assert(hdl->type == TYPE_SHM);
@@ -147,8 +113,8 @@ static int shm_lookup(struct libos_dentry* dent) {
 
     mode_t type;
     switch (pal_attr.handle_type) {
-        case PAL_TYPE_FILE:
-            /* Regular files in shm file system are device files. */
+        case PAL_TYPE_FILE: /* Regular files in shm file system are device files. */
+        case PAL_TYPE_DEV:
             type = S_IFCHR;
             break;
         case PAL_TYPE_DIR:
@@ -158,9 +124,6 @@ static int shm_lookup(struct libos_dentry* dent) {
                 goto out;
             }
             type = S_IFDIR;
-            break;
-        case PAL_TYPE_DEV:
-            type = S_IFCHR;
             break;
         default:
             log_error("unexpected handle type returned by PAL: %d", pal_attr.handle_type);
@@ -196,8 +159,7 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
 
 struct libos_fs_ops shm_fs_ops = {
     .mount      = shm_mount,
-    .read       = shm_read,
-    .write      = shm_write,
+    /* .read and .write are intentionally not supported according to POSIX shared memory API. */
     .mmap       = shm_mmap,
     .seek       = generic_inode_seek,
     .hstat      = generic_inode_hstat,
