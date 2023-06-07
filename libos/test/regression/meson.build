@@ -268,6 +268,7 @@ foreach conf: configurations
 
         name_prefix = ''
         if conf['use_musl']
+            c_args += ['-DUSE_MUSL=1']
             # XXX: this is a hack, to be removed when we fix building tests
             c_args += ['-specs', musl_specs_path]
             link_args += ['-specs', musl_specs_path]

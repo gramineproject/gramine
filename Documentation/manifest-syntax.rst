@@ -814,7 +814,7 @@ Allowed IOCTLs
 
 By default, Gramine disables all device-backed and socket IOCTLs. This syntax
 allows to explicitly allow a set of IOCTLs on devices (devices must be
-explicitly mounted via ``fs.mounts`` manifest syntax) and sockets (e.g. For
+explicitly mounted via ``fs.mounts`` manifest syntax) and sockets (e.g. for
 ``SIOCGIFCONF`` and ``SIOCGIFHWADDR``). Only IOCTLs with the ``request_code``
 argument found among the manifest-listed IOCTLs are allowed to pass-through to
 the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
