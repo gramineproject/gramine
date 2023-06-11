@@ -15,12 +15,12 @@
 int main(int argc, const char** argv) {
     /* Parent is already a process group leader so setsid() should fail. */
     errno = 0;
-    setsid();
-    if (errno != EPERM) {
+    pid_t psid = setsid();
+    if (psid != -1 || errno != EPERM) {
         errx(1, "Parent: unexpected setsid error (expected: %d, actual: %d)", EPERM, errno);
     }
 
-    pid_t psid = getsid(0);
+    psid = CHECK(getsid(0));
     pid_t p = CHECK(fork());
     if (p == 0) {
         /* Child created via fork inherits its parent's session ID. */
@@ -58,7 +58,7 @@ int main(int argc, const char** argv) {
         exit(0);
     }
 
-    /* NOTE: in a "standard" usage of setsid() for daemonising, the parent should be terminated to
+    /* NOTE: in a "standard" usage of setsid() for daemonizing, the parent should be terminated to
      * ensure the new process is an orphan (adopted by init) and also return control to the calling
      * shell. Here we just wait for child termination for testing purposes. */
     int status = 0;

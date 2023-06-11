@@ -169,8 +169,6 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct libos
         .pid = thread->tid,
         .ppid = g_process.pid,
         .pgid = g_process.pgid,
-        /* on fork, child process is attached to the same process group as parent */
-        .attached_to_other_pg = false,
         .sid = g_process.sid,
         .root = g_process.root,
         .cwd = g_process.cwd,

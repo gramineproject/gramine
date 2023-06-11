@@ -40,7 +40,6 @@ int init_process(void) {
 
     /* `pid` and `pgid` are initialized together with the first thread. */
     g_process.ppid = 0;
-    g_process.attached_to_other_pg = false;
 
     g_process.sid = 0;
 
@@ -251,8 +250,6 @@ BEGIN_CP_FUNC(process_description) {
     new_process->pid = process->pid;
     new_process->ppid = process->ppid;
     new_process->pgid = process->pgid;
-    /* attached_to_other_pg is set to false in libos/src/sys/libos_clone.c: do_clone_new_vm() */
-    new_process->attached_to_other_pg = process->attached_to_other_pg;
     new_process->sid = process->sid;
 
     /* copy cmdline (used by /proc/[pid]/cmdline) from the current process */

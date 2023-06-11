@@ -2,6 +2,7 @@
 /* Copyright (C) 2014 Stony Brook University
  * Copyright (C) 2020 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
+ *                    Kailun Qin <kailun.qin@intel.com>
  */
 
 #include "libos_lock.h"
@@ -38,19 +39,13 @@ long libos_syscall_setpgid(pid_t pid, pid_t pgid) {
     }
 
     if (!pid || g_process.pid == (IDTYPE)pid) {
+        /* TODO: Currently we do not support checking that:
+         * - the target process group to be joined (specified by `pgid`) must exist;
+         * - the process group of the joining process (specified by `pid`) and the target process
+         *   group to be joined must have the same session ID. */
+
         rwlock_write_lock(&g_process_id_lock);
-
-        IDTYPE pgid_to_set = (IDTYPE)pgid ?: g_process.pid;
-
-        /* TODO: Currently we do not support checking that the process group of the joining process
-         * (specified by `pid`) and the existing process group to be joined (specified by `pgid`)
-         * must have the same session ID. */
-
-        if (g_process.pgid != pgid_to_set) {
-            g_process.pgid = pgid_to_set;
-            g_process.attached_to_other_pg = true;
-        }
-
+        g_process.pgid = (IDTYPE)pgid ?: g_process.pid;
         rwlock_write_unlock(&g_process_id_lock);
 
         /* TODO: inform parent about pgid change. */
@@ -85,24 +80,19 @@ long libos_syscall_setsid(void) {
     IDTYPE current_pid = g_process.pid;
     IDTYPE current_pgid = g_process.pgid;
 
-    /*
-     * If the caller is already a group leader or attached to another process group, a new session
-     * cannot be created. See below for details:
-     *
-     * - https://elixir.bootlin.com/linux/v6.2/source/kernel/sys.c#L1216
-     * - https://elixir.bootlin.com/linux/v6.2/source/kernel/sys.c#L1222
-     *
-     */
-    if (current_pid == current_pgid || g_process.attached_to_other_pg) {
+    /* Fail if the calling process is already a process group leader. */
+    if (current_pid == current_pgid) {
         rwlock_write_unlock(&g_process_id_lock);
         return -EPERM;
     }
+
+    /* TODO: Currently we do not fail if a process group id already exists that equals to the
+     * proposed session id. */
 
     /* The calling process is the leader of the new session and the process group leader of the new
      * process group. */
     g_process.sid = current_pid;
     g_process.pgid = current_pid;
-    g_process.attached_to_other_pg = true;
 
     rwlock_write_unlock(&g_process_id_lock);
 
