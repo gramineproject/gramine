@@ -224,8 +224,12 @@ struct handle_ops g_dev_ops = {
 
 /*
  * Code below describes the TOML syntax of the manifest entries used for deep-copying complex nested
- * objects out and inside the SGX enclave. This syntax is currently used for IOCTL emulation and is
- * generic enough to describe the most common memory layouts for deep copy of IOCTL structs.
+ * objects out and inside the Gramine memory. This syntax is currently used for IOCTL emulation and
+ * is generic enough to describe the most common memory layouts for deep copy of IOCTL structs.
+ *
+ * We distinguish between Gramine memory and host memory. This distinction is only relevant for TEE
+ * PALs. E.g. for Linux-SGX PAL, Gramine memory means in-SGX-enclave memory and host memory means
+ * outside-SGX-enclave untrusted memory.
  *
  * The high-level description can be found in the "manifest syntax" documentation page.
  *
@@ -242,7 +246,7 @@ struct handle_ops g_dev_ops = {
  *
  * The example IOCTL takes as a third argument a pointer to an object of type `struct root` that
  * contains two pointers to other objects (pascal-style string and a C-style string) and embeds two
- * integers `x` and `y`. The two strings reside in separate memory regions in enclave memory. Note
+ * integers `x` and `y`. The two strings reside in separate memory regions in Gramine memory. Note
  * that the size of the allocated buffer for the C-style string is stored in the `s2_buf_size` field
  * of the root object. The `pascal_str` string is an input to the IOCTL, the `c_str` string and its
  * actual size `s2_buf_size` are the outputs of the IOCTL, and the integers `x` and `y` are also
@@ -253,7 +257,7 @@ struct handle_ops g_dev_ops = {
  *
  * The corresponding manifest entries describing these structs look like this:
  *
- *   sgx.ioctl_structs.root = [
+ *   sys.ioctl_structs.root = [
  *     { alignment = 128, ptr = [
  *                            { name = "pascal-str-len", size = 1, direction = "out" },
  *                            { name = "pascal-str", size = "pascal-str-len", direction = "out"}
@@ -265,7 +269,7 @@ struct handle_ops g_dev_ops = {
  *     { size = 2, direction = "in" }  # x and y fields
  *   ]
  *
- *   sgx.allowed_ioctls = [
+ *   sys.allowed_ioctls = [
  *     { request_code = <DEV_IOCTL_NUMER>, struct = "root" }
  *   ]
  *
@@ -293,17 +297,17 @@ struct handle_ops g_dev_ops = {
  *  6. Sub-regions may have a name for ease of identification; this is required for "size" /
  *     "array_len" sub-regions but may be omitted for all other kinds of sub-regions.
  *  7. Sub-regions may have one of the four directions: "out" to copy contents of the sub-region out
- *     of the enclave to untrusted memory, "in" to copy from untrusted memory into the enclave,
- *     "inout" to copy in both directions, "none" to not copy at all (useful for e.g. padding).
- *     Note that pointer sub-regions do not have a direction (their values are unconditionally
- *     rewired so as to point to the corresponding region in untrusted memory).
+ *     of Gramine memory to host memory, "in" to copy from host memory into Gramine memory, "inout"
+ *     to copy in both directions, "none" to not copy at all (useful for e.g. padding).  Note that
+ *     pointer sub-regions do not have a direction (their values are unconditionally rewired so as
+ *     to point to the corresponding region in host memory).
  *  8. The first sub-region (and only the first!) may specify the alignment of the memory region.
  *  9. The total size of a sub-region is calculated as `size * unit + adjustment`. By default `unit`
  *     is 1 byte and `adjustment` is 0. Note that `adjustment` may be a negative number.
  *
- * The diagram below shows how this complex object is copied from enclave memory (left side) to
- * untrusted memory (right side). MR stands for "memory region", SR stands for "sub-region". Note
- * how enclave pointers are copied and rewired to point to untrusted memory regions.
+ * The diagram below shows how this complex object is copied from Gramine memory (left side) to
+ * host memory (right side). MR stands for "memory region", SR stands for "sub-region". Note how
+ * Gramine-memory pointers are copied and rewired to point to host-memory regions.
  *
  *      struct root (MR1)                    |       deep-copied struct (aligned at 128B)
  *      +-----------------------+            |       +------------------------------+
@@ -333,7 +337,7 @@ struct handle_ops g_dev_ops = {
 #define MAX_MEM_REGIONS 1024
 #define MAX_SUB_REGIONS (10 * 1024)
 
-/* direction of copy: none (used for padding), out of enclave, inside enclave or both;
+/* direction of copy: none (used for padding), out of Gramine memory, inside Gramine memory or both;
  * default is DIRECTION_NONE */
 enum mem_copy_direction {
     DIRECTION_NONE,
@@ -344,7 +348,7 @@ enum mem_copy_direction {
 
 struct mem_region {
     toml_array_t* toml_mem_region; /* describes contiguous sub-regions in this mem-region */
-    void* enclave_addr;            /* base address of this memory region in enclave memory */
+    void* gramine_addr;            /* base address of this memory region in Gramine memory */
     bool adjacent;                 /* memory region adjacent to previous one? (used for arrays) */
 };
 
@@ -368,10 +372,14 @@ struct sub_region {
     size_t unit;                    /* unit of measurement, used in total size calculation */
     int64_t adjustment;             /* may be negative; used to adjust total size */
     size_t alignment;               /* alignment of this sub-region */
-    void* enclave_addr;             /* base address of this sub region in enclave mem */
-    void* untrusted_addr;           /* base address of corresponding sub region in untrusted mem */
+    void* gramine_addr;             /* base address of this sub region in Gramine mem */
+    void* host_addr;                /* base address of corresponding sub region in host mem */
     toml_array_t* toml_mem_region;  /* for pointers/arrays, specifies pointed-to mem region */
 };
+
+typedef bool (*memcpy_to_host_f)(void* host_ptr, const void* ptr, size_t size);
+typedef bool (*memcpy_to_gramine_f)(void* ptr, size_t max_size, const void* host_ptr,
+                                    size_t host_size);
 
 static bool strings_equal(const char* s1, const char* s2) {
     if (!s1 || !s2)
@@ -383,10 +391,14 @@ static int copy_value(void* addr, size_t size, uint64_t* out_value) {
     if (!addr || size > sizeof(*out_value))
         return -PAL_ERROR_INVAL;
 
+#ifdef __x86_64__
     /* the copy below assumes little-endian machines (which x86 is) */
     *out_value = 0;
     memcpy(out_value, addr, size);
     return 0;
+#else
+#error "Unsupported architecture"
+#endif /* __x86_64__ */
 }
 
 /* finds a sub region with name `sub_region_name` among `all_sub_regions` and returns its index */
@@ -463,7 +475,8 @@ static int get_sub_region_adjustment(const toml_table_t* toml_sub_region, int64_
     return ret < 0 ? -PAL_ERROR_INVAL : 0;
 }
 
-static int get_toml_nested_mem_region(toml_table_t* toml_sub_region,
+static int get_toml_nested_mem_region(toml_table_t* toml_ioctl_structs,
+                                      toml_table_t* toml_sub_region,
                                       toml_array_t** out_toml_mem_region) {
     toml_array_t* toml_mem_region = toml_array_in(toml_sub_region, "ptr");
     if (toml_mem_region) {
@@ -481,12 +494,6 @@ static int get_toml_nested_mem_region(toml_table_t* toml_sub_region,
         *out_toml_mem_region = NULL;
         return 0;
     }
-
-    /* since we're in this function, we are parsing sgx.ioctl_structs list, so we know it exists */
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
-    assert(manifest_sgx);
-    toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sgx, "ioctl_structs");
-    assert(toml_ioctl_structs);
 
     toml_mem_region = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
     if (!toml_mem_region || toml_array_nelem(toml_mem_region) <= 0) {
@@ -532,7 +539,7 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
     if (ret < 0)
         return ret;
 
-    void* addr_of_size_field  = all_sub_regions[found_idx].enclave_addr;
+    void* addr_of_size_field  = all_sub_regions[found_idx].gramine_addr;
     size_t size_of_size_field = all_sub_regions[found_idx].size;
     uint64_t read_size;
 
@@ -586,12 +593,17 @@ static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
 
 /* Caller sets `mem_regions_cnt_ptr` to the length of `mem_regions` array; this variable is updated
  * to return the number of actually used `mem_regions`. Similarly with `sub_regions`. */
-static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_enclave_addr,
-                               struct mem_region* mem_regions, size_t* mem_regions_cnt_ptr,
-                               struct sub_region* sub_regions, size_t* sub_regions_cnt_ptr) {
+static int collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_toml_mem_region,
+                               void* root_gramine_addr, struct mem_region* mem_regions,
+                               size_t* mem_regions_cnt_ptr, struct sub_region* sub_regions,
+                               size_t* sub_regions_cnt_ptr) {
     int ret;
 
     assert(root_toml_mem_region && toml_array_nelem(root_toml_mem_region) > 0);
+
+    toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sys, "ioctl_structs");
+    if (!toml_ioctl_structs)
+        return -PAL_ERROR_DENIED;
 
     size_t max_sub_regions = *sub_regions_cnt_ptr;
     size_t sub_regions_cnt = 0;
@@ -603,7 +615,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
         return -PAL_ERROR_NOMEM;
 
     mem_regions[0].toml_mem_region = root_toml_mem_region;
-    mem_regions[0].enclave_addr    = root_enclave_addr;
+    mem_regions[0].gramine_addr    = root_gramine_addr;
     mem_regions[0].adjacent        = false;
     mem_regions_cnt++;
 
@@ -620,14 +632,14 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
      * before learning its size.
      *
      */
-    char* cur_enclave_addr = NULL;
+    char* cur_gramine_addr = NULL;
     size_t mem_region_idx = 0;
     while (mem_region_idx < mem_regions_cnt) {
         struct mem_region* cur_mem_region = &mem_regions[mem_region_idx];
         mem_region_idx++;
 
         if (!cur_mem_region->adjacent)
-            cur_enclave_addr = cur_mem_region->enclave_addr;
+            cur_gramine_addr = cur_mem_region->gramine_addr;
 
         size_t cur_mem_region_first_sub_region_idx = sub_regions_cnt;
 
@@ -651,9 +663,9 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
 
             memset(cur_sub_region, 0, sizeof(*cur_sub_region));
 
-            cur_sub_region->enclave_addr = cur_enclave_addr;
-            if (!cur_enclave_addr) {
-                /* FIXME: use `is_user_memory_readable()` to check invalid enclave addresses */
+            cur_sub_region->gramine_addr = cur_gramine_addr;
+            if (!cur_gramine_addr) {
+                /* FIXME: use `is_user_memory_readable()` to check invalid addresses */
                 ret = -PAL_ERROR_INVAL;
                 goto out;
             }
@@ -728,7 +740,8 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 goto out;
             }
 
-            ret = get_toml_nested_mem_region(toml_sub_region, &cur_sub_region->toml_mem_region);
+            ret = get_toml_nested_mem_region(toml_ioctl_structs, toml_sub_region,
+                                             &cur_sub_region->toml_mem_region);
             if (ret < 0) {
                 log_error("IOCTL: parsing of 'ptr' field failed");
                 goto out;
@@ -752,12 +765,12 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                 }
             }
 
-            if (!access_ok(cur_enclave_addr, cur_sub_region->size)) {
-                log_error("IOCTL: enclave address overflows");
+            if (!access_ok(cur_gramine_addr, cur_sub_region->size)) {
+                log_error("IOCTL: address overflows");
                 ret = -PAL_ERROR_OVERFLOW;
                 goto out;
             }
-            cur_enclave_addr += cur_sub_region->size;
+            cur_gramine_addr += cur_sub_region->size;
         }
 
         /* iterate through collected pointer/array sub regions and add corresponding mem regions */
@@ -777,7 +790,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                     goto out;
                 }
 
-                void* addr_of_array_len_field  = sub_regions[found_idx].enclave_addr;
+                void* addr_of_array_len_field  = sub_regions[found_idx].gramine_addr;
                 size_t size_of_array_len_field = sub_regions[found_idx].size;
                 uint64_t array_len;
                 ret = copy_value(addr_of_array_len_field, size_of_array_len_field, &array_len);
@@ -795,7 +808,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
             }
 
             /* add nested mem regions only if this pointer/array sub region value is not NULL */
-            void* mem_region_addr = *((void**)sub_regions[i].enclave_addr);
+            void* mem_region_addr = *((void**)sub_regions[i].gramine_addr);
             if (mem_region_addr) {
                 for (size_t k = 0; k < sub_regions[i].array_len.value; k++) {
                     if (mem_regions_cnt == max_mem_regions) {
@@ -805,7 +818,7 @@ static int collect_sub_regions(toml_array_t* root_toml_mem_region, void* root_en
                     }
 
                     mem_regions[mem_regions_cnt].toml_mem_region = sub_regions[i].toml_mem_region;
-                    mem_regions[mem_regions_cnt].enclave_addr    = mem_region_addr;
+                    mem_regions[mem_regions_cnt].gramine_addr    = mem_region_addr;
                     mem_regions[mem_regions_cnt].adjacent        = k > 0;
                     mem_regions_cnt++;
                 }
@@ -829,33 +842,28 @@ out:
     return ret;
 }
 
-static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t sub_regions_cnt,
-                                         void* untrusted_addr) {
-    /* we rely on the fact that the untrusted memory region was zeroed out: we can simply "jump
-     * over" untrusted memory when doing alignment and when direction of copy is `in` or `none` */
-    char* cur_untrusted_addr = untrusted_addr;
+static int copy_sub_regions_to_host(struct sub_region* sub_regions, size_t sub_regions_cnt,
+                                    void* host_addr, memcpy_to_host_f memcpy_to_host) {
+    /* we rely on the fact that the host memory region was zeroed out: we can simply "jump over"
+     * host memory when doing alignment and when direction of copy is `in` or `none` */
+    char* cur_host_addr = host_addr;
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         if (!sub_regions[i].size)
             continue;
 
         assert(sub_regions[i].alignment);
-        cur_untrusted_addr = ALIGN_UP_PTR(cur_untrusted_addr, sub_regions[i].alignment);
-
-        if (!sgx_is_completely_within_enclave(sub_regions[i].enclave_addr, sub_regions[i].size)
-                || !sgx_is_valid_untrusted_ptr(cur_untrusted_addr, sub_regions[i].size, 1)) {
-            return -PAL_ERROR_DENIED;
-        }
+        cur_host_addr = ALIGN_UP_PTR(cur_host_addr, sub_regions[i].alignment);
 
         if (sub_regions[i].direction == DIRECTION_OUT
                 || sub_regions[i].direction == DIRECTION_INOUT) {
-            bool ret = sgx_copy_from_enclave(cur_untrusted_addr, sub_regions[i].enclave_addr,
-                                             sub_regions[i].size);
+            bool ret = memcpy_to_host(cur_host_addr, sub_regions[i].gramine_addr,
+                                      sub_regions[i].size);
             if (!ret)
                 return -PAL_ERROR_DENIED;
         }
 
-        sub_regions[i].untrusted_addr = cur_untrusted_addr;
-        cur_untrusted_addr += sub_regions[i].size;
+        sub_regions[i].host_addr = cur_host_addr;
+        cur_host_addr += sub_regions[i].size;
     }
 
     for (size_t i = 0; i < sub_regions_cnt; i++) {
@@ -863,13 +871,12 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
             continue;
 
         if (sub_regions[i].toml_mem_region) {
-            void* enclave_ptr_value = *((void**)sub_regions[i].enclave_addr);
-            /* rewire pointer value in untrusted memory to a corresponding untrusted sub-region */
+            void* gramine_ptr_value = *((void**)sub_regions[i].gramine_addr);
+            /* rewire pointer value in host memory to a corresponding copied-to-host sub-region */
             for (size_t j = 0; j < sub_regions_cnt; j++) {
-                if (sub_regions[j].enclave_addr == enclave_ptr_value) {
-                    bool ret = sgx_copy_from_enclave(sub_regions[i].untrusted_addr,
-                                                     &sub_regions[j].untrusted_addr,
-                                                     sizeof(void*));
+                if (sub_regions[j].gramine_addr == gramine_ptr_value) {
+                    bool ret = memcpy_to_host(sub_regions[i].host_addr, &sub_regions[j].host_addr,
+                                              sizeof(void*));
                     if (!ret)
                         return -PAL_ERROR_DENIED;
                     break;
@@ -881,15 +888,16 @@ static int copy_sub_regions_to_untrusted(struct sub_region* sub_regions, size_t 
     return 0;
 }
 
-static int copy_sub_regions_to_enclave(struct sub_region* sub_regions, size_t sub_regions_cnt) {
+static int copy_sub_regions_to_gramine(struct sub_region* sub_regions, size_t sub_regions_cnt,
+                                       memcpy_to_gramine_f memcpy_to_gramine) {
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         if (!sub_regions[i].size)
             continue;
 
         if (sub_regions[i].direction == DIRECTION_IN
                 || sub_regions[i].direction == DIRECTION_INOUT) {
-            bool ret = sgx_copy_to_enclave(sub_regions[i].enclave_addr, sub_regions[i].size,
-                                           sub_regions[i].untrusted_addr, sub_regions[i].size);
+            bool ret = memcpy_to_gramine(sub_regions[i].gramine_addr, sub_regions[i].size,
+                                         sub_regions[i].host_addr, sub_regions[i].size);
             if (!ret)
                 return -PAL_ERROR_DENIED;
         }
@@ -898,7 +906,7 @@ static int copy_sub_regions_to_enclave(struct sub_region* sub_regions, size_t su
 }
 
 /* may return `*out_toml_ioctl_struct = NULL` which means "no struct needed for this IOCTL" */
-static int get_ioctl_struct(toml_table_t* manifest_sgx, toml_table_t* toml_ioctl_table,
+static int get_ioctl_struct(toml_table_t* manifest_sys, toml_table_t* toml_ioctl_table,
                             toml_array_t** out_toml_ioctl_struct) {
     toml_raw_t toml_ioctl_struct_raw = toml_raw_in(toml_ioctl_table, "struct");
     if (!toml_ioctl_struct_raw) {
@@ -919,7 +927,7 @@ static int get_ioctl_struct(toml_table_t* manifest_sgx, toml_table_t* toml_ioctl
         goto out;
     }
 
-    toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sgx, "ioctl_structs");
+    toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sys, "ioctl_structs");
     if (!toml_ioctl_structs) {
         log_error("There are no IOCTL structs found in manifest");
         ret = -PAL_ERROR_INVAL;
@@ -940,15 +948,12 @@ out:
 }
 
 /* may return `*out_toml_ioctl_struct = NULL` which means "no struct needed for this IOCTL" */
-static int get_allowed_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_struct) {
+static int get_allowed_ioctl_struct(toml_table_t* manifest_sys, uint32_t cmd,
+                                    toml_array_t** out_toml_ioctl_struct) {
     int ret;
 
     /* find this IOCTL request in the manifest */
-    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
-    if (!manifest_sgx)
-        return -PAL_ERROR_NOTIMPLEMENTED;
-
-    toml_array_t* toml_allowed_ioctls = toml_array_in(manifest_sgx, "allowed_ioctls");
+    toml_array_t* toml_allowed_ioctls = toml_array_in(manifest_sys, "allowed_ioctls");
     if (!toml_allowed_ioctls)
         return -PAL_ERROR_NOTIMPLEMENTED;
 
@@ -972,7 +977,7 @@ static int get_allowed_ioctl_struct(uint32_t cmd, toml_array_t** out_toml_ioctl_
 
         if (request_code == (int64_t)cmd) {
             /* found this IOCTL request in the manifest, now must find the corresponding struct */
-            ret = get_ioctl_struct(manifest_sgx, toml_ioctl_table, out_toml_ioctl_struct);
+            ret = get_ioctl_struct(manifest_sys, toml_ioctl_table, out_toml_ioctl_struct);
             if (ret < 0) {
                 log_error("Invalid struct value of allowed IOCTL #%zu in manifest", idx + 1);
             }
@@ -992,8 +997,13 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    /* find this IOCTL request in the manifest */
+    toml_table_t* manifest_sys = toml_table_in(g_pal_public_state.manifest_root, "sys");
+    if (!manifest_sys)
+        return -PAL_ERROR_NOTIMPLEMENTED;
+
     toml_array_t* toml_ioctl_struct = NULL;
-    ret = get_allowed_ioctl_struct(cmd, &toml_ioctl_struct);
+    ret = get_allowed_ioctl_struct(manifest_sys, cmd, &toml_ioctl_struct);
     if (ret < 0)
         return ret;
 
@@ -1003,8 +1013,8 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         return 0;
     }
 
-    void* untrusted_addr = NULL;
-    size_t untrusted_size = 0;
+    void* host_addr = NULL;
+    size_t host_size = 0;
 
     size_t mem_regions_cnt = MAX_MEM_REGIONS;
     size_t sub_regions_cnt = MAX_SUB_REGIONS;
@@ -1017,8 +1027,8 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     /* deep-copy the IOCTL argument's input data outside of enclave, execute the IOCTL OCALL, and
      * deep-copy the IOCTL argument's output data back into enclave */
-    ret = collect_sub_regions(toml_ioctl_struct, (void*)arg, mem_regions, &mem_regions_cnt,
-                              sub_regions, &sub_regions_cnt);
+    ret = collect_sub_regions(manifest_sys, toml_ioctl_struct, (void*)arg, mem_regions,
+                              &mem_regions_cnt, sub_regions, &sub_regions_cnt);
     if (ret < 0) {
         log_error("IOCTL: failed to parse ioctl struct (request code = 0x%x)", cmd);
         goto out;
@@ -1026,33 +1036,48 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     for (size_t i = 0; i < sub_regions_cnt; i++) {
         /* overapproximation since alignment doesn't necessarily increase sub-region's size */
-        untrusted_size += sub_regions[i].size + sub_regions[i].alignment - 1;
+        host_size += sub_regions[i].size + sub_regions[i].alignment - 1;
     }
 
-    ret = ocall_mmap_untrusted(&untrusted_addr, ALLOC_ALIGN_UP(untrusted_size),
+    ret = ocall_mmap_untrusted(&host_addr, ALLOC_ALIGN_UP(host_size),
                                PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, /*fd=*/-1,
                                /*offset=*/0);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         goto out;
     }
+    assert(host_addr);
 
-    assert(untrusted_addr);
-    ret = copy_sub_regions_to_untrusted(sub_regions, sub_regions_cnt, untrusted_addr);
+    /* verify that all collected sub-regions are strictly inside the enclave, and the corresponding
+     * host sub-regions are strictly outside the enclave */
+    char* cur_host_addr = host_addr;
+    for (size_t i = 0; i < sub_regions_cnt; i++) {
+        if (!sub_regions[i].size)
+            continue;
+        cur_host_addr = ALIGN_UP_PTR(cur_host_addr, sub_regions[i].alignment);
+        if (!sgx_is_completely_within_enclave(sub_regions[i].gramine_addr, sub_regions[i].size)
+                || !sgx_is_valid_untrusted_ptr(cur_host_addr, sub_regions[i].size, 1)) {
+            ret = -PAL_ERROR_DENIED;
+            goto out;
+        }
+        cur_host_addr += sub_regions[i].size;
+    }
+
+    ret = copy_sub_regions_to_host(sub_regions, sub_regions_cnt, host_addr, sgx_copy_from_enclave);
     if (ret < 0)
         goto out;
 
-    int ioctl_ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)untrusted_addr);
+    int ioctl_ret = ocall_ioctl(handle->dev.fd, cmd, (unsigned long)host_addr);
 
-    ret = copy_sub_regions_to_enclave(sub_regions, sub_regions_cnt);
+    ret = copy_sub_regions_to_gramine(sub_regions, sub_regions_cnt, sgx_copy_to_enclave);
     if (ret < 0)
         goto out;
 
     *out_ret = ioctl_ret;
     ret = 0;
 out:
-    if (untrusted_addr)
-        ocall_munmap_untrusted(untrusted_addr, ALLOC_ALIGN_UP(untrusted_size));
+    if (host_addr)
+        ocall_munmap_untrusted(host_addr, ALLOC_ALIGN_UP(host_size));
     free(mem_regions);
     free(sub_regions);
     return ret;
