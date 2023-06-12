@@ -445,6 +445,147 @@ Start (current working) directory
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
 
+Allowed IOCTLs
+^^^^^^^^^^^^^^
+
+::
+
+    sys.ioctl_structs.[identifier] = [memory-layout-format]
+
+    sys.allowed_ioctls = [
+      { request_code = [NUM], struct = "[identifier-of-ioctl-struct]" },
+    ]
+
+By default, Gramine disables all device-backed IOCTLs. This syntax allows to
+explicitly allow a set of IOCTLs on devices (devices must be explicitly mounted
+via ``fs.mounts`` manifest syntax). Only IOCTLs with the ``request_code``
+argument found among the manifest-listed IOCTLs are allowed to pass-through to
+the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
+the ``struct`` field, in case the third IOCTL argument is intended to be
+translated by Gramine.
+
+Available IOCTL structs are described via ``sys.ioctl_structs``. Each IOCTL
+struct describes the memory layout of the third argument to the ``ioctl`` system
+call (typically a pointer to a complex nested object passed to the device).
+Description of the memory layout is required for a deep copy of the IOCTL
+struct. Here we use the term *memory region* to denote a separate contiguous
+region of memory and the term *sub-region of a memory region* to denote a part
+of the memory region that has properties different from other sub-regions in the
+same memory region (e.g., should it be copied in or out of host memory, is it a
+pointer to another memory region, etc.). For example, a C struct can be
+considered one memory region, and fields of this C struct can be considered
+sub-regions of this memory region.
+
+Memory layout of the IOCTL struct is described using the TOML syntax of inline
+arrays (for each new separate memory region) and inline tables (for each
+sub-region in one memory region). Each sub-region is described via the following
+keys:
+
+- ``name`` is an optional name for this sub-region; mainly used to find
+  length-specifying sub-regions and nested memory regions.
+- ``alignment`` is an optional alignment of the memory region; may be specified
+  only in the first sub-region of a memory region (all other sub-regions are
+  contiguous with the first sub-region, so specifying their alignment doesn't
+  make sense). The default value is ``1``.
+- ``size`` is the size of this sub-region. The ``size`` field may be a string
+  with the name of another sub-region that contains the size value or an integer
+  with the constant size measured in ``unit`` units (default unit is 1 byte;
+  also see below). For example, ``size = "strlen"`` denotes a size field that
+  will be calculated dynamically during IOCTL execution based on the sub-region
+  named ``strlen``, whereas ``size = 16`` denotes a sub-region of size 16B. Note
+  that ``ptr`` sub-regions must *not* specify the ``size`` field.
+- ``unit`` is an optional unit of measurement for ``size``. It is 1 byte by
+  default. Unit of measurement must be a constant integer. For example,
+  ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
+  character is 2B long) of a dynamically specified length.
+- ``adjustment`` is an optional integer adjustment for ``size`` (always
+  specified in bytes). It is 0 bytes by default. This field must be a constant
+  (possibly negative) integer. For example, ``size = 6``, ``unit = 2`` and
+  ``adjustment = -8`` results in a total size of 4B.
+- ``direction = "none" | "out" | "in" | "inout"`` is an optional direction of
+  copy for this sub-region (from the app point of view). For example,
+  ``direction = "out"`` denotes a sub-region to be copied out of Gramine memory
+  to host memory, i.e., this sub-region is an input to the host device. The
+  default value is ``none`` which is useful for e.g. padding of structs. This
+  field must be ommitted if the ``ptr`` field is specified for this sub-region
+  (pointer sub-regions contain the pointer value which will be unconditionally
+  rewired to point to host memory).
+- ``ptr = inlined-memory-region`` or ``ptr = "another-ioctl-struct"``
+  specifies a pointer to another, nested memory region. This field is required
+  when describing complex IOCTL structs. Such pointer memory region always has
+  the implicit size of 8B, and the pointer value is always rewired by Gramine to
+  the memory region in host memory (containing a corresponding nested memory
+  region). If ``ptr`` is specified together with ``array_len``, it describes an
+  array of pointers to these memory regions. (In other words, ``ptr`` is an
+  array of pointers to memory regions with ``array_len = 1`` by default.) This
+  may be recursive with the ``NULL`` value being a guard, which allows
+  describing linked lists.
+- ``array_len`` is an optional number of items in the ``ptr`` array. This field
+  cannot be specified with non-``ptr`` sub-regions. The default value is ``1``.
+
+Consider this simple C snippet:
+
+.. code-block:: c
+
+   struct ioctl_read {
+       size_t buf_size;                /* copied from Gramine to device */
+       char* buf;                      /* copied from device to Gramine */
+   } __attribute__((aligned(0x1000))); /* alignment just for illustration */
+
+This translates into the following manifest syntax::
+
+    sys.ioctl_structs.ioctl_read = [
+        {
+            name      = "buf_size",
+            size      = 8,
+            direction = "out",
+            alignment = 0x1000
+        },
+        {
+            ptr = [
+                {
+                    size      = "buf_size",
+                    direction = "in"
+                }
+            ]
+        }
+    ]
+
+The above example specifies a root struct (first memory region) that consists of
+two sub-regions: the first one contains an 8-byte size value, the second one is
+an 8-byte pointer value. This pointer points to another memory region in Gramine
+memory that contains a single sub-region of size ``buf_size``. This nested
+sub-region is copied from the device into the Gramine memory.
+
+IOCTLs that use the above struct in a third argument are defined like this::
+
+    sys.allowed_ioctls = [
+      { request_code = 0x12345678, struct = "ioctl_read" },
+      { request_code = 0x87654321, struct = "ioctl_read" },
+    ]
+
+If the IOCTL's third argument should be passed directly as-is (or unused at
+all), then the ``struct`` key must be an empty string or not exist at all::
+
+    sys.allowed_ioctls = [
+      { request_code = 0x43218765, struct = "" },
+      { request_code = 0x87654321 },
+    ]
+
+.. note ::
+   IOCTLs for device communication are pass-through and thus potentially
+   insecure by themselves in e.g. SGX environments:
+
+   - IOCTL arguments are passed as-is from the app to the untrusted host,
+     which may lead to leaks of enclave data.
+   - Untrusted host can change IOCTL arguments as it wishes when passing
+     them from Gramine to the device and back.
+
+   It is the responsibility of the app developer to correctly use IOCTLs, with
+   security implications in mind. In most cases, IOCTL arguments should be
+   encrypted or integrity-protected with a key pre-shared between Gramine and
+   the device.
+
 SGX syntax
 ----------
 
@@ -800,147 +941,6 @@ every such file. Effectively, this policy operates on all unknown files as if
 they were listed as ``allowed_files``. (However, this policy still does not
 allow writing/creating files specified as trusted.) This policy is a convenient
 way to determine the set of files that the ported application uses.
-
-Allowed IOCTLs
-^^^^^^^^^^^^^^
-
-::
-
-    sys.ioctl_structs.[identifier] = [memory-layout-format]
-
-    sys.allowed_ioctls = [
-      { request_code = [NUM], struct = "[identifier-of-ioctl-struct]" },
-    ]
-
-By default, Gramine disables all device-backed IOCTLs. This syntax allows to
-explicitly allow a set of IOCTLs on devices (devices must be explicitly mounted
-via ``fs.mounts`` manifest syntax). Only IOCTLs with the ``request_code``
-argument found among the manifest-listed IOCTLs are allowed to pass-through to
-the host. Each IOCTL entry may also contain a reference to an IOCTL struct in
-the ``struct`` field, in case the third IOCTL argument is intended to be
-translated by Gramine.
-
-Available IOCTL structs are described via ``sys.ioctl_structs``. Each IOCTL
-struct describes the memory layout of the third argument to the ``ioctl`` system
-call (typically a pointer to a complex nested object passed to the device).
-Description of the memory layout is required for a deep copy of the IOCTL
-struct. Here we use the term *memory region* to denote a separate contiguous
-region of memory and the term *sub-region of a memory region* to denote a part
-of the memory region that has properties different from other sub-regions in the
-same memory region (e.g., should it be copied in or out of host memory, is it a
-pointer to another memory region, etc.). For example, a C struct can be
-considered one memory region, and fields of this C struct can be considered
-sub-regions of this memory region.
-
-Memory layout of the IOCTL struct is described using the TOML syntax of inline
-arrays (for each new separate memory region) and inline tables (for each
-sub-region in one memory region). Each sub-region is described via the following
-keys:
-
-- ``name`` is an optional name for this sub-region; mainly used to find
-  length-specifying sub-regions and nested memory regions.
-- ``alignment`` is an optional alignment of the memory region; may be specified
-  only in the first sub-region of a memory region (all other sub-regions are
-  contiguous with the first sub-region, so specifying their alignment doesn't
-  make sense). The default value is ``1``.
-- ``size`` is the size of this sub-region. The ``size`` field may be a string
-  with the name of another sub-region that contains the size value or an integer
-  with the constant size measured in ``unit`` units (default unit is 1 byte;
-  also see below). For example, ``size = "strlen"`` denotes a size field that
-  will be calculated dynamically during IOCTL execution based on the sub-region
-  named ``strlen``, whereas ``size = 16`` denotes a sub-region of size 16B. Note
-  that ``ptr`` sub-regions must *not* specify the ``size`` field.
-- ``unit`` is an optional unit of measurement for ``size``. It is 1 byte by
-  default. Unit of measurement must be a constant integer. For example,
-  ``size = "strlen"`` and ``unit = 2`` denote a wide-char string (where each
-  character is 2B long) of a dynamically specified length.
-- ``adjustment`` is an optional integer adjustment for ``size`` (always
-  specified in bytes). It is 0 bytes by default. This field must be a constant
-  (possibly negative) integer. For example, ``size = 6``, ``unit = 2`` and
-  ``adjustment = -8`` results in a total size of 4B.
-- ``direction = "none" | "out" | "in" | "inout"`` is an optional direction of
-  copy for this sub-region (from the app point of view). For example,
-  ``direction = "out"`` denotes a sub-region to be copied out of Gramine memory
-  to host memory, i.e., this sub-region is an input to the host device. The
-  default value is ``none`` which is useful for e.g. padding of structs. This
-  field must be ommitted if the ``ptr`` field is specified for this sub-region
-  (pointer sub-regions contain the pointer value which will be unconditionally
-  rewired to point to host memory).
-- ``ptr = inlined-memory-region`` or ``ptr = "another-ioctl-struct"``
-  specifies a pointer to another, nested memory region. This field is required
-  when describing complex IOCTL structs. Such pointer memory region always has
-  the implicit size of 8B, and the pointer value is always rewired by Gramine to
-  the memory region in host memory (containing a corresponding nested memory
-  region). If ``ptr`` is specified together with ``array_len``, it describes an
-  array of pointers to these memory regions. (In other words, ``ptr`` is an
-  array of pointers to memory regions with ``array_len = 1`` by default.) This
-  may be recursive with the ``NULL`` value being a guard, which allows
-  describing linked lists.
-- ``array_len`` is an optional number of items in the ``ptr`` array. This field
-  cannot be specified with non-``ptr`` sub-regions. The default value is ``1``.
-
-Consider this simple C snippet:
-
-.. code-block:: c
-
-   struct ioctl_read {
-       size_t buf_size;                /* copied from Gramine to device */
-       char* buf;                      /* copied from device to Gramine */
-   } __attribute__((aligned(0x1000))); /* alignment just for illustration */
-
-This translates into the following manifest syntax::
-
-    sys.ioctl_structs.ioctl_read = [
-        {
-            name      = "buf_size",
-            size      = 8,
-            direction = "out",
-            alignment = 0x1000
-        },
-        {
-            ptr = [
-                {
-                    size      = "buf_size",
-                    direction = "in"
-                }
-            ]
-        }
-    ]
-
-The above example specifies a root struct (first memory region) that consists of
-two sub-regions: the first one contains an 8-byte size value, the second one is
-an 8-byte pointer value. This pointer points to another memory region in Gramine
-memory that contains a single sub-region of size ``buf_size``. This nested
-sub-region is copied from the device into the Gramine memory.
-
-IOCTLs that use the above struct in a third argument are defined like this::
-
-    sys.allowed_ioctls = [
-      { request_code = 0x12345678, struct = "ioctl_read" },
-      { request_code = 0x87654321, struct = "ioctl_read" },
-    ]
-
-If the IOCTL's third argument should be passed directly as-is (or unused at
-all), then the ``struct`` key must be an empty string or not exist at all::
-
-    sys.allowed_ioctls = [
-      { request_code = 0x43218765, struct = "" },
-      { request_code = 0x87654321 },
-    ]
-
-.. note ::
-   IOCTLs for device communication are pass-through and thus potentially
-   insecure by themselves in e.g. SGX environments:
-
-   - IOCTL arguments are passed as-is from the app to the untrusted host,
-     which may lead to leaks of enclave data.
-   - Untrusted host can change IOCTL arguments as it wishes when passing
-     them from Gramine to the device and back.
-
-   It is the responsibility of the app developer to correctly use IOCTLs, with
-   security implications in mind. In most cases, IOCTL arguments should be
-   encrypted or integrity-protected with a key pre-shared between Gramine and
-   the device.
 
 Attestation and quotes
 ^^^^^^^^^^^^^^^^^^^^^^
