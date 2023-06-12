@@ -11,6 +11,7 @@
  */
 
 #include "api.h"
+#include "ioctls.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_flags_conv.h"
@@ -210,16 +211,92 @@ struct handle_ops g_dev_ops = {
     .attrquerybyhdl = &dev_attrquerybyhdl,
 };
 
+static bool memcpy_to_host(void* host_ptr, const void* ptr, size_t size) {
+    memcpy(host_ptr, ptr, size);
+    return true;
+}
+
+static bool memcpy_to_gramine(void* ptr, size_t max_size, const void* host_ptr, size_t host_size) {
+    __UNUSED(max_size);
+    memcpy(ptr, host_ptr, host_size);
+    return true;
+}
+
 int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int* out_ret) {
+    int ret;
+
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
     if (handle->dev.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
+    /* find this IOCTL request in the manifest */
+    toml_table_t* manifest_sys = toml_table_in(g_pal_public_state.manifest_root, "sys");
+    if (!manifest_sys)
+        return -PAL_ERROR_NOTIMPLEMENTED;
+
+    toml_array_t* toml_ioctl_struct = NULL;
+    ret = ioctls_get_allowed_ioctl_struct(manifest_sys, cmd, &toml_ioctl_struct);
+    if (ret < 0)
+        return ret;
+
+    if (!toml_ioctl_struct) {
+        /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
+        *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
+        return 0;
+    }
+
+    void* host_addr = NULL;
+    size_t host_size = 0;
+
+    size_t mem_regions_cnt = MAX_MEM_REGIONS;
+    size_t sub_regions_cnt = MAX_SUB_REGIONS;
+    struct mem_region* mem_regions = calloc(mem_regions_cnt, sizeof(*mem_regions));
+    struct sub_region* sub_regions = calloc(sub_regions_cnt, sizeof(*sub_regions));
+    if (!mem_regions || !sub_regions) {
+        ret = -PAL_ERROR_NOMEM;
+        goto out;
+    }
+
+    /* deep-copy the IOCTL argument's input data outside of enclave, execute the IOCTL OCALL, and
+     * deep-copy the IOCTL argument's output data back into enclave */
+    ret = ioctls_collect_sub_regions(manifest_sys, toml_ioctl_struct, (void*)arg, mem_regions,
+                                     &mem_regions_cnt, sub_regions, &sub_regions_cnt);
+    if (ret < 0) {
+        log_error("IOCTL: failed to parse ioctl struct (request code = 0x%x)", cmd);
+        goto out;
+    }
+
+    for (size_t i = 0; i < sub_regions_cnt; i++) {
+        /* overapproximation since alignment doesn't necessarily increase sub-region's size */
+        host_size += sub_regions[i].size + sub_regions[i].alignment - 1;
+    }
+
+    host_addr = calloc(1, ALLOC_ALIGN_UP(host_size));
+    if (!host_addr) {
+        ret = -PAL_ERROR_NOMEM;
+        goto out;
+    }
+
+    ret = ioctls_copy_sub_regions_to_host(sub_regions, sub_regions_cnt, host_addr, memcpy_to_host);
+    if (ret < 0)
+        goto out;
+
     /* note that if the host returned a negative value (typically means an error, but not always
      * since this is completely device-specific), then we still return success and forward the value
      * as-is to the LibOS and ultimately to the app */
-    *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
-    return 0;
+    int ioctl_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, (unsigned long)host_addr);
+
+    ret = ioctls_copy_sub_regions_to_gramine(sub_regions, sub_regions_cnt, memcpy_to_gramine);
+    if (ret < 0)
+        goto out;
+
+    *out_ret = ioctl_ret;
+    ret = 0;
+out:
+    free(host_addr);
+    free(mem_regions);
+    free(sub_regions);
+    return ret;
 }

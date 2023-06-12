@@ -1052,7 +1052,7 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['device_ioctl'])
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skipUnless(IS_VM and HAS_SGX, 'Requires /dev/gramine_test_dev and SGX')
+    @unittest.skipUnless(IS_VM, '/dev/gramine_test_dev is available only on some Jenkins machines')
     def test_004_device_ioctl_fail(self):
         try:
             self.run_binary(['device_ioctl_fail'])
@@ -1062,7 +1062,7 @@ class TC_40_FileSystem(RegressionTestCase):
             self.assertRegex(stdout, r'ioctl\(devfd, GRAMINE_TEST_DEV_IOCTL_REWIND\).*'
                                      r'Function not implemented')
 
-    @unittest.skipUnless(IS_VM and HAS_SGX, 'Requires /dev/gramine_test_dev and SGX')
+    @unittest.skipUnless(IS_VM, '/dev/gramine_test_dev is available only on some Jenkins machines')
     def test_005_device_ioctl_parse_fail(self):
         stdout, stderr = self.run_binary(['device_ioctl_parse_fail'])
         self.assertRegex(stderr, r'error: Invalid struct value of allowed IOCTL .* in manifest')
