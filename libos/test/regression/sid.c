@@ -34,17 +34,19 @@ int main(int argc, const char** argv) {
          * session ID is made the same as its process ID). It also becomes the process group leader
          * of a new process group in the session (i.e., its process group ID is made the same as its
          * process ID). */
-        sid = CHECK(setsid());
-        if (sid != getpid() || CHECK(getpgid(0)) != sid) {
-            errx(1, "Child: setsid returned wrong value: %d (expected: %d)", sid, getpid());
+        pid_t new_sid = CHECK(setsid());
+        if (CHECK(getsid(0)) == sid || new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
+            errx(1, "Child: setsid returned wrong value: %d (expected: %d)", new_sid, getpid());
         }
 
         p = CHECK(fork());
         if (p == 0) {
+            sid = CHECK(getsid(0));
+
             /* A forked child of the session leader should be able to create a new session. */
-            sid = CHECK(setsid());
-            if (sid != getpid() || CHECK(getpgid(0)) != sid) {
-                errx(1, "Grandchild: setsid returned wrong value: %d (expected: %d)", sid,
+            new_sid = CHECK(setsid());
+            if (CHECK(getsid(0)) == sid || new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
+                errx(1, "Grandchild: setsid returned wrong value: %d (expected: %d)", new_sid,
                      getpid());
             }
             exit(0);
