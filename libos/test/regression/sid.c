@@ -35,7 +35,8 @@ int main(int argc, const char** argv) {
          * of a new process group in the session (i.e., its process group ID is made the same as its
          * process ID). */
         pid_t new_sid = CHECK(setsid());
-        if (CHECK(getsid(0)) == sid || new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
+        if (CHECK(getsid(0)) == sid || CHECK(getsid(0)) != new_sid ||
+            new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
             errx(1, "Child: setsid returned wrong value: %d (expected: %d)", new_sid, getpid());
         }
 
@@ -45,7 +46,8 @@ int main(int argc, const char** argv) {
 
             /* A forked child of the session leader should be able to create a new session. */
             new_sid = CHECK(setsid());
-            if (CHECK(getsid(0)) == sid || new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
+            if (CHECK(getsid(0)) == sid || CHECK(getsid(0)) != new_sid ||
+                new_sid != getpid() || CHECK(getpgid(0)) != new_sid) {
                 errx(1, "Grandchild: setsid returned wrong value: %d (expected: %d)", new_sid,
                      getpid());
             }
