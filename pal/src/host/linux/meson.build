@@ -73,6 +73,7 @@ libpal_direct = shared_library('pal',
 
     dependencies: [
         common_dep,
+        ioctls_dep,
     ],
 
     install: true,

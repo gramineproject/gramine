@@ -20,5 +20,5 @@ sgx.trusted_files = [
 ]
 
 sys.allowed_ioctls = [
-  # no allowed IOCTLs to force test failure (on SGX)
+  # no allowed IOCTLs to force test failure
 ]
