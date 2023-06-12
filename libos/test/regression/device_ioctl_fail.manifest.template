@@ -19,6 +19,6 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 
-sgx.allowed_ioctls = [
+sys.allowed_ioctls = [
   # no allowed IOCTLs to force test failure (on SGX)
 ]

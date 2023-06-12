@@ -17,21 +17,21 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 
-sgx.ioctl_structs.gramine_test_dev_ioctl_write = [
+sys.ioctl_structs.gramine_test_dev_ioctl_write = [
     { size = 8, direction = "out", name = "buf_size" },    # buf_size
     { ptr = [ {size = "buf_size", direction = "out"} ] },  # buf
     { size = 8, direction = "inout" },                     # off
     { size = 8, direction = "in" },                        # copied
 ]
 
-sgx.ioctl_structs.gramine_test_dev_ioctl_read = [
+sys.ioctl_structs.gramine_test_dev_ioctl_read = [
     { size = 8, direction = "out", name = "buf_size" },   # buf_size
     { ptr = [ {size = "buf_size", direction = "in"} ] },  # buf
     { size = 8, direction = "inout" },                    # off
     { size = 8, direction = "in" },                       # copied
 ]
 
-sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
+sys.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
     { size = 8, direction = "out", name = "replacements_cnt" },            # replacements_cnt
     { array_len = "replacements_cnt", ptr = [                              # replacements_arr
                                         { size = 2, direction = "out" },   # src, dst
@@ -39,13 +39,13 @@ sgx.ioctl_structs.gramine_test_dev_ioctl_replace_arr = [
                                       ] },
 ]
 
-sgx.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
+sys.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
     { size = 1, unit = 2, direction = "out" },        # src, dst; `unit` is just for testing
     { size = 3, adjustment = 3, direction = "none" }, # 6B padding; `adjustment` is just for testing
     { ptr = "gramine_test_dev_ioctl_replace_list" },  # next
 ]
 
-sgx.allowed_ioctls = [
+sys.allowed_ioctls = [
   # three IOCTLs below test different "no struct needed" syntaxes of the `struct` key
   { request_code = 0x8100, struct = "" },  # REWIND
   { request_code = 0x8103 },               # GETSIZE
