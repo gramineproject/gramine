@@ -13,11 +13,12 @@
 #include "common.h"
 
 int main(int argc, const char** argv) {
-    /* Parent is already a process group leader so setsid() should fail. */
+    /* The test is based on the assumption that it's started as the first member of the process
+     * group (i.e., the group leader); setsid() should then fail in the first place. */
     errno = 0;
     pid_t psid = setsid();
     if (psid != -1 || errno != EPERM) {
-        errx(1, "Parent: unexpected setsid error (expected: %d, actual: %d)", EPERM, errno);
+        errx(1, "Unexpected setsid error (expected: %d, actual: %d)", EPERM, errno);
     }
 
     psid = CHECK(getsid(0));
@@ -34,7 +35,7 @@ int main(int argc, const char** argv) {
          * of a new process group in the session (i.e., its process group ID is made the same as its
          * process ID). */
         sid = CHECK(setsid());
-        if (sid != getpid() || getpgid(0) != sid) {
+        if (sid != getpid() || CHECK(getpgid(0)) != sid) {
             errx(1, "Child: setsid returned wrong value: %d (expected: %d)", sid, getpid());
         }
 
@@ -42,7 +43,7 @@ int main(int argc, const char** argv) {
         if (p == 0) {
             /* A forked child of the session leader should be able to create a new session. */
             sid = CHECK(setsid());
-            if (sid != getpid() || getpgid(0) != sid) {
+            if (sid != getpid() || CHECK(getpgid(0)) != sid) {
                 errx(1, "Grandchild: setsid returned wrong value: %d (expected: %d)", sid,
                      getpid());
             }

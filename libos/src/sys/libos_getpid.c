@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
- * Copyright (C) 2020 Intel Corporation
+ * Copyright (C) 2023 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  *                    Kailun Qin <kailun.qin@intel.com>
  */
@@ -86,8 +86,8 @@ long libos_syscall_setsid(void) {
         return -EPERM;
     }
 
-    /* TODO: Currently we do not fail if a process group id already exists that equals to the
-     * proposed session id. */
+    /* TODO: Currently we do not fail if a process group ID already exists that equals the session
+     * ID to be set (which is made the same as the process ID of the calling process). */
 
     /* The calling process is the leader of the new session and the process group leader of the new
      * process group. */
