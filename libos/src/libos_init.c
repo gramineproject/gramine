@@ -88,8 +88,8 @@ void* migrated_memory_end;
 
 const char* const* migrated_envp __attribute_migratable;
 
-/* `g_library_paths` is populated with LD_PRELOAD entries once during LibOS initialization and is
- * used in `__load_interp_object()` to search for ELF program interpreter in specific paths. Once
+/* `g_library_paths` is populated with LD_LIBRARY_PATH entries once during LibOS initialization and
+ * is used in `load_elf_interp()` to search for ELF program interpreter in specific paths. Once
  * allocated, its memory is never freed or updated. */
 char** g_library_paths = NULL;
 

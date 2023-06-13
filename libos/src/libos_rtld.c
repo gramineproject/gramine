@@ -885,7 +885,7 @@ static int find_interp(const char* interp_name, struct libos_dentry** out_dent) 
     }
 
     const char* default_paths[] = {"/lib", "/lib64", NULL};
-    const char** paths          = g_library_paths ?: default_paths;
+    const char** paths = g_library_paths ?: default_paths;
 
     for (const char** path = paths; *path; path++) {
         size_t path_len = strlen(*path);
@@ -898,6 +898,7 @@ static int find_interp(const char* interp_name, struct libos_dentry** out_dent) 
         log_debug("searching for interpreter: %s", interp_path);
         struct libos_dentry* dent;
         int ret = path_lookupat(/*start=*/NULL, interp_path, LOOKUP_FOLLOW, &dent);
+        free(interp_path);
         if (ret == 0) {
             *out_dent = dent;
             return 0;
