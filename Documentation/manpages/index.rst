@@ -5,15 +5,6 @@ The following man pages are available:
 
 .. toctree::
    :maxdepth: 1
+   :glob:
 
-   gramine
-   gramine-argv-serializer
-   gramine-manifest
-   gramine-sgx-gen-private-key
-   gramine-sgx-get-token
-   gramine-sgx-ias-request
-   gramine-sgx-ias-verify-report
-   gramine-sgx-quote-view
-   gramine-sgx-sign
-   gramine-sgx-sigstruct-view
-   is-sgx-available
+   *
