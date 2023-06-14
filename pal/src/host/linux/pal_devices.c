@@ -217,7 +217,8 @@ static bool memcpy_to_host(void* host_ptr, const void* ptr, size_t size) {
 }
 
 static bool memcpy_to_gramine(void* ptr, size_t max_size, const void* host_ptr, size_t host_size) {
-    __UNUSED(max_size);
+    if (host_size > max_size)
+        return false;
     memcpy(ptr, host_ptr, host_size);
     return true;
 }
