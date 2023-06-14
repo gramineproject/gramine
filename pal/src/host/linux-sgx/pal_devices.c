@@ -110,6 +110,7 @@ fail:
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
     if (offset || handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
+
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
@@ -273,9 +274,7 @@ static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
     }
 
     int ret = ocall_ftruncate(handle->dev.fd, length);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-    return (int64_t)length;
+    return ret < 0 ? unix_to_pal_error(ret) : (int64_t)length;
 }
 
 struct handle_ops g_dev_ops = {

@@ -257,9 +257,7 @@ static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
     }
 
     int ret = DO_SYSCALL(ftruncate, handle->dev.fd, length);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-    return (int64_t)length;
+    return ret < 0 ? unix_to_pal_error(ret) : (int64_t)length;
 }
 
 struct handle_ops g_dev_ops = {
