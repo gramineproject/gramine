@@ -288,8 +288,6 @@ class TC_01_Bootstrap(RegressionTestCase):
             if os.path.exists(path):
                 os.unlink(path)
 
-    @unittest.skipUnless(HAS_SGX,
-        'Protected files are only available with SGX')
     def test_221_send_handle_pf(self):
         path = 'tmp/pf/send_handle_test'
         os.makedirs('tmp/pf', exist_ok=True)
@@ -701,9 +699,6 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skip('Protected files (as implemented in Linux-SGX PAL) do not support renaming yet')
-    @unittest.skipUnless(HAS_SGX,
-        'Protected files are only available with SGX')
     def test_034_rename_unlink_pf(self):
         os.makedirs('tmp/pf', exist_ok=True)
         file1 = 'tmp/pf/file1'
@@ -792,8 +787,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('Child process done', stdout)
         self.assertIn('Parent process done', stdout)
 
-    @unittest.skipUnless(HAS_SGX,
-        'Protected files are only available with SGX')
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
     def test_053_mmap_file_backed_protected(self):
         # create the protected file
         pf_path = 'encrypted_file_mrsigner.dat'
