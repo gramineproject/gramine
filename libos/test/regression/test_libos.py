@@ -83,7 +83,22 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(['helloworld'])
         self.assertIn('Hello world!', stdout)
 
-    def test_002_toml_parsing(self):
+    @unittest.skipUnless(HAS_SGX, 'Required tool gramine-sgx-pf-crypt only available with SGX')
+    def test_002_helloworld_enc(self):
+        stdout, _ = self.run_binary(['helloworld_enc'])
+        self.assertIn('Hello world!', stdout)
+
+    @unittest.skipUnless(HAS_SGX, 'Required tool gramine-sgx-pf-crypt only available with SGX')
+    def test_003_helloworld_enc_fail(self):
+        try:
+            self.run_binary(['helloworld_enc_fail'])
+            self.fail('helloworld_enc_fail unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode()
+            self.assertRegex(stderr, r'warning: Hash of trusted file .*helloworld_enc.* does not '
+                                      'match with the reference hash in manifest')
+
+    def test_010_toml_parsing(self):
         stdout, _ = self.run_binary(['toml_parsing'])
         self.assertIn('Hello world!', stdout)
 
