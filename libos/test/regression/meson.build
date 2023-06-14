@@ -313,4 +313,20 @@ if enable_musl
     )
 endif
 
+if sgx
+    # encrypt helloworld binary for helloworld_enc and helloworld_enc_fail tests
+    meson.add_install_script(
+        find_program('encrypt_file.sh'),
+        prefix / install_dir / 'helloworld',
+        prefix / install_dir / 'helloworld_enc',
+    )
+    if enable_musl
+        meson.add_install_script(
+            find_program('encrypt_file.sh'),
+            prefix / install_dir / 'musl' / 'helloworld',
+            prefix / install_dir / 'musl' / 'helloworld_enc',
+        )
+    endif
+endif
+
 subdir('asm')
