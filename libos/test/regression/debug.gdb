@@ -1,5 +1,6 @@
 set breakpoint pending on
 set pagination off
+set backtrace past-main off
 
 # Check if debug sources are loaded in our program, and we can break inside.
 

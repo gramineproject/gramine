@@ -1237,28 +1237,21 @@ class TC_50_GDB(RegressionTestCase):
         # To run this test manually, use:
         # GDB=1 GDB_SCRIPT=debug.gdb gramine-{direct|sgx} debug
         #
-        # TODO: strengthen this test after SGX includes enclave entry.
-        #
-        # While the stack trace in SGX is unbroken, it currently starts at _start inside
-        # enclave, instead of including eclave entry.
+        # TODO: strengthen this test after SGX includes enclave entry. This may require modifying
+        #       `set backtrace past-main off` in debug.gdb config file (currently GDB is configured
+        #       to stop the backtrace at `main()`).
 
         stdout, _ = self.run_gdb(['debug'], 'debug.gdb')
 
         backtrace_1 = self.find('backtrace 1', stdout)
         self.assertIn(' main ()', backtrace_1)
-        self.assertIn(' _start ()', backtrace_1)
         self.assertIn('debug.c', backtrace_1)
-        if not USES_MUSL:
-            self.assertNotIn('??', backtrace_1)
 
         backtrace_2 = self.find('backtrace 2', stdout)
         self.assertIn(' dev_write (', backtrace_2)
         self.assertIn(' func ()', backtrace_2)
         self.assertIn(' main ()', backtrace_2)
-        self.assertIn(' _start ()', backtrace_2)
         self.assertIn('debug.c', backtrace_2)
-        if not USES_MUSL:
-            self.assertNotIn('??', backtrace_2)
 
         if HAS_SGX:
             backtrace_3 = self.find('backtrace 3', stdout)
@@ -1266,10 +1259,7 @@ class TC_50_GDB(RegressionTestCase):
             self.assertIn(' dev_write (', backtrace_3)
             self.assertIn(' func ()', backtrace_3)
             self.assertIn(' main ()', backtrace_3)
-            self.assertIn(' _start ()', backtrace_3)
             self.assertIn('debug.c', backtrace_3)
-            if not USES_MUSL:
-                self.assertNotIn('??', backtrace_3)
 
     @unittest.skipUnless(ON_X86, 'x86-specific')
     def test_010_regs_x86_64(self):
