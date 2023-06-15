@@ -581,7 +581,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                       || DBGINFO_ADDR > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
 #ifdef ASAN
-    static_assert(SHARED_ADDR_MIN >= ASAN_SHADOW_START + ASAN_SHADOW_LENGTH,
+    static_assert(SHARED_ADDR_MIN >= ASAN_SHADOW_START + ASAN_SHADOW_LENGTH
                       || ASAN_SHADOW_START > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR_MIN overlaps with ASAN_SHADOW");
 #endif
