@@ -289,7 +289,7 @@ if enable_glibc
     subproject('glibc-2.36-1')
 endif
 if enable_musl
-    subproject('musl-1.2.2')
+    subproject('musl-1.2.4')
 endif
 
 if enable_libgomp
