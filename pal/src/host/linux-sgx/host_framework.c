@@ -228,8 +228,6 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     log_debug("    attr.flags:     0x%016lx", secs->attributes.flags);
     log_debug("    attr.xfrm:      0x%016lx", secs->attributes.xfrm);
     log_debug("    ssa_frame_size: %d",       secs->ssa_frame_size);
-    log_debug("    isv_prod_id:    0x%08x",   secs->isv_prod_id);
-    log_debug("    isv_svn:        0x%08x",   secs->isv_svn);
 
     /* Linux v5.16 introduced support for Intel AMX feature. Any process must opt-in for AMX
      * by issuing an AMX-permission request. More technically, together with AMX, Intel introduced
@@ -517,6 +515,8 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_tok
     log_debug("    mr_enclave:   %s", bytes2hex(sigstruct->enclave_hash.m,
                                                 sizeof(sigstruct->enclave_hash.m),
                                                 hex, sizeof(hex)));
+    log_debug("    isv_prod_id:  %d", sigstruct->isv_prod_id);
+    log_debug("    isv_svn:      %d", sigstruct->isv_svn);
 
     struct sgx_enclave_init param = {
 #ifdef CONFIG_SGX_DRIVER_OOT
