@@ -249,7 +249,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
 
     if (!toml_ioctl_struct) {
         /* special case of "no struct needed for IOCTL" -> base-type or ignored IOCTL argument */
-        *out_ret = DO_SYSCALL(ioctl, handle->dev.fd, cmd, arg);
+        *out_ret = DO_SYSCALL(ioctl, fd, cmd, arg);
         return 0;
     }
 

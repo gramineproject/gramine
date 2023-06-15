@@ -20,7 +20,7 @@
  * SIOCGIFHWADDR ioctls used by the main program. (Well, SIOCGIFHWADDR doesn't require sanitization
  * because its data structure has nothing that needs checks.)
  *
- * A more generic solution would probably be in the form of a shared LD_PRELOAD'ed library, or
+ * A more generic solution would probably be in the form of a shared LD_PRELOAD-ed library, or
  * directly inlined in the application codebase.
  *
  * Partial protection is also endorsed by `sgx.ioctl_structs` descriptions in the corresponding
@@ -36,7 +36,7 @@ int ioctl(int fd, unsigned long int request, ...) {
     va_start(ap, request);
     void* arg = va_arg(ap, void*);
 
-    /* memorize some fields for SIOCGIFCONF sanitization after the syscall */
+    /* memoize some fields for SIOCGIFCONF sanitization after the syscall */
     bool initial_ifc = false;
     int initial_ifc_len = 0;
     void* initial_ifc_req = NULL;
