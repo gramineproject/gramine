@@ -228,8 +228,6 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     log_debug("    attr.flags:     0x%016lx", secs->attributes.flags);
     log_debug("    attr.xfrm:      0x%016lx", secs->attributes.xfrm);
     log_debug("    ssa_frame_size: %d",       secs->ssa_frame_size);
-    log_debug("    isv_prod_id:    0x%08x",   secs->isv_prod_id);
-    log_debug("    isv_svn:        0x%08x",   secs->isv_svn);
 
     /* Linux v5.16 introduced support for Intel AMX feature. Any process must opt-in for AMX
      * by issuing an AMX-permission request. More technically, together with AMX, Intel introduced
