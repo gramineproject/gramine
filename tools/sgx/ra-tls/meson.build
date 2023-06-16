@@ -8,6 +8,10 @@ install_headers('ra_tls.h', 'ra_tls_common.h', 'secret_prov.h', subdir : 'gramin
 
 libra_tls_inc = include_directories('.')
 
+# if Glibc is enabled, then make default RA-TLS libs Glibc-linked (even if musl is also enabled);
+# musl-only OS distros must disable Glibc build so that default RA-TLS libs become musl-linked
+libc = enable_glibc ? 'glibc' : 'musl'
+
 ra_tls_map = join_paths(meson.current_source_dir(), 'ra_tls.map')
 ra_tls_link_args = [
     '-Wl,--version-script=@0@'.format(ra_tls_map),
@@ -30,8 +34,8 @@ libra_tls_attest = shared_library('ra_tls_attest',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_attest.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 libra_tls_verify = static_library('ra_tls_verify',
     'ra_tls_verify_common.c',
@@ -46,8 +50,8 @@ libra_tls_verify = static_library('ra_tls_verify',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_verify.a ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 libra_tls_verify_dep = declare_dependency(
     link_with: libra_tls_verify,
@@ -68,8 +72,8 @@ libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libra_tls_verify_epid.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 libsecret_prov_attest = shared_library('secret_prov_attest',
     'secret_prov_attest.c',
@@ -87,8 +91,8 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_attest.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 libsecret_prov_verify = static_library('secret_prov_verify',
     'secret_prov_verify.c',
@@ -104,8 +108,8 @@ libsecret_prov_verify = static_library('secret_prov_verify',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_verify.a ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 libsecret_prov_verify_dep = declare_dependency(
     link_with: libsecret_prov_verify,
@@ -127,8 +131,8 @@ libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
 )
 meson.add_install_script('/bin/sh', '-c',
     'ln -sf ../../../libsecret_prov_verify_epid.so ' +
-    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-        get_option('libdir')))
+    '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+        get_option('libdir'), libc))
 
 if dcap
     libra_tls_verify_dcap = shared_library('ra_tls_verify_dcap',
@@ -146,8 +150,8 @@ if dcap
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libra_tls_verify_dcap.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-            get_option('libdir')))
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+            get_option('libdir'), libc))
 
     libra_tls_verify_dcap_gramine = shared_library('ra_tls_verify_dcap_gramine',
         'ra_tls_verify_dcap.c',
@@ -165,8 +169,8 @@ if dcap
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libra_tls_verify_dcap_gramine.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-            get_option('libdir')))
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+            get_option('libdir'), libc))
 
     libsecret_prov_verify_dcap = shared_library('secret_prov_verify_dcap',
         'ra_tls_verify_dcap.c',
@@ -185,8 +189,8 @@ if dcap
     )
     meson.add_install_script('/bin/sh', '-c',
         'ln -sf ../../../libsecret_prov_verify_dcap.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/glibc/'.format(
-            get_option('libdir')))
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+            get_option('libdir'), libc))
 endif
 
 pkgconfig.generate(

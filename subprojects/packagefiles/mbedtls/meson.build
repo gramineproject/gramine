@@ -55,11 +55,14 @@ pkgconfig.generate(
     ],
 )
 
+# if Glibc is enabled, then make default mbedTLS libs Glibc-linked (even if musl is also enabled);
+# musl-only OS distros must disable Glibc build so that default mbedTLS libs become musl-linked
+libc = get_option('glibc') == 'enabled' ? 'glibc' : 'musl'
 foreach output : mbedtls_libs_output
     meson.add_install_script('/bin/sh', '-c',
         ('ln -sf ../../../@0@ ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
-            output, get_option('libdir')))
+        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/@2@/').format(
+            output, get_option('libdir'), libc))
 endforeach
 
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
