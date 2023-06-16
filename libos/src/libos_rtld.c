@@ -1112,7 +1112,7 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv
      */
     assert(IS_ALIGNED_PTR(argp, 16)); /* stack must be 16B-aligned */
 
-    static_assert(REQUIRED_ELF_AUXV >= 9, "not enough space on stack for auxv");
+    static_assert(REQUIRED_ELF_AUXV >= 14, "not enough space on stack for auxv");
     auxp[0].a_type     = AT_PHDR;
     auxp[0].a_un.a_val = (__typeof(auxp[0].a_un.a_val))g_exec_map->l_phdr;
     auxp[1].a_type     = AT_PHNUM;
@@ -1129,12 +1129,26 @@ noreturn void execute_elf_object(struct link_map* exec_map, void* argp, elf_auxv
     auxp[6].a_un.a_val = sizeof(elf_phdr_t);
     auxp[7].a_type     = AT_SYSINFO_EHDR;
     auxp[7].a_un.a_val = (uint64_t)g_vdso_addr;
-    auxp[8].a_type     = AT_NULL;
+    auxp[8].a_type     = AT_SECURE;
     auxp[8].a_un.a_val = 0;
+
+    struct libos_thread* cur_thread = get_cur_thread();
+    /* no need to take thread lock since this is the only app thread at this point */
+    auxp[ 9].a_type     = AT_UID;
+    auxp[ 9].a_un.a_val = cur_thread->uid;
+    auxp[10].a_type     = AT_EUID;
+    auxp[10].a_un.a_val = cur_thread->euid;
+    auxp[11].a_type     = AT_GID;
+    auxp[11].a_un.a_val = cur_thread->gid;
+    auxp[12].a_type     = AT_EGID;
+    auxp[12].a_un.a_val = cur_thread->egid;
+
+    auxp[13].a_type     = AT_NULL;
+    auxp[13].a_un.a_val = 0;
 
     /* populate extra memory space for aux vector data */
     static_assert(REQUIRED_ELF_AUXV_SPACE >= 16, "not enough space on stack for auxv");
-    elf_addr_t auxp_extra = (elf_addr_t)&auxp[9];
+    elf_addr_t auxp_extra = (elf_addr_t)&auxp[14];
 
     elf_addr_t random = auxp_extra; /* random 16B for AT_RANDOM */
     ret = PalRandomBitsRead((void*)random, 16);
