@@ -39,7 +39,6 @@
 #include "pal.h"
 #include "pal_linux.h"
 
-int g_xsave_enabled = 0;
 uint64_t g_xsave_features = 0;
 uint32_t g_xsave_size = 0;
 
@@ -62,8 +61,8 @@ const uint32_t g_cpu_extension_offsets[] = {
     [AMX_TILECFG] = 2752, [AMX_TILEDATA] = 2816,
 };
 
-/* FXRSTOR only cares about the first 512 bytes, while XRSTOR in compacted mode will ignore
- * the first 512 bytes. */
+/* FXRSTOR-compatible reset state. We use it just for sanity, even though XRSTOR in compacted mode
+ * ignores the first 512 bytes. */
 const uint32_t g_xsave_reset_state[XSAVE_RESET_STATE_SIZE / sizeof(uint32_t)] __attribute__((
     aligned(PAL_XSTATE_ALIGN))) = {
     0x037F, 0, 0, 0, 0, 0, 0x1F80,     0xFFFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -98,16 +97,8 @@ void init_xsave_size(uint64_t xfrm) {
     };
     assert(xsave_size_table[ARRAY_SIZE(xsave_size_table) - 1].size == SSA_XSAVE_SIZE_MAX);
 
-    /* fxsave/fxrstore as fallback */
-    g_xsave_enabled = 0;
     g_xsave_features = PAL_XFEATURE_MASK_FPSSE;
     g_xsave_size = 512 + 64;
-    if (!xfrm || (xfrm & SGX_XFRM_RESERVED)) {
-        log_debug("xsave is disabled, xfrm 0x%lx", xfrm);
-        return;
-    }
-
-    g_xsave_enabled = (xfrm == SGX_XFRM_LEGACY) ? 0 : 1;
     for (size_t i = 0; i < ARRAY_SIZE(xsave_size_table); i++) {
         if ((xfrm & xsave_size_table[i].bits) == xsave_size_table[i].bits) {
             g_xsave_features = xfrm;
