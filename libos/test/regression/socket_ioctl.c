@@ -6,11 +6,9 @@
 #include <malloc.h>
 #include <net/if.h>
 #include <netinet/in.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
-#include <unistd.h>
 
 #include "common.h"
 
