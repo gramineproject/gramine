@@ -104,16 +104,21 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
         {SGX_XFRM_AMX,    { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
     };
 
+    /* we are guaranteed that XGETBV instruction is available, see verify_hw_requirements() */
+    uint64_t xcr0 = xgetbv(/*xcr_number=*/0);
+
     *out_xfrm = xfrm;
     for (size_t i = 0; i < ARRAY_SIZE(xfrm_flags); i++) {
         /* check if SIGSTRUCT.ATTRIBUTEMASK.XFRM doesn't care whether an optional CPU feature is
          * enabled or not (XFRM mask should completely unset these bits) */
         if ((xfrm_flags[i].bits & xfrm_mask) == 0) {
-            /* set CPU feature if current system supports it (for performance) */
+            /* set CPU feature if current CPU + OS support it */
             uint32_t values[4];
             cpuid(xfrm_flags[i].cpuid.leaf, xfrm_flags[i].cpuid.subleaf, values);
-            if (values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit))
+            if ((values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit))
+                    && ((xcr0 & xfrm_flags[i].bits) == xfrm_flags[i].bits)) {
                 *out_xfrm |= xfrm_flags[i].bits;
+            }
         }
     }
 
