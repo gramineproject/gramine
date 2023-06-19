@@ -60,9 +60,9 @@ int main(int argc, char** argv) {
         /* server */
         fd = -1;
         while (fd < 0) {
-            /* wait until client is ready for read */
+            /* wait until client is ready for read (O_TRUNC flag here is only for testing) */
             errno = 0;
-            fd = open(FIFO_PATH, O_NONBLOCK | O_WRONLY);
+            fd = open(FIFO_PATH, O_NONBLOCK | O_WRONLY | O_TRUNC);
             if (fd < 0 && errno != ENXIO) {
                 perror("[parent] open error");
                 return 1;

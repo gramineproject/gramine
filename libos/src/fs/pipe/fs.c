@@ -212,7 +212,7 @@ static int fifo_open(struct libos_handle* hdl, struct libos_dentry* dent, int fl
          * one end (read or write) in our emulation, so we treat such FIFOs as read-only. This
          * covers most apps seen in the wild (in particular, LTP apps). */
         log_warning("FIFO (named pipe) '%s' cannot be opened in read-write mode in Gramine. "
-                    "Treating it as read-only.", dent->mount->path);
+                    "Treating it as read-only.", dent->name);
         flags = (flags & ~O_ACCMODE) | O_RDONLY;
     }
 
