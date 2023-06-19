@@ -131,11 +131,11 @@ noreturn void thread_exit(int error_code, int term_signal) {
         /* UNREACHABLE */
     }
 
-    /* Clear POSIX locks before we notify parent: after a successful `wait()` by parent, our locks
-     * should already be gone. */
-    int ret = posix_lock_clear_pid(g_process.pid);
+    /* Clear file (POSIX) locks before we notify parent: after a successful `wait()` by parent, our
+     * locks should already be gone. */
+    int ret = file_lock_clear_pid(g_process.pid);
     if (ret < 0)
-        log_warning("error clearing POSIX locks: %s", unix_strerror(ret));
+        log_warning("error clearing file (POSIX) locks: %s", unix_strerror(ret));
 
     detach_all_fds();
 

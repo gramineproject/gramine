@@ -291,18 +291,18 @@ static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* 
     return handle;
 }
 
-static int clear_posix_locks(struct libos_handle* handle) {
+static int clear_file_locks(struct libos_handle* handle) {
     if (handle && handle->dentry) {
-        /* Clear POSIX locks for a file. We are required to do that every time a FD is closed, even
-         * if the process holds other handles for that file, or duplicated FDs for the same
-         * handle. */
-        struct posix_lock pl = {
+        /* Clear file (POSIX) locks for a file. We are required to do that every time a FD is
+         * closed, even if the process holds other handles for that file, or duplicated FDs for the
+         * same handle. */
+        struct libos_file_lock file_lock = {
             .type = F_UNLCK,
             .start = 0,
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
         };
-        int ret = posix_lock_set(handle->dentry, &pl, /*block=*/false);
+        int ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
         if (ret < 0) {
             log_warning("error releasing locks: %s", unix_strerror(ret));
             return ret;
@@ -326,7 +326,7 @@ struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
 
     rwlock_write_unlock(&handle_map->lock);
 
-    (void)clear_posix_locks(handle);
+    (void)clear_file_locks(handle);
 
     return handle;
 }
@@ -700,7 +700,7 @@ void close_cloexec_handles(struct libos_handle_map* map) {
             struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
 
             rwlock_write_unlock(&map->lock);
-            (void)clear_posix_locks(hdl);
+            (void)clear_file_locks(hdl);
 
             put_handle(hdl);
             rwlock_write_lock(&map->lock);
