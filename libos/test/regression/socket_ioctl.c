@@ -20,8 +20,8 @@
  * Note that on errors, these wrappers return -1 and set errno. This is to make these wrappers
  * similar to libc functions, so that `main()` can use the `CHECK()` macro.
  *
- * Another solution would be in the form of a shared LD_PRELOAD-ed library. Though we recommend
- * *against* the LD_PRELOAD solution in production deployments, as it is very brittle.
+ * Though another solution would be in the form of a shared LD_PRELOAD-ed library, we recommend
+ * against this in production deployments as it is very brittle.
  *
  * Partial protection is also endorsed by `sgx.ioctl_structs` descriptions in the corresponding
  * manifest (e.g. SIOCGIFHWADDR's `ifreq::ifr_name` is copy-out-only and thus cannot be modified by
@@ -40,18 +40,15 @@ static int list_ipv4_interfaces(int sockfd, struct ifconf* ifc) {
     /* verify ifc_len (same checks for both ifc_req==NULL and ifc_req!=NULL cases) */
     if (ifc->ifc_len < 0) {
         fprintf(stderr, "SIOCGIFCONF() returned negative ifc_len");
-        errno = EPERM;
-        return -1;
+        goto fail;
     }
     if (ifc->ifc_len % sizeof(struct ifreq)) {
         fprintf(stderr, "SIOCGIFCONF() returned non-aligned ifc_len");
-        errno = EPERM;
-        return -1;
+        goto fail;
     }
     if ((ifc->ifc_len / sizeof(struct ifreq)) > 1024) {
         fprintf(stderr, "SIOCGIFCONF() returned too large ifc_len (limit is 1024 ifreq objs)");
-        errno = EPERM;
-        return -1;
+        goto fail;
     }
 
     if (!initial_ifc_req) {
@@ -59,21 +56,18 @@ static int list_ipv4_interfaces(int sockfd, struct ifconf* ifc) {
          * in ifc_len; ifc_req must be NULL */
         if (ifc->ifc_req) {
             fprintf(stderr, "SIOCGIFCONF(ifconf::ifc_req=NULL) returned ifc_req != NULL");
-            errno = EPERM;
-            return -1;
+            goto fail;
         }
     } else {
         /* ifc_req contains a pointer to an array of ifreq structures to be filled with all
          * currently active IPv4 interface addresses */
         if (ifc->ifc_req != initial_ifc_req) {
             fprintf(stderr, "SIOCGIFCONF(ifconf::ifc_req) returned modified ifc_req");
-            errno = EPERM;
-            return -1;
+            goto fail;
         }
         if (ifc->ifc_len > initial_ifc_len) {
             fprintf(stderr, "SIOCGIFCONF(ifconf::ifc_req) returned ifc_len > initial");
-            errno = EPERM;
-            return -1;
+            goto fail;
         }
 
         /* verify each ifreq structure in the array */
@@ -81,13 +75,15 @@ static int list_ipv4_interfaces(int sockfd, struct ifconf* ifc) {
         for (struct ifreq* ifr = ifc->ifc_req; ifr < ifend; ifr++) {
             if (memchr(ifr->ifr_name, '\0', sizeof(ifr->ifr_name)) == NULL) {
                 fprintf(stderr, "SIOCGIFCONF(ifconf::ifc_req) returned ifc_req with bad ifr_name");
-                errno = EPERM;
-                return -1;
+                goto fail;
             }
         }
     }
 
     return 0;
+fail:
+    errno = EPERM;
+    return -1;
 }
 
 static int get_hwaddr(int sockfd, struct ifreq* ifreq) {
