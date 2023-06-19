@@ -1,1 +1,3 @@
+# TODO: after deprecating 18.04/bionic, change these to type: 'feature'
+#       see also top-level meson_options.txt
 option('glibc', type: 'combo', choices: ['disabled', 'enabled'], value: 'enabled', yield: true)
