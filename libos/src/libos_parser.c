@@ -42,6 +42,7 @@ static void parse_socktype(struct print_buf*, va_list*);
 static void parse_futexop(struct print_buf*, va_list*);
 static void parse_ioctlop(struct print_buf*, va_list*);
 static void parse_fcntlop(struct print_buf*, va_list*);
+static void parse_flockop(struct print_buf*, va_list*);
 static void parse_seek(struct print_buf*, va_list*);
 static void parse_at_fdcwd(struct print_buf*, va_list*);
 static void parse_wait_options(struct print_buf*, va_list*);
@@ -199,7 +200,8 @@ struct parser_table {
                      parse_integer_arg, parse_pointer_arg}},
     [__NR_fcntl] = {.slow = false, .name = "fcntl", .parser = {parse_long_arg, parse_integer_arg,
                     parse_fcntlop, parse_pointer_arg}},
-    [__NR_flock] = {.slow = false, .name = "flock", .parser = {NULL}},
+    [__NR_flock] = {.slow = true, .name = "flock", .parser = {parse_long_arg, parse_integer_arg,
+                    parse_flockop}},
     [__NR_fsync] = {.slow = false, .name = "fsync", .parser = {parse_long_arg, parse_integer_arg}},
     [__NR_fdatasync] = {.slow = false, .name = "fdatasync", .parser = {parse_long_arg,
                         parse_integer_arg}},
@@ -1327,6 +1329,28 @@ static void parse_fcntlop(struct print_buf* buf, va_list* ap) {
             buf_printf(buf, "OP %d", op);
             break;
     }
+}
+
+static void parse_flockop(struct print_buf* buf, va_list* ap) {
+    int flags = va_arg(*ap, int);
+
+#define FLG(n) { #n, n }
+    const struct flag_table all_flags[] = {
+        FLG(LOCK_SH),
+        FLG(LOCK_EX),
+        FLG(LOCK_UN),
+        FLG(LOCK_NB),
+        /* support for below flags was removed from Linux, so they are not really used */
+        FLG(LOCK_MAND),
+        FLG(LOCK_READ),
+        FLG(LOCK_WRITE),
+        FLG(LOCK_RW),
+    };
+#undef FLG
+
+    flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
+    if (flags)
+        buf_printf(buf, "|0x%x", flags);
 }
 
 static void parse_ioctlop(struct print_buf* buf, va_list* ap) {
