@@ -278,3 +278,37 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
     put_handle(hdl);
     return ret;
 }
+
+long libos_syscall_flock(int fd, unsigned int cmd) {
+    int ret;
+
+    /* support for LOCK_{MAND,READ,WRITE,RW} was removed from Linux; it simply ignores LOCK_MAND
+     * requests so we do the same */
+    if (cmd & LOCK_MAND) {
+        log_warning("flock request with LOCK_MAND is ignored");
+        return 0;
+    }
+
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    assert(handle_map);
+
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, handle_map);
+    if (!hdl)
+        return -EBADF;
+
+    switch (cmd & ~LOCK_NB) {
+        case LOCK_EX:
+        case LOCK_SH:
+        case LOCK_UN:
+            break;
+        default:
+            ret = -EINVAL;
+            goto out;
+    }
+
+    /* TODO: add implementation */
+    ret = -ENOSYS;
+out:
+    put_handle(hdl);
+    return ret;
+}
