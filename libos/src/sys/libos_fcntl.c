@@ -51,14 +51,15 @@ int set_handle_nonblocking(struct libos_handle* handle, bool on) {
 }
 
 /*
- * Convert user-mode `struct flock` into our `struct posix_lock`. This mostly means converting the
- * position parameters (l_whence, l_start, l_len) to an absolute inclusive range [start .. end]. See
- * `man fcntl` for details.
+ * Convert user-mode `struct flock` into our `struct libos_file_lock`. This mostly means converting
+ * the position parameters (l_whence, l_start, l_len) to an absolute inclusive range [start .. end].
+ * See `man fcntl` for details.
  *
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
  */
-static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struct posix_lock* pl) {
+static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl,
+                              struct libos_file_lock* file_lock) {
     if (!(fl->l_type == F_RDLCK || fl->l_type == F_WRLCK || fl->l_type == F_UNLCK))
         return -EINVAL;
 
@@ -123,10 +124,10 @@ static int flock_to_posix_lock(struct flock* fl, struct libos_handle* hdl, struc
         end = FS_LOCK_EOF;
     }
 
-    pl->type = fl->l_type;
-    pl->start = start;
-    pl->end = end;
-    pl->pid = g_process.pid;
+    file_lock->type = fl->l_type;
+    file_lock->start = start;
+    file_lock->end = end;
+    file_lock->pid = g_process.pid;
     return 0;
 }
 
@@ -187,7 +188,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
         /* F_SETLK, F_SETLKW (struct flock*): see `libos_fs_lock.h` for caveats */
         case F_SETLK:
         case F_SETLKW: {
-            struct flock *fl = (struct flock*)arg;
+            struct flock* fl = (struct flock*)arg;
             if (!is_user_memory_readable(fl, sizeof(*fl))) {
                 ret = -EFAULT;
                 break;
@@ -210,18 +211,18 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
                 break;
             }
 
-            struct posix_lock pl;
-            ret = flock_to_posix_lock(fl, hdl, &pl);
+            struct libos_file_lock file_lock;
+            ret = flock_to_file_lock(fl, hdl, &file_lock);
             if (ret < 0)
                 break;
 
-            ret = posix_lock_set(hdl->dentry, &pl, /*wait=*/cmd == F_SETLKW);
+            ret = file_lock_set(hdl->dentry, &file_lock, /*wait=*/cmd == F_SETLKW);
             break;
         }
 
         /* F_GETLK (struct flock*): see `libos_fs_lock.h` for caveats */
         case F_GETLK: {
-            struct flock *fl = (struct flock*)arg;
+            struct flock* fl = (struct flock*)arg;
             if (!is_user_memory_readable(fl, sizeof(*fl))
                     || !is_user_memory_writable(fl, sizeof(*fl))) {
                 ret = -EFAULT;
@@ -233,32 +234,32 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
                 break;
             }
 
-            struct posix_lock pl;
-            ret = flock_to_posix_lock(fl, hdl, &pl);
+            struct libos_file_lock file_lock;
+            ret = flock_to_file_lock(fl, hdl, &file_lock);
             if (ret < 0)
                 break;
 
-            if (pl.type == F_UNLCK) {
+            if (file_lock.type == F_UNLCK) {
                 ret = -EINVAL;
                 break;
             }
 
-            struct posix_lock pl2;
-            ret = posix_lock_get(hdl->dentry, &pl, &pl2);
+            struct libos_file_lock file_lock2;
+            ret = file_lock_get(hdl->dentry, &file_lock, &file_lock2);
             if (ret < 0)
                 break;
 
-            fl->l_type = pl2.type;
-            if (pl2.type != F_UNLCK) {
+            fl->l_type = file_lock2.type;
+            if (file_lock2.type != F_UNLCK) {
                 fl->l_whence = SEEK_SET;
-                fl->l_start = pl2.start;
-                if (pl2.end == FS_LOCK_EOF) {
+                fl->l_start = file_lock2.start;
+                if (file_lock2.end == FS_LOCK_EOF) {
                     /* range until EOF is encoded as len == 0 */
                     fl->l_len = 0;
                 } else {
-                    fl->l_len = pl2.end - pl2.start + 1;
+                    fl->l_len = file_lock2.end - file_lock2.start + 1;
                 }
-                fl->l_pid = pl2.pid;
+                fl->l_pid = file_lock2.pid;
             }
             ret = 0;
             break;
