@@ -405,10 +405,13 @@ int dentry_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) 
         hdl->dir_info.dents = NULL;
     }
 
-    /* truncate regular writable file if O_TRUNC is given */
+    /* truncate regular writable file if O_TRUNC is given
+     * See `man 2 open`
+     * Ignore O_TRUNC flag for FIFO files. */
     if ((flags & O_TRUNC) && ((flags & O_RDWR) | (flags & O_WRONLY))
             && (dent->inode->type != S_IFDIR)
-            && (dent->inode->type != S_IFLNK)) {
+            && (dent->inode->type != S_IFLNK)
+            && strcmp(fs->name, "fifo")) {
 
         if (!(fs->fs_ops && fs->fs_ops->truncate))
             return -EINVAL;
