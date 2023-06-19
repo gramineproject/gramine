@@ -60,9 +60,9 @@ static ipc_callback ipc_callbacks[] = {
     [IPC_MSG_SYNC_CONFIRM_DOWNGRADE] = ipc_sync_confirm_downgrade_callback,
     [IPC_MSG_SYNC_CONFIRM_CLOSE]     = ipc_sync_confirm_close_callback,
 
-    [IPC_MSG_POSIX_LOCK_SET]       = ipc_posix_lock_set_callback,
-    [IPC_MSG_POSIX_LOCK_GET]       = ipc_posix_lock_get_callback,
-    [IPC_MSG_POSIX_LOCK_CLEAR_PID] = ipc_posix_lock_clear_pid_callback,
+    [IPC_MSG_FILE_LOCK_SET]       = ipc_file_lock_set_callback,
+    [IPC_MSG_FILE_LOCK_GET]       = ipc_file_lock_get_callback,
+    [IPC_MSG_FILE_LOCK_CLEAR_PID] = ipc_file_lock_clear_pid_callback,
 };
 
 static void ipc_leader_died_callback(void) {

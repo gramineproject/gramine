@@ -10,14 +10,14 @@
 #include "linux_abi/fs.h"
 
 /*
- * Global lock for the whole subsystem. Protects access to `g_fs_lock_list`, and also to dentry
- * fields (`fs_lock` and `maybe_has_fs_locks`).
+ * Global lock for the whole subsystem. Protects access to `g_dent_file_locks_list`, and also to
+ * dentry fields (`file_locks` and `maybe_has_file_locks`).
  */
 static struct libos_lock g_fs_lock_lock;
 
 /*
- * Describes a pending request for a POSIX lock. After processing the request, the object is
- * removed, and a possible waiter is notified (see below).
+ * Describes a pending request for a file lock. After processing the request, the object is removed,
+ * and a possible waiter is notified (see below).
  *
  * If the request is initiated by another process over IPC, `notify.vmid` and `notify.seq` should be
  * set to parameters of IPC message. After processing the request, IPC response will be sent.
@@ -26,10 +26,10 @@ static struct libos_lock g_fs_lock_lock;
  * `notify.event` should be set to an event handle. After processing the request, the event will be
  * triggered, and `*notify.result` will be set to the result.
  */
-DEFINE_LISTP(posix_lock_request);
-DEFINE_LIST(posix_lock_request);
-struct posix_lock_request {
-    struct posix_lock pl;
+DEFINE_LISTP(file_lock_request);
+DEFINE_LIST(file_lock_request);
+struct file_lock_request {
+    struct libos_file_lock file_lock;
 
     struct {
         IDTYPE vmid;
@@ -41,28 +41,28 @@ struct posix_lock_request {
         int* result;
     } notify;
 
-    LIST_TYPE(posix_lock_request) list;
+    LIST_TYPE(file_lock_request) list;
 };
 
-/* Describes file lock details for a given dentry. Currently holds only POSIX locks. */
-DEFINE_LISTP(fs_lock);
-DEFINE_LIST(fs_lock);
-struct fs_lock {
+/* Describes file locks' details for a given dentry. Currently holds only POSIX locks. */
+DEFINE_LISTP(dent_file_locks);
+DEFINE_LIST(dent_file_locks);
+struct dent_file_locks {
     struct libos_dentry* dent;
 
-    /* POSIX locks, sorted by PID and then by start position (so that we are able to merge and split
-     * locks). The ranges do not overlap within a given PID. */
-    LISTP_TYPE(posix_lock) posix_locks;
+    /* Currently only POSIX locks, sorted by PID and then by start position (so that we are able to
+     * merge and split locks). The ranges do not overlap within a given PID. */
+    LISTP_TYPE(libos_file_lock) file_locks;
 
     /* Pending requests. */
-    LISTP_TYPE(posix_lock_request) posix_lock_requests;
+    LISTP_TYPE(file_lock_request) file_lock_requests;
 
-    /* List node, for `g_fs_lock_list`. */
-    LIST_TYPE(fs_lock) list;
+    /* List node, for `g_dent_file_locks_list`. */
+    LIST_TYPE(dent_file_locks) list;
 };
 
-/* Global list of `fs_lock` objects. Used for cleanup. */
-static LISTP_TYPE(fs_lock) g_fs_lock_list = LISTP_INIT;
+/* Global list of `dent_file_locks` objects. Used for cleanup. */
+static LISTP_TYPE(dent_file_locks) g_dent_file_locks_list = LISTP_INIT;
 
 int init_fs_lock(void) {
     if (g_process_ipc_ids.leader_vmid)
@@ -71,91 +71,95 @@ int init_fs_lock(void) {
     return create_lock(&g_fs_lock_lock);
 }
 
-static int find_fs_lock(struct libos_dentry* dent, bool create, struct fs_lock** out_fs_lock) {
+static int find_dent_file_locks(struct libos_dentry* dent, bool create,
+                                struct dent_file_locks** out_dent_file_locks) {
     assert(locked(&g_fs_lock_lock));
-    if (!dent->fs_lock && create) {
-        struct fs_lock* fs_lock = malloc(sizeof(*fs_lock));
-        if (!fs_lock)
+    if (!dent->file_locks && create) {
+        struct dent_file_locks* dent_file_locks = malloc(sizeof(*dent_file_locks));
+        if (!dent_file_locks)
             return -ENOMEM;
-        fs_lock->dent = dent;
+        dent_file_locks->dent = dent;
         get_dentry(dent);
-        INIT_LISTP(&fs_lock->posix_locks);
-        INIT_LISTP(&fs_lock->posix_lock_requests);
-        dent->fs_lock = fs_lock;
+        INIT_LISTP(&dent_file_locks->file_locks);
+        INIT_LISTP(&dent_file_locks->file_lock_requests);
+        dent->file_locks = dent_file_locks;
 
-        LISTP_ADD(fs_lock, &g_fs_lock_list, list);
+        LISTP_ADD(dent_file_locks, &g_dent_file_locks_list, list);
     }
-    *out_fs_lock = dent->fs_lock;
+    *out_dent_file_locks = dent->file_locks;
     return 0;
 }
 
-static int posix_lock_dump_write_all(const char* str, size_t size, void* arg) {
+static int file_lock_dump_write_all(const char* str, size_t size, void* arg) {
     __UNUSED(arg);
-    log_always("posix_lock: %.*s", (int)size, str);
+    log_always("file_lock: %.*s", (int)size, str);
     return 0;
 }
 
 /* Log current locks for a file, for debugging purposes. */
-static void posix_lock_dump(struct fs_lock* fs_lock) {
+static void file_locks_dump(struct dent_file_locks* dent_file_locks) {
     assert(locked(&g_fs_lock_lock));
-    struct print_buf buf = INIT_PRINT_BUF(&posix_lock_dump_write_all);
+    struct print_buf buf = INIT_PRINT_BUF(&file_lock_dump_write_all);
     IDTYPE pid = 0;
 
-    struct posix_lock* pl;
-    LISTP_FOR_EACH_ENTRY(pl, &fs_lock->posix_locks, list) {
-        if (pl->pid != pid) {
+    struct libos_file_lock* file_lock;
+    LISTP_FOR_EACH_ENTRY(file_lock, &dent_file_locks->file_locks, list) {
+        if (file_lock->pid != pid) {
             if (pid != 0)
                 buf_flush(&buf);
-            pid = pl->pid;
+            pid = file_lock->pid;
             buf_printf(&buf, "%d:", pid);
         }
 
         char c;
-        switch (pl->type) {
+        switch (file_lock->type) {
             case F_RDLCK: c = 'r'; break;
             case F_WRLCK: c = 'w'; break;
             default: c = '?'; break;
         }
-        if (pl->end == FS_LOCK_EOF) {
-            buf_printf(&buf, " %c[%lu..end]", c, pl->start);
+        if (file_lock->end == FS_LOCK_EOF) {
+            buf_printf(&buf, " %c[%lu..end]", c, file_lock->start);
         } else {
-            buf_printf(&buf, " %c[%lu..%lu]", c, pl->start, pl->end);
+            buf_printf(&buf, " %c[%lu..%lu]", c, file_lock->start, file_lock->end);
         }
     }
-    if (LISTP_EMPTY(&fs_lock->posix_locks)) {
+    if (LISTP_EMPTY(&dent_file_locks->file_locks)) {
         buf_printf(&buf, "no locks");
     }
     buf_flush(&buf);
 }
 
-/* Removes `fs_lock` if it's not necessary (i.e. no locks are held or requested for a file). */
-static void fs_lock_gc(struct fs_lock* fs_lock) {
+/* Removes `dent_file_locks` if it's not necessary (no locks are held or requested for a file). */
+static void dent_file_locks_gc(struct dent_file_locks* dent_file_locks) {
     assert(locked(&g_fs_lock_lock));
     if (g_log_level >= LOG_LEVEL_TRACE)
-        posix_lock_dump(fs_lock);
-    if (LISTP_EMPTY(&fs_lock->posix_locks) && LISTP_EMPTY(&fs_lock->posix_lock_requests)) {
-        struct libos_dentry* dent = fs_lock->dent;
-        dent->fs_lock = NULL;
+        file_locks_dump(dent_file_locks);
+    if (LISTP_EMPTY(&dent_file_locks->file_locks)
+            && LISTP_EMPTY(&dent_file_locks->file_lock_requests)) {
+        struct libos_dentry* dent = dent_file_locks->dent;
+        dent->file_locks = NULL;
 
-        LISTP_DEL(fs_lock, &g_fs_lock_list, list);
+        LISTP_DEL(dent_file_locks, &g_dent_file_locks_list, list);
 
         put_dentry(dent);
-        free(fs_lock);
+        free(dent_file_locks);
     }
 }
 
 /*
- * Find first lock that conflicts with `pl`. Two locks conflict if they have different PIDs, their
- * ranges overlap, and at least one of them is a write lock.
+ * Find first lock that conflicts with `file_lock`. Two locks conflict if they have different PIDs,
+ * their ranges overlap, and at least one of them is a write lock.
  */
-static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, struct posix_lock* pl) {
+static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* dent_file_locks,
+                                                       struct libos_file_lock* file_lock) {
     assert(locked(&g_fs_lock_lock));
-    assert(pl->type != F_UNLCK);
+    assert(file_lock->type != F_UNLCK);
 
-    struct posix_lock* cur;
-    LISTP_FOR_EACH_ENTRY(cur, &fs_lock->posix_locks, list) {
-        if (cur->pid != pl->pid && pl->start <= cur->end && cur->start <= pl->end
-               && (cur->type == F_WRLCK || pl->type == F_WRLCK))
+    struct libos_file_lock* cur;
+    LISTP_FOR_EACH_ENTRY(cur, &dent_file_locks->file_locks, list) {
+        if (cur->pid != file_lock->pid && file_lock->start <= cur->end
+               && cur->start <= file_lock->end
+               && (cur->type == F_WRLCK || file_lock->type == F_WRLCK))
             return cur;
     }
     return NULL;
@@ -163,69 +167,71 @@ static struct posix_lock* posix_lock_find_conflict(struct fs_lock* fs_lock, stru
 
 /*
  * Add a new lock request. Before releasing `g_fs_lock_lock`, the caller has to initialize the
- * `notify` part of the request (see `struct posix_lock_request` above).
+ * `notify` part of the request (see `struct file_lock_request` above).
  */
-static int posix_lock_add_request(struct fs_lock* fs_lock, struct posix_lock* pl,
-                                  struct posix_lock_request** out_req) {
+static int file_lock_add_request(struct dent_file_locks* dent_file_locks,
+                                 struct libos_file_lock* file_lock,
+                                 struct file_lock_request** out_req) {
     assert(locked(&g_fs_lock_lock));
-    assert(pl->type != F_UNLCK);
+    assert(file_lock->type != F_UNLCK);
 
-    struct posix_lock_request* req = malloc(sizeof(*req));
+    struct file_lock_request* req = malloc(sizeof(*req));
     if (!req)
         return -ENOMEM;
-    req->pl = *pl;
-    LISTP_ADD(req, &fs_lock->posix_lock_requests, list);
+    req->file_lock = *file_lock;
+    LISTP_ADD(req, &dent_file_locks->file_lock_requests, list);
     *out_req = req;
     return 0;
 }
 
 /*
- * Main part of `posix_lock_set`. Adds/removes a lock (depending on `pl->type`), assumes we already
- * verified there are no conflicts. Replaces existing locks for a given PID, and merges adjacent
- * locks if possible.
+ * Main part of `file_lock_set`. Adds/removes a lock (depending on `file_lock->type`), assumes we
+ * already verified there are no conflicts. Replaces existing locks for a given PID, and merges
+ * adjacent locks if possible.
  *
  * See also Linux sources (`fs/locks.c`) for a similar implementation.
  */
-static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
+static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
+                           struct libos_file_lock* file_lock) {
     assert(locked(&g_fs_lock_lock));
 
     /* Preallocate new locks first, so that we don't fail after modifying something. */
 
     /* Lock to be added. Not necessary for F_UNLCK, because we're only removing existing locks. */
-    struct posix_lock* new = NULL;
-    if (pl->type != F_UNLCK) {
+    struct libos_file_lock* new = NULL;
+    if (file_lock->type != F_UNLCK) {
         new = malloc(sizeof(*new));
         if (!new)
             return -ENOMEM;
     }
 
     /* Extra lock that we might need when splitting existing one. */
-    struct posix_lock* extra = malloc(sizeof(*extra));
+    struct libos_file_lock* extra = malloc(sizeof(*extra));
     if (!extra) {
         free(new);
         return -ENOMEM;
     }
 
     /* Target range: we will be changing it when merging existing locks. */
-    uint64_t start = pl->start;
-    uint64_t end   = pl->end;
+    uint64_t start = file_lock->start;
+    uint64_t end   = file_lock->end;
 
     /* `prev` will be set to the last lock before target range, so that we add the new lock just
      * after `prev`. */
-    struct posix_lock* prev = NULL;
+    struct libos_file_lock* prev = NULL;
 
-    struct posix_lock* cur;
-    struct posix_lock* tmp;
-    LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &fs_lock->posix_locks, list) {
-        if (cur->pid < pl->pid) {
+    struct libos_file_lock* cur;
+    struct libos_file_lock* tmp;
+    LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &dent_file_locks->file_locks, list) {
+        if (cur->pid < file_lock->pid) {
             prev = cur;
             continue;
         }
-        if (pl->pid < cur->pid) {
+        if (file_lock->pid < cur->pid) {
             break;
         }
 
-        if (cur->type == pl->type) {
+        if (cur->type == file_lock->type) {
             /* Same lock type: we can possibly merge the locks. */
 
             if (start > 0 && cur->end < start - 1) {
@@ -240,7 +246,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
                  * expand the target range. */
                 start = MIN(start, cur->start);
                 end = MAX(end, cur->end);
-                LISTP_DEL(cur, &fs_lock->posix_locks, list);
+                LISTP_DEL(cur, &dent_file_locks->file_locks, list);
                 free(cur);
             }
         } else {
@@ -284,7 +290,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
                 extra->end = cur->end;
                 extra->pid = cur->pid;
                 cur->end = start - 1;
-                LISTP_ADD_AFTER(extra, cur, &fs_lock->posix_locks, list);
+                LISTP_ADD_AFTER(extra, cur, &dent_file_locks->file_locks, list);
                 extra = NULL;
                 /* We're done: the new lock, if any, will be added after `cur`. */
                 prev = cur;
@@ -296,7 +302,7 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
                  * cur:    ====
                  * tgt:  --------
                  */
-                LISTP_DEL(cur, &fs_lock->posix_locks, list);
+                LISTP_DEL(cur, &dent_file_locks->file_locks, list);
                 free(cur);
             } else {
                 /*
@@ -316,28 +322,30 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
     }
 
     if (new) {
-        assert(pl->type != F_UNLCK);
+        assert(file_lock->type != F_UNLCK);
 
 
-        new->type = pl->type;
+        new->type = file_lock->type;
         new->start = start;
         new->end = end;
-        new->pid = pl->pid;
+        new->pid = file_lock->pid;
 
 #ifdef DEBUG
         /* Assert that list order is preserved */
-        struct posix_lock* next = prev ? LISTP_NEXT_ENTRY(prev, &fs_lock->posix_locks, list)
-            : LISTP_FIRST_ENTRY(&fs_lock->posix_locks, struct posix_lock, list);
+        struct libos_file_lock* next = prev
+            ? LISTP_NEXT_ENTRY(prev, &dent_file_locks->file_locks, list)
+            : LISTP_FIRST_ENTRY(&dent_file_locks->file_locks, struct libos_file_lock, list);
         if (prev)
-            assert(prev->pid < pl->pid || (prev->pid == pl->pid && prev->end < start));
+            assert(prev->pid < file_lock->pid
+                    || (prev->pid == file_lock->pid && prev->end < start));
         if (next)
-            assert(pl->pid < next->pid || (pl->pid == next->pid && end < next->start));
+            assert(file_lock->pid < next->pid || (file_lock->pid == next->pid && end < next->start));
 #endif
 
         if (prev) {
-            LISTP_ADD_AFTER(new, prev, &fs_lock->posix_locks, list);
+            LISTP_ADD_AFTER(new, prev, &dent_file_locks->file_locks, list);
         } else {
-            LISTP_ADD(new, &fs_lock->posix_locks, list);
+            LISTP_ADD(new, &dent_file_locks->file_locks, list);
         }
     }
 
@@ -352,20 +360,21 @@ static int _posix_lock_set(struct fs_lock* fs_lock, struct posix_lock* pl) {
  *
  * TODO: This is pretty inefficient, but perhaps good enough for now...
  */
-static void posix_lock_process_requests(struct fs_lock* fs_lock) {
+static void file_lock_process_requests(struct dent_file_locks* dent_file_locks) {
     assert(locked(&g_fs_lock_lock));
 
     bool changed;
     do {
         changed = false;
 
-        struct posix_lock_request* req;
-        struct posix_lock_request* tmp;
-        LISTP_FOR_EACH_ENTRY_SAFE(req, tmp, &fs_lock->posix_lock_requests, list) {
-            struct posix_lock* conflict = posix_lock_find_conflict(fs_lock, &req->pl);
+        struct file_lock_request* req;
+        struct file_lock_request* tmp;
+        LISTP_FOR_EACH_ENTRY_SAFE(req, tmp, &dent_file_locks->file_lock_requests, list) {
+            struct libos_file_lock* conflict = file_lock_find_conflict(dent_file_locks,
+                                                                       &req->file_lock);
             if (!conflict) {
-                int result = _posix_lock_set(fs_lock, &req->pl);
-                LISTP_DEL(req, &fs_lock->posix_lock_requests, list);
+                int result = _posix_lock_set(dent_file_locks, &req->file_lock);
+                LISTP_DEL(req, &dent_file_locks->file_lock_requests, list);
 
                 /* Notify the waiter that we processed their request. Note that the result might
                  * still be a failure (-ENOMEM). */
@@ -378,10 +387,10 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
                     assert(!req->notify.event);
                     assert(!req->notify.result);
 
-                    int ret = ipc_posix_lock_set_send_response(req->notify.vmid, req->notify.seq,
-                                                               result);
+                    int ret = ipc_file_lock_set_send_response(req->notify.vmid, req->notify.seq,
+                                                              result);
                     if (ret < 0) {
-                        log_warning("posix lock: error sending result over IPC: %s",
+                        log_warning("file lock: error sending result over IPC: %s",
                                     unix_strerror(ret));
                     }
                 }
@@ -394,58 +403,59 @@ static void posix_lock_process_requests(struct fs_lock* fs_lock) {
 
 /* Add/remove a lock if possible. On conflict, returns -EAGAIN (if `wait` is false) or adds a new
  * request (if `wait` is true). */
-static int posix_lock_set_or_add_request(struct libos_dentry* dent, struct posix_lock* pl,
-                                         bool wait, struct posix_lock_request** out_req) {
+static int file_lock_set_or_add_request(struct libos_dentry* dent,
+                                        struct libos_file_lock* file_lock,
+                                        bool wait, struct file_lock_request** out_req) {
     assert(locked(&g_fs_lock_lock));
 
-    struct fs_lock* fs_lock = NULL;
-    int ret = find_fs_lock(dent, /*create=*/pl->type != F_UNLCK, &fs_lock);
+    struct dent_file_locks* dent_file_locks = NULL;
+    int ret = find_dent_file_locks(dent, /*create=*/file_lock->type != F_UNLCK, &dent_file_locks);
     if (ret < 0)
         goto out;
-    if (!fs_lock) {
-        assert(pl->type == F_UNLCK);
+    if (!dent_file_locks) {
+        assert(file_lock->type == F_UNLCK);
         /* Nothing to unlock. */
         return 0;
     }
 
-    struct posix_lock* conflict = NULL;
-    if (pl->type != F_UNLCK)
-        conflict = posix_lock_find_conflict(fs_lock, pl);
+    struct libos_file_lock* conflict = NULL;
+    if (file_lock->type != F_UNLCK)
+        conflict = file_lock_find_conflict(dent_file_locks, file_lock);
     if (conflict) {
         if (!wait) {
             ret = -EAGAIN;
             goto out;
         }
 
-        struct posix_lock_request* req;
-        ret = posix_lock_add_request(fs_lock, pl, &req);
+        struct file_lock_request* req;
+        ret = file_lock_add_request(dent_file_locks, file_lock, &req);
         if (ret < 0)
             goto out;
 
         *out_req = req;
     } else {
-        ret = _posix_lock_set(fs_lock, pl);
+        ret = _posix_lock_set(dent_file_locks, file_lock);
         if (ret < 0)
             goto out;
-        posix_lock_process_requests(fs_lock);
+        file_lock_process_requests(dent_file_locks);
         *out_req = NULL;
     }
     ret = 0;
 out:
-    if (fs_lock)
-        fs_lock_gc(fs_lock);
+    if (dent_file_locks)
+        dent_file_locks_gc(dent_file_locks);
     return ret;
 }
 
-int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) {
+int file_lock_set(struct libos_dentry* dent, struct libos_file_lock* file_lock, bool wait) {
     int ret;
     if (g_process_ipc_ids.leader_vmid) {
-        /* In the IPC version, we use `dent->maybe_has_fs_locks` to short-circuit unlocking files
+        /* In the IPC version, we use `dent->maybe_has_file_locks` to short-circuit unlocking files
          * that we never locked. This is to prevent unnecessary IPC calls on a handle. */
         lock(&g_fs_lock_lock);
-        if (pl->type == F_RDLCK || pl->type == F_WRLCK) {
-            dent->maybe_has_fs_locks = true;
-        } else if (!dent->maybe_has_fs_locks) {
+        if (file_lock->type == F_RDLCK || file_lock->type == F_WRLCK) {
+            dent->maybe_has_file_locks = true;
+        } else if (!dent->maybe_has_file_locks) {
             /* We know we're not holding any locks for the file */
             unlock(&g_fs_lock_lock);
             return 0;
@@ -457,7 +467,7 @@ int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) 
         if (ret < 0)
             return ret;
 
-        ret = ipc_posix_lock_set(path, pl, wait);
+        ret = ipc_file_lock_set(path, file_lock, wait);
         free(path);
         return ret;
     }
@@ -465,12 +475,12 @@ int posix_lock_set(struct libos_dentry* dent, struct posix_lock* pl, bool wait) 
     lock(&g_fs_lock_lock);
 
     PAL_HANDLE event = NULL;
-    struct posix_lock_request* req = NULL;
-    ret = posix_lock_set_or_add_request(dent, pl, wait, &req);
+    struct file_lock_request* req = NULL;
+    ret = file_lock_set_or_add_request(dent, file_lock, wait, &req);
     if (ret < 0)
         goto out;
     if (req) {
-        /* `posix_lock_set_or_add_request` is allowed to add a request only if `wait` is true */
+        /* `file_lock_set_or_add_request` is allowed to add a request only if `wait` is true */
         assert(wait);
 
         int result;
@@ -499,29 +509,29 @@ out:
     return ret;
 }
 
-int posix_lock_set_from_ipc(const char* path, struct posix_lock* pl, bool wait, IDTYPE vmid,
-                            unsigned long seq) {
+int file_lock_set_from_ipc(const char* path, struct libos_file_lock* file_lock, bool wait,
+                           IDTYPE vmid, unsigned long seq) {
     assert(!g_process_ipc_ids.leader_vmid);
 
     struct libos_dentry* dent = NULL;
-    struct posix_lock_request* req = NULL;
+    struct file_lock_request* req = NULL;
 
     lock(&g_dcache_lock);
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
     unlock(&g_dcache_lock);
     if (ret < 0) {
-        log_warning("posix_lock_set_from_ipc: error on dentry lookup for %s: %d", path, ret);
+        log_warning("file_lock_set_from_ipc: error on dentry lookup for %s: %d", path, ret);
         goto out;
     }
 
     lock(&g_fs_lock_lock);
-    ret = posix_lock_set_or_add_request(dent, pl, wait, &req);
+    ret = file_lock_set_or_add_request(dent, file_lock, wait, &req);
     unlock(&g_fs_lock_lock);
     if (ret < 0)
         goto out;
 
     if (req) {
-        /* `posix_lock_set_or_add_request` is allowed to add a request only if `wait` is true */
+        /* `file_lock_set_or_add_request` is allowed to add a request only if `wait` is true */
         assert(wait);
 
         req->notify.vmid = vmid;
@@ -537,11 +547,12 @@ out:
         /* We added a request, so response will be sent later. */
         return 0;
     }
-    return ipc_posix_lock_set_send_response(vmid, seq, ret);
+    return ipc_file_lock_set_send_response(vmid, seq, ret);
 }
 
-int posix_lock_get(struct libos_dentry* dent, struct posix_lock* pl, struct posix_lock* out_pl) {
-    assert(pl->type != F_UNLCK);
+int file_lock_get(struct libos_dentry* dent, struct libos_file_lock* file_lock,
+                  struct libos_file_lock* out_file_lock) {
+    assert(file_lock->type != F_UNLCK);
 
     int ret;
     if (g_process_ipc_ids.leader_vmid) {
@@ -550,40 +561,41 @@ int posix_lock_get(struct libos_dentry* dent, struct posix_lock* pl, struct posi
         if (ret < 0)
             return ret;
 
-        ret = ipc_posix_lock_get(path, pl, out_pl);
+        ret = ipc_file_lock_get(path, file_lock, out_file_lock);
         free(path);
         return ret;
     }
 
     lock(&g_fs_lock_lock);
 
-    struct fs_lock* fs_lock = NULL;
-    ret = find_fs_lock(dent, /*create=*/false, &fs_lock);
+    struct dent_file_locks* dent_file_locks = NULL;
+    ret = find_dent_file_locks(dent, /*create=*/false, &dent_file_locks);
     if (ret < 0)
         goto out;
 
-    struct posix_lock* conflict = NULL;
-    if (fs_lock)
-        conflict = posix_lock_find_conflict(fs_lock, pl);
+    struct libos_file_lock* conflict = NULL;
+    if (dent_file_locks)
+        conflict = file_lock_find_conflict(dent_file_locks, file_lock);
     if (conflict) {
-        out_pl->type = conflict->type;
-        out_pl->start = conflict->start;
-        out_pl->end = conflict->end;
-        out_pl->pid = conflict->pid;
+        out_file_lock->type = conflict->type;
+        out_file_lock->start = conflict->start;
+        out_file_lock->end = conflict->end;
+        out_file_lock->pid = conflict->pid;
     } else {
-        out_pl->type = F_UNLCK;
+        out_file_lock->type = F_UNLCK;
     }
     ret = 0;
 
 out:
-    if (fs_lock)
-        fs_lock_gc(fs_lock);
+    if (dent_file_locks)
+        dent_file_locks_gc(dent_file_locks);
 
     unlock(&g_fs_lock_lock);
     return ret;
 }
 
-int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posix_lock* out_pl) {
+int file_lock_get_from_ipc(const char* path, struct libos_file_lock* file_lock,
+                           struct libos_file_lock* out_file_lock) {
     assert(!g_process_ipc_ids.leader_vmid);
 
     struct libos_dentry* dent = NULL;
@@ -591,75 +603,75 @@ int posix_lock_get_from_ipc(const char* path, struct posix_lock* pl, struct posi
     int ret = path_lookupat(g_dentry_root, path, LOOKUP_NO_FOLLOW, &dent);
     unlock(&g_dcache_lock);
     if (ret < 0) {
-        log_warning("posix_lock_get_from_ipc: error on dentry lookup for %s: %s", path,
+        log_warning("file_lock_get_from_ipc: error on dentry lookup for %s: %s", path,
                     unix_strerror(ret));
         return ret;
     }
 
-    ret = posix_lock_get(dent, pl, out_pl);
+    ret = file_lock_get(dent, file_lock, out_file_lock);
     put_dentry(dent);
     return ret;
 }
 
 /* Removes all locks and lock requests for a given PID and dentry. */
-static int posix_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid) {
+static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid) {
     assert(locked(&g_fs_lock_lock));
 
-    struct fs_lock* fs_lock;
-    int ret = find_fs_lock(dent, /*create=*/false, &fs_lock);
+    struct dent_file_locks* dent_file_locks;
+    int ret = find_dent_file_locks(dent, /*create=*/false, &dent_file_locks);
     if (ret < 0)
         return ret;
-    if (!fs_lock) {
+    if (!dent_file_locks) {
         /* Nothing to process. */
         return 0;
     }
 
     bool changed = false;
 
-    struct posix_lock* pl;
-    struct posix_lock* pl_tmp;
-    LISTP_FOR_EACH_ENTRY_SAFE(pl, pl_tmp, &fs_lock->posix_locks, list) {
-        if (pl->pid == pid) {
-            LISTP_DEL(pl, &fs_lock->posix_locks, list);
-            free(pl);
+    struct libos_file_lock* file_lock;
+    struct libos_file_lock* file_lock_tmp;
+    LISTP_FOR_EACH_ENTRY_SAFE(file_lock, file_lock_tmp, &dent_file_locks->file_locks, list) {
+        if (file_lock->pid == pid) {
+            LISTP_DEL(file_lock, &dent_file_locks->file_locks, list);
+            free(file_lock);
             changed = true;
         }
     }
 
-    struct posix_lock_request* req;
-    struct posix_lock_request* req_tmp;
-    LISTP_FOR_EACH_ENTRY_SAFE(req, req_tmp, &fs_lock->posix_lock_requests, list) {
-        if (req->pl.pid == pid) {
+    struct file_lock_request* req;
+    struct file_lock_request* req_tmp;
+    LISTP_FOR_EACH_ENTRY_SAFE(req, req_tmp, &dent_file_locks->file_lock_requests, list) {
+        if (req->file_lock.pid == pid) {
             assert(!req->notify.event);
-            LISTP_DEL(req, &fs_lock->posix_lock_requests, list);
+            LISTP_DEL(req, &dent_file_locks->file_lock_requests, list);
             free(req);
         }
     }
 
     if (changed) {
-        posix_lock_process_requests(fs_lock);
-        fs_lock_gc(fs_lock);
+        file_lock_process_requests(dent_file_locks);
+        dent_file_locks_gc(dent_file_locks);
     }
 
     return 0;
 }
 
-int posix_lock_clear_pid(IDTYPE pid) {
+int file_lock_clear_pid(IDTYPE pid) {
     if (g_process_ipc_ids.leader_vmid) {
-        return ipc_posix_lock_clear_pid(pid);
+        return ipc_file_lock_clear_pid(pid);
     }
 
-    log_debug("clearing POSIX locks for pid %d", pid);
+    log_debug("clearing file (POSIX) locks for pid %d", pid);
 
     int ret;
 
-    struct fs_lock* fs_lock;
-    struct fs_lock* fs_lock_tmp;
+    struct dent_file_locks* dent_file_locks;
+    struct dent_file_locks* dent_file_locks_tmp;
 
     lock(&g_fs_lock_lock);
-    LISTP_FOR_EACH_ENTRY_SAFE(fs_lock, fs_lock_tmp, &g_fs_lock_list, list) {
-        /* Note that the below call might end up deleting `fs_lock` */
-        ret = posix_lock_clear_pid_from_dentry(fs_lock->dent, pid);
+    LISTP_FOR_EACH_ENTRY_SAFE(dent_file_locks, dent_file_locks_tmp, &g_dent_file_locks_list, list) {
+        /* Note that the below call might end up deleting `dent_file_locks` */
+        ret = file_lock_clear_pid_from_dentry(dent_file_locks->dent, pid);
         if (ret < 0)
             goto out;
     }
