@@ -89,6 +89,7 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
     /* see also sgx_get_token.py:get_optional_sgx_features(), used for legacy non-FLC machines */
     const struct {
         uint64_t bits;
+        const char* name;
         const struct {
             uint32_t leaf;
             uint32_t subleaf;
@@ -97,11 +98,16 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
         } cpuid;
     } xfrm_flags[] = {
         /* for mapping of CPUID leaves to CPU features, see libos/src/arch/x86_64/libos_cpuid.c */
-        {SGX_XFRM_AVX,    { .leaf = FEATURE_FLAGS_LEAF,          .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
-        {SGX_XFRM_MPX,    { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
-        {SGX_XFRM_AVX512, { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
-        {SGX_XFRM_PKRU,   { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
-        {SGX_XFRM_AMX,    { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
+        {SGX_XFRM_AVX, "AVX",
+          { .leaf = FEATURE_FLAGS_LEAF,          .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 28 }},
+        {SGX_XFRM_MPX, "MPX",
+          { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 14 }},
+        {SGX_XFRM_AVX512, "AVX512",
+          { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EBX, .bit = 16 }},
+        {SGX_XFRM_PKRU, "PKRU",
+          { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_ECX, .bit = 3 }},
+        {SGX_XFRM_AMX, "AMX",
+          { .leaf = EXTENDED_FEATURE_FLAGS_LEAF, .subleaf = 0, .reg = CPUID_WORD_EDX, .bit = 24 }},
     };
 
     /* we are guaranteed that XGETBV instruction is available, see verify_hw_requirements() */
@@ -115,9 +121,15 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
             /* set CPU feature if current CPU + OS support it */
             uint32_t values[4];
             cpuid(xfrm_flags[i].cpuid.leaf, xfrm_flags[i].cpuid.subleaf, values);
-            if ((values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit))
-                    && ((xcr0 & xfrm_flags[i].bits) == xfrm_flags[i].bits)) {
-                *out_xfrm |= xfrm_flags[i].bits;
+            if (values[xfrm_flags[i].cpuid.reg] & (1u << xfrm_flags[i].cpuid.bit)) {
+                if ((xcr0 & xfrm_flags[i].bits) == xfrm_flags[i].bits) {
+                    /* both CPU and OS support, can set in XFRM */
+                    *out_xfrm |= xfrm_flags[i].bits;
+                } else {
+                    /* CPU supports but OS doesn't, this is a weird config */
+                    log_warning("CPU supports the %s feature but the OS doesn't (XCR0=0x%lx)",
+                                xfrm_flags[i].name, xcr0);
+                }
             }
         }
     }
