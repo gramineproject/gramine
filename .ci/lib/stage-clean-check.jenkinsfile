@@ -57,6 +57,7 @@ stage('clean-check') {
         # python/ subdir does not have makefiles, so no clean
         rm -rf /tmp/*.clean-check.clean/python/graminelibos/__pycache__
         rm -rf python/graminelibos/__pycache__
+        rm -rf tests/__pycache__
 
         ./scripts/clean-check
     '''

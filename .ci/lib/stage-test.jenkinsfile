@@ -53,4 +53,15 @@ stage('test') {
             }
         }
     }
+
+    timeout(time: 15, unit: 'MINUTES') {
+        try {
+            sh '''
+                python3 -m pytest -v --junit-xml tests.xml tests/
+            '''
+        } finally {
+            junit 'tests.xml'
+            sh 'rm -rf tests.xml'
+        }
+    }
 }

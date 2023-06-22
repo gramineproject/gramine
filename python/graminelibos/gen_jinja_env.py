@@ -8,11 +8,7 @@ import jinja2
 
 from . import _CONFIG_PKGLIBDIR
 
-def ldd(*args):
-    '''
-    Args:
-        binaries for which to generate manifest trusted files list.
-    '''
+def parse_ldd(output):
     # Be careful: We have to skip vdso, which doesn't have a corresponding file on the disk (we
     # assume that such files have paths starting with '/', seems ldd always prints absolute paths).
     # Also, old ldd (from Ubuntu 16.04) prints vdso differently than newer ones:
@@ -21,13 +17,24 @@ def ldd(*args):
     # new:
     #     linux-vdso.so.1 (0x00007ffd31fee000)
     ret = set()
-    for line in subprocess.check_output(['ldd', *(os.fspath(i) for i in args)]).decode('ascii'):
+    for line in output.rstrip('\n').split('\n'):
         line = line.strip().split()
+        if len(line) == 1 and line[0].endswith(':'):
+            # header for when there are multiple binaries given
+            continue
         if line[1] == '=>' and line[2].startswith('/'):
             ret.add(line[2])
         elif line[0].startswith('/') and line[1].startswith('/'):
             ret.add(line[0])
     return sorted(ret)
+
+def ldd(*args):
+    '''
+    Args:
+        binaries for which to generate manifest trusted files list.
+    '''
+    return parse_ldd(
+        subprocess.check_output(['ldd', *(os.fspath(i) for i in args)]).decode('ascii'))
 
 def python_get_sys_path(interpreter, include_nonexisting=False):
     for path in subprocess.check_output([interpreter, '-c',
