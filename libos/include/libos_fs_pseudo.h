@@ -61,7 +61,8 @@ struct libos_dev_ops {
     int (*truncate)(struct libos_handle* hdl, uint64_t len);
 };
 
-#define PSEUDO_PERM_DIR     PERM_r_xr_xr_x  /* default for directories */
+#define PSEUDO_PERM_DIR_R   PERM_r_xr_xr_x  /* default for directories */
+#define PSEUDO_PERM_DIR_RW  PERM_rwxrwxrwx
 #define PSEUDO_PERM_LINK    PERM_rwxrwxrwx  /* default for links */
 #define PSEUDO_PERM_FILE_R  PERM_r__r__r__  /* default for all other files */
 #define PSEUDO_PERM_FILE_RW PERM_rw_rw_rw_
@@ -110,6 +111,9 @@ struct pseudo_node {
 
     /* Retrieves all file names for this node. Works the same as `readdir`. */
     int (*list_names)(struct libos_dentry* parent, readdir_callback_t callback, void* arg);
+
+    /* Creates a file with a given name. */
+    int (*creat)(struct libos_dentry* parent, const char* name, struct pseudo_node** out_node);
 
     /* File permissions. See `PSEUDO_PERM_*` above for defaults. */
     mode_t perm;

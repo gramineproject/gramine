@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
@@ -15,6 +16,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include "common.h"
 #include "rw_file.h"
 
 #define KEY_SIZE 16
@@ -26,6 +28,9 @@ typedef uint8_t pf_key_t[KEY_SIZE];
 #define DEFAULT_KEY_PATH "/dev/attestation/keys/default"
 #define CUSTOM_KEY_PATH "/dev/attestation/keys/my_custom_key"
 
+/* Key not specified in `manifest.template`. Will be created by this test. */
+#define NONEXISTING_KEY_PATH "/dev/attestation/keys/nonexisting_key"
+
 /* Special keys (SGX sealing keys), always existing under SGX and read-only */
 #define MRENCLAVE_KEY_PATH "/dev/attestation/keys/_sgx_mrenclave"
 #define MRSIGNER_KEY_PATH "/dev/attestation/keys/_sgx_mrsigner"
@@ -36,9 +41,12 @@ static const pf_key_t default_key = {
 static const pf_key_t custom_key = {
     0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
 
-/* New value that we'll be setting. */
+/* New values that we'll be setting. */
 static const pf_key_t new_custom_key = {
     0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
+
+static const pf_key_t nonexisting_key = {
+    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88};
 
 static void format_key(char buf[static KEY_STR_SIZE], const pf_key_t* key) {
     const char* hex = "0123456789abcdef";
@@ -109,6 +117,13 @@ int main(int argc, char** argv) {
     expect_key("before writing key", DEFAULT_KEY_PATH, &default_key);
     expect_key("before writing key", CUSTOM_KEY_PATH, &custom_key);
 
+    /* create non-existing key, write into it and check the result */
+    int fd = CHECK(open(NONEXISTING_KEY_PATH, O_WRONLY | O_CREAT | O_TRUNC, 0666));
+    CHECK(close(fd));
+
+    write_key("writing key", NONEXISTING_KEY_PATH, &nonexisting_key);
+    expect_key("after writing key", NONEXISTING_KEY_PATH, &nonexisting_key);
+
     /* Perform invalid write (size too small), Gramine's `write` syscall should fail */
     ssize_t n = posix_file_write(CUSTOM_KEY_PATH, (char*)&new_custom_key,
                                  sizeof(new_custom_key) - 1);
@@ -127,6 +142,7 @@ int main(int argc, char** argv) {
     if (pid == 0) {
         expect_key("in child process", DEFAULT_KEY_PATH, &default_key);
         expect_key("in child process", CUSTOM_KEY_PATH, &new_custom_key);
+        expect_key("in child process", NONEXISTING_KEY_PATH, &nonexisting_key);
     } else {
         int status;
         if (waitpid(pid, &status, 0) == -1)

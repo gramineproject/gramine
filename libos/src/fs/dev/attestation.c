@@ -323,6 +323,32 @@ static int key_save(struct libos_dentry* dent, const char* data, size_t size) {
     return 0;
 }
 
+static int keys_creat(struct libos_dentry* parent, const char* name,
+                      struct pseudo_node** out_node) {
+    assert(parent && parent->inode && parent->inode->data && strcmp(parent->name, "keys") == 0);
+
+    if (name[0] == '_') {
+        /* key names beginning with `_` are special keys provided by Gramine; cannot be created */
+        return -EACCES;
+    }
+
+    struct libos_encrypted_files_key* encrypted_files_key;
+    int ret = get_or_create_encrypted_files_key(name, &encrypted_files_key);
+    if (ret < 0) {
+        log_error("Cannot create encryption key `%s`", name);
+        return ret;
+    }
+
+    /* mount the newly created key over other /dev/attestation/keys/ */
+    struct pseudo_node* keys = parent->inode->data;
+    struct pseudo_node* key = pseudo_add_str(keys, name, &key_load);
+    key->perm = PSEUDO_PERM_FILE_RW;
+    key->str.save = &key_save;
+
+    *out_node = key;
+    return 0;
+}
+
 static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_node* keys) {
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
@@ -376,6 +402,9 @@ int init_attestation(struct pseudo_node* dev) {
     struct pseudo_node* attestation = pseudo_add_dir(dev, "attestation");
 
     struct pseudo_node* keys = pseudo_add_dir(attestation, "keys");
+    keys->creat = &keys_creat;
+    keys->perm = PSEUDO_PERM_DIR_RW;
+
     struct pseudo_node* key = pseudo_add_str(keys, /*name=*/NULL, &key_load);
     key->name_exists = &key_name_exists;
     key->list_names = &key_list_names;

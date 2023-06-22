@@ -158,6 +158,40 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
     return 0;
 }
 
+static int pseudo_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags,
+                        mode_t perm) {
+    assert(locked(&g_dcache_lock));
+    assert(!dent->inode);
+
+    __UNUSED(flags);
+    __UNUSED(perm);
+
+    if (!dent->parent)
+        return -ENOENT;
+
+    struct pseudo_node* parent_node = pseudo_find(dent->parent);
+    if (!parent_node)
+        return -ENOENT;
+
+    if (!parent_node->creat)
+        return -EACCES;
+
+    /* note that we currently never unlink created pseudo-files, for simplicity of implementation */
+    struct pseudo_node* created_node;
+    int ret = parent_node->creat(dent->parent, dent->name, &created_node);
+    if (ret < 0)
+        return ret;
+
+    struct libos_inode* inode = get_new_inode(dent->mount, TYPE_STR, created_node->perm);
+    if (!inode)
+        return -ENOMEM;
+
+    inode->data = created_node;
+    dent->inode = inode;
+
+    return pseudo_open(hdl, dent, /*flags=*/0);
+}
+
 static int pseudo_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
@@ -554,7 +588,7 @@ struct pseudo_node* pseudo_add_root_dir(const char* name) {
 
 struct pseudo_node* pseudo_add_dir(struct pseudo_node* parent_node, const char* name) {
     struct pseudo_node* node = pseudo_add_ent(parent_node, name, PSEUDO_DIR);
-    node->perm = PSEUDO_PERM_DIR;
+    node->perm = PSEUDO_PERM_DIR_R;
     return node;
 }
 
@@ -595,6 +629,7 @@ struct libos_fs_ops pseudo_fs_ops = {
 struct libos_d_ops pseudo_d_ops = {
     .open        = &pseudo_open,
     .lookup      = &pseudo_lookup,
+    .creat       = &pseudo_creat,
     .readdir     = &pseudo_readdir,
     .stat        = &pseudo_stat,
     .unlink      = &pseudo_unlink,
