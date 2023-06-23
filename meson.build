@@ -19,7 +19,6 @@ project(
 # we need this subdir() early, because we need scripts defined there for setting up global vars
 subdir('scripts')
 
-prefix = get_option('prefix')
 pkglibdir = get_option('libdir') / meson.project_name()
 pkgdatadir = get_option('datadir') / meson.project_name()
 
