@@ -3,12 +3,6 @@ PyTorch PPML Framework Tutorial
 
 .. highlight:: sh
 
-.. note::
-
-   This tutorial works with the latest Gramine master branch (commit "[LibOS]
-   Add `fadvise64` syscall implementation" as of the date of this writing), but
-   unfortunately not with the latest stable release (v1.2).
-
 This tutorial presents a framework for developing PPML (Privacy-Preserving
 Machine Learning) applications with Intel SGX and Gramine. We use `PyTorch
 <https://pytorch.org>`__ as an example ML framework. However, this tutorial can
@@ -91,8 +85,8 @@ user who will decrypt it and analyze its contents.
 Prerequisites
 -------------
 
-- Ubuntu 18.04. This tutorial should work on other Linux distributions as well,
-  but for simplicity we provide the steps for Ubuntu 18.04 only.
+- Ubuntu 20.04. This tutorial should work on other Linux distributions as well,
+  but for simplicity we provide the steps for Ubuntu 20.04 only.
 
   Please install the following dependencies::
 
@@ -100,24 +94,10 @@ Prerequisites
 
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
-  before you proceed (don't forget to choose Linux as the target OS). It may be
-  necessary to install under root user, in this case use ``sudo -E -H pip3
-  install ...``.
+  before you proceed (don't forget to choose Linux as the target OS).
 
-- Intel SGX Driver. This tutorial assumes a modern Linux kernel (at least 5.11).
-  If the Linux kernel is older than this, then the user must install the
-  out-of-tree SGX driver manually, following e.g. our documentation:
-  https://gramine.readthedocs.io/en/latest/devel/building.html#install-the-intel-sgx-driver
-
-- SDK/PSW. You need a machine that supports Intel SGX and
-  FLC/DCAP. Please follow `this guide
-  <https://download.01.org/intel-sgx/latest/linux-latest/docs/Intel_SGX_SW_Installation_Guide_for_Linux.pdf>`__
-  to install the Intel SGX driver and SDK/PSW.
-
-- Gramine. Unfortunately, the latest stable release (v1.2) has a bug that
-  prevents correct execution of this tutorial. Please follow the `Building
-  docs <https://gramine.readthedocs.io/en/latest/devel/building.html>`__ to
-  build and install the latest Gramine version.
+- Gramine of at least v1.4, with DCAP support. DCAP software infrastructure must
+  also be installed.
 
 Executing Native PyTorch
 ------------------------
@@ -136,9 +116,9 @@ Go to the directory with Gramine's PyTorch example::
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
 files. The script reads a `pretrained AlexNet model
-<https://pytorch.org/docs/stable/torchvision/models.html>`__ and an image
-``input.jpg``, and infers the class of an object in the image. Then, the script
-writes the top-5 classification results to a file ``result.txt``.
+<https://pytorch.org/hub/pytorch_vision_alexnet/>`__ and an image ``input.jpg``,
+and infers the class of an object in the image. Then, the script writes the
+top-5 classification results to a file ``result.txt``.
 
 We first download and save the pre-trained AlexNet model::
 
@@ -178,7 +158,7 @@ arguments, and so on.  In the rest of this tutorial, we will create this
 manifest file and explain its options and rationale behind them. Note that the
 manifest file contains both general non-SGX options for Gramine and
 SGX-specific ones.  Please refer to `this
-<https://gramine.readthedocs.io/en/latest/manifest-syntax.html>`__ for further
+<https://gramine.readthedocs.io/en/stable/manifest-syntax.html>`__ for further
 details about the syntax of Gramine manifests.
 
 Executing PyTorch with non-SGX Gramine
@@ -197,32 +177,33 @@ only a few entries of the file. Note that we can simply ignore SGX-specific keys
 (starting with the ``sgx.`` prefix) for our non-SGX run.
 
 Notice that the manifest file is not secure because it propagates untrusted
-command-line arguments and environment variables into the enclave. We
-keep these work-arounds in this tutorial for simplicity, but this configuration
-must not be used in production::
+command-line arguments into the enclave. We keep this work-around in this
+tutorial for simplicity, but this configuration must not be used in production::
 
    loader.insecure__use_cmdline_argv = true
-   loader.insecure__use_host_env = true
 
 We mount the entire glibc host-level directory to the ``/lib`` directory seen
 inside Gramine. This trick allows to transparently replace standard C libraries
 with Gramine-patched libraries::
 
    fs.mounts = [
-     { uri = "file:{{ gramine.runtimedir() }}", path = "/lib" },
+     { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
      ...
    ]
 
-We also mount other directories such as ``/usr`` and ``/etc`` required by Python
+We also mount other directories such as ``{{ arch_libdir }}`` required by Python
 and PyTorch (they search for libraries and utility files in these system
 directories).
 
-Finally, we mount the path containing the Python and Pytorch packages installed
-via pip::
+Finally, we mount the paths containing the Python and Pytorch packages using
+special Jinja for-loop syntax and Gramine-specific helper method
+``python.get_sys_path()``::
 
    fs.mounts = [
      ...
-     { uri = "file:{{ pillow_path }}", path = "{{ pillow_path }}" },
+     {% for path in python.get_sys_path(entrypoint) %}
+       { path = "{{ path }}", uri = "file:{{ path }}" },
+     {% endfor %}
    ]
 
 Now we can run ``make`` to build/copy all required Gramine files::
@@ -259,13 +240,13 @@ these entries are ignored if Gramine runs in non-SGX mode).
 
 Below, we will highlight some of the SGX-specific manifest options in
 :file:`pytorch.manifest.template`. SGX syntax is fully described `here
-<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
+<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
 
 First, here are the following SGX-specific lines in the manifest template::
 
    sgx.trusted_files = [
-     "file:{{ gramine.libos }}",
      "file:{{ entrypoint }}",
+     "file:{{ gramine.libos }}",
      "file:{{ gramine.runtimedir() }}/",
       ...
    ]
@@ -302,9 +283,9 @@ The above command performs the following tasks:
 #. Signs the manifest and generates the SGX signature file containing SIGSTRUCT
    (:file:`pytorch.sig`).
 
-#. Creates a dummy EINITTOKEN token file :file:`pytorch.token` (this file is
-   used for backwards compatibility with SGX platforms with EPID and without
-   Flexible Launch Control).
+#. Only on EPID platforms: creates a dummy EINITTOKEN token file
+   :file:`pytorch.token` (this file is used for backwards compatibility with SGX
+   platforms with EPID and without Flexible Launch Control).
 
 Let's also remove the file :file:`result.txt` (it should exist from the previous
 :command:`gramine-direct` run)::
@@ -330,7 +311,7 @@ user. This way the user gains trust in the SGX enclave running in an untrusted
 environment, ships the application code and data, and is sure that the *correct*
 application was executed inside a *genuine* SGX enclave. This process of gaining
 trust in a remote SGX machine is called
-`Remote Attestation (RA) <https://gramine.readthedocs.io/en/latest/attestation.html>`__.
+`Remote Attestation (RA) <https://gramine.readthedocs.io/en/stable/attestation.html>`__.
 
 Gramine has two features that transparently add SGX RA to the application: (1)
 RA-TLS augments normal SSL/TLS sessions with an SGX-specific handshake callback,
@@ -341,7 +322,7 @@ and typically runs before the application. Both features are provided as opt-in
 libraries.
 
 The `Secret Provisioning library
-<https://gramine.readthedocs.io/en/latest/attestation.html#secret-prov-attest-so>`__
+<https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
 provides a simple non-programmatic API to applications: it transparently
 initializes the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a
 secret obtained from the remote user during remote attestation (note that
@@ -358,7 +339,7 @@ Background on Encrypted Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Gramine provides a feature of `Encrypted Files
-<https://gramine.readthedocs.io/en/latest/manifest-syntax.html?highlight=protected#encrypted-files>`__,
+<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=protected#encrypted-files>`__,
 which encrypts files and transparently decrypts them when the application reads
 or writes them. Integrity- or confidentiality-sensitive files (or whole
 directories) accessed by the application must be put under the "encrypted"
@@ -384,7 +365,7 @@ We will use the reference implementation of the Secret Provisioning server found
 under ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine
 repository), so let's build the secret provisioning server::
 
-   git clone --depth 1 --branch v1.2 https://github.com/gramineproject/gramine.git
+   git clone --depth 1 --branch v1.4 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
    make app dcap RA_TYPE=dcap
 
@@ -437,7 +418,8 @@ The user must prepare the secret provisioning server and start it. For this,
 copy the secret provisioning executable from ``CI-Examples/ra-tls-secret-prov``
 (that you built in one of the previous steps) to the current directory::
 
-   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_pf/server_dcap .
+   mkdir secret_prov_pf
+   cp gramine/CI-Examples/ra-tls-secret-prov/secret_prov_pf/server_dcap secret_prov_pf/
 
 Also, copy the server-identifying certificates so that in-Gramine secret
 provisioning library can verify the provisioning server (via classical X.509
@@ -451,7 +433,11 @@ and use them.
 
 Now we can launch the secret provisioning server::
 
-    ./server_dcap &
+   cd secret_prov_pf
+   ./server_dcap ../files/wrap_key &
+
+(You may need to run the server with ``RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`` if
+your platform has outdated TCB.)
 
 In this tutorial, we simply run it locally (``localhost:4433`` as hard-coded in the
 server source code) for simplicity. In reality, the user must run it on a trusted
@@ -484,16 +470,10 @@ FS mount so that PyTorch writes the *encrypted* result into it::
    ]
 
 Our PyTorch uses remote secret provisioning which requires some knowledge about
-the network configuration on the platform. Therefore, we need to specify several
-files related to networking. Append the following to ``sgx.trusted_files``::
+the network configuration on the platform. Therefore, we need to enable
+networking information::
 
-   sgx.trusted_files = [
-     ...
-     "file:/etc/host.conf",
-     "file:/etc/hosts",
-     "file:/etc/nsswitch.conf",
-     "file:/etc/resolv.conf",
-   ]
+   sys.enable_extra_runtime_domain_names_conf = true
 
 Add the following lines to enable remote secret provisioning and allow encrypted
 files to be transparently decrypted by the provisioned key. Recall that we
@@ -508,7 +488,28 @@ re-use the same ``ssl/`` directory and specify ``localhost``::
    loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "ssl/ca.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
-You must append the `ssl/ca.crt` to the already-existing `sgx.trusted_files` array::
+We must specify the path at which `libsecret_prov_attest.so` should be found.
+To learn this path, execute the following command::
+
+   pkg-config --variable=libdir secret_prov_gramine
+
+For example, the path is ``/usr/local/lib/gramine``. We must add this path to
+``LD_LIBRARY_PATH``, to ``fs.mounts`` and to ``sgx.trusted_files``::
+
+   loader.env.LD_LIBRARY_PATH = "/lib:/usr/local/lib/gramine:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
+
+   fs.mounts = [
+     ...
+     { path = "/usr/local/lib/gramine", uri = "file:/usr/local/lib/gramine" },
+   ]
+
+   sgx.trusted_files = [
+     ...
+     "file:/usr/local/lib/gramine/",
+   ]
+
+Finally, you must append the ``ssl/ca.crt`` to the already-existing
+``sgx.trusted_files`` array::
 
    sgx.trusted_files = [
      ...
@@ -558,4 +559,4 @@ Cleaning Up
 
 When done, don't forget to terminate the secret provisioning server::
 
-   killall secret_prov_server_dcap
+   killall server_dcap
