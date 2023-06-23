@@ -28,17 +28,17 @@ if syslibdir == ''
     syslibdir = '/' / get_option('libdir')
 endif
 
-direct = get_option('direct') == 'enabled'
-sgx = get_option('sgx') == 'enabled'
-skeleton = get_option('skeleton') == 'enabled'
+direct = get_option('direct').enabled()
+sgx = get_option('sgx').enabled()
+skeleton = get_option('skeleton').enabled()
 
-dcap = get_option('dcap') == 'enabled'
-ubsan = get_option('ubsan') == 'enabled'
-asan = get_option('asan') == 'enabled'
-vtune = get_option('vtune') == 'enabled'
+dcap = get_option('dcap').enabled()
+ubsan = get_option('ubsan').enabled()
+asan = get_option('asan').enabled()
+vtune = get_option('vtune').enabled()
 
-enable_libgomp = get_option('libgomp') == 'enabled'
-enable_tests = get_option('tests') == 'enabled'
+enable_libgomp = get_option('libgomp').enabled()
+enable_tests = get_option('tests').enabled()
 
 cc = meson.get_compiler('c')
 host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
