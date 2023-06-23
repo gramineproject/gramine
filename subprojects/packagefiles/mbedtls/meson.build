@@ -55,13 +55,6 @@ pkgconfig.generate(
     ],
 )
 
-foreach output : mbedtls_libs_output
-    meson.add_install_script('/bin/sh', '-c',
-        ('ln -sf ../../../@0@ ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
-            output, get_option('libdir')))
-endforeach
-
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
 # mbedTLS headers
 install_subdir('mbedtls-mbedtls-3.4.0/include/mbedtls', install_dir: get_option('includedir') / 'gramine')

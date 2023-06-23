@@ -78,6 +78,7 @@ secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.templat
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dsecret_prov_gramine_dir=$(shell pkg-config --variable=libdir secret_prov_gramine) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -102,6 +103,7 @@ secret_prov/client.manifest: secret_prov/client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dsecret_prov_gramine_dir=$(shell pkg-config --variable=libdir secret_prov_gramine) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -124,6 +126,7 @@ secret_prov_pf/client.manifest: secret_prov_pf/client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dsecret_prov_gramine_dir=$(shell pkg-config --variable=libdir secret_prov_gramine) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \

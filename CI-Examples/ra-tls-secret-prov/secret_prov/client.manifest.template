@@ -5,12 +5,13 @@ libos.entrypoint = "/client"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib::{{ secret_prov_gramine_dir }}:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
-  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "{{ secret_prov_gramine_dir }}", uri = "file:{{ secret_prov_gramine_dir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/client", uri = "file:client" },
   { path = "/ca.crt", uri = "file:../ssl/ca.crt" },
   { path = "/etc/hosts", uri = "file:../helper-files/hosts" },
@@ -30,6 +31,7 @@ sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:client",
   "file:{{ gramine.runtimedir() }}/",
+  "file:{{ secret_prov_gramine_dir }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
   "file:../ssl/ca.crt",

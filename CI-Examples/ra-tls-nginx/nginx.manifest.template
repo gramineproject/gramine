@@ -6,7 +6,7 @@ loader.argv = [
 libos.entrypoint = "/gramine-ratls"
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/usr/local/lib:/usr{{ arch_libdir }}:{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/usr/local/lib:/usr/local/lib/ra_tls:/usr{{ arch_libdir }}:{{ arch_libdir }}"
 
 loader.uid = 65534
 loader.gid = 65534
@@ -21,6 +21,7 @@ fs.mounts = [
     { path = "/lib", uri = "file:/lib" },
     { path = "/usr/lib", uri = "file:/usr/lib" },
     { path = "/usr/local/lib", uri = "file:{{ gramine.runtimedir() }}" },
+    { path = "/usr/local/lib/ra_tls", uri = "file:{{ ra_tls_gramine_dir }}" },
 
     { path = "/tmp", type = "tmpfs" },
 
@@ -50,6 +51,7 @@ sgx.debug = true
 sgx.trusted_files = [
     "file:{{ gramine.libos }}",
     "file:{{ gramine.runtimedir() }}/",
+    "file:{{ ra_tls_gramine_dir }}/",
 
     "file:{{ entrypoint }}",
     "file:/usr/sbin/nginx",

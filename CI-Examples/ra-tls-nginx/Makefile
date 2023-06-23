@@ -14,6 +14,7 @@ all: nginx.manifest.sgx nginx.sig
 	gramine-manifest \
 		-Dentrypoint=$$(command -v gramine-ratls) \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
+		-Dra_tls_gramine_dir=$(shell pkg-config --variable=libdir ra_tls_gramine) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \

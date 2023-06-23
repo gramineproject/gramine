@@ -5,7 +5,7 @@ libos.entrypoint = "/client"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib::{{ secret_prov_gramine_dir }}:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 loader.env.LD_PRELOAD = "libsecret_prov_attest.so"
 loader.env.SECRET_PROVISION_CONSTRUCTOR = "1"
 loader.env.SECRET_PROVISION_SET_KEY = "default"
@@ -14,6 +14,7 @@ loader.env.SECRET_PROVISION_SERVERS = "dummyserver:80;localhost:4433;anotherdumm
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ secret_prov_gramine_dir }}", uri = "file:{{ secret_prov_gramine_dir }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/client", uri = "file:client" },
@@ -36,6 +37,7 @@ sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:client",
   "file:{{ gramine.runtimedir() }}/",
+  "file:{{ secret_prov_gramine_dir }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
   "file:../ssl/ca.crt",

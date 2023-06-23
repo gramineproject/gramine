@@ -57,6 +57,7 @@ server.manifest: server.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dmbedtls_gramine_dir=$(shell pkg-config --variable=libdir mbedtls_gramine) \
 		-Dra_type=$(RA_TYPE) \
 		-Dra_client_spid=$(RA_CLIENT_SPID) \
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
@@ -79,6 +80,7 @@ client_dcap.manifest: client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dmbedtls_gramine_dir=$(shell pkg-config --variable=libdir mbedtls_gramine) \
 		$< >$@
 
 client_dcap.manifest.sgx client_dcap.sig: sgx_sign_client_dcap
@@ -96,6 +98,7 @@ client_epid.manifest: client.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
+		-Dmbedtls_gramine_dir=$(shell pkg-config --variable=libdir mbedtls_gramine) \
 		$< >$@
 
 client_epid.manifest.sgx client_epid.sig: sgx_sign_client_epid

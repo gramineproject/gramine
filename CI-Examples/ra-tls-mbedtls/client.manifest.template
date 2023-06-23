@@ -5,7 +5,7 @@ libos.entrypoint = "/client"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:/usr/local/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ mbedtls_gramine_dir }}:/usr/local/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 loader.env.LC_ALL = "C"
 
 loader.env.RA_TLS_CLIENT_INSIDE_SGX = "1"
@@ -15,6 +15,7 @@ loader.insecure__use_host_env = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ mbedtls_gramine_dir }}", uri = "file:{{ mbedtls_gramine_dir }}" },
   { path = "/usr/local/lib", uri = "file:/usr/local/lib" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
@@ -33,6 +34,7 @@ sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:client",
   "file:{{ gramine.runtimedir() }}/",
+  "file:{{ mbedtls_gramine_dir }}/",
   "file:/usr/local/lib/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",

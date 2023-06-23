@@ -5,7 +5,7 @@ libos.entrypoint = "/server"
 
 loader.log_level = "{{ log_level }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ mbedtls_gramine_dir }}:{{ arch_libdir }}:/usr{{ arch_libdir }}"
 
 loader.insecure__use_cmdline_argv = true
 
@@ -13,6 +13,7 @@ sys.enable_sigterm_injection = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ mbedtls_gramine_dir }}", uri = "file:{{ mbedtls_gramine_dir }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr{{ arch_libdir }}", uri = "file:/usr{{ arch_libdir }}" },
   { path = "/etc", uri = "file:/etc" },
@@ -30,6 +31,7 @@ sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:server",
   "file:{{ gramine.runtimedir() }}/",
+  "file:{{ mbedtls_gramine_dir }}/",
   "file:{{ arch_libdir }}/",
   "file:/usr{{ arch_libdir }}/",
   "file:ssl/ca.crt",
