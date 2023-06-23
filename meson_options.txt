@@ -1,26 +1,25 @@
-# TODO: after deprecating 18.04/bionic, change these to type: 'feature'
-option('direct', type: 'combo', choices: ['disabled', 'enabled'],
+option('direct', type: 'feature', value: 'disabled',
     description: 'Build and install gramine-direct (aka Linux aka nonsgx)')
-option('sgx', type: 'combo', choices: ['disabled', 'enabled'],
+option('sgx', type: 'feature', value: 'disabled',
     description: 'Build and install gramine-sgx (aka Linux-SGX)')
-option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
+option('skeleton', type: 'feature', value: 'disabled',
     description: 'Build skeleton PAL')
 
-option('glibc', type: 'combo', choices: ['disabled', 'enabled'],
-    value: 'enabled', description: 'Build patched glibc')
-option('musl', type: 'combo', choices: ['disabled', 'enabled'],
-    value: 'enabled', description: 'Build patched musl')
+option('glibc', type: 'feature', value: 'enabled',
+    description: 'Build patched glibc')
+option('musl', type: 'feature', value: 'enabled',
+    description: 'Build patched musl')
 
-option('tests', type: 'combo', choices: ['disabled', 'enabled'],
+option('tests', type: 'feature', value: 'disabled',
     description: 'Build test binaries')
 
-option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
+option('dcap', type: 'feature', value: 'disabled',
     description: 'Build additional utilities linked against DCAP library')
-option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
+option('ubsan', type: 'feature', value: 'disabled',
     description: 'Enable undefined behavior sanitizer')
-option('asan', type: 'combo', choices: ['disabled', 'enabled'],
+option('asan', type: 'feature', value: 'disabled',
     description: 'Enable address sanitizer (Clang only)')
-option('libgomp', type: 'combo', choices: ['disabled', 'enabled'],
+option('libgomp', type: 'feature', value: 'disabled',
     description: 'Build patched libgomp (takes long time)')
 
 option('sgx_driver', type: 'combo',
@@ -34,7 +33,7 @@ option('sgx_driver_device', type: 'string',
 option('syslibdir', type: 'string',
     description: 'Path to the system library directory')
 
-option('vtune', type: 'combo', choices: ['disabled', 'enabled'],
+option('vtune', type: 'feature', value: 'disabled',
     description: 'Enable profiling with VTune for Gramine with SGX')
 option('vtune_sdk_path', type: 'string',
     value: '/opt/intel/oneapi/vtune/latest/sdk',
