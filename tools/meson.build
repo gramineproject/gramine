@@ -1,10 +1,10 @@
 conf = configuration_data()
 conf.set_quoted('IN_GIT', '')
-conf.set_quoted('PREFIX', prefix)
+conf.set_quoted('PREFIX', get_option('prefix'))
 conf.set_quoted('BINDIR', get_option('bindir'))
 
 if direct
-    hostpalpath_direct = prefix / pkglibdir / 'direct'
+    hostpalpath_direct = get_option('prefix') / pkglibdir / 'direct'
     conf_gramine_direct = configuration_data()
     conf_gramine_direct.merge_from(conf)
     conf_gramine_direct.set('SGX', 0)
@@ -24,13 +24,13 @@ endif
 if sgx
     subdir('sgx')
 
-    hostpalpath_linux_sgx = prefix / pkglibdir / 'sgx'
+    hostpalpath_linux_sgx = get_option('prefix') / pkglibdir / 'sgx'
     conf_gramine_sgx = configuration_data()
     conf_gramine_sgx.merge_from(conf)
     conf_gramine_sgx.set('SGX', 1)
     conf_gramine_sgx.set_quoted('HOST_PAL_PATH', hostpalpath_linux_sgx)
     conf_gramine_sgx.set_quoted('LIBPAL_PATH', hostpalpath_linux_sgx / 'libpal.so')
-    conf_gramine_sgx.set_quoted('PAL_CMD', prefix / pkglibdir / 'sgx' / 'loader')
+    conf_gramine_sgx.set_quoted('PAL_CMD', get_option('prefix') / pkglibdir / 'sgx' / 'loader')
     conf_gramine_sgx.set_quoted('CONFIG_SGX_DRIVER', sgx_driver)
 
     configure_file(

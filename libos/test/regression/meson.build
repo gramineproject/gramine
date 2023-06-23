@@ -309,7 +309,7 @@ endforeach
 if enable_musl
     meson.add_install_script(
         find_program('install_musl_tests.sh'),
-        prefix / install_dir / 'musl',
+        get_option('prefix') / install_dir / 'musl',
         musl_execs,
     )
 endif
