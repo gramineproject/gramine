@@ -1,8 +1,10 @@
-gramine (1.4post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.5) bookworm bullseye jammy focal; urgency=medium
 
-  *
+  * version 1.5
+  * added python3-recommonmark
+  * removed libcjson1* dependencies, cJSON is built from subproject
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Sun, 12 Feb 2023 00:00:01 +0100
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 7 Jul 2023 11:00:00 +0200
 
 gramine (1.4) bullseye bookworm bionic focal jammy; urgency=medium
 
