@@ -1,0 +1,80 @@
+# Contributor: Amie Raine <amie@invisiblethingslab.com>
+# Maintainer: Amie Raine <amie@invisiblethingslab.com>
+pkgname=gramine
+pkgver=0_git$(date "+%Y%m%d")
+pkgrel=0
+_commit=master
+pkgdesc="A library OS for Linux multi-process applications"
+url="https://github.com/gramineproject/gramine"
+arch="all"
+license="LGPL-3.0-only"
+makedepends="
+	nasm
+	meson
+	samurai
+	py3-click
+	py3-jinja2
+	py3-elftools
+	bison
+	autoconf
+	linux-headers
+	gawk
+	grep
+	findutils
+	gettext
+	binutils-dev
+	musl-dev
+	openssl1.1-compat-dev
+	coreutils
+	xz
+	py3-pytest
+	libunwind
+	protobuf-c-compiler
+	protobuf-c-dev
+	"
+depends="
+	py3-click
+	py3-jinja2
+	py3-tomli
+	py3-tomli-w
+	py3-cryptography
+	py3-elftools
+	"
+source="
+	gramine-master-$(date "+%Y%m%d").tar.gz::https://github.com/gramineproject/gramine/archive/$_commit.tar.gz
+	sysinfo.patch
+	mbedtls.patch
+	"
+	
+builddir="$srcdir/$pkgname-$_commit/"
+options="!check" # tests assume a glibc environment
+
+prepare() {
+	meson \
+		--prefix=/usr \
+		--buildtype=release \
+		-Ddirect=enabled \
+		-Dsgx=enabled \
+		-Dglibc=disabled \
+		. build/
+	default_prepare
+}
+
+build() {
+	meson compile -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C build
+	
+	mbedtls_ver="$(cat meson.build | grep 'mbedtls_proj = ' | sed "s/.*mbedtls-//;;s/'.*//")"
+	sed -i "s/Version: undefined/Version: $mbedtls_ver/" "$pkgdir"/usr/lib/pkgconfig/mbedtls_gramine.pc
+	sed -i "s/post~UNRELEASED//" "$pkgdir"/usr/lib/pkgconfig/ra_tls_gramine.pc
+	sed -i "s/post~UNRELEASED//" "$pkgdir"/usr/lib/pkgconfig/secret_prov_gramine.pc
+}
+
+sha512sums="
+efae80296f696426e31363b743901efcca54a32bd10efb859218145fe609f6ceed7027cabec2456f408a967fc7d81b03f3aae7fd1cc27aa9c184611cf0713e37  gramine-master-20230619.tar.gz
+2cbcfd2122f6879a7ed07a65bf55f7d631f346610151f285b0f437d963391a97a64a14087b3525f475611005f12dbbf1ebd9fb23f6657d67f79f5c59df07b767  sysinfo.patch
+59830a6cbe70a92100fdb8f4f169b4aef4aca04dc8d1cdf9987efb91948826ec6b885de3e066499aa7f1e1ac09b503716dc945c96a33df186b551d47c8557a12  mbedtls.patch
+"
