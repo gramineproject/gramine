@@ -1,7 +1,7 @@
 # Contributor: Amie Raine <amie@invisiblethingslab.com>
 # Maintainer: Amie Raine <amie@invisiblethingslab.com>
 pkgname=gramine
-_real_pkgver=1.4post~UNRELEASED
+_real_pkgver=1.5~rc3
 pkgver=$(printf %s "$_real_pkgver" | sed \
     -e "s:post~UNRELEASED:_git$(printf %d 0x"$(git rev-parse HEAD 2>/dev/null | cut -c1-8)"):" \
     -e 's:~:_:' \
