@@ -1,0 +1,83 @@
+# Contributor: Amie Raine <amie@invisiblethingslab.com>
+# Maintainer: Amie Raine <amie@invisiblethingslab.com>
+pkgname=gramine
+_real_pkgver=1.4post~UNRELEASED
+pkgver=$(printf %s "$_real_pkgver" | sed \
+    -e 's:post~UNRELEASED:.u0n0r0e0l0e0a0s0e0d_git0:' \
+    -e 's:~:_:' \
+)
+pkgrel=0
+pkgdesc="A lightweight usermode guest OS designed to run a single Linux application"
+url="https://github.com/gramineproject/gramine"
+arch="x86_64"
+license="LGPL-3.0-or-later"
+makedepends="
+	autoconf
+	binutils-dev
+	bison
+	coreutils
+	findutils
+	gawk
+	gettext
+	grep
+	libunwind
+	linux-headers
+	meson
+	musl-dev
+	nasm
+	openssl1.1-compat-dev
+	protobuf-c-compiler
+	protobuf-c-dev
+	py3-click
+	py3-elftools
+	py3-jinja2
+	py3-pytest
+	"
+depends="
+	py3-click
+	py3-cryptography
+	py3-elftools
+	py3-jinja2
+	py3-tomli
+	py3-tomli-w
+	"
+source="$pkgname-$pkgver.tar.gz"
+builddir="$srcdir/$pkgname-$_real_pkgver/"
+options="!check" # tests assume a glibc environment
+
+prepare() {
+	meson setup \
+		--prefix=/usr \
+		--buildtype=release \
+		-Ddirect=enabled \
+		-Dsgx=enabled \
+		-Dlibc=musl \
+		. build/
+
+    # sanity check for version number
+    test "$(meson introspect build/ --projectinfo | jq -r '.version')" = "$_real_pkgver" \
+        || die '$_real_pkgver does not match what is in meson.build'
+
+	default_prepare
+}
+
+build() {
+	meson compile -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C build
+
+    for pc in \
+        "$pkgdir"/usr/lib/pkgconfig/ra_tls_gramine.pc \
+        "$pkgdir"/usr/lib/pkgconfig/secret_prov_gramine.pc \
+    ; do
+        sed -i -e "s:$_real_pkgver:$pkgver:" "$pc"
+    done
+}
+
+snapshot() {
+    meson setup -Dskeleton=enabled -Dlibc=musl build-dist/ ../..
+    meson dist -C build-dist/ --no-test --include-subprojects --format=gztar
+    install -D build-dist/meson-dist/"$pkgname-$_real_pkgver".tar.gz "$pkgname-$pkgver.tar.gz"
+}
