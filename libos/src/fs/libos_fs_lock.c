@@ -51,8 +51,15 @@ DEFINE_LIST(dent_file_locks);
 struct dent_file_locks {
     struct libos_dentry* dent;
 
-    /* Currently only POSIX locks, sorted by PID and then by start position (so that we are able to
-     * merge and split locks). The ranges do not overlap within a given PID. */
+    /*
+     * POSIX (fcntl) and BSD (flock) locks for a given dentry.
+     *
+     * For POSIX locks:
+     *   - sorted by PID and then by start position (so that we are able to merge and split locks),
+     *   - the ranges do not overlap within a given PID.
+     *
+     * BSD locks do not have ranges, thus the above properties do not apply.
+     */
     LISTP_TYPE(libos_file_lock) file_locks;
 
     /* Pending requests. */
@@ -105,11 +112,18 @@ static void file_locks_dump(struct dent_file_locks* dent_file_locks) {
 
     struct libos_file_lock* file_lock;
     LISTP_FOR_EACH_ENTRY(file_lock, &dent_file_locks->file_locks, list) {
-        if (file_lock->pid != pid) {
+        if (file_lock->handle_id == 0) {
+            if (file_lock->pid != pid) {
+                if (pid != 0)
+                    buf_flush(&buf);
+                pid = file_lock->pid;
+                buf_printf(&buf, "fcntl (POSIX): pid=%d:", pid);
+            }
+        } else {
             if (pid != 0)
                 buf_flush(&buf);
-            pid = file_lock->pid;
-            buf_printf(&buf, "%d:", pid);
+            pid = 123; /* dummy pid to force a flush in the line above */
+            buf_printf(&buf, " flock (BSD): handle id=%lu:", file_lock->handle_id);
         }
 
         char c;
@@ -122,11 +136,6 @@ static void file_locks_dump(struct dent_file_locks* dent_file_locks) {
             buf_printf(&buf, " %c[%lu..end]", c, file_lock->start);
         } else {
             buf_printf(&buf, " %c[%lu..%lu]", c, file_lock->start, file_lock->end);
-        }
-        if (file_lock->handle_id == 0) {
-            buf_printf(&buf, " fcntl (POSIX) lock");
-        } else {
-            buf_printf(&buf, " flock (BSD) lock with id=%lu", file_lock->handle_id);
         }
     }
     if (LISTP_EMPTY(&dent_file_locks->file_locks)) {
@@ -223,8 +232,8 @@ bool has_flock_locks(struct libos_dentry* dent) {
 }
 
 /*
- * Main part of `file_lock_set`. Adds/removes a lock (depending on `file_lock->type`), assumes we
- * already verified there are no conflicts. Replaces existing locks for a given PID, and merges
+ * Main part of `file_lock_set`. Adds/removes a POSIX lock (depending on `file_lock->type`), assumes
+ * we already verified there are no conflicts. Replaces existing locks for a given PID, and merges
  * adjacent locks if possible.
  *
  * See also Linux sources (`fs/locks.c`) for a similar implementation.
@@ -328,6 +337,7 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
                 extra->start = end + 1;
                 extra->end = cur->end;
                 extra->pid = cur->pid;
+                extra->handle_id = 0;
                 cur->end = start - 1;
                 LISTP_ADD_AFTER(extra, cur, &dent_file_locks->file_locks, list);
                 extra = NULL;
@@ -393,6 +403,10 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
     return 0;
 }
 
+/*
+ * Main part of `file_lock_set`. Adds/removes a BSD lock (depending on `file_lock->type`), assumes
+ * we already verified there are no conflicts. Replaces existing locks for a given handle ID.
+ */
 static int _flock_lock_set(struct dent_file_locks* dent_file_locks,
                            struct libos_file_lock* file_lock) {
     assert(locked(&g_fs_lock_lock));
@@ -662,6 +676,7 @@ int file_lock_get(struct libos_dentry* dent, struct libos_file_lock* file_lock,
         out_file_lock->start = conflict->start;
         out_file_lock->end = conflict->end;
         out_file_lock->pid = conflict->pid;
+        out_file_lock->handle_id = conflict->handle_id;
     } else {
         out_file_lock->type = F_UNLCK;
     }
@@ -694,7 +709,7 @@ int file_lock_get_from_ipc(const char* path, struct libos_file_lock* file_lock,
     return ret;
 }
 
-/* Removes all locks and lock requests for a given PID and dentry. */
+/* Removes all POSIX locks and lock requests for a given PID and dentry. */
 static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid) {
     assert(locked(&g_fs_lock_lock));
 
@@ -712,7 +727,7 @@ static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid
     struct libos_file_lock* file_lock;
     struct libos_file_lock* file_lock_tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(file_lock, file_lock_tmp, &dent_file_locks->file_locks, list) {
-        if (file_lock->pid == pid) {
+        if (file_lock->handle_id == 0 && file_lock->pid == pid) {
             LISTP_DEL(file_lock, &dent_file_locks->file_locks, list);
             free(file_lock);
             changed = true;
@@ -722,7 +737,7 @@ static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid
     struct file_lock_request* req;
     struct file_lock_request* req_tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(req, req_tmp, &dent_file_locks->file_lock_requests, list) {
-        if (req->file_lock.pid == pid) {
+        if (req->file_lock.handle_id == 0 && req->file_lock.pid == pid) {
             assert(!req->notify.event);
             LISTP_DEL(req, &dent_file_locks->file_lock_requests, list);
             free(req);
