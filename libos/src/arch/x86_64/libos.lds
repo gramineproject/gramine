@@ -50,13 +50,6 @@ SECTIONS
   {
     /* the rest of rodata */
     *(.rodata .rodata.*)
-    . = ALIGN(8);
-    __cp_name = .;
-    *(SORT(.cp_name.*));
-    __cp_func = .;
-    *(SORT(.cp_func.*));
-    __rs_func = .;
-    *(SORT(.rs_func.*));
   }
   .eh_frame_hdr  : { *(.eh_frame_hdr) }
   .eh_frame      : ONLY_IF_RO { *(.eh_frame) }
@@ -74,6 +67,18 @@ SECTIONS
     __init_array_start = .;
     KEEP (*(SORT_BY_INIT_PRIORITY(.init_array.*) .init_array))
     __init_array_end = .;
+  }
+  .data.rel.ro :
+  {
+    /* the rest of RELRO data segment */
+    *(.data.rel.ro .data.rel.ro.*)
+    . = ALIGN(8);
+    __cp_name = .;
+    *(SORT(.cp_name.*));
+    __cp_func = .;
+    *(SORT(.cp_func.*));
+    __rs_func = .;
+    *(SORT(.rs_func.*));
   }
   . = DATA_SEGMENT_RELRO_END (0, .);
   .data :
