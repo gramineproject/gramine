@@ -1,0 +1,4 @@
+# TODO: after deprecating 18.04/bionic, change these to type: 'feature'
+#       see also top-level meson_options.txt
+option('epid', type: 'combo', choices: ['disabled', 'enabled'], value: 'enabled', yield: true)
+option('dcap', type: 'combo', choices: ['disabled', 'enabled'], yield: true)

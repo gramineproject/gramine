@@ -14,8 +14,11 @@ option('musl', type: 'combo', choices: ['disabled', 'enabled'],
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
 
+option('epid', type: 'combo', choices: ['disabled', 'enabled'],
+    value: 'enabled', description: 'Build EPID-based attestation utilities')
 option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
-    description: 'Build additional utilities linked against DCAP library')
+    description: 'Build DCAP-based attestation utilities (linked against DCAP library)')
+
 option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable undefined behavior sanitizer')
 option('asan', type: 'combo', choices: ['disabled', 'enabled'],

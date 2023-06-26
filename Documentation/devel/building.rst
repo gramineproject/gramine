@@ -192,7 +192,7 @@ Additional build options
 
   .. note::
      EPID version of RA-TLS library (``ra_tls_verify_epid.so``) is built by
-     default.
+     default. You can disable the build via  :command:`meson -Depid=disabled`.
 
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,

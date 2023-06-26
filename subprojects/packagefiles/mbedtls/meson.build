@@ -55,12 +55,15 @@ pkgconfig.generate(
     ],
 )
 
-foreach output : mbedtls_libs_output
-    meson.add_install_script('/bin/sh', '-c',
-        ('ln -sf ../../../@0@ ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
-            output, get_option('libdir')))
-endforeach
+# install mbedTLS symlinks into Gramine runtime dir only if attestation was requested
+if get_option('epid') == 'enabled' or get_option('dcap') == 'enabled'
+    foreach output : mbedtls_libs_output
+        meson.add_install_script('/bin/sh', '-c',
+            ('ln -sf ../../../@0@ ' +
+            '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
+                output, get_option('libdir')))
+    endforeach
+endif
 
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
 # mbedTLS headers
