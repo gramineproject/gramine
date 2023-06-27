@@ -8,6 +8,7 @@
 #pragma once
 
 #include "libos_types.h"
+#include "linux_abi/sysinfo.h"
 
 typedef void (*libos_syscall_t)(void);
 

@@ -19,7 +19,6 @@
 #include <linux/aio_abi.h>
 #include <linux/eventpoll.h>
 #include <linux/futex.h>
-#include <linux/kernel.h>
 #include <linux/msg.h>
 #include <linux/perf_event.h>
 #include <linux/sem.h>

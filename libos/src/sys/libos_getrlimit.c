@@ -13,6 +13,7 @@
 #include "libos_thread.h"
 #include "libos_vma.h"
 #include "linux_abi/limits.h"
+#include "linux_abi/sysinfo.h"
 
 /*
  * TODO: implement actual limitation on each resource.
