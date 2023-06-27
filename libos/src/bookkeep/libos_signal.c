@@ -151,6 +151,11 @@ void get_all_pending_signals(__sigset_t* set) {
 
     __sigemptyset(set);
 
+    int host_sig = __atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED);
+    if (host_sig && host_sig != 0xff) {
+        __sigaddset(set, host_sig);
+    }
+
     if (__atomic_load_n(&current->pending_signals, __ATOMIC_ACQUIRE) == 0
             && __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE) == 0) {
         return;
