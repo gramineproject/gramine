@@ -152,7 +152,8 @@ void get_all_pending_signals(__sigset_t* set) {
     __sigemptyset(set);
 
     if (__atomic_load_n(&current->pending_signals, __ATOMIC_ACQUIRE) == 0
-            && __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE) == 0) {
+            && __atomic_load_n(&g_process_pending_signals_cnt, __ATOMIC_ACQUIRE) == 0
+            && __atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED) == 0) {
         return;
     }
 
@@ -163,6 +164,9 @@ void get_all_pending_signals(__sigset_t* set) {
 
     unlock(&g_process_signal_queue_lock);
     unlock(&current->lock);
+
+    if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED))
+        __sigaddset(set, SIGTERM);
 }
 
 bool have_pending_signals(void) {

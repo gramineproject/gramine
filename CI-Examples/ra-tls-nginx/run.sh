@@ -10,7 +10,7 @@ sleep 10
 test "$(curl --insecure -s https://localhost:8000/)" = "$(cat html/index.html)"
 ret=$?
 
-kill -9 $pid
+kill $pid
 
 if test $ret -eq 0
 then
