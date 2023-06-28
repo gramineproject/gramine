@@ -40,10 +40,8 @@ vtune = get_option('vtune') == 'enabled'
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
 
-enable_glibc = get_option('glibc') == 'enabled'
-enable_musl = get_option('musl') == 'enabled'
-
 cc = meson.get_compiler('c')
+host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
 objcopy = find_program('objcopy')
 
 pythonmod = import('python')
@@ -285,10 +283,9 @@ subdir('libos')
 subdir('python')
 subdir('tools')
 
-if enable_glibc
+if get_option('libc') == 'glibc'
     subproject('glibc-2.37-1')
-endif
-if enable_musl
+elif get_option('libc') == 'musl'
     subproject('musl-1.2.4')
 endif
 
