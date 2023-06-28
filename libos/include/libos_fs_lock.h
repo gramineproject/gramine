@@ -33,9 +33,9 @@ int init_fs_lock(void);
  *   lock is uncontested.
  * - The main process has to be able to look up the same file, so locking will not work for files in
  *   local-process-only filesystems (tmpfs).
- * - There is no deadlock detection (EDEADLK).
  * - The lock requests cannot be interrupted (EINTR).
  * - The locks work only on files that have a dentry (no pipes, sockets etc.).
+ * - Only for POSIX (fcntl) locks: no deadlock detection (EDEADLK).
  */
 
 enum libos_file_lock_family {
@@ -75,15 +75,15 @@ struct libos_file_lock {
  * This is the equivalent of `fnctl(F_SETLK/F_SETLKW)`.
  *
  * If `file_lock->type` is `F_UNLCK`, the function will remove locks as follows:
- * - For POSIX (fcntl) locks, remove all locks held by the given PID for the given range.
- * - For BSD (flock) locks, remove all locks held by the given handle ID.
+ * - For POSIX (fcntl) locks, remove all POSIX locks held by the given PID for the given range.
+ * - For BSD (flock) locks, remove all BSD locks held by the given handle ID.
  *
  * Removing a lock never waits.
  *
  * If `file_lock->type` is `F_RDLCK` or `F_WRLCK`, the function will create a new lock as follows:
- * - For POSIX (fcntl) locks, for the given PID and range, replace the existing locks held by the
- *   given PID for that range.
- * - for BSD (flock) locks, replace the existing locks held by the given handle ID.
+ * - For POSIX (fcntl) locks, for the given PID and range, replace the existing POSIX locks held by
+ *   the given PID for that range.
+ * - for BSD (flock) locks, replace the existing BSD locks held by the given handle ID.
  *
  * If there are conflicting locks, the function either waits (if `wait` is true), or fails with
  * `-EAGAIN` (if `wait` is false).

@@ -15,10 +15,6 @@
  */
 static struct libos_lock g_fs_lock_lock;
 
-/* Used to disallow mixing of POSIX and BSD locks. Protected by `g_fs_lock_lock`. */
-static bool g_file_lock_posix_used = false;
-static bool g_file_lock_flock_used = false;
-
 /*
  * Describes a pending request for a file lock. After processing the request, the object is removed,
  * and a possible waiter is notified (see below).
@@ -55,6 +51,12 @@ DEFINE_LIST(dent_file_locks);
 struct dent_file_locks {
     struct libos_dentry* dent;
 
+    /* Used to disallow mixing of POSIX and BSD locks on the same file (dentry). Note that all file
+     * locking requests are processed by the leader process, so even if POSIX and BSD locks are
+     * created in different processes, they will end up in leader and will update these fields. */
+    bool posix_used;
+    bool flock_used;
+
     /*
      * POSIX (fcntl) and BSD (flock) locks for a given dentry.
      *
@@ -90,6 +92,8 @@ static int find_dent_file_locks(struct libos_dentry* dent, bool create,
         struct dent_file_locks* dent_file_locks = malloc(sizeof(*dent_file_locks));
         if (!dent_file_locks)
             return -ENOMEM;
+        dent_file_locks->posix_used = false;
+        dent_file_locks->flock_used = false;
         dent_file_locks->dent = dent;
         get_dentry(dent);
         INIT_LISTP(&dent_file_locks->file_locks);
@@ -181,8 +185,7 @@ static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* d
     assert(file_lock->type != F_UNLCK);
 
     struct libos_file_lock* cur;
-    /* Gramine doesn't support mixing POSIX and flock types of locks, and assumes that the
-     * application won't ever mix them, otherwise it may exhibit unexpected behavior. */
+    /* Gramine doesn't support mixing POSIX and flock types of locks: it fails loudly. */
     if (file_lock->family == FILE_LOCK_POSIX) {
         LISTP_FOR_EACH_ENTRY(cur, &dent_file_locks->file_locks, list) {
             if (cur->pid != file_lock->pid && file_lock->start <= cur->end
@@ -496,19 +499,6 @@ static int file_lock_set_or_add_request(struct libos_dentry* dent,
                                         bool wait, struct file_lock_request** out_req) {
     assert(locked(&g_fs_lock_lock));
 
-    if (file_lock->type != F_UNLCK) {
-        if ((file_lock->family == FILE_LOCK_FLOCK && g_file_lock_posix_used)
-                || (file_lock->family == FILE_LOCK_POSIX && g_file_lock_flock_used)) {
-            log_error("Application wants to use both POSIX (fcntl) and BSD (flock) file locks. "
-                      "This is not supported.");
-            return -EPERM;
-        }
-        if (file_lock->family == FILE_LOCK_POSIX)
-            g_file_lock_posix_used = true;
-        if (file_lock->family == FILE_LOCK_FLOCK)
-            g_file_lock_flock_used = true;
-    }
-
     struct dent_file_locks* dent_file_locks = NULL;
     int ret = find_dent_file_locks(dent, /*create=*/file_lock->type != F_UNLCK, &dent_file_locks);
     if (ret < 0)
@@ -517,6 +507,16 @@ static int file_lock_set_or_add_request(struct libos_dentry* dent,
         assert(file_lock->type == F_UNLCK);
         /* Nothing to unlock. */
         return 0;
+    }
+
+    if (file_lock->type != F_UNLCK) {
+        if ((file_lock->family == FILE_LOCK_FLOCK && dent_file_locks->posix_used)
+                || (file_lock->family == FILE_LOCK_POSIX && dent_file_locks->flock_used)) {
+            log_error("Application wants to use both POSIX (fcntl) and BSD (flock) file locks on "
+                      "the same file. This is not supported.");
+            ret = -EPERM;
+            goto out;
+        }
     }
 
     struct libos_file_lock* conflict = NULL;
@@ -541,6 +541,13 @@ static int file_lock_set_or_add_request(struct libos_dentry* dent,
             goto out;
         file_lock_process_requests(dent_file_locks);
         *out_req = NULL;
+    }
+
+    if (file_lock->type != F_UNLCK) {
+        if (file_lock->family == FILE_LOCK_POSIX)
+            dent_file_locks->posix_used = true;
+        if (file_lock->family == FILE_LOCK_FLOCK)
+            dent_file_locks->flock_used = true;
     }
     ret = 0;
 out:

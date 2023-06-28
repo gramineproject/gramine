@@ -975,6 +975,8 @@ class TC_30_Syscall(RegressionTestCase):
         finally:
             if os.path.exists('tmp/flock_file'):
                 os.remove('tmp/flock_file')
+            if os.path.exists('tmp/flock_file2'):
+                os.remove('tmp/flock_file2')
         self.assertIn('TEST OK', stdout)
 
 class TC_31_Syscall(RegressionTestCase):

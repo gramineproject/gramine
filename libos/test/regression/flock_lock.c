@@ -7,8 +7,9 @@
  * Test for `flock` syscall (`flock(LOCK_EX/LOCK_SH/LOCK_UN`). We assert that the calls succeed (or
  * taking a lock fails), and log all details for debugging purposes.
  *
- * The tests involve multithreaded, dup and file-backed mmap cases. We don't add multi-process cases
- * here because they are already covered by LTP tests `flock03` and `flock04`.
+ * The tests involve multithreaded, dup and file-backed mmap cases, as well as testing for a mix
+ * with POSIX (fcntl) locks. We don't add complex multi-process cases here because they are already
+ * covered by LTP tests `flock03` and `flock04`.
  */
 
 #define _GNU_SOURCE
@@ -21,11 +22,14 @@
 #include <stdlib.h>
 #include <sys/file.h>
 #include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "common.h"
 
-#define TEST_FILE "tmp/flock_file"
+#define TEST_FILE  "tmp/flock_file"
+#define TEST_FILE2 "tmp/flock_file2"
 #define FILE_SIZE 1024
 
 struct thread_args {
@@ -48,6 +52,22 @@ static void try_flock(int fd, int operation, int expect_ret) {
     if (ret != expect_ret) {
         errx(1, "flock(%d, %s) error with return value = %d, expected value = %d",
              fd, str_type(operation), ret, expect_ret);
+    }
+}
+
+static void try_fcntl(int fd, int operation, int expect_ret, int expect_errno) {
+    struct flock fl = {
+        .l_type = F_RDLCK,
+        .l_whence = SEEK_SET,
+        .l_start = 0,
+        .l_len = 0,
+    };
+    int ret = fcntl(fd, operation, &fl);
+    if (ret != expect_ret) {
+        errx(1, "fcntl(%d) error with return value = %d, expected value = %d", fd, ret, expect_ret);
+    }
+    if (ret < 0 && errno != expect_errno) {
+        errx(1, "fcntl(%d) error with errno = %d, expected errno = %d", fd, errno, expect_errno);
     }
 }
 
@@ -115,21 +135,27 @@ static void test_flock_mix_with_fcntl(void) {
     }
     CHECK(close(fd));
 
+    /* test in the same process (lock same file) */
     fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
     try_flock(fd, LOCK_SH, 0);
+    try_fcntl(fd, F_SETLK, -1, EPERM);
 
-    /* Gramine currently doesn't support mixing BSD and POSIX locks, so expect failure */
-    struct flock fl = {
-        .l_type = F_RDLCK,
-        .l_whence = SEEK_SET,
-        .l_start = 0,
-        .l_len = 0,
-    };
-    int ret = fcntl(fd, F_SETLK, &fl);
-    if (!ret)
-        errx(1, "fcntl() unexpectedly succeeded");
-    if (errno != EPERM)
-        errx(1, "fcntl() failed with errno = %d, expected = %d", errno, EPERM);
+    /* test in the same process (lock another file) */
+    int fd2 = CHECK(open(TEST_FILE2, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    try_fcntl(fd2, F_SETLK, 0, 0);
+    CHECK(close(fd2));
+
+    /* test in another process (lock same file) */
+    pid_t pid = CHECK(fork());
+    if (pid == 0) {
+        try_fcntl(fd, F_SETLK, -1, EPERM);
+        exit(0);
+    }
+    int status = 0;
+    CHECK(wait(&status));
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        errx(1, "child died with status: %#x", status);
+    }
 
     CHECK(close(fd));
 }
@@ -216,6 +242,7 @@ int main(void) {
     test_flock_multithread();
 
     CHECK(unlink(TEST_FILE));
+    CHECK(unlink(TEST_FILE2));
     printf("TEST OK\n");
     return 0;
 }
