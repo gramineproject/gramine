@@ -96,7 +96,6 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 
 %dir %{_libdir}/%{name}/runtime
 %{_libdir}/%{name}/runtime/glibc
-%{_libdir}/%{name}/runtime/musl
 
 %{_libdir}/pkgconfig/mbedtls_%{name}.pc
 %{_libdir}/pkgconfig/ra_tls_%{name}.pc

@@ -52,5 +52,3 @@ usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libra_tls_attest.so*
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libra_tls_verify.a
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libsecret_prov_attest.so*
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/glibc/libsecret_prov_verify.a
-
-usr/lib/${DEB_HOST_MULTIARCH}/gramine/runtime/musl/
