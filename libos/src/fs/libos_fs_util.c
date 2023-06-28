@@ -78,8 +78,7 @@ static int generic_istat(struct libos_inode* inode, struct stat* buf) {
      */
     buf->st_nlink = (inode->type == S_IFDIR ? 2 : 1);
 
-    if (inode->mount->uri)
-        buf->st_dev = hash_str(inode->mount->uri);
+    buf->st_dev = 123; /* FIXME: I guess /proc, /dev, /sys must have different numbers */
 
     unlock(&inode->lock);
     return 0;
