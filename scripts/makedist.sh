@@ -6,7 +6,7 @@ BUILDDIR=build-dist
 
 rm -rf "$BUILDDIR"
 # it doesn't matter what options we have here, this is only for meson dist
-meson setup "$BUILDDIR" -Dskeleton=enabled -Dglibc=enabled -Dmusl=enabled -Dlibgomp=enabled >&2
+meson setup "$BUILDDIR" -Dskeleton=enabled -Dlibgomp=enabled >&2
 meson dist -C "$BUILDDIR" --no-test --include-subprojects --formats=gztar >&2
 
 tarball=$(meson introspect --projectinfo "$BUILDDIR" | jq -r '.descriptive_name + "-" + .version').tar.gz

@@ -3,7 +3,10 @@ stage('test-sgx') {
         .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/libsysdb.so
         .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/sgx/loader
         .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/sgx/libpal.so
-        .ci/check-no-syscall.sh "$GRAMINE_PKGLIBDIR"/runtime/glibc/libc.so.6
+        if test -f "$GRAMINE_PKGLIBDIR"/runtime/glibc/libc.so.6
+        then
+            .ci/check-no-syscall.sh "$GRAMINE_PKGLIBDIR"/runtime/glibc/libc.so.6
+        fi
         if test -f "$GRAMINE_PKGLIBDIR"/runtime/musl/libc.so
         then
             .ci/check-no-syscall.sh "$GRAMINE_PKGLIBDIR"/runtime/musl/libc.so

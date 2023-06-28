@@ -12,7 +12,8 @@ Gramine consists of several components:
 
 Building Gramine implies building at least the first two components. The
 build of the patched C library is optional but highly recommended for
-performance reasons. Both patched glibc and patched musl are built by default.
+performance reasons. You can to choose at most one of the libcs available. By
+default glibc is built.
 
 Gramine currently only works on the x86_64 architecture. Gramine is currently
 tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
@@ -176,8 +177,8 @@ it's usually not needed.
    programs can not be found, you might need to edit your configuration files so
    that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
 
-Set ``-Dglibc=`` or ``-Dmusl=`` options to ``disabled`` if you wish not to build
-the support for any (they are both built by default).
+Set ``-Dlibc`` option to ``musl`` if you wish build musl instead of Glibc (which
+is built by default), or to ``none`` if you do not want to build any libc.
 
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -302,16 +303,16 @@ also git submodules. For this you need to create a |~| dummy builddir using
 
     meson setup build-dist/ \
         -Ddirect=disabled -Dsgx=disabled -Dskeleton=enabled \
-        -Dglibc=enabled -Dmusl=enabled -Dlibgomp-enabled
+        -Dlibc=glibc -Dlibgomp-enabled
     meson dist -C build-dist/ --no-tests --include-subprojects --formats=gztar
 
-The options specified with ``-D`` (especially ``-Dglibc``, ``-Dmusl`` and
-``-Dlibgomp``) are important, because without them some subprojects will not be
-included in the tarball (if in doubt, you can consult
-:file:`scripts/makedist.sh` script). The command :command:`meson dist` still
-needs network access, because it downloads subprojects and checks out git
-submodules. The tarballs are located in :file:`build-dist/meson-dist`. You can
-adjust ``--formats`` option to your needs.
+The options specified with ``-D`` (especially ``-Dlibc`` and ``-Dlibgomp``) are
+important, because they determine which subprojects will be included in the
+tarball. They need to match what you intend to build. The command
+:command:`meson dist` still needs network access, because it downloads
+subprojects and checks out git submodules. The tarballs are located in
+:file:`build-dist/meson-dist`. You can adjust ``--formats`` option to your
+needs.
 
 You can now sever your network connection::
 

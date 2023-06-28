@@ -19,7 +19,8 @@ stage('test') {
         try {
             sh '''
                 cd libos/test/regression
-                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
+                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
+                    gramine-test -n tests${GRAMINE_MUSL+_musl}.toml build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {
@@ -27,43 +28,29 @@ stage('test') {
         }
     }
 
-    if (env.CC != "clang") {
+    if (env.GRAMINE_MUSL != '1') {
         timeout(time: 15, unit: 'MINUTES') {
             try {
                 sh '''
-                    export GRAMINE_MUSL=1
-                    cd libos/test/regression
-                    RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
-                        gramine-test -n tests_musl.toml build -v
-                    python3 -m pytest -v --junit-xml libos-regression-musl.xml
+                    cd libos/test/abi/x86_64
+                    gramine-test build -v
+                    python3 -m pytest -v --junit-xml abi.xml
                 '''
             } finally {
-                junit 'libos/test/regression/libos-regression-musl.xml'
+                junit 'libos/test/abi/x86_64/*.xml'
             }
         }
-    }
 
-    timeout(time: 15, unit: 'MINUTES') {
-        try {
-            sh '''
-                cd libos/test/abi/x86_64
-                gramine-test build -v
-                python3 -m pytest -v --junit-xml abi.xml
-            '''
-        } finally {
-            junit 'libos/test/abi/x86_64/*.xml'
-        }
-    }
-
-    timeout(time: 15, unit: 'MINUTES') {
-        try {
-            sh '''
-                cd libos/test/fs
-                gramine-test build -v
-                python3 -m pytest -v --junit-xml fs.xml
-            '''
-        } finally {
-            junit 'libos/test/fs/*.xml'
+        timeout(time: 15, unit: 'MINUTES') {
+            try {
+                sh '''
+                    cd libos/test/fs
+                    gramine-test build -v
+                    python3 -m pytest -v --junit-xml fs.xml
+                '''
+            } finally {
+                junit 'libos/test/fs/*.xml'
+            }
         }
     }
 }

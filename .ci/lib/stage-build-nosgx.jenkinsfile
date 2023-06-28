@@ -1,13 +1,15 @@
 stage('build') {
     env.MESON_OPTIONS = ''
+    if (env.GRAMINE_MUSL == '1') {
+        env.MESON_OPTIONS += ' -Dlibc=musl'
+    } else {
+        env.MESON_OPTIONS += ' -Dlibc=glibc'
+    }
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'
     }
     if (env.ASAN == '1') {
         env.MESON_OPTIONS += ' -Dasan=enabled'
-    }
-    if (env.CC == 'clang') {
-        env.MESON_OPTIONS += ' -Dmusl=disabled'
     }
 
     try {
@@ -25,8 +27,11 @@ stage('build') {
             ninja -vC build/ install
         '''
     } finally {
-        archiveArtifacts 'build/meson-logs/**/*'
-        archiveArtifacts 'build/subprojects/glibc-*/glibc-build.log'
+        archiveArtifacts '''
+            build/meson-logs/**/*,
+            build/subprojects/glibc-*/glibc-build.log,
+            build/subprojects/musl-*/musl-build.log,
+        '''
     }
 
     // archive all installed files

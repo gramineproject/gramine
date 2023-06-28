@@ -196,7 +196,7 @@ endif
 install_dir = pkglibdir / 'tests' / 'libos' / 'regression'
 
 configurations = []
-if enable_glibc
+if get_option('libc') == 'glibc'
     common_lib = static_library('test_libos',
         'dump.c',
         'rw_file.c',
@@ -207,10 +207,10 @@ if enable_glibc
         'tests': tests,
     }
 endif
-if enable_musl
+if get_option('libc') == 'musl'
     if meson.get_compiler('c').get_id() != 'gcc'
-        error('Compiling tests is currently unsupported with Musl and compilers other than GCC. ' +
-              'You need to either disable Musl (-Dmusl=disabled) or use GCC (CC=gcc).')
+        error('Compiling tests is currently unsupported with musl and compilers other than GCC. ' +
+              'You need to either disable musl (i.e. -Dlibc=glibc) or use GCC (CC=gcc).')
     endif
 
     musl_specs_path_cmd = run_command('sh', '-c',
@@ -306,7 +306,7 @@ foreach conf: configurations
     endforeach
 endforeach
 
-if enable_musl
+if get_option('libc') == 'musl'
     meson.add_install_script(
         find_program('install_musl_tests.sh'),
         prefix / install_dir / 'musl',

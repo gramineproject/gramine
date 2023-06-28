@@ -6,10 +6,8 @@ option('sgx', type: 'combo', choices: ['disabled', 'enabled'],
 option('skeleton', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build skeleton PAL')
 
-option('glibc', type: 'combo', choices: ['disabled', 'enabled'],
-    value: 'enabled', description: 'Build patched glibc')
-option('musl', type: 'combo', choices: ['disabled', 'enabled'],
-    value: 'enabled', description: 'Build patched musl')
+option('libc', type: 'combo', choices: ['none', 'glibc', 'musl'],
+    value: 'glibc', description: 'Choose (patched) libc that is to be built into runtime directory')
 
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
