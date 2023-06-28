@@ -134,9 +134,23 @@ struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
 
-    /* Unique id, works as an identifier for `flock` syscall. This field does not change, so
-     * reading it does not require holding any locks. */
+    /* Unique ID. This field does not change, so reading it does not require holding any locks.
+     * Currently used only for `flock` system call. */
     uint64_t id;
+    /*
+     * Specifies whether this handle was created by this process or inherited from the parent
+     * process. Used to perform an operation on the handle only once per Gramine instance (with
+     * multiple processes). Currently used to perform LOCK_UN operation in `flock` system call when
+     * the "last" file descriptor to this handle is closed (by "last" FD we assume here the last FD
+     * referring to this handle in the creator process).
+     *
+     * FIXME: This is incorrect in case when the parent process opens a handle, spawns a child and
+     *        terminates; in this case the operation (e.g. LOCK_UN) will be performed even though
+     *        the handle is still opened in the child. Unfortunately, Gramine lacks system-wide
+     *        tracking of handle FDs. On the other hand, Gramine anyway doesn't support the
+     *        "daemonization" case described above, so the assumption of "last" FD works fine.
+     */
+    bool created_by_process;
 
     refcount_t ref_count;
 

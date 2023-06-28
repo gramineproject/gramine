@@ -292,7 +292,7 @@ static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* 
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry && (!has_flock_locks(handle->dentry))) {
+    if (handle && handle->dentry) {
         /* Clear file (POSIX) locks for a file. We are required to do that every time a FD is
          * closed, even if the process holds other handles for that file, or duplicated FDs for the
          * same handle. */
@@ -355,6 +355,8 @@ struct libos_handle* get_new_handle(void) {
     static uint64_t local_counter = 0;
     new_handle->id = ((uint64_t)g_process.pid << 32)
                       | __atomic_add_fetch(&local_counter, 1, __ATOMIC_RELAXED);
+    new_handle->created_by_process = true;
+
     return new_handle;
 }
 
@@ -482,7 +484,7 @@ static void destroy_handle(struct libos_handle* hdl) {
 
 static int clear_flock_locks(struct libos_handle* hdl) {
     /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
-    if (hdl && hdl->dentry && has_flock_locks(hdl->dentry)) {
+    if (hdl && hdl->dentry && hdl->created_by_process) {
         assert(hdl->ref_count == 0);
         struct libos_file_lock file_lock = {
             .family = FILE_LOCK_FLOCK,
@@ -760,6 +762,7 @@ BEGIN_CP_FUNC(handle) {
         lock(&hdl->lock);
         *new_hdl = *hdl;
 
+        new_hdl->created_by_process = false;
         new_hdl->dentry = NULL;
         refcount_set(&new_hdl->ref_count, 0);
         clear_lock(&new_hdl->lock);

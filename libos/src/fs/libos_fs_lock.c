@@ -15,6 +15,10 @@
  */
 static struct libos_lock g_fs_lock_lock;
 
+/* Used to disallow mixing of POSIX and BSD locks. Protected by `g_fs_lock_lock`. */
+static bool g_file_lock_posix_used = false;
+static bool g_file_lock_flock_used = false;
+
 /*
  * Describes a pending request for a file lock. After processing the request, the object is removed,
  * and a possible waiter is notified (see below).
@@ -216,26 +220,6 @@ static int file_lock_add_request(struct dent_file_locks* dent_file_locks,
     return 0;
 }
 
-bool has_flock_locks(struct libos_dentry* dent) {
-    lock(&g_fs_lock_lock);
-    if (!dent->file_locks) {
-        unlock(&g_fs_lock_lock);
-        return false;
-    }
-
-    bool has_flock = false;
-    struct dent_file_locks* dent_file_locks = dent->file_locks;
-    struct libos_file_lock* cur;
-    LISTP_FOR_EACH_ENTRY(cur, &dent_file_locks->file_locks, list) {
-        if (cur->handle_id != 0) {
-            has_flock = true;
-            break;
-        }
-    }
-    unlock(&g_fs_lock_lock);
-    return has_flock;
-}
-
 /*
  * Main part of `file_lock_set`. Adds/removes a POSIX lock (depending on `file_lock->type`), assumes
  * we already verified there are no conflicts. Replaces existing locks for a given PID, and merges
@@ -276,6 +260,9 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
     struct libos_file_lock* cur;
     struct libos_file_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &dent_file_locks->file_locks, list) {
+        if (cur->family != FILE_LOCK_POSIX)
+            continue;
+
         if (cur->pid < file_lock->pid) {
             prev = cur;
             continue;
@@ -430,6 +417,9 @@ static int _flock_lock_set(struct dent_file_locks* dent_file_locks,
     struct libos_file_lock* cur;
     struct libos_file_lock* tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(cur, tmp, &dent_file_locks->file_locks, list) {
+        if (cur->family != FILE_LOCK_FLOCK)
+            continue;
+
         if (cur->handle_id == file_lock->handle_id) {
             LISTP_DEL(cur, &dent_file_locks->file_locks, list);
             free(cur);
@@ -505,6 +495,19 @@ static int file_lock_set_or_add_request(struct libos_dentry* dent,
                                         struct libos_file_lock* file_lock,
                                         bool wait, struct file_lock_request** out_req) {
     assert(locked(&g_fs_lock_lock));
+
+    if (file_lock->type != F_UNLCK) {
+        if ((file_lock->family == FILE_LOCK_FLOCK && g_file_lock_posix_used)
+                || (file_lock->family == FILE_LOCK_POSIX && g_file_lock_flock_used)) {
+            log_error("Application wants to use both POSIX (fcntl) and BSD (flock) file locks. "
+                      "This is not supported.");
+            return -EPERM;
+        }
+        if (file_lock->family == FILE_LOCK_POSIX)
+            g_file_lock_posix_used = true;
+        if (file_lock->family == FILE_LOCK_FLOCK)
+            g_file_lock_flock_used = true;
+    }
 
     struct dent_file_locks* dent_file_locks = NULL;
     int ret = find_dent_file_locks(dent, /*create=*/file_lock->type != F_UNLCK, &dent_file_locks);

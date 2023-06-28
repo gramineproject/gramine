@@ -105,6 +105,35 @@ static void test_flock_dup_open(void) {
     CHECK(close(fd3));
 }
 
+static void test_flock_mix_with_fcntl(void) {
+    printf("testing locks with BSD (flock) and POSIX (fcntl) mix...\n");
+
+    int fd = open("/dev/attestation", O_RDONLY);
+    if (fd < 0) {
+        printf("   - Gramine not detected, skipping this Gramine-specific test\n");
+        return;
+    }
+    CHECK(close(fd));
+
+    fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+    try_flock(fd, LOCK_SH, 0);
+
+    /* Gramine currently doesn't support mixing BSD and POSIX locks, so expect failure */
+    struct flock fl = {
+        .l_type = F_RDLCK,
+        .l_whence = SEEK_SET,
+        .l_start = 0,
+        .l_len = 0,
+    };
+    int ret = fcntl(fd, F_SETLK, &fl);
+    if (!ret)
+        errx(1, "fcntl() unexpectedly succeeded");
+    if (errno != EPERM)
+        errx(1, "fcntl() failed with errno = %d, expected = %d", errno, EPERM);
+
+    CHECK(close(fd));
+}
+
 static void test_mmap_flock_close_unmap(void) {
     printf("testing locks with the mmap and flock...\n");
     int fd1, fd2;
@@ -182,6 +211,7 @@ int main(void) {
     setbuf(stdout, NULL);
 
     test_flock_dup_open();
+    test_flock_mix_with_fcntl();
     test_mmap_flock_close_unmap();
     test_flock_multithread();
 

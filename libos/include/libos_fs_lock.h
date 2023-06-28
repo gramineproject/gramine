@@ -146,14 +146,3 @@ int file_lock_set_from_ipc(const char* path, struct libos_file_lock* file_lock, 
  */
 int file_lock_get_from_ipc(const char* path, struct libos_file_lock* file_lock,
                            struct libos_file_lock* out_file_lock);
-
-/*!
- * \brief Determine whether dentry has flock-typed locks.
- *
- * \param dent The dentry for a file.
- *
- * Returns true if at least one associated lock is flock-typed. Otherwise returns false. Note that
- * if a dentry has a mix of fcntl and flock locks, then this function returns true (and the
- * subsequent behavior is undefined).
- */
-bool has_flock_locks(struct libos_dentry* dent);
