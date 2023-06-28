@@ -19,27 +19,12 @@ stage('test') {
         try {
             sh '''
                 cd libos/test/regression
-                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} gramine-test build -v
+                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
+                    gramine-test -n tests${GRAMINE_MUSL+_musl}.toml build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {
             junit 'libos/test/regression/libos-regression.xml'
-        }
-    }
-
-    if (env.CC != "clang") {
-        timeout(time: 15, unit: 'MINUTES') {
-            try {
-                sh '''
-                    export GRAMINE_MUSL=1
-                    cd libos/test/regression
-                    RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
-                        gramine-test -n tests_musl.toml build -v
-                    python3 -m pytest -v --junit-xml libos-regression-musl.xml
-                '''
-            } finally {
-                junit 'libos/test/regression/libos-regression-musl.xml'
-            }
         }
     }
 
@@ -59,7 +44,7 @@ stage('test') {
         try {
             sh '''
                 cd libos/test/fs
-                gramine-test build -v
+                gramine-test -n tests${GRAMINE_MUSL+_musl}.toml build -v
                 python3 -m pytest -v --junit-xml fs.xml
             '''
         } finally {

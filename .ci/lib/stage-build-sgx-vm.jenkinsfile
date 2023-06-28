@@ -30,14 +30,16 @@ stage('build') {
     '''
 
     env.MESON_OPTIONS = ''
+    if (env.GRAMINE_MUSL == '1') {
+        env.MESON_OPTIONS += ' -Dlibc=musl'
+    } else {
+        env.MESON_OPTIONS += ' -Dlibc=glibc'
+    }
     if (env.UBSAN == '1') {
         env.MESON_OPTIONS += ' -Dubsan=enabled'
     }
     if (env.ASAN == '1') {
         env.MESON_OPTIONS += ' -Dasan=enabled'
-    }
-    if (env.CC == 'clang') {
-        env.MESON_OPTIONS += ' -Dmusl=disabled'
     }
 
     try {
