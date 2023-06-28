@@ -1,5 +1,8 @@
 project('mbedtls', 'c')
 
+cc = meson.get_compiler('c')
+host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
+
 pkgconfig = import('pkgconfig')
 
 mbedtls_libs_output = [
@@ -55,12 +58,14 @@ pkgconfig.generate(
     ],
 )
 
-foreach output : mbedtls_libs_output
-    meson.add_install_script('/bin/sh', '-c',
-        ('ln -sf ../../../@0@ ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/glibc/').format(
-            output, get_option('libdir')))
-endforeach
+if get_option('libc') == 'glibc' and host_has_glibc
+    foreach output : mbedtls_libs_output
+        meson.add_install_script('/bin/sh', '-c',
+            ('ln -sf ../../../@0@ ' +
+            '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/@2@/').format(
+                output, get_option('libdir'), get_option('libc')))
+    endforeach
+endif
 
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
 # mbedTLS headers

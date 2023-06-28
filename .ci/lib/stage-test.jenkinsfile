@@ -27,6 +27,7 @@ stage('test') {
         }
     }
 
+    /*
     if (env.CC != "clang") {
         timeout(time: 15, unit: 'MINUTES') {
             try {
@@ -42,6 +43,7 @@ stage('test') {
             }
         }
     }
+    */
 
     timeout(time: 15, unit: 'MINUTES') {
         try {

@@ -12,9 +12,6 @@ stage('build') {
     if (env.ASAN == '1') {
         env.MESON_OPTIONS += ' -Dasan=enabled'
     }
-    if (env.CC == 'clang') {
-        env.MESON_OPTIONS += ' -Dmusl=disabled'
-    }
     if (env.RA_TYPE == 'dcap') {
         env.MESON_OPTIONS += ' -Ddcap=enabled'
     }
