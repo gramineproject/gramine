@@ -5,7 +5,7 @@
 
 /*
  * File locks. Both POSIX locks (fcntl syscall) and BSD locks (flock syscall) are implemented via
- * a common struct `posix_lock` (the name is historic). See `man fcntl` and `man flock` for details.
+ * a common struct `libos_file_lock`. See `man fcntl` and `man flock` for details.
  */
 
 #pragma once
@@ -38,26 +38,31 @@ int init_fs_lock(void);
  * - The locks work only on files that have a dentry (no pipes, sockets etc.).
  */
 
+enum libos_file_lock_family {
+    FILE_LOCK_UNKNOWN, /* this is only to catch uninitialized-variable errors */
+    FILE_LOCK_POSIX,
+    FILE_LOCK_FLOCK,
+};
+
 DEFINE_LISTP(libos_file_lock);
 DEFINE_LIST(libos_file_lock);
 struct libos_file_lock {
+    /* Lock family: FILE_LOCK_POSIX, FILE_LOCK_FLOCK */
+    enum libos_file_lock_family family;
+
     /* Lock type: F_RDLCK, F_WRLCK, F_UNLCK */
     int type;
-
-    /* First byte of range */
-    uint64_t start;
-
-    /* Last byte of range (use FS_LOCK_EOF for a range until end of file) */
-    uint64_t end;
-
-    /* PID of process taking the lock */
-    IDTYPE pid;
 
     /* List node, used internally */
     LIST_TYPE(libos_file_lock) list;
 
-    /* Unique handle id, works as an identifier for `flock` syscall */
-    uint64_t handle_id;
+    /* FILE_LOCK_POSIX fields */
+    uint64_t start; /* First byte of range */
+    uint64_t end;   /* Last byte of range (use FS_LOCK_EOF for a range until end of file) */
+    IDTYPE pid;     /* PID of process taking the lock */
+
+    /* FILE_LOCK_FLOCK fields */
+    uint64_t handle_id; /* Unique handle ID using which the lock is taken */
 };
 
 /*!
@@ -69,13 +74,19 @@ struct libos_file_lock {
  *
  * This is the equivalent of `fnctl(F_SETLK/F_SETLKW)`.
  *
- * If `file_lock->type` is `F_UNLCK`, the function will remove any locks held by the given PID for
- * the given range. Removing a lock never waits.
+ * If `file_lock->type` is `F_UNLCK`, the function will remove locks as follows:
+ * - For POSIX (fcntl) locks, remove all locks held by the given PID for the given range.
+ * - For BSD (flock) locks, remove all locks held by the given handle ID.
  *
- * If `file_lock->type` is `F_RDLCK` or `F_WRLCK`, the function will create a new lock for the given
- * PID and range, replacing the existing locks held by the given PID for that range. If there are
- * conflicting locks, the function either waits (if `wait` is true), or fails with `-EAGAIN` (if
- * `wait` is false).
+ * Removing a lock never waits.
+ *
+ * If `file_lock->type` is `F_RDLCK` or `F_WRLCK`, the function will create a new lock as follows:
+ * - For POSIX (fcntl) locks, for the given PID and range, replace the existing locks held by the
+ *   given PID for that range.
+ * - for BSD (flock) locks, replace the existing locks held by the given handle ID.
+ *
+ * If there are conflicting locks, the function either waits (if `wait` is true), or fails with
+ * `-EAGAIN` (if `wait` is false).
  */
 int file_lock_set(struct libos_dentry* dent, struct libos_file_lock* file_lock, bool wait);
 
@@ -88,14 +99,20 @@ int file_lock_set(struct libos_dentry* dent, struct libos_file_lock* file_lock, 
  *
  * This is the equivalent of `fcntl(F_GETLK)`.
  *
- * The function checks if there are locks by other PIDs preventing the proposed lock from being
- * placed. If the lock could be placed, `out_file_lock->type` is set to `F_UNLCK`. Otherwise,
- * `out_file_lock` fields (`type`, `start, `end`, `pid`) are set to details of a conflicting lock.
+ * The function checks if there are conflicting locks:
+ * - For POSIX (fcntl) locks, check for other PIDs preventing the proposed lock from being placed.
+ * - For BSD (flock) locks, check for other handle IDs preventing the proposed lock from being
+ *   placed.
+ *
+ * If the lock could be placed, `out_file_lock->type` is set to `F_UNLCK`. Otherwise,
+ * `out_file_lock` fields (`type`, `start, `end`, `pid`, `handle_id`) are set to details of a
+ * conflicting lock.
  */
 int file_lock_get(struct libos_dentry* dent, struct libos_file_lock* file_lock,
                   struct libos_file_lock* out_file_lock);
 
-/* Removes all locks for a given PID. Should be called before process exit. */
+/* Removes all locks for a given PID. Applicable only for POSIX locks. Should be called before
+ * process exit. */
 int file_lock_clear_pid(IDTYPE pid);
 
 /*!

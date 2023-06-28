@@ -10,6 +10,7 @@
 
 #include "avl_tree.h"
 #include "libos_defs.h"
+#include "libos_fs_lock.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_thread.h"
@@ -278,11 +279,12 @@ int ipc_sync_confirm_close_callback(IDTYPE src, void* data, unsigned long seq);
 
 struct libos_ipc_file_lock {
     /* see `struct libos_file_lock` in `libos_fs_lock.h` */
+    enum libos_file_lock_family family;
     int type;
     uint64_t start;
     uint64_t end;
-    uint64_t handle_id;
     IDTYPE pid;
+    uint64_t handle_id;
 
     bool wait;
     char path[]; /* null-terminated */
@@ -292,11 +294,12 @@ struct libos_ipc_file_lock_resp {
     int result;
 
     /* see `struct libos_file_lock` in `libos_fs_lock.h` */
+    enum libos_file_lock_family family;
     int type;
     uint64_t start;
     uint64_t end;
-    uint64_t handle_id;
     IDTYPE pid;
+    uint64_t handle_id;
 };
 
 struct libos_file_lock;

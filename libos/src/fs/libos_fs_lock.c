@@ -109,35 +109,39 @@ static void file_locks_dump(struct dent_file_locks* dent_file_locks) {
     assert(locked(&g_fs_lock_lock));
     struct print_buf buf = INIT_PRINT_BUF(&file_lock_dump_write_all);
     IDTYPE pid = 0;
+    bool force_flush = false;
 
     struct libos_file_lock* file_lock;
     LISTP_FOR_EACH_ENTRY(file_lock, &dent_file_locks->file_locks, list) {
-        if (file_lock->handle_id == 0) {
-            if (file_lock->pid != pid) {
-                if (pid != 0)
-                    buf_flush(&buf);
-                pid = file_lock->pid;
-                buf_printf(&buf, "fcntl (POSIX): pid=%d:", pid);
-            }
-        } else {
-            if (pid != 0)
-                buf_flush(&buf);
-            pid = 123; /* dummy pid to force a flush in the line above */
-            buf_printf(&buf, " flock (BSD): handle id=%lu:", file_lock->handle_id);
-        }
-
         char c;
         switch (file_lock->type) {
             case F_RDLCK: c = 'r'; break;
             case F_WRLCK: c = 'w'; break;
             default: c = '?'; break;
         }
-        if (file_lock->end == FS_LOCK_EOF) {
-            buf_printf(&buf, " %c[%lu..end]", c, file_lock->start);
+
+        if (file_lock->family == FILE_LOCK_POSIX) {
+            if (file_lock->pid != pid) {
+                if (force_flush)
+                    buf_flush(&buf);
+                pid = file_lock->pid;
+                force_flush = true;
+                buf_printf(&buf, "fcntl (POSIX): pid=%d:", pid);
+            }
+            if (file_lock->end == FS_LOCK_EOF) {
+                buf_printf(&buf, " %c[%lu..end]", c, file_lock->start);
+            } else {
+                buf_printf(&buf, " %c[%lu..%lu]", c, file_lock->start, file_lock->end);
+            }
         } else {
-            buf_printf(&buf, " %c[%lu..%lu]", c, file_lock->start, file_lock->end);
+            assert(file_lock->family == FILE_LOCK_FLOCK);
+            if (force_flush)
+                buf_flush(&buf);
+            force_flush = true;
+            buf_printf(&buf, " flock (BSD): handle id=%lu: %c", file_lock->handle_id, c);
         }
     }
+
     if (LISTP_EMPTY(&dent_file_locks->file_locks)) {
         buf_printf(&buf, "no locks");
     }
@@ -162,10 +166,10 @@ static void dent_file_locks_gc(struct dent_file_locks* dent_file_locks) {
 }
 
 /*
- * Find first lock that conflicts with `file_lock`. For fcntl locks (file_lock->handle_id == 0), two
- * locks conflict if they have different PIDs, their ranges overlap, and at least one of them is a
- * write lock. For flock locks, two locks conflict if they have different handle IDs and at least
- * one of them is a write lock.
+ * Find first lock that conflicts with `file_lock`. For POSIX (fcntl) locks, two locks conflict if
+ * they have different PIDs, their ranges overlap, and at least one of them is a write lock. For BSD
+ * (flock) locks, two locks conflict if they have different handle IDs and at least one of them is a
+ * write lock.
  */
 static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* dent_file_locks,
                                                        struct libos_file_lock* file_lock) {
@@ -175,7 +179,7 @@ static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* d
     struct libos_file_lock* cur;
     /* Gramine doesn't support mixing POSIX and flock types of locks, and assumes that the
      * application won't ever mix them, otherwise it may exhibit unexpected behavior. */
-    if (file_lock->handle_id == 0) {
+    if (file_lock->family == FILE_LOCK_POSIX) {
         LISTP_FOR_EACH_ENTRY(cur, &dent_file_locks->file_locks, list) {
             if (cur->pid != file_lock->pid && file_lock->start <= cur->end
                     && cur->start <= file_lock->end
@@ -183,6 +187,7 @@ static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* d
                 return cur;
         }
     } else {
+        assert(file_lock->family == FILE_LOCK_FLOCK);
         LISTP_FOR_EACH_ENTRY(cur, &dent_file_locks->file_locks, list) {
             if (cur->handle_id != file_lock->handle_id
                     && (cur->type == F_WRLCK || file_lock->type == F_WRLCK))
@@ -241,7 +246,7 @@ bool has_flock_locks(struct libos_dentry* dent) {
 static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
                            struct libos_file_lock* file_lock) {
     assert(locked(&g_fs_lock_lock));
-    assert(file_lock->handle_id == 0);
+    assert(file_lock->family == FILE_LOCK_POSIX);
 
     /* Preallocate new locks first, so that we don't fail after modifying something. */
 
@@ -333,11 +338,12 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
                 assert(extra);
 
                 assert(start > 0);
+                extra->family = FILE_LOCK_POSIX;
                 extra->type = cur->type;
                 extra->start = end + 1;
                 extra->end = cur->end;
                 extra->pid = cur->pid;
-                extra->handle_id = 0;
+                extra->handle_id = 0; /* unused in POSIX (fcntl) locks, unset for sanity */
                 cur->end = start - 1;
                 LISTP_ADD_AFTER(extra, cur, &dent_file_locks->file_locks, list);
                 extra = NULL;
@@ -373,11 +379,12 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
     if (new) {
         assert(file_lock->type != F_UNLCK);
 
+        new->family = FILE_LOCK_POSIX;
         new->type = file_lock->type;
         new->start = start;
         new->end = end;
         new->pid = file_lock->pid;
-        new->handle_id = 0;
+        new->handle_id = 0; /* unused in POSIX (fcntl) locks, unset for sanity */
 
 #ifdef DEBUG
         /* Assert that list order is preserved */
@@ -410,7 +417,7 @@ static int _posix_lock_set(struct dent_file_locks* dent_file_locks,
 static int _flock_lock_set(struct dent_file_locks* dent_file_locks,
                            struct libos_file_lock* file_lock) {
     assert(locked(&g_fs_lock_lock));
-    assert(file_lock->handle_id);
+    assert(file_lock->family == FILE_LOCK_FLOCK);
 
     /* Lock to be added. Not necessary for F_UNLCK, because we're only removing existing locks. */
     struct libos_file_lock* new = NULL;
@@ -432,13 +439,10 @@ static int _flock_lock_set(struct dent_file_locks* dent_file_locks,
 
     if (new) {
         assert(file_lock->type != F_UNLCK);
+        new->family = FILE_LOCK_FLOCK;
         new->type = file_lock->type;
-        /* Lock the whole file; start, end and pid fields are set only for sanity
-         * (not used by flock). */
-        new->start = 0;
-        new->end = FS_LOCK_EOF;
-        new->pid = file_lock->pid;
         new->handle_id = file_lock->handle_id;
+        new->start = new->end = new->pid = 0; /* unused in BSD (flock) locks, unset for sanity */
 
         LISTP_ADD(new, &dent_file_locks->file_locks, list);
     }
@@ -465,7 +469,7 @@ static void file_lock_process_requests(struct dent_file_locks* dent_file_locks) 
             struct libos_file_lock* conflict = file_lock_find_conflict(dent_file_locks,
                                                                        &req->file_lock);
             if (!conflict) {
-                int result = req->file_lock.handle_id == 0
+                int result = req->file_lock.family == FILE_LOCK_POSIX
                                  ? _posix_lock_set(dent_file_locks, &req->file_lock)
                                  : _flock_lock_set(dent_file_locks, &req->file_lock);
                 LISTP_DEL(req, &dent_file_locks->file_lock_requests, list);
@@ -528,8 +532,8 @@ static int file_lock_set_or_add_request(struct libos_dentry* dent,
 
         *out_req = req;
     } else {
-        ret = file_lock->handle_id == 0 ? _posix_lock_set(dent_file_locks, file_lock)
-                                        : _flock_lock_set(dent_file_locks, file_lock);
+        ret = file_lock->family == FILE_LOCK_POSIX ? _posix_lock_set(dent_file_locks, file_lock)
+                                                   : _flock_lock_set(dent_file_locks, file_lock);
         if (ret < 0)
             goto out;
         file_lock_process_requests(dent_file_locks);
@@ -543,6 +547,9 @@ out:
 }
 
 int file_lock_set(struct libos_dentry* dent, struct libos_file_lock* file_lock, bool wait) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
+
     int ret;
     if (g_process_ipc_ids.leader_vmid) {
         /* In the IPC version, we use `dent->maybe_has_file_locks` to short-circuit unlocking files
@@ -606,6 +613,8 @@ out:
 
 int file_lock_set_from_ipc(const char* path, struct libos_file_lock* file_lock, bool wait,
                            IDTYPE vmid, unsigned long seq) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
     assert(!g_process_ipc_ids.leader_vmid);
 
     struct libos_dentry* dent = NULL;
@@ -647,6 +656,8 @@ out:
 
 int file_lock_get(struct libos_dentry* dent, struct libos_file_lock* file_lock,
                   struct libos_file_lock* out_file_lock) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
     assert(file_lock->type != F_UNLCK);
 
     int ret;
@@ -672,6 +683,7 @@ int file_lock_get(struct libos_dentry* dent, struct libos_file_lock* file_lock,
     if (dent_file_locks)
         conflict = file_lock_find_conflict(dent_file_locks, file_lock);
     if (conflict) {
+        out_file_lock->family = conflict->family;
         out_file_lock->type = conflict->type;
         out_file_lock->start = conflict->start;
         out_file_lock->end = conflict->end;
@@ -692,6 +704,8 @@ out:
 
 int file_lock_get_from_ipc(const char* path, struct libos_file_lock* file_lock,
                            struct libos_file_lock* out_file_lock) {
+    assert(file_lock->family == FILE_LOCK_POSIX || file_lock->family == FILE_LOCK_FLOCK);
+    assert(file_lock->family == FILE_LOCK_POSIX ? file_lock->pid : file_lock->handle_id);
     assert(!g_process_ipc_ids.leader_vmid);
 
     struct libos_dentry* dent = NULL;
@@ -727,7 +741,7 @@ static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid
     struct libos_file_lock* file_lock;
     struct libos_file_lock* file_lock_tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(file_lock, file_lock_tmp, &dent_file_locks->file_locks, list) {
-        if (file_lock->handle_id == 0 && file_lock->pid == pid) {
+        if (file_lock->family == FILE_LOCK_POSIX && file_lock->pid == pid) {
             LISTP_DEL(file_lock, &dent_file_locks->file_locks, list);
             free(file_lock);
             changed = true;
@@ -737,7 +751,7 @@ static int file_lock_clear_pid_from_dentry(struct libos_dentry* dent, IDTYPE pid
     struct file_lock_request* req;
     struct file_lock_request* req_tmp;
     LISTP_FOR_EACH_ENTRY_SAFE(req, req_tmp, &dent_file_locks->file_lock_requests, list) {
-        if (req->file_lock.handle_id == 0 && req->file_lock.pid == pid) {
+        if (req->file_lock.family == FILE_LOCK_POSIX && req->file_lock.pid == pid) {
             assert(!req->notify.event);
             LISTP_DEL(req, &dent_file_locks->file_lock_requests, list);
             free(req);

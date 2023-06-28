@@ -53,14 +53,14 @@ int set_handle_nonblocking(struct libos_handle* handle, bool on) {
 }
 
 /*
- * Convert user-mode `struct flock` into our `struct libos_file_lock`. This mostly means converting
- * the position parameters (l_whence, l_start, l_len) to an absolute inclusive range [start .. end].
- * See `man fcntl` for details.
+ * Convert user-mode `struct flock` into our `struct libos_file_lock` (for POSIX locks only). This
+ * mostly means converting the position parameters (l_whence, l_start, l_len) to an absolute
+ * inclusive range [start .. end]. See `man fcntl` for details.
  *
  * We need to return -EINVAL for underflow (positions before start of file), and -EOVERFLOW for
  * positive overflow.
  */
-static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl, uint64_t handle_id,
+static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl,
                               struct libos_file_lock* file_lock) {
     if (!(fl->l_type == F_RDLCK || fl->l_type == F_WRLCK || fl->l_type == F_UNLCK))
         return -EINVAL;
@@ -126,11 +126,12 @@ static int flock_to_file_lock(struct flock* fl, struct libos_handle* hdl, uint64
         end = FS_LOCK_EOF;
     }
 
+    file_lock->family = FILE_LOCK_POSIX;
     file_lock->type = fl->l_type;
     file_lock->start = start;
     file_lock->end = end;
     file_lock->pid = g_process.pid;
-    file_lock->handle_id = handle_id;
+    file_lock->handle_id = 0; /* unused in POSIX (fcntl) locks, unset for sanity */
     return 0;
 }
 
@@ -215,7 +216,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct libos_file_lock file_lock;
-            ret = flock_to_file_lock(fl, hdl, /*handle_id=*/0, &file_lock);
+            ret = flock_to_file_lock(fl, hdl, &file_lock);
             if (ret < 0)
                 break;
 
@@ -238,7 +239,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct libos_file_lock file_lock;
-            ret = flock_to_file_lock(fl, hdl, /*handle_id=*/0, &file_lock);
+            ret = flock_to_file_lock(fl, hdl, &file_lock);
             if (ret < 0)
                 break;
 
@@ -297,28 +298,27 @@ long libos_syscall_flock(unsigned int fd, unsigned int cmd) {
     if (!hdl)
         return -EBADF;
 
-    struct flock fl = { .l_whence = SEEK_SET };
-
+    int lock_type;
     switch (cmd & ~LOCK_NB) {
         case LOCK_EX:
-            fl.l_type = F_WRLCK;
+            lock_type = F_WRLCK;
             break;
         case LOCK_SH:
-            fl.l_type = F_RDLCK;
+            lock_type = F_RDLCK;
             break;
         case LOCK_UN:
-            fl.l_type = F_UNLCK;
+            lock_type = F_UNLCK;
             break;
         default:
             ret = -EINVAL;
             goto out;
     }
 
-    struct libos_file_lock file_lock;
-    ret = flock_to_file_lock(&fl, hdl, hdl->id, &file_lock);
-    if (ret < 0)
-        goto out;
-
+    struct libos_file_lock file_lock = {
+        .family = FILE_LOCK_FLOCK,
+        .type = lock_type,
+        .handle_id = hdl->id,
+    };
     ret = file_lock_set(hdl->dentry, &file_lock, !(cmd & LOCK_NB));
 out:
     put_handle(hdl);

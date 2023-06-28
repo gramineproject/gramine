@@ -297,11 +297,11 @@ static int clear_posix_locks(struct libos_handle* handle) {
          * closed, even if the process holds other handles for that file, or duplicated FDs for the
          * same handle. */
         struct libos_file_lock file_lock = {
+            .family = FILE_LOCK_POSIX,
             .type = F_UNLCK,
             .start = 0,
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
-            .handle_id = 0,
         };
         int ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
         if (ret < 0) {
@@ -485,10 +485,8 @@ static int clear_flock_locks(struct libos_handle* hdl) {
     if (hdl && hdl->dentry && has_flock_locks(hdl->dentry)) {
         assert(hdl->ref_count == 0);
         struct libos_file_lock file_lock = {
+            .family = FILE_LOCK_FLOCK,
             .type = F_UNLCK,
-            .start = 0,
-            .end = FS_LOCK_EOF,
-            .pid = g_process.pid,
             .handle_id = hdl->id,
         };
         int ret = file_lock_set(hdl->dentry, &file_lock, /*block=*/false);
