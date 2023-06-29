@@ -2219,7 +2219,8 @@ main (leader) process.
 Gramine currently implements two types of file locks:
 - POSIX (fcntl) locks aka Advisory record locks. In particular, the following operations are
   implemented: `fcntl(F_SETLK)`, `fcntl(F_SETLKW)` and `fcntl(F_GETLK)`.
-- BSD (flock) locks. The following system call is implemented: `flock()`.
+- BSD (flock) locks. The following system call is implemented: `flock()`. Its support is currently
+  experimental and not suitable for production.
 
 Both types of file locks share the same internal implementation in Gramine. The current
 implementation has the following caveats:
@@ -2233,17 +2234,14 @@ implementation has the following caveats:
 - The lock requests cannot be interrupted (`EINTR`).
 - The locks work only on regular files (no pipes, sockets etc.).
 
-There is one more caveat for BSD (flock) locks: BSD locks are released when the last reference (file
-descriptor, or FD) to the underlying opened file is closed, including when a process with the opened
-file terminates. Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This leads
-to the following corner case: the parent process opens a file, spawns a child (which inherits the
-opened file) and then the parent terminates. Here, the parent process doesn't know whether the child
-closed the file's FD or continues to use it; in the latter case, releasing the file lock on parent
-termination would be incorrect. Gramine currently errs on the side of caution and does *not* release
-a file lock if the process has children; this may leak resources or deadlock but doesn't introduce
-unsafe behavior.
-
 Similarly to Linux, BSD (flock) locks ignore deprecated `LOCK_{MAND,READ,WRITE,RW}` operations.
+
+BSD (flock) locks are currently experimental and are *disabled* by default. To enable them, use
+``sys.experimental__enable_flock`` manifest option. There is at least one problem with BSD locks
+currently: they are supposed to be released when the last reference (file descriptor, or FD) to the
+underlying opened file is closed, including when a process with the opened file terminates.
+Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may lead to premature
+releases of flock locks in some situations.
 
 <details><summary>Related system calls</summary>
 
@@ -2251,7 +2249,7 @@ Similarly to Linux, BSD (flock) locks ignore deprecated `LOCK_{MAND,READ,WRITE,R
   - ▣ `F_SETLK`: see notes above
   - ▣ `F_SETLKW`: see notes above
   - ▣ `F_GETLK`: see notes above
-- ▣ `flock()`: see notes above
+- ▣ `flock()`: experimental, see notes above
 
 </details><br />
 
