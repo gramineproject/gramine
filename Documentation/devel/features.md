@@ -380,7 +380,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[23](#misc)</sup>
 
-- ☒ `flock()`
+- ▣ `flock()`
   <sup>[9b](#file-locking)</sup>
 
 - ☑ `fsync()`
@@ -498,7 +498,7 @@ The below list is generated from the [syscall table of Linux
 - ▣ `getpgrp()`
   <sup>[3](#process-and-thread-identifiers)</sup>
 
-- ☒ `setsid()`
+- ▣ `setsid()`
   <sup>[23](#misc)</sup>
 
 - ☒ `setreuid()`
@@ -534,7 +534,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `setfsgid()`
   <sup>[8](#user-and-group-identifiers)</sup>
 
-- ☒ `getsid()`
+- ▣ `getsid()`
   <sup>[23](#misc)</sup>
 
 - ☒ `capget()`
