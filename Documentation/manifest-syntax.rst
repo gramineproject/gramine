@@ -604,8 +604,8 @@ This syntax enables the ``flock`` system call in Gramine.
 
 .. warning::
    This syscall is still under development and may contain security
-   vulnerabilities. This is temporary; the syscall will be enabled in future
-   after thorough validation and this syntax will be removed then.
+   vulnerabilities. This is temporary; the syscall will be enabled by default in
+   the future after thorough validation and this syntax will be removed then.
 
 SGX syntax
 ----------
