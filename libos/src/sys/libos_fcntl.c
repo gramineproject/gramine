@@ -26,6 +26,7 @@
 #include "libos_thread.h"
 #include "linux_abi/errors.h"
 #include "linux_abi/fs.h"
+#include "toml_utils.h"
 
 #define FCNTL_SETFL_MASK (O_APPEND | O_DIRECT | O_NOATIME | O_NONBLOCK)
 
@@ -293,6 +294,28 @@ long libos_syscall_flock(unsigned int fd, unsigned int cmd) {
         log_warning("flock requests with LOCK_MAND are ignored");
         return 0;
     }
+
+    /* TODO: temporary measure, remove it once flock implementation is thoroughly validated and
+     * works on multi-process apps; see comments at `created_by_process` in `libos_handle.h` */
+    assert(g_manifest_root);
+    bool enable_flock;
+    ret = toml_bool_in(g_manifest_root, "sys.experimental__enable_flock", /*defaultval=*/false,
+                       &enable_flock);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.experimental__enable_flock' (the value must be `true` or "
+                  "`false`)");
+        return -ENOSYS;
+    }
+    if (!enable_flock) {
+        /* flock is not explicitly allowed in manifest */
+        if (FIRST_TIME()) {
+            log_warning("The app tried to use flock, but it's turned off "
+                        "(sys.experimental__enable_flock = false)");
+        }
+
+        return -ENOSYS;
+    }
+
 
     struct libos_handle* hdl = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!hdl)

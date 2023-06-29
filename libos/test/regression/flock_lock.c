@@ -158,6 +158,7 @@ static void test_flock_mix_with_fcntl(void) {
     }
 
     CHECK(close(fd));
+    CHECK(unlink(TEST_FILE2));
 }
 
 static void test_mmap_flock_close_unmap(void) {
@@ -242,7 +243,6 @@ int main(void) {
     test_flock_multithread();
 
     CHECK(unlink(TEST_FILE));
-    CHECK(unlink(TEST_FILE2));
     printf("TEST OK\n");
     return 0;
 }

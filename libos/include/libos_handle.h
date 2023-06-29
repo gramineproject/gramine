@@ -144,12 +144,16 @@ struct libos_handle {
      * the "last" file descriptor to this handle is closed (by "last" FD we assume here the last FD
      * referring to this handle in the creator process).
      *
-     * FIXME: This is problematic in case when the parent process opens a handle, spawns a child and
-     *        terminates; in this case the operation (e.g. LOCK_UN) would be performed even though
-     *        the handle is still opened in the child. Unfortunately, Gramine lacks system-wide
-     *        tracking of handle FDs. We currently err on the side of caution and do *not* perform
-     *        an operation if the process has children; this may leak resources or deadlock but at
-     *        least we don't introduce unsafe behavior.
+     * FIXME: Problematic case: P1 opens a handle, spawns P2 and terminates; in this case the
+     *        operation (e.g. LOCK_UN) would be performed even though the handle is still opened in
+     *        P2. Unfortunately, Gramine lacks system-wide tracking of handle FDs. We currently err
+     *        on the side of caution and do *not* perform an operation if the process has children;
+     *        this may leak resources or deadlock but at least we don't introduce unsafe behavior.
+     *
+     *        However, even this precaution doesn't solve a more complex case: P1 opens a handle,
+     *        spawns P2, P2 spawns P3, P2 terminates, P1 terminates. In this case, P1 doesn't have
+     *        direct children, but the handle is still opened in P3, so technically P1 should *not*
+     *        perform an operation. But, this case is impossible to track in current Gramine.
      */
     bool created_by_process;
 

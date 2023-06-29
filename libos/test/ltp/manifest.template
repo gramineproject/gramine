@@ -17,6 +17,9 @@ fs.mounts = [
   { path = "/tmp", uri = "file:/tmp" },
 ]
 
+# for flock tests
+sys.experimental__enable_flock = true
+
 sys.brk.max_size = "32M"
 sys.stack.size = "4M"
 sgx.debug = true

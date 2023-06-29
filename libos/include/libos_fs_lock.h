@@ -83,7 +83,7 @@ struct libos_file_lock {
  * If `file_lock->type` is `F_RDLCK` or `F_WRLCK`, the function will create a new lock as follows:
  * - For POSIX (fcntl) locks, for the given PID and range, replace the existing POSIX locks held by
  *   the given PID for that range.
- * - for BSD (flock) locks, replace the existing BSD locks held by the given handle ID.
+ * - For BSD (flock) locks, replace the existing BSD locks held by the given handle ID.
  *
  * If there are conflicting locks, the function either waits (if `wait` is true), or fails with
  * `-EAGAIN` (if `wait` is false).

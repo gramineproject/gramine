@@ -491,7 +491,6 @@ static void destroy_handle(struct libos_handle* hdl) {
 static int clear_flock_locks(struct libos_handle* hdl) {
     /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
     if (hdl && hdl->dentry && hdl->created_by_process) {
-
         lock(&g_process.children_lock);
         if (!LISTP_EMPTY(&g_process.children)) {
             /* Do not perform an unlock operation if this process has children. This may leak
