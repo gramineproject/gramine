@@ -1,4 +1,4 @@
-project('mbedtls', 'c')
+project('mbedtls', 'c', version: '3.4.0')
 
 cc = meson.get_compiler('c')
 host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
