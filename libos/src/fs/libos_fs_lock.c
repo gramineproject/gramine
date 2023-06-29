@@ -53,7 +53,8 @@ struct dent_file_locks {
 
     /* Used to disallow mixing of POSIX and BSD locks on the same file (dentry). Note that all file
      * locking requests are processed by the leader process, so even if POSIX and BSD locks are
-     * created in different processes, they will end up in leader and will update these fields. */
+     * created in different processes, they will end up in the leader and it will update these
+     * fields. */
     bool posix_used;
     bool flock_used;
 
@@ -176,8 +177,8 @@ static void dent_file_locks_gc(struct dent_file_locks* dent_file_locks) {
 /*
  * Find first lock that conflicts with `file_lock`. For POSIX (fcntl) locks, two locks conflict if
  * they have different PIDs, their ranges overlap, and at least one of them is a write lock. For BSD
- * (flock) locks, two locks conflict if they have different handle IDs and at least one of them is a
- * write lock.
+ * (flock) locks, two locks conflict if they have different handle IDs and at least one of them is
+ * an exclusive lock.
  */
 static struct libos_file_lock* file_lock_find_conflict(struct dent_file_locks* dent_file_locks,
                                                        struct libos_file_lock* file_lock) {

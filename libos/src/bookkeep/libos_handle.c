@@ -352,9 +352,15 @@ struct libos_handle* get_new_handle(void) {
     INIT_LISTP(&new_handle->epoll_items);
     new_handle->epoll_items_count = 0;
 
-    static uint64_t local_counter = 0;
+    static uint32_t local_id_counter = 0;
     new_handle->id = ((uint64_t)g_process.pid << 32)
-                      | __atomic_add_fetch(&local_counter, 1, __ATOMIC_RELAXED);
+                      | __atomic_add_fetch(&local_id_counter, 1, __ATOMIC_RELAXED);
+    if ((new_handle->id & 0xFFFFFFFF) == 0) {
+        /* overflow of local_id_counter, this may lead to aliasing of different handles and is
+         * potentially a security vulnerability, so just terminate the whole process */
+        log_error("overflow when allocating a handle ID, not safe to proceed");
+        BUG();
+    }
     new_handle->created_by_process = true;
 
     return new_handle;
@@ -485,6 +491,17 @@ static void destroy_handle(struct libos_handle* hdl) {
 static int clear_flock_locks(struct libos_handle* hdl) {
     /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
     if (hdl && hdl->dentry && hdl->created_by_process) {
+
+        lock(&g_process.children_lock);
+        if (!LISTP_EMPTY(&g_process.children)) {
+            /* Do not perform an unlock operation if this process has children. This may leak
+             * resources or deadlock, but protects against unsafe behavior. See comments near
+             * `created_by_process` in libos_handle.h header. */
+            unlock(&g_process.children_lock);
+            return -EBUSY;
+        }
+        unlock(&g_process.children_lock);
+
         assert(hdl->ref_count == 0);
         struct libos_file_lock file_lock = {
             .family = FILE_LOCK_FLOCK,
