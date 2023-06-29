@@ -2774,9 +2774,10 @@ It is possible to specify arbitrary IOCTLs (with arbitrary request codes and cor
 data structures), targeted for special use cases like communication with hardware accelerators (e.g.
 GPUs) or implementing socket-related IOCTLs. This is achieved via [`sys.ioctl_structs` and
 `sys.allowed_ioctls` manifest options](../manifest-syntax.html#allowed-ioctls). Read the
-documentation to learn how to use this feature. There is also a corresponding
-[whitepaper](https://arxiv.org/abs/2203.01813). Note that arbitrary IOCTLs specified in the manifest
-are pass-through and thus potentially insecure by themselves in e.g. SGX environments!
+documentation to learn how to use this feature. There is also a corresponding [whitepaper on
+communication with hardware accelerators](https://arxiv.org/abs/2203.01813). Note that arbitrary
+IOCTLs specified in the manifest are pass-through and thus potentially insecure by themselves in
+e.g. SGX environments!
 
 <details><summary>Related system calls</summary>
 
@@ -3011,8 +3012,8 @@ Gramine implements several arch-specific (x86-64) operations:
 Gramine implements minimal session management via `setsid()` and `getsid()`. It is possible to make
 the calling process the leader of the new session, which is enough for many workloads (e.g. JVM).
 However, there are serious limitations:
-- in `getsid()`, not possible to get session id of other processes (only of this process),
-- impossible to send signals to a process group,
+- in `getsid()`, it's not possible to get session id of other processes (only of this process),
+- it's impossible to send signals to a process group,
 - daemonization is still broken: the orphaned child is not adopted by `init`, because there is no
   `init` process in Gramine.
 
