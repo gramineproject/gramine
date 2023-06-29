@@ -63,7 +63,16 @@ static bool _find_free_id_range(IDTYPE* start, IDTYPE* end) {
 
     static_assert(!IS_SIGNED(IDTYPE), "IDTYPE must be unsigned");
     static_assert(PID_MAX <= IDTYPE_MAX - (MAX_RANGE_SIZE - 1), "int overflow may happen");
-    IDTYPE next_id = (g_last_id + 1 > PID_MAX) ? 1 : g_last_id + 1;
+
+    if (g_last_id + 1 > PID_MAX) {
+        /* Overflow of IDs, this may lead to aliasing of process-ID-derived objects (e.g.
+         * `libos_handle::id` used for flock file locks) and is potentially a security
+         * vulnerability, so just terminate the whole process (which is the IPC leader). */
+        log_error("reached PID limit when allocating a new ID, not safe to proceed");
+        BUG();
+    }
+
+    IDTYPE next_id = g_last_id + 1;
 
     struct id_range dummy = {
         .start = next_id,
@@ -111,9 +120,12 @@ static int alloc_id_range(IDTYPE owner, IDTYPE* start, IDTYPE* end) {
     lock(&g_id_owners_tree_lock);
     bool found = _find_free_id_range(start, end);
     if (!found) {
-        /* No id found, try wrapping around. */
-        g_last_id = 0;
-        found = _find_free_id_range(start, end);
+        /* No id found, we could try wrapping around (`g_last_id = 0`) and calling the func again,
+         * but this may lead to aliasing of process-ID-derived objects (e.g. `libos_handle::id`
+         * used for flock file locks) and is potentially a security vulnerability, so just terminate
+         * the whole process (which is the IPC leader). */
+        log_error("reached PID limit when allocating a new ID, not safe to proceed");
+        BUG();
     }
 
     int ret = 0;
@@ -123,6 +135,7 @@ static int alloc_id_range(IDTYPE owner, IDTYPE* start, IDTYPE* end) {
         new_range->end = *end;
         new_range->owner = owner;
         avl_tree_insert(&g_id_owners_tree, &new_range->node);
+        assert(*end > g_last_id);
         g_last_id = *end;
     } else {
         free(new_range);

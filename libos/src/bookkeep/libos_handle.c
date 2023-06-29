@@ -353,14 +353,14 @@ struct libos_handle* get_new_handle(void) {
     new_handle->epoll_items_count = 0;
 
     static uint32_t local_id_counter = 0;
-    new_handle->id = ((uint64_t)g_process.pid << 32)
-                      | __atomic_add_fetch(&local_id_counter, 1, __ATOMIC_RELAXED);
-    if ((new_handle->id & 0xFFFFFFFF) == 0) {
+    uint32_t next_id_counter = __atomic_add_fetch(&local_id_counter, 1, __ATOMIC_RELAXED);
+    if (!next_id_counter) {
         /* overflow of local_id_counter, this may lead to aliasing of different handles and is
          * potentially a security vulnerability, so just terminate the whole process */
         log_error("overflow when allocating a handle ID, not safe to proceed");
         BUG();
     }
+    new_handle->id = ((uint64_t)g_process.pid << 32) | next_id_counter;
     new_handle->created_by_process = true;
 
     return new_handle;
