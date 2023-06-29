@@ -1,4 +1,8 @@
-project('mbedtls', 'c')
+project(
+    'mbedtls',
+    'c',
+    version: '1.4post~UNRELEASED', # keep synced with top-level meson.build
+)
 
 pkgconfig = import('pkgconfig')
 

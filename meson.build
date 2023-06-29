@@ -5,7 +5,7 @@
 project(
     'gramine',
     'c', 'cpp',
-    version: '1.4post~UNRELEASED',
+    version: '1.4post~UNRELEASED', # keep synced with subprojects/packagefiles/mbedtls/meson.build
     license: 'LGPLv3+',
 
     meson_version: '>=0.56',
