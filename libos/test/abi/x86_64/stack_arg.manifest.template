@@ -7,7 +7,6 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.argv_src_file = "file:stack_arg_argv_input"
 
 fs.mounts = [
-  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
@@ -18,7 +17,6 @@ sgx.max_threads = 4
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ binary_dir }}/{{ entrypoint }}",
-  "file:{{ gramine.runtimedir() }}/",
 ]
 
 sgx.allowed_files = [
