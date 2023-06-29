@@ -7,7 +7,6 @@ loader.env.env0 = "val0"
 loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
-  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
@@ -18,5 +17,4 @@ sgx.max_threads = 4
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ binary_dir }}/{{ entrypoint }}",
-  "file:{{ gramine.runtimedir() }}/",
 ]
