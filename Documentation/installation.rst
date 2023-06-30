@@ -25,6 +25,22 @@ option on a dedicated page.
 Install Gramine packages
 ------------------------
 
+Debian 12
+^^^^^^^^^
+
+::
+
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   | sudo tee /etc/apt/sources.list.d/gramine.list
+
+   sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu jammy main" \
+   | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+
+   sudo apt-get update
+   sudo apt-get install gramine
+
 Debian 11
 ^^^^^^^^^
 
@@ -45,8 +61,8 @@ Debian 11
    sudo apt-get update
    sudo apt-get install gramine
 
-Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Ubuntu 22.04 LTS or 20.04 LTS
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
@@ -61,12 +77,10 @@ Ubuntu 22.04 LTS, 20.04 LTS or 18.04 LTS
    sudo apt-get update
    sudo apt-get install gramine
 
-RHEL-like distributions version 8
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AlmaLinux and compatible distributions, versions 9 and 8
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 These are distributions like AlmaLinux, Rocky Linux, etc.
-
-We also *experimentally* support RHEL-like distributions version 9.
 
 1. Install EPEL repository as described here:
    https://docs.fedoraproject.org/en-US/epel/
