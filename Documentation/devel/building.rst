@@ -130,9 +130,8 @@ non-SGX version)::
 .. note::
 
    Meson documentation recommends to always override the ``--prefix`` default.
-   For a system-wide installation from sources, ``/usr/local`` is typically a
-   correct value.  For some distros (e.g. Alpine), the correct value is
-   ``/usr``.
+   For a system-wide installation from sources, ``/usr/local`` is typically the
+   correct value. For some distros (e.g. Alpine), the correct value is ``/usr``.
 
 .. note::
 
