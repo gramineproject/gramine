@@ -1,8 +1,4 @@
-project(
-    'mbedtls',
-    'c',
-    version: '1.4post~UNRELEASED', # keep synced with top-level meson.build
-)
+project('mbedtls', 'c', version: '3.4.0')
 
 pkgconfig = import('pkgconfig')
 
@@ -46,6 +42,7 @@ mbedtls_libs = custom_target('mbedtls',
 pkgconfig.generate(
     name: 'mbedtls_gramine',
     filebase: 'mbedtls_gramine',
+    version: '1.4post~UNRELEASED', # keep synced with top-level meson.build
     description: 'A version of mbedtls patched for Gramine',
     subdirs: 'gramine',
     libraries: [
