@@ -165,10 +165,8 @@ void get_all_pending_signals(__sigset_t* set) {
     unlock(&g_process_signal_queue_lock);
     unlock(&current->lock);
 
-#if 0 /* TODO: remove after testing CI (should fail without this snippet) */
     if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED))
         __sigaddset(set, SIGTERM);
-#endif
 }
 
 bool have_pending_signals(void) {
