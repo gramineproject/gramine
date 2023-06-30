@@ -123,8 +123,16 @@ To build Gramine, you need to first set up the build directory. In the root
 directory of Gramine repo, run the following command (recall that "direct" means
 non-SGX version)::
 
-   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
+   meson setup build/ --buildtype=release --prefix=/usr/local \
+       -Ddirect=enabled -Dsgx=enabled \
        -Dsgx_driver=<driver> -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+
+.. note::
+
+   Meson documentation recommends to always override the ``--prefix`` default.
+   For a system-wide installation from sources, ``/usr/local`` is typically a
+   correct value.  For some distros (e.g. Alpine), the correct value is
+   ``/usr``.
 
 .. note::
 
@@ -170,11 +178,13 @@ it's usually not needed.
 
 .. note::
 
-   When installing from sources, Gramine executables are placed under
-   ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
-   for executables under this path. If your system reports that Gramine
-   programs can not be found, you might need to edit your configuration files so
-   that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
+   When installing from sources with the default installation prefix, Gramine
+   executables are placed under ``/usr/local/bin``. Some Linux distributions
+   (notably CentOS) do not search for executables under this path. If your
+   system reports that Gramine programs can not be found, you might need to edit
+   your configuration files so that ``/usr/local/bin`` is in your path (in
+   ``PATH`` environment variable). Some other distros (notably Alpine) prefer
+   the ``/usr/bin`` path.
 
 Set ``-Dglibc=`` or ``-Dmusl=`` options to ``disabled`` if you wish not to build
 the support for any (they are both built by default).
@@ -235,10 +245,10 @@ Additional build options
 
 - To build with ``-Werror``, run :command:`meson --werror`.
 
-- To install into some other place than :file:`/usr/local`, use
-  :command:`meson --prefix=<prefix>`. Note that if you chose something else than
-  :file:`/usr` then for things to work, you probably need to adjust several
-  environment variables:
+- To install into some other place than :file:`/usr/local`, modify the
+  installation prefix via :command:`meson --prefix=<prefix>`. Note that if you
+  chose something else than :file:`/usr` then for things to work, you probably
+  need to adjust several environment variables:
 
   =========================== ================================================== ========================
   Variable                    What to add                                        Read more
@@ -300,7 +310,7 @@ command, which apart from Gramine code will contain all wrapped subprojects and
 also git submodules. For this you need to create a |~| dummy builddir using
 :command:`meson setup` command::
 
-    meson setup build-dist/ \
+    meson setup build-dist/ --prefix=/usr/local \
         -Ddirect=disabled -Dsgx=disabled -Dskeleton=enabled \
         -Dglibc=enabled -Dmusl=enabled -Dlibgomp-enabled
     meson dist -C build-dist/ --no-tests --include-subprojects --formats=gztar
@@ -327,7 +337,7 @@ Proceed with compiling and installing as usual.
 
 ::
 
-    meson setup build/ --prefix=/usr --wrap-mode=nodownload \
+    meson setup build/ --prefix=/usr/local --wrap-mode=nodownload \
         -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
     meson compile -C build/
     meson install -C build/
