@@ -2236,12 +2236,13 @@ implementation has the following caveats:
 
 Similarly to Linux, BSD (flock) locks ignore deprecated `LOCK_{MAND,READ,WRITE,RW}` operations.
 
-BSD (flock) locks are currently experimental and are *disabled* by default. To enable them, use
-``sys.experimental__enable_flock`` manifest option. There is at least one problem with BSD locks
-currently: they are supposed to be released when the last reference (file descriptor, or FD) to the
-underlying opened file is closed, including when a process with the opened file terminates.
-Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may lead to premature
-releases of flock locks in some situations.
+BSD (flock) locks are currently experimental and are *disabled* by default. To enable them, use the
+[``sys.experimental__enable_flock`` manifest
+option](../manifest-syntax.html#experimental-flock-bsd-style-locks-support). There is at least one
+problem with BSD locks currently: they are supposed to be released when the last reference (file
+descriptor, or FD) to the underlying opened file is closed, including when a process with the opened
+file terminates.  Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may
+lead to premature releases of flock locks in some situations.
 
 <details><summary>Related system calls</summary>
 
