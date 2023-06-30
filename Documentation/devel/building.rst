@@ -183,15 +183,17 @@ By default, Meson uses installation prefix :file:`/usr/local`.
   search for executables under this path. If your system reports that Gramine
   programs can not be found, you might need to edit your configuration files so
   that :file:`/usr/local/bin` is in your path (in ``$PATH`` environment
-  variable). Alternatively, you can modify the installation prefix, e.g. to
-  :file:`/usr`.
+  variable). Alternatively, you can modify the installation prefix (e.g. to
+  :file:`/usr`) or the executable directory (e.g. :command:`meson
+  --bindir=/usr/bin`).
 
 - When installing from sources, Gramine Python modules are placed under
-  :file:`/usr/local/lib/python3.xyz/site-packages`. Some Linux distributions
-  (notably Alpine) do not search for Python modules under this path. If your
-  system fails to find Gramine Python modules, you might need to adjust
-  ``PYTHONPATH`` environment variable. Alternatively, you can modify the
-  installation prefix, e.g. to :file:`/usr`.
+  :file:`/usr/local/lib/python3.xyz/site-packages` (or under
+  :file:`/usr/local/lib/python3.xyz/dist-packages` on Debian-like distros). Some
+  Linux distributions (notably Alpine) do not search for Python modules under
+  this path. If your system fails to find Gramine Python modules, you might need
+  to adjust ``PYTHONPATH`` environment variable. Alternatively, you can modify
+  the installation prefix, e.g. to :file:`/usr`.
 
 To install into some other place than :file:`/usr/local`, use :command:`meson
 --prefix=<prefix>`. Note that if you chose something else than :file:`/usr`
