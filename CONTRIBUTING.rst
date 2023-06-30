@@ -194,7 +194,8 @@ also built by Meson, must be installed as well. To do that, configure your build
 directory with ``-Dtests=enabled`` and install Gramine::
 
    # add -Dsgx=enabled and SGX options if necessary
-   meson setup build/ --werror -Dtests=enabled -Ddirect=enabled
+   meson setup build/ --buildtype=debug --prefix=/usr/local --werror \
+       -Dtests=enabled -Ddirect=enabled
 
    ninja -C build/
    sudo ninja -C build/ install
