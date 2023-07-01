@@ -46,7 +46,7 @@ Moreover, we set `RA_TLS_ALLOW_OUTDATED_TCB_INSECURE=1`,
 allow performing the tests when some of Intel's security advisories haven't been
 addressed (for example, when the microcode or architectural enclaves aren't
 fully up-to-date). Note that in production environments, you must carefully
-analyse whether to use these options!
+analyze whether to use these options!
 
 ## Secret Provisioning clients
 

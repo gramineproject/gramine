@@ -74,7 +74,7 @@ int sgx_qv_verify_quote(const uint8_t* p_quote, uint32_t quote_size, void* p_quo
 static const char* sgx_ql_qv_result_to_str(sgx_ql_qv_result_t verification_result) {
     switch (verification_result) {
         case SGX_QL_QV_RESULT_OK:
-            return "OK (but collateral out of date)";
+            return "OK";
         case SGX_QL_QV_RESULT_CONFIG_NEEDED:
             return "CONFIG_NEEDED";
         case SGX_QL_QV_RESULT_OUT_OF_DATE:
@@ -215,8 +215,13 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
             break;
     }
     if (ret < 0) {
-        ERROR("Quote: verification failed with error %s\n",
-              sgx_ql_qv_result_to_str(verification_result));
+        if (verification_result == SGX_QL_QV_RESULT_OK) {
+            assert(collateral_expiration_status != 0 && !allow_outdated_tcb);
+            ERROR("Quote: verification failed because collateral is out of date\n");
+        } else {
+            ERROR("Quote: verification failed with error %s\n",
+                  sgx_ql_qv_result_to_str(verification_result));
+        }
         goto out;
     }
     if (verification_result != SGX_QL_QV_RESULT_OK) {

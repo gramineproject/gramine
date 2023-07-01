@@ -108,10 +108,8 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
  * \param ias_sig_b64               IAS report signature (base64-encoded as returned by IAS).
  * \param ias_sig_b64_size          Size of \p ias_sig_b64 in bytes.
  * \param allow_outdated_tcb        Treat IAS status code GROUP_OUT_OF_DATE as OK.
- * \param allow_hw_config_needed    Treat IAS status codes CONFIGURATION_NEEDED and
- *                                  CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
- * \param allow_sw_hardening_needed Treat IAS status codes SW_HARDENING_NEEDED and
- *                                  CONFIGURATION_AND_SW_HARDENING_NEEDED as OK.
+ * \param allow_hw_config_needed    Treat IAS status code CONFIGURATION_NEEDED as OK.
+ * \param allow_sw_hardening_needed Treat IAS status code SW_HARDENING_NEEDED as OK.
  * \param nonce                     (Optional) Nonce that's expected in the report.
  * \param ias_pub_key_pem           (Optional) IAS public RSA key (PEM format, NULL-terminated).
  *                                  If not specified, a hardcoded Intel's key is used.
@@ -123,6 +121,9 @@ int ias_send_quote_get_report_raw(struct ias_context_t* context, const void* quo
  * \param[out] out_quote_size       Size of \p out_quote in bytes.
  *
  * \returns 0 on successful verification, negative value on error.
+ *
+ * To treat the IAS status code CONFIGURATION_AND_SW_HARDENING_NEEDED as OK, both
+ * \p allow_hw_config_needed and \p allow_sw_hardening_needed must be set to true.
  */
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
                                     uint8_t* ias_sig_b64, size_t ias_sig_b64_size,

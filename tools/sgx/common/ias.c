@@ -620,22 +620,34 @@ out:
     return ret;
 }
 
-static void print_allowed_and_advisories(char* quote_status_str, cJSON* json) {
+static int print_allowed_and_advisories(char* quote_status_str, cJSON* json) {
     INFO("IAS report: allowing quote status %s\n", quote_status_str);
 
     cJSON* url_node = cJSON_GetObjectItem(json, "advisoryURL");
-    if (url_node && url_node->type == cJSON_String) {
+    if (url_node) {
+        if (url_node->type != cJSON_String) {
+            ERROR("Unexpected type of `advisoryURL` field (expected JSON string)\n");
+            return -1;
+        }
         INFO("            [ advisory URL: %s ]\n", url_node->valuestring);
     }
 
     cJSON* ids_node = cJSON_GetObjectItem(json, "advisoryIDs");
-    if (ids_node && ids_node->type == cJSON_Array) {
+    if (ids_node) {
+        if (ids_node->type != cJSON_Array) {
+            ERROR("Unexpected type of `advisoryIDs` field (expected JSON array)\n");
+            return -1;
+        }
         char* ids_str = cJSON_Print(ids_node);
-        if (!ids_str)
-            return;
+        if (!ids_str) {
+            ERROR("Failed to print `advisoryIDs` field\n");
+            return -1;
+        }
         INFO("            [ advisory IDs: %s ]\n", ids_str);
         free(ids_str);
     }
+
+    return 0;
 }
 
 int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report_size,
@@ -754,18 +766,14 @@ int ias_verify_report_extract_quote(const uint8_t* ias_report, size_t ias_report
         ret = 0;
         INFO("IAS report: quote status OK\n");
     } else if (allow_outdated_tcb && strcmp("GROUP_OUT_OF_DATE", node->valuestring) == 0) {
-        ret = 0;
-        print_allowed_and_advisories(node->valuestring, json);
+        ret = print_allowed_and_advisories(node->valuestring, json);
     } else if (allow_hw_config_needed && strcmp("CONFIGURATION_NEEDED", node->valuestring) == 0) {
-        ret = 0;
-        print_allowed_and_advisories(node->valuestring, json);
+        ret = print_allowed_and_advisories(node->valuestring, json);
     } else if (allow_sw_hardening_needed && strcmp("SW_HARDENING_NEEDED", node->valuestring) == 0) {
-        ret = 0;
-        print_allowed_and_advisories(node->valuestring, json);
+        ret = print_allowed_and_advisories(node->valuestring, json);
     } else if (allow_hw_config_needed && allow_sw_hardening_needed
                    && strcmp("CONFIGURATION_AND_SW_HARDENING_NEEDED", node->valuestring) == 0) {
-        ret = 0;
-        print_allowed_and_advisories(node->valuestring, json);
+        ret = print_allowed_and_advisories(node->valuestring, json);
     }
 
     if (ret != 0) {

@@ -344,11 +344,15 @@ The library also uses the following SGX-specific environment variables:
   allowing debug enclaves is **insecure** and should be used only for debugging
   and testing.
 
+Note that the IAS attestation report/DCAP verification library can return the
+"HW configuration and SW hardening needed" status. To allow this status, you
+must set both ``RA_TLS_ALLOW_HW_CONFIG_NEEDED`` and
+``RA_TLS_ALLOW_SW_HARDENING_NEEDED`` environment variables.
+
 Each of the above environment variables must be set to ``1`` to allow the
 corresponding status. By default, all of the above environment variables are not
-set, and thus all not-OK statuses are disallowed; in other words, only
-strictly-compliant HW/SW SGX platforms can pass verification by default. For
-more information, please refer to official Intel documentation:
+set, and thus all not-OK statuses are disallowed. For more information, please
+refer to the official Intel documentation:
 
 - `Intel EPID/IAS
   <https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf>`__
