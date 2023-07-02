@@ -1,0 +1,70 @@
+# Contributor: Amie Raine <amie@invisiblethingslab.com>
+# Maintainer: Amie Raine <amie@invisiblethingslab.com>
+pkgname=gramine
+pkgver=0_git$(date "+%Y%m%d")
+pkgrel=0
+_commit=master
+pkgdesc="A lightweight usermode guest OS designed to run a single Linux application"
+url="https://github.com/gramineproject/gramine"
+arch="x86_64"
+license="LGPL-3.0-or-later"
+makedepends="
+	autoconf
+	binutils-dev
+	bison
+	coreutils
+	findutils
+	gawk
+	gettext
+	grep
+	libunwind
+	linux-headers
+	meson
+	musl-dev
+	nasm
+	openssl1.1-compat-dev
+	protobuf-c-compiler
+	protobuf-c-dev
+	py3-click
+	py3-elftools
+	py3-jinja2
+	py3-pytest
+	"
+depends="
+	py3-click
+	py3-cryptography
+	py3-elftools
+	py3-jinja2
+	py3-tomli
+	py3-tomli-w
+	"
+source="
+	gramine-master-$(date "+%Y%m%d").tar.gz::https://github.com/gramineproject/gramine/archive/$_commit.tar.gz
+	"
+	
+builddir="$srcdir/$pkgname-$_commit/"
+options="!check" # tests assume a glibc environment
+
+prepare() {
+	meson \
+		--prefix=/usr \
+		--buildtype=release \
+		-Ddirect=enabled \
+		-Dsgx=enabled \
+		-Dlibc=musl \
+		. build/
+	default_prepare
+}
+
+build() {
+	meson compile -C build
+}
+
+package() {
+	DESTDIR="$pkgdir" meson install --no-rebuild -C build
+	
+	mbedtls_ver="$(cat meson.build | grep 'mbedtls_proj = ' | sed "s/.*mbedtls-//;;s/'.*//")"
+	sed -i "s/Version: undefined/Version: $mbedtls_ver/" "$pkgdir"/usr/lib/pkgconfig/mbedtls_gramine.pc
+	sed -i "s/post~UNRELEASED//" "$pkgdir"/usr/lib/pkgconfig/ra_tls_gramine.pc
+	sed -i "s/post~UNRELEASED//" "$pkgdir"/usr/lib/pkgconfig/secret_prov_gramine.pc
+}
