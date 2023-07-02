@@ -99,12 +99,22 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
 
 bool getenv_allow_outdated_tcb(void) {
     char* str = getenv(RA_TLS_ALLOW_OUTDATED_TCB_INSECURE);
-    return (str && !strcmp(str, "1"));
+    return str && !strcmp(str, "1");
+}
+
+bool getenv_allow_hw_config_needed(void) {
+    char* str = getenv(RA_TLS_ALLOW_HW_CONFIG_NEEDED);
+    return str && !strcmp(str, "1");
+}
+
+bool getenv_allow_sw_hardening_needed(void) {
+    char* str = getenv(RA_TLS_ALLOW_SW_HARDENING_NEEDED);
+    return str && !strcmp(str, "1");
 }
 
 bool getenv_allow_debug_enclave(void) {
     char* str = getenv(RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE);
-    return (str && !strcmp(str, "1"));
+    return str && !strcmp(str, "1");
 }
 
 /*! searches for specific \p oid among \p exts and returns pointer to its value in \p out_val;

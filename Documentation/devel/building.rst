@@ -169,17 +169,49 @@ it's usually not needed.
    file <https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11>`__.
    This is because the DCAP and the upstream drivers have compatible APIs.
 
-.. note::
-
-   When installing from sources, Gramine executables are placed under
-   ``/usr/local/bin``. Some Linux distributions (notably CentOS) do not search
-   for executables under this path. If your system reports that Gramine
-   programs can not be found, you might need to edit your configuration files so
-   that ``/usr/local/bin`` is in your path (in ``PATH`` environment variable).
-
 Set ``-Dlibc`` option to ``musl`` if you wish to build musl instead of glibc
 (which is built by default), or to ``none`` if you do not want to build any
 libc.
+
+Installation prefix
+^^^^^^^^^^^^^^^^^^^
+
+By default, Meson uses installation prefix :file:`/usr/local`.
+
+- When installing from sources, Gramine executables are placed under
+  :file:`/usr/local/bin`. Some Linux distributions (notably CentOS) do not
+  search for executables under this path. If your system reports that Gramine
+  programs can not be found, you might need to edit your configuration files so
+  that :file:`/usr/local/bin` is in your path (in ``$PATH`` environment
+  variable). Alternatively, you can modify the installation prefix (e.g. to
+  :file:`/usr`) or the executable directory (e.g. :command:`meson
+  --bindir=/usr/bin`).
+
+- When installing from sources, Gramine Python modules are placed under
+  :file:`/usr/local/lib/python3.xyz/site-packages` (or under
+  :file:`/usr/local/lib/python3.xyz/dist-packages` on Debian-like distros). Some
+  Linux distributions (notably Alpine) do not search for Python modules under
+  this path. If your system fails to find Gramine Python modules, you might need
+  to adjust ``PYTHONPATH`` environment variable. Alternatively, you can modify
+  the installation prefix, e.g. to :file:`/usr`.
+
+To install into some other place than :file:`/usr/local`, use :command:`meson
+--prefix=<prefix>`. Note that if you chose something else than :file:`/usr`
+then for things to work, you probably need to adjust several environment
+variables:
+
+=========================== ================================================== ========================
+Variable                    What to add                                        Read more
+=========================== ================================================== ========================
+``$PATH``                   :file:`<prefix>/bin`                               `POSIX.1-2018 8.3`_
+``$PYTHONPATH``             :file:`<prefix>/lib/python<version>/site-packages` :manpage:`python3(1)`
+``$PKG_CONFIG_PATH``        :file:`<prefix>/<libdir>/pkgconfig`                :manpage:`pkg-config(1)`
+=========================== ================================================== ========================
+
+.. _POSIX.1-2018 8.3: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_03
+
+This very much depends on a particular distribution, so please consult
+relevant documentation provided by your distro.
 
 Additional build options
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -236,24 +268,6 @@ Additional build options
      ASan builds (even non-debug) are not suitable for production.
 
 - To build with ``-Werror``, run :command:`meson --werror`.
-
-- To install into some other place than :file:`/usr/local`, use
-  :command:`meson --prefix=<prefix>`. Note that if you chose something else than
-  :file:`/usr` then for things to work, you probably need to adjust several
-  environment variables:
-
-  =========================== ================================================== ========================
-  Variable                    What to add                                        Read more
-  =========================== ================================================== ========================
-  ``$PATH``                   :file:`<prefix>/bin`                               `POSIX.1-2018 8.3`_
-  ``$PYTHONPATH``             :file:`<prefix>/lib/python<version>/site-packages` :manpage:`python3(1)`
-  ``$PKG_CONFIG_PATH``        :file:`<prefix>/<libdir>/pkgconfig`                :manpage:`pkg-config(1)`
-  =========================== ================================================== ========================
-
-  .. _POSIX.1-2018 8.3: https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap08.html#tag_08_03
-
-  This very much depends on a particular distribution, so please consult
-  relevant documentation provided by your distro.
 
 - To compile a patched version of GCC's OpenMP library (``libgomp``), install
   GCC's build prerequisites (see :ref:`common-dependencies`), and use

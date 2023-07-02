@@ -7,7 +7,8 @@
 > ⚠ This is a highly technical document intended for software engineers with knowledge of OS
 > kernels.
 
-> ⛏ This is a living document. The last major update happened in **March 2023**.
+> ⛏ This is a living document. The last major update happened in **June 2023** and closely
+> corresponds to Gramine v1.5.
 
 Gramine strives to **run native, unmodified Linux applications** on any platform. The SGX backend
 additionally strives to **provide security guarantees**, in particular, protect against a malicious
@@ -379,7 +380,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[23](#misc)</sup>
 
-- ☒ `flock()`
+- ▣ `flock()`
   <sup>[9b](#file-locking)</sup>
 
 - ☑ `fsync()`
@@ -497,8 +498,8 @@ The below list is generated from the [syscall table of Linux
 - ▣ `getpgrp()`
   <sup>[3](#process-and-thread-identifiers)</sup>
 
-- ☒ `setsid()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+- ▣ `setsid()`
+  <sup>[23](#misc)</sup>
 
 - ☒ `setreuid()`
   <sup>[8](#user-and-group-identifiers)</sup>
@@ -533,8 +534,8 @@ The below list is generated from the [syscall table of Linux
 - ☒ `setfsgid()`
   <sup>[8](#user-and-group-identifiers)</sup>
 
-- ☒ `getsid()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+- ▣ `getsid()`
+  <sup>[23](#misc)</sup>
 
 - ☒ `capget()`
   <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
@@ -1311,8 +1312,8 @@ grows with time, as Gramine adds functionality required by real-world workloads.
     - ☑ `/dev/attestation/report` <sup>[25](#attestation)</sup>
     - ☑ `/dev/attestation/keys` <sup>[25](#attestation)</sup>
       - ☑ `/dev/attestation/keys/<key_name>` <sup>[25](#attestation)</sup>
-    - ▣ `/dev/attestation/protected_files_key`
-      <sup>[25](#attestation)</sup>
+      - ☑ `/dev/attestation/keys/_sgx_mrenclave` <sup>[25](#attestation)</sup>
+      - ☑ `/dev/attestation/keys/_sgx_mrsigner` <sup>[25](#attestation)</sup>
   - ☑ `/dev/null` <sup>[23](#misc)</sup>
   - ☑ `/dev/zero` <sup>[23](#misc)</sup>
   - ☑ `/dev/random` <sup>[21](#randomness)</sup>
@@ -1459,6 +1460,11 @@ Gramine supports creating child processes using `fork()`, `vfork()` and `clone()
 `vfork()` is emulated via `fork()`. `clone()` always means a separate process with its own address
 space (i.e., `CLONE_THREAD`, `CLONE_FILES`, etc. flags cannot be specified). In case of SGX backend,
 child processes are created *in a new SGX enclave*.
+
+It is possible to disallow creation of child processes, by specifying [`sys.disallow_subprocesses =
+true` in the manifest](../manifest-syntax.html#disallowing-subprocesses-fork). The intuition is that
+many applications have fallbacks when they fail to spawn a child process (e.g. Python). This can be
+useful in SGX environments: child processes consume EPC memory which is a limited resource.
 
 Currently, Gramine does *not* fully support fork in multi-threaded applications. There is a [known
 bug in Gramine](https://github.com/gramineproject/gramine/issues/1156) that if one thread is
@@ -1989,8 +1995,8 @@ details](../manifest-syntax.html#manifest-syntax).
 
 Gramine also provides a subset of pseudo-files that can be found in a Linux kernel. In particular,
 Gramine automatically populates `/proc`, `/dev` and `/sys` pseudo-filesystems with most widely used
-pseudo-files. The complete list can be found in the ["List of pseudo-files"
-section](#list-of-pseudo-files).
+pseudo-files. These pseudo-files cannot be deleted. The complete list can be found in the ["List of
+pseudo-files" section](#list-of-pseudo-files).
 
 The final peculiarity is that Gramine is a *distributed* Library OS, as discussed in ["Overview of
 Inter-Process Communication (IPC)" section](#overview-of-inter-process-communication-ipc). This
@@ -2210,20 +2216,33 @@ Inter-Process Communication (IPC)" section](#overview-of-inter-process-communica
 file locks are implemented via message passing in Gramine, and all lock-requests are handled in the
 main (leader) process.
 
-Gramine currently implements POSIX locks aka Advisory record locks. In particular, the following
-operations are implemented: `fcntl(F_SETLK)`, `fcntl(F_SETLKW)` and `fcntl(F_GETLK)`.
+Gramine currently implements two types of file locks:
+- POSIX (fcntl) locks aka Advisory record locks. In particular, the following operations are
+  implemented: `fcntl(F_SETLK)`, `fcntl(F_SETLKW)` and `fcntl(F_GETLK)`.
+- BSD (flock) locks. The following system call is implemented: `flock()`. Its support is currently
+  experimental and not suitable for production.
 
-The current implementation has the following caveats:
+Both types of file locks share the same internal implementation in Gramine. The current
+implementation has the following caveats:
 
 - Lock requests from other processes will always have the overhead of IPC round-trip, even if the
   lock is uncontested.
 - The main process has to be able to look up the same file, so locking will not work for files in
   local-process-only filesystems (e.g. tmpfs).
-- There is no deadlock detection (`EDEADLK`).
+- There is no deadlock detection (`EDEADLK`). This is only applicable to POSIX locks; BSD locks do
+  not have deadlock detection in the first place.
 - The lock requests cannot be interrupted (`EINTR`).
 - The locks work only on regular files (no pipes, sockets etc.).
 
-Gramine does *not* currently implement the `flock()` system call.
+Similarly to Linux, BSD (flock) locks ignore deprecated `LOCK_{MAND,READ,WRITE,RW}` operations.
+
+BSD (flock) locks are currently experimental and are *disabled* by default. To enable them, use the
+[``sys.experimental__enable_flock`` manifest
+option](../manifest-syntax.html#experimental-flock-bsd-style-locks-support). There is at least one
+problem with BSD locks currently: they are supposed to be released when the last reference (file
+descriptor, or FD) to the underlying opened file is closed, including when a process with the opened
+file terminates.  Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may
+lead to premature releases of flock locks in some situations.
 
 <details><summary>Related system calls</summary>
 
@@ -2231,8 +2250,7 @@ Gramine does *not* currently implement the `flock()` system call.
   - ▣ `F_SETLK`: see notes above
   - ▣ `F_SETLKW`: see notes above
   - ▣ `F_GETLK`: see notes above
-
-- ☒ `flock()`: may be implemented in the future
+- ▣ `flock()`: experimental, see notes above
 
 </details><br />
 
@@ -2394,7 +2412,8 @@ for most operations.
 
 Other networking limitations in Gramine include:
 - no support for auto binding in the `listen()` system call;
-- no support for ancillary data (aka control messages).
+- dummy support for ancillary data (aka control messages): received messages always indicate there
+  is no ancillary data attached to them.
 
 #### TCP/IP and UDP/IP sockets
 
@@ -2569,20 +2588,16 @@ Gramine does not implement autosleep.
 
 Select and poll families of system calls are implemented in Gramine.
 
+Poll/ppoll system calls have the following limitation:
+- `POLLRDHUP` is always reported together with `POLLHUP`.
+
 Epoll family of system calls has the following limitations:
 - No sharing of an epoll instance between processes; updates in one process (e.g. adding an fd to be
   monitored) won't be visible in the other process.
 - `EPOLLEXCLUSIVE` is a no-op; this is correct semantically, but may reduce performance of apps
   using this flag.
 - Adding an epoll to another epoll instance is not currently supported.
-- `EPOLLRDHUP` is not reported and `EPOLLHUP` is always reported together with `EPOLLERR`.
-
-<details><summary>Note on EPOLLERR/EPOLLHUP/EPOLLRDHUP</summary>
-
-There is a pending [GitHub pull request](https://github.com/gramineproject/gramine/pull/1073) to
-distinguish between the three error conditions.
-
-</details>
+- `EPOLLRDHUP` is always reported together with `EPOLLHUP`.
 
 <details><summary>Related system calls</summary>
 
@@ -2751,19 +2766,17 @@ like communication with hardware accelerators (e.g. GPUs):
 
 ### IOCTLs
 
-Gramine currently implements only a minimal set of IOCTL request codes. See the list under
+By default, Gramine implements only a minimal set of IOCTL request codes. See the list under
 "Related system calls".
 
-<details><summary>Adding support for arbitrary IOCTLs </summary>
-
-There is an effort to add support for specifying arbitrary IOCTLs (with arbitrary request codes and
-corresponding IOCTL data structures), targeted for special use cases like communication with
-hardware accelerators (e.g. GPUs):
-- [Whitepaper](https://arxiv.org/abs/2203.01813),
-- [GitHub issue](https://github.com/gramineproject/gramine/issues/353),
-- [GitHub pull request](https://github.com/gramineproject/gramine/pull/671).
-
-</details>
+It is possible to specify arbitrary IOCTLs (with arbitrary request codes and corresponding IOCTL
+data structures), targeted for special use cases like communication with hardware accelerators (e.g.
+GPUs) or implementing socket-related IOCTLs. This is achieved via [`sys.ioctl_structs` and
+`sys.allowed_ioctls` manifest options](../manifest-syntax.html#allowed-ioctls). Read the
+documentation to learn how to use this feature. There is also a corresponding [whitepaper on
+communication with hardware accelerators](https://arxiv.org/abs/2203.01813). Note that arbitrary
+IOCTLs specified in the manifest are pass-through and thus potentially insecure by themselves in
+e.g. SGX environments!
 
 <details><summary>Related system calls</summary>
 
@@ -2774,6 +2787,7 @@ hardware accelerators (e.g. GPUs):
   - ☑ `FIOCLEX`
   - ☑ `FIOASYNC`
   - ☑ `FIONREAD`
+  - ▣ other IOCTLs via `sys.ioctl_structs` and `sys.allowed_ioctls` manifest options
 
 </details><br />
 
@@ -2801,10 +2815,8 @@ malicious host OS. There is currently no solution to this limitation.
 
 - ☑ `gettimeofday()`
 - ☑ `time()`
-- ▣ `clock_gettime()`: all clocks emulated via
-  `CLOCK_REALTIME`
-- ▣ `clock_getres()`: all clocks emulated via
-  `CLOCK_REALTIME`
+- ▣ `clock_gettime()`: all clocks emulated via `CLOCK_REALTIME`
+- ▣ `clock_getres()`: all clocks emulated via `CLOCK_REALTIME`
 
 - ☒ `settimeofday()`: very rarely used by applications
 - ☒ `clock_settime()`: very rarely used by applications
@@ -2832,8 +2844,7 @@ these timers in the future, if need arises.
 <details><summary>Related system calls</summary>
 
 - ☑ `nanosleep()`
-- ▣ `clock_nanosleep()`: all clocks emulated via
-  `CLOCK_REALTIME`
+- ▣ `clock_nanosleep()`: all clocks emulated via `CLOCK_REALTIME`
 - ▣ `getitimer()`: only `ITIMER_REAL`
 - ▣ `setitimer()`: only `ITIMER_REAL`
 - ☑ `alarm()`
@@ -2917,10 +2928,8 @@ pseudo-files". For additional pseudo-files containing process-specific informati
 <details><summary>Related system calls</summary>
 
 - ☒ `getrusage()`
-- ▣ `sysinfo()`: only `totalram`, `totalhigh`, `freeram`
-  and `freehigh`
-- ▣ `uname()`: only `sysname`, `nodename`, `release`,
-  `version`, `machine` and `domainname`
+- ▣ `sysinfo()`: only `totalram`, `totalhigh`, `freeram` and `freehigh`
+- ▣ `uname()`: only `sysname`, `nodename`, `release`, `version`, `machine` and `domainname`
 - ▣ `sethostname()`: dummy
 - ▣ `setdomainname()`: dummy
 - ▣ `getrlimit()`: see notes above
@@ -2951,8 +2960,7 @@ pseudo-files". For additional pseudo-files containing process-specific informati
     - ☒ `intr` line
     - ☒ `softirq` line
 
-- ▣ `/sys/devices/system/cpu/`: only most important files
-  implemented
+- ▣ `/sys/devices/system/cpu/`: only most important files implemented
   - ▣ `/sys/devices/system/cpu/cpu[x]/`
     - ▣ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/`
       - ☑ `/sys/devices/system/cpu/cpu[x]/cache/index[x]/coherency_line_size`
@@ -2971,16 +2979,14 @@ pseudo-files". For additional pseudo-files containing process-specific informati
   - ☑ `/sys/devices/system/cpu/online`
   - ☑ `/sys/devices/system/cpu/possible`
 
-- ▣ `/sys/devices/system/node/`: only most important files
-  implemented
+- ▣ `/sys/devices/system/node/`: only most important files implemented
   - ▣ `/sys/devices/system/node/node[x]/`
     - ☑ `/sys/devices/system/node/node[x]/cpumap`
     - ☑ `/sys/devices/system/node/node[x]/distance`
     - ☑ `/sys/devices/system/node/node[x]/hugepages/`
       - ▣
         `/sys/devices/system/node/node[x]/hugepages/hugepages-[y]/nr_hugepages`: always zero
-    - ▣ `/sys/devices/system/node/node[x]/meminfo`:
-      partially implemented
+    - ▣ `/sys/devices/system/node/node[x]/meminfo`: partially implemented
       - ☑ `MemTotal`, `MemFree`, `MemUsed`
       - ☒ rest fields: always zero
 
@@ -3001,6 +3007,14 @@ Gramine implements several arch-specific (x86-64) operations:
   `arch_prctl(ARCH_SET_FS)`,
 - getting/setting the Intel AMX feature via `arch_prctl(ARCH_GET_XCOMP_SUPP)`,
   `arch_prctl(ARCH_GET_XCOMP_PERM)` and `arch_prctl(ARCH_REQ_XCOMP_PERM)`.
+
+Gramine implements minimal session management via `setsid()` and `getsid()`. It is possible to make
+the calling process the leader of the new session, which is enough for many workloads (e.g. JVM).
+However, there are serious limitations:
+- in `getsid()`, it's not possible to get session id of other processes (only of this process),
+- it's impossible to send signals to a process group,
+- daemonization is still broken: the orphaned child is not adopted by `init`, because there is no
+  `init` process in Gramine.
 
 Gramine implements the `/dev/null` and `/dev/zero` pseudo-files.
 
@@ -3025,6 +3039,9 @@ Gramine implements the `/dev/null` and `/dev/zero` pseudo-files.
   - ☑ `ARCH_GET_XCOMP_SUPP`
   - ☑ `ARCH_GET_XCOMP_PERM`
   - ☑ `ARCH_REQ_XCOMP_PERM`
+
+- ▣ `setsid()`
+- ▣ `getsid()`
 
 </details>
 
@@ -3055,7 +3072,6 @@ codebase of Gramine minimal.
 - Paging and swapping: `swapon()`, `swapoff()`, `readahead()`
 - Process execution domain: `personality()`
 - Secure Computing (seccomp) state: `seccomp()`
-- Session management: `getsid()`, `setsid()`
 - Zero-copy transfer of data: `splice()`, `tee()`, `vmsplice()`, `copy_file_range()`
 - Transfer of data between processes: `process_vm_readv()`, `process_vm_writev()`
 - Filesystem configuration context: `fsopen()`, `fsconfig()`, `fspick()`, `fsmount()`
@@ -3090,7 +3106,6 @@ codebase of Gramine minimal.
 - ☒ `fspick()`
 - ☒ `get_kernel_syms()`
 - ☒ `getpmsg()`
-- ☒ `getsid()`
 - ☒ `getxattr()`
 - ☒ `init_module()`
 - ☒ `io_pgetevents()`
@@ -3133,7 +3148,6 @@ codebase of Gramine minimal.
 - ☒ `seccomp()`
 - ☒ `security()`
 - ☒ `setns()`
-- ☒ `setsid()`
 - ☒ `setxattr()`
 - ☒ `splice()`
 - ☒ `swapoff()`
@@ -3174,7 +3188,8 @@ Gramine](../attestation.html#low-level-dev-attestation-interface).
 
   - ☑ `/dev/attestation/keys`
     - ☑ `/dev/attestation/keys/<key_name>`
-  - ▣ `/dev/attestation/protected_files_key`: deprecated
+    - ☑ `/dev/attestation/keys/_sgx_mrenclave` (only for SGX)
+    - ☑ `/dev/attestation/keys/_sgx_mrsigner` (only for SGX)
 
 </details><br />
 
