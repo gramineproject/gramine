@@ -20,6 +20,7 @@ To build the HelloWorld application, install the ``gcc`` compiler and the
 
    sudo apt-get install gcc make  # for Ubuntu distribution
    sudo dnf install gcc make      # for RHEL-like distribution
+   sudo apk add build-base make   # for Alpine distribution
 
 Go to the HelloWorld example directory::
 
@@ -34,6 +35,11 @@ Build and run with SGX::
 
    make SGX=1
    gramine-sgx helloworld
+
+If you want to run this example on Alpine, then before building, modify the
+:file:`helloworld.manifest.template` file: replace ``gramine.runtimedir()`` with
+``gramine.runtimedir('musl')``. For details, see the section "glibc vs musl"
+below.
 
 Other sample applications
 -------------------------
