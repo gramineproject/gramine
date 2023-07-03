@@ -20,6 +20,7 @@ To build the HelloWorld application, install the ``gcc`` compiler and the
 
    sudo apt-get install gcc make  # for Ubuntu distribution
    sudo dnf install gcc make      # for RHEL-like distribution
+   sudo apk add build-base make   # for Alpine distribution
 
 Go to the HelloWorld example directory::
 
@@ -35,6 +36,11 @@ Build and run with SGX::
    make SGX=1
    gramine-sgx helloworld
 
+If you want to run this example on Alpine, then before building, modify the
+:file:`helloworld.manifest.template` file: replace ``gramine.runtimedir()`` with
+``gramine.runtimedir('musl')``. For details, see the section "glibc vs musl"
+below.
+
 Other sample applications
 -------------------------
 
@@ -47,12 +53,17 @@ Gramine features.
 Additional sample Gramine configurations for applications are available in a
 separate repository: https://github.com/gramineproject/examples.
 
-Please note that these sample applications are tested on Ubuntu. Most of these
-applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
-Linux, but with caveats. One caveat is that Makefiles should be invoked with
-``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications that rely on
-specific versions/builds of Glibc may break (our GCC example is known to work
-only on Ubuntu).
+Please note that these sample applications are tested on Debian/Ubuntu. Most of
+these applications are also known to run correctly on Alpine and RHEL-like
+distributions (Fedora, CentOS Stream, AlmaLinux, Rocky Linux) but with caveats:
+
+- On RHEL-like distributions, Makefiles should be invoked with
+  ``ARCH_LIBDIR=/lib64 make``.
+- On Alpine, manifest files must use ``gramine.runtimedir('musl')`` instead of
+  ``gramine.runtimedir()``, and Makefiles should be invoked with
+  ``ARCH_LIBDIR=/lib make``.
+- Applications that rely on specific versions/builds of Glibc may break (our GCC
+  example is known to work only on Ubuntu).
 
 glibc vs musl
 -------------
