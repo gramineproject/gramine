@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    stages {
+        stage('makedist') {
+            agent {
+                dockerfile {
+                    filename '.ci/alpine3.17.dockerfile'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    ABUILD_USERDIR=$PWD/abuild
+                    export ABUILD_USERDIR
+                    cd packaging/alpine
+                    abuild snapshot
+                '''
+            }
+        }
+        stage('build') {
+            agent {
+                dockerfile {
+                    filename '.ci/alpine3.17.dockerfile'
+                    args '--network=none'
+                    reuseNode true
+                }
+            }
+            steps {
+                sh '''
+                    ABUILD_USERDIR=$PWD/abuild
+                    REPODEST=$PWD/packages
+                    export ABUILD_USERDIR REPODEST
+                    cd packaging/alpine
+                    abuild-keygen -an
+                    abuild checksum all
+                '''
+                archiveArtifacts 'packages/'
+            }
+        }
+    }
+}
