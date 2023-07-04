@@ -73,6 +73,12 @@ glibc = custom_target('glibc',
         'glibc-2.37/configure',
         'gramine-syscall.patch',
         'hp-timing.patch',
+        # backporting the fix for CVE-2023-25139; drop when we update to glibc 2.38;
+        # see the following:
+        #  - https://nvd.nist.gov/vuln/detail/CVE-2023-25139
+        #  - https://sourceware.org/bugzilla/show_bug.cgi?id=30068
+        #  - https://sourceware.org/git/?p=glibc.git;a=commitdiff;h=c980549cc6a1c03c23cc2fe3e7b0fe626a0364b0
+        'fix-bug-30068.patch',
     ],
 
     output: glibc_output,
