@@ -53,12 +53,17 @@ Gramine features.
 Additional sample Gramine configurations for applications are available in a
 separate repository: https://github.com/gramineproject/examples.
 
-Please note that these sample applications are tested on Ubuntu. Most of these
-applications are also known to run correctly on Fedora/RHEL/AlmaLinux/Rocky
-Linux, but with caveats. One caveat is that Makefiles should be invoked with
-``ARCH_LIBDIR=/lib64 make``. Another caveat is that applications that rely on
-specific versions/builds of Glibc may break (our GCC example is known to work
-only on Ubuntu).
+Please note that these sample applications are tested on Debian/Ubuntu. Most of
+these applications are also known to run correctly on Alpine and RHEL-like
+distributions (Fedora, CentOS Stream, AlmaLinux, Rocky Linux) but with caveats:
+
+- On RHEL-like distributions, Makefiles should be invoked with
+  ``ARCH_LIBDIR=/lib64 make``.
+- On Alpine, manifest files must use ``gramine.runtimedir('musl')`` instead of
+  ``gramine.runtimedir()``, and Makefiles should be invoked with
+  ``ARCH_LIBDIR=/lib make``.
+- Applications that rely on specific versions/builds of Glibc may break (our GCC
+  example is known to work only on Ubuntu).
 
 glibc vs musl
 -------------
