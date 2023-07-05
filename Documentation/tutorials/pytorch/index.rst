@@ -157,8 +157,7 @@ including the security posture, environment variables, dynamic libraries,
 arguments, and so on.  In the rest of this tutorial, we will create this
 manifest file and explain its options and rationale behind them. Note that the
 manifest file contains both general non-SGX options for Gramine and
-SGX-specific ones.  Please refer to `this
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html>`__ for further
+SGX-specific ones. Please refer to :doc:`../../manifest-syntax` for further
 details about the syntax of Gramine manifests.
 
 Executing PyTorch with non-SGX Gramine
@@ -239,8 +238,8 @@ example inside an Intel SGX enclave. Let's go back to the manifest template
 these entries are ignored if Gramine runs in non-SGX mode).
 
 Below, we will highlight some of the SGX-specific manifest options in
-:file:`pytorch.manifest.template`. SGX syntax is fully described `here
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=manifest#sgx-syntax>`__.
+:file:`pytorch.manifest.template`. SGX syntax is fully described
+:ref:`here<sgx-syntax>`.
 
 First, here are the following SGX-specific lines in the manifest template::
 
@@ -310,8 +309,8 @@ Intel SGX provides a way for the SGX enclave to attest itself to the remote
 user. This way the user gains trust in the SGX enclave running in an untrusted
 environment, ships the application code and data, and is sure that the *correct*
 application was executed inside a *genuine* SGX enclave. This process of gaining
-trust in a remote SGX machine is called
-`Remote Attestation (RA) <https://gramine.readthedocs.io/en/stable/attestation.html>`__.
+trust in a remote SGX machine is called :doc:`Remote Attestation
+(RA)<../../attestation>`.
 
 Gramine has two features that transparently add SGX RA to the application: (1)
 RA-TLS augments normal SSL/TLS sessions with an SGX-specific handshake callback,
@@ -321,11 +320,10 @@ enclave and provision secrets to it. Secret Provisioning builds on top of RA-TLS
 and typically runs before the application. Both features are provided as opt-in
 libraries.
 
-The `Secret Provisioning library
-<https://gramine.readthedocs.io/en/stable/attestation.html#secret-prov-attest-so>`__
-provides a simple non-programmatic API to applications: it transparently
-initializes the environment variable ``SECRET_PROVISION_SECRET_STRING`` with a
-secret obtained from the remote user during remote attestation (note that
+The :ref:`Secret Provisioning library<secret-prov-attest-so>` provides a simple
+non-programmatic API to applications: it transparently initializes the
+environment variable ``SECRET_PROVISION_SECRET_STRING`` with a secret obtained
+from the remote user during remote attestation (note that
 ``SECRET_PROVISION_CONSTRUCTOR`` must also be set). In our PyTorch example, the
 provisioned secret is the encryption key to encrypt/decrypt user files. To
 inform Gramine that the obtained secret is indeed the key for file encryption,
@@ -338,14 +336,13 @@ on an untrusted-cloud scenario, we use the ECDSA/DCAP attestation framework.
 Background on Encrypted Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Gramine provides a feature of `Encrypted Files
-<https://gramine.readthedocs.io/en/stable/manifest-syntax.html?highlight=protected#encrypted-files>`__,
-which encrypts files and transparently decrypts them when the application reads
-or writes them. Integrity- or confidentiality-sensitive files (or whole
-directories) accessed by the application must be put under the "encrypted"
-FS mount in the Gramine manifest. New files created in the "encrypted" FS mount
-are automatically treated as encrypted. The encryption format used for encrypted
-files is borrowed from the protected files feature of Intel SGX SDK.
+Gramine provides a feature of :ref:`encrypted-files`, which encrypts files and
+transparently decrypts them when the application reads or writes them.
+Integrity- or confidentiality-sensitive files (or whole directories) accessed by
+the application must be put under the "encrypted" FS mount in the Gramine
+manifest. New files created in the "encrypted" FS mount are automatically
+treated as encrypted. The encryption format used for encrypted files is borrowed
+from the protected files feature of Intel SGX SDK.
 
 This feature can be combined with Secret Provisioning such that the files are
 encrypted/decrypted using the provisioned key, as explained in the previous

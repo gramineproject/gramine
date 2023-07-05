@@ -408,6 +408,8 @@ The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-secret-prov
 The examples include minimalistic provisioning of constant-string secrets as
 well as provisioning of an encryption key and its later use for encrypted files.
 
+.. _secret-prov-attest-so:
+
 ``secret_prov_attest.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

@@ -592,6 +592,8 @@ all), then the ``struct`` key must be an empty string or not exist at all::
    encrypted or integrity-protected with a key pre-shared between Gramine and
    the device.
 
+.. _sgx-syntax:
+
 SGX syntax
 ----------
 
