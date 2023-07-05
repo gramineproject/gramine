@@ -485,26 +485,6 @@ re-use the same ``ssl/`` directory and specify ``localhost``::
    loader.env.SECRET_PROVISION_CA_CHAIN_PATH = "ssl/ca.crt"
    loader.env.SECRET_PROVISION_SERVERS = "localhost:4433"
 
-We must specify the path at which `libsecret_prov_attest.so` should be found.
-To learn this path, execute the following command::
-
-   pkg-config --variable=libdir secret_prov_gramine
-
-For example, the path is ``/usr/local/lib/gramine``. We must add this path to
-``LD_LIBRARY_PATH``, to ``fs.mounts`` and to ``sgx.trusted_files``::
-
-   loader.env.LD_LIBRARY_PATH = "/lib:/usr/local/lib/gramine:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
-
-   fs.mounts = [
-     ...
-     { path = "/usr/local/lib/gramine", uri = "file:/usr/local/lib/gramine" },
-   ]
-
-   sgx.trusted_files = [
-     ...
-     "file:/usr/local/lib/gramine/",
-   ]
-
 Finally, you must append the ``ssl/ca.crt`` to the already-existing
 ``sgx.trusted_files`` array::
 
