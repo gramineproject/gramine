@@ -88,13 +88,10 @@ Prerequisites
 - Ubuntu 20.04. This tutorial should work on other Linux distributions as well,
   but for simplicity we provide the steps for Ubuntu 20.04 only.
 
-  Please install the following dependencies::
-
-      sudo apt-get install libnss-mdns libnss-myhostname
-
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
-  before you proceed (don't forget to choose Linux as the target OS).
+  before you proceed (don't forget to choose Linux as the target OS and CPU as
+  the compute platform).
 
 - Gramine v1.5, with DCAP support. DCAP software infrastructure must also be
   installed.
@@ -111,7 +108,7 @@ example as a basis and will improve it to protect all user files.
 
 Go to the directory with Gramine's PyTorch example::
 
-   git clone https://github.com/gramineproject/examples.git
+   git clone --depth 1 --branch v1.5 https://github.com/gramineproject/examples.git
    cd examples/pytorch
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
@@ -279,9 +276,10 @@ Now we desribed how the manifest template looks like and what the SGX-specific
 manifest entries represent. Let's prepare all the files needed to run PyTorch in
 an SGX enclave::
 
+   gramine-sgx-gen-private-key  # only if you didn't create the signing key yet
    make SGX=1
 
-The above command performs the following tasks:
+The above ``make SGX=1`` invocation performs the following tasks:
 
 #. Generates the final SGX manifest file :file:`pytorch.manifest.sgx`.
 
