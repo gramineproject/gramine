@@ -96,8 +96,8 @@ Prerequisites
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
   before you proceed (don't forget to choose Linux as the target OS).
 
-- Gramine of at least v1.4, with DCAP support. DCAP software infrastructure must
-  also be installed.
+- Gramine v1.5, with DCAP support. DCAP software infrastructure must also be
+  installed.
 
 Executing Native PyTorch
 ------------------------
@@ -192,7 +192,13 @@ with Gramine-patched libraries::
 
 We also mount other directories such as ``{{ arch_libdir }}`` required by Python
 and PyTorch (they search for libraries and utility files in these system
-directories).
+directories)::
+
+   fs.mounts = [
+     ...
+     { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+     ...
+   ]
 
 Finally, we mount the paths containing the Python and Pytorch packages using
 special Jinja for-loop syntax and Gramine-specific helper method
@@ -362,7 +368,7 @@ We will use the reference implementation of the Secret Provisioning server found
 under ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine
 repository), so let's build the secret provisioning server::
 
-   git clone --depth 1 --branch v1.4 https://github.com/gramineproject/gramine.git
+   git clone --depth 1 --branch v1.5 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
    make app dcap RA_TYPE=dcap
 
