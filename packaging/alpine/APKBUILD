@@ -47,7 +47,10 @@ builddir="$srcdir/$pkgname-$_real_pkgver/"
 options="!check" # tests assume a glibc environment
 
 prepare() {
-    meson setup \
+    # LDFLAGS on 3.18 contain "-Wl,-z,pack-relative-relocs", which breaks
+    # Gramine, because our own loader (which relocates only LibOS and PAL)
+    # does not support RELR
+    LDFLAGS= meson setup \
         --wrap-mode=nodownload \
         --prefix=/usr \
         --buildtype=release \
