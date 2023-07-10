@@ -286,10 +286,6 @@ The above ``make SGX=1`` invocation performs the following tasks:
 #. Signs the manifest and generates the SGX signature file containing SIGSTRUCT
    (:file:`pytorch.sig`).
 
-#. Only on EPID platforms: creates a dummy EINITTOKEN token file
-   :file:`pytorch.token` (this file is used for backwards compatibility with SGX
-   platforms with EPID and without Flexible Launch Control).
-
 Let's also remove the file :file:`result.txt` (it should exist from the previous
 :command:`gramine-direct` run)::
 
