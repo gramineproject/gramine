@@ -19,8 +19,14 @@ option :option:`-D`) under paths given as first two CLI arguments. If further
 arguments are passed, those are interpreted as a |~| command that is then
 executed using ``execvp()``.
 
-It is intended to launch standalone TLS (HTTPS) servers which require cert and
-key passed as files.
+This tool is intended to be the "pre-main" executable that runs inside Gramine
+before the actual application; therefore it must be specified as the entrypoint
+in the Gramine manifest file. It **cannot** be used by itself.
+
+This tool is intended to launch standalone TLS (HTTPS) servers which require
+cert and key passed as files. For a real-world example of its usage with an
+Nginx web server, see
+https://github.com/gramineproject/gramine/tree/master/CI-Examples/ra-tls-nginx.
 
 Options
 =======
@@ -41,8 +47,9 @@ Options
 Example
 =======
 
-This manifest will run :program:`gramine-ratls` and write the contents of
-certificate file to standard output using the :program:`cat` utility:
+The below manifest will first run :program:`gramine-ratls` and then write the
+contents of a certificate file to standard output using the :program:`cat`
+utility:
 
 .. code-block:: jinja
 
