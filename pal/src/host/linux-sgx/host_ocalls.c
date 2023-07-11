@@ -28,8 +28,6 @@
 
 #define DEFAULT_BACKLOG 2048
 
-extern bool g_vtune_profile_enabled;
-
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
 static long sgx_ocall_exit(void* args) {
@@ -62,7 +60,7 @@ static long sgx_ocall_exit(void* args) {
     block_async_signals(true);
     ecall_thread_reset();
 
-    unmap_tcs();
+    unmap_my_tcs();
 
     if (!current_enclave_thread_cnt()) {
         /* no enclave threads left, kill the whole process */
@@ -242,8 +240,7 @@ static long sgx_ocall_sched_getaffinity(void* args) {
 }
 
 static long sgx_ocall_clone_thread(void* args) {
-    __UNUSED(args);
-    return clone_thread();
+    return clone_thread(args);
 }
 
 static long sgx_ocall_create_process(void* args) {

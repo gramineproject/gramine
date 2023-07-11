@@ -53,3 +53,4 @@ int64_t sgx_getkey(sgx_key_request_t* keyrequest, sgx_key_128bit_t* key);
 int sgx_edmm_add_pages(uint64_t addr, size_t count, uint64_t prot);
 int sgx_edmm_remove_pages(uint64_t addr, size_t count);
 int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot);
+int sgx_edmm_convert_pages_to_tcs(uint64_t addr, size_t count);

@@ -421,6 +421,22 @@ class TC_20_SingleProcess(RegressionTestCase):
         # Thread Cleanup: Can still start threads.
         self.assertIn('Thread 4 ok.', stderr)
 
+    @unittest.skipUnless(HAS_SGX, 'This test is only meaningful on SGX PAL')
+    def test_512_thread2_edmm(self):
+        if HAS_EDMM:
+            _, stderr = self.run_binary(['Thread2_edmm'])
+            self.assertIn('Thread 2 ok.', stderr)
+            self.assertIn('Thread 3 ok.', stderr)
+            self.assertNotIn('Exiting thread 3 failed.', stderr)
+            self.assertIn('Thread 4 ok.', stderr)
+        else:
+            try:
+                self.run_binary(['Thread2_edmm'])
+                self.fail('expected to return nonzero')
+            except subprocess.CalledProcessError as e:
+                stderr = e.stderr.decode()
+                self.assertIn("PalThreadCreate failed for thread 2.", stderr)
+
     def test_900_misc(self):
         _, stderr = self.run_binary(['Misc'])
         # Query System Time

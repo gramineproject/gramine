@@ -29,7 +29,7 @@ fs.mounts = [
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.max_threads = 16
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
 
 # Memcached does not fail explicitly when enclave memory is exhausted. Instead, Memcached goes into
 # infinite loop without a listening socket. You can trigger this incorrect behavior by increasing

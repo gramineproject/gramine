@@ -40,4 +40,4 @@ sys.insecure__allow_eventfd = true
 # - any threads and threadpools you might be starting
 # - helper threads internal to Gramine — see:
 #   https://gramine.readthedocs.io/en/stable/manifest-syntax.html#number-of-threads
-sgx.max_threads = 8
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}

@@ -15,6 +15,7 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "spinlock.h"
+#include "toml_utils.h"
 
 static spinlock_t g_thread_list_lock = INIT_SPINLOCK_UNLOCKED;
 DEFINE_LISTP(pal_handle_thread);
@@ -26,6 +27,96 @@ struct thread_param {
 };
 
 extern uintptr_t g_enclave_base;
+
+/* number of unused TCS pages; protected by g_unused_tcs_pages_num_lock */
+size_t g_unused_tcs_pages_num = 0;
+
+static spinlock_t g_unused_tcs_pages_num_lock = INIT_SPINLOCK_UNLOCKED;
+
+/*
+ * This function initializes the TCB, SSA, TCS, etc. of a new enclave thread (dynamically
+ * allocated using EDMM). The TCS is properly filled out and ready to be converted to the
+ * TCS page using the SGX EDMM flow (see `sgx_edmm_convert_pages_to_tcs()`).
+ *
+ * The initialization of fields in TCB and TCS of the thread is equivalent to the one in
+ * host_main.c:initialize_enclave().
+ *
+ * Layout of the enclave thread data block:
+ *
+ *         TCS +--> +-------------------+
+ *                  |  TCS              | PAGE_SIZE
+ *         SSA +--> +-------------------+
+ *                  |  SSA              | SSA_FRAME_NUM * SSA_FRAME_SIZE
+ *         TCB +--> +-------------------+
+ *                  |  TCB              | PAGE_SIZE
+ *   sig_stack +--> +-------------------+
+ *                  |  sig_stack        | ENCLAVE_SIG_STACK_SIZE
+ *       stack +--> +-------------------+
+ *                  |  stack            | ENCLAVE_STACK_SIZE
+ *                  +-------------------+
+ *
+ */
+#define THREAD_DATA_SIZE                                                               \
+    (PAGE_SIZE + SSA_FRAME_NUM * SSA_FRAME_SIZE + PAGE_SIZE + ENCLAVE_SIG_STACK_SIZE + \
+     ENCLAVE_STACK_SIZE)
+static void init_dynamic_thread(void* addr) {
+    sgx_arch_tcs_t* tcs         = addr;
+    void* ssa                   = (char*)tcs + PAGE_SIZE;
+    struct pal_enclave_tcb* tcb = (struct pal_enclave_tcb*)(ssa + SSA_FRAME_NUM * SSA_FRAME_SIZE);
+    void* sig_stack             = (char*)tcb + PAGE_SIZE;
+    void* stack                 = sig_stack + ENCLAVE_SIG_STACK_SIZE;
+
+    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb doesn't fit into one page");
+    tcb->common.self                   = (PAL_TCB*)tcb;
+    tcb->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
+    tcb->enclave_size                  = GET_ENCLAVE_TCB(enclave_size);
+    tcb->tcs_offset                    = (uint64_t)tcs - g_enclave_base;
+    tcb->initial_stack_addr            = (uint64_t)stack + ENCLAVE_STACK_SIZE;
+    tcb->sig_stack_low                 = (uint64_t)sig_stack;
+    tcb->sig_stack_high                = (uint64_t)sig_stack + ENCLAVE_SIG_STACK_SIZE;
+    tcb->ssa                           = ssa;
+    tcb->gpr                           = ssa + SSA_FRAME_SIZE - sizeof(sgx_pal_gpr_t);
+    tcb->manifest_size                 = GET_ENCLAVE_TCB(manifest_size);
+    tcb->heap_min                      = GET_ENCLAVE_TCB(heap_min);
+    tcb->heap_max                      = GET_ENCLAVE_TCB(heap_max);
+    tcb->thread                        = NULL;
+
+    extern void* enclave_entry; /* enclave_entry() asm function in enclave_entry.S */
+    /* .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs. */
+    tcs->ossa      = (uint64_t)ssa - g_enclave_base;
+    tcs->nssa      = SSA_FRAME_NUM;
+    tcs->oentry    = (uint64_t)&enclave_entry - g_enclave_base;
+    tcs->ofs_base  = 0;
+    tcs->ogs_base  = (uint64_t)tcb - g_enclave_base;
+    tcs->ofs_limit = 0xfff;
+    tcs->ogs_limit = 0xfff;
+}
+
+static int create_dynamic_tcs_if_none_available(void** out_tcs) {
+    int ret;
+    spinlock_lock(&g_unused_tcs_pages_num_lock);
+    if (g_unused_tcs_pages_num) {
+        g_unused_tcs_pages_num--;
+        *out_tcs = NULL;
+        spinlock_unlock(&g_unused_tcs_pages_num_lock);
+        return 0;
+    }
+    spinlock_unlock(&g_unused_tcs_pages_num_lock);
+
+    void* addr;
+    /* This memory is page aligned and never freed but only re-used by new enclave threads */
+    ret = pal_internal_memory_alloc(THREAD_DATA_SIZE, &addr);
+    if (ret)
+        return ret;
+
+    init_dynamic_thread(addr);
+
+    ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, /*count=*/1);
+    if (ret < 0)
+        BUG(); /* cannot recover anyway */
+    *out_tcs = addr;
+    return 0;
+}
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
  * g_thread_list, initializes its TCB/TLS, and jumps into the callback-to-run. Gramine uses GCC's
@@ -93,11 +184,19 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     thread_param->param    = param;
     new_thread->thread.param = (void*)thread_param;
 
+    void* dynamic_tcs = NULL;
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        ret = create_dynamic_tcs_if_none_available(&dynamic_tcs);
+        if (ret < 0) {
+            goto out_err;
+        }
+    }
+
     spinlock_lock(&g_thread_list_lock);
     LISTP_ADD_TAIL(&new_thread->thread, &g_thread_list, list);
     spinlock_unlock(&g_thread_list_lock);
 
-    ret = ocall_clone_thread();
+    ret = ocall_clone_thread(dynamic_tcs);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         spinlock_lock(&g_thread_list_lock);
@@ -139,6 +238,12 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
         spinlock_lock(&g_thread_list_lock);
         LISTP_DEL(exiting_thread, &g_thread_list, list);
         spinlock_unlock(&g_thread_list_lock);
+
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            spinlock_lock(&g_unused_tcs_pages_num_lock);
+            g_unused_tcs_pages_num++;
+            spinlock_unlock(&g_unused_tcs_pages_num_lock);
+        }
     }
 
     ocall_exit(0, /*is_exitgroup=*/false);

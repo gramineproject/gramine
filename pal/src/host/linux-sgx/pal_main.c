@@ -401,6 +401,7 @@ extern void* g_enclave_base;
 extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
+extern size_t g_unused_tcs_pages_num;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     int ret;
@@ -748,6 +749,20 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                   edmm_enabled);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    int64_t thread_num_int64;
+    ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.max_threads",
+            /*defaultval=*/-1, &thread_num_int64);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.max_threads'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    if (thread_num_int64 <= 0) {
+        log_error("Invalid 'sgx.max_threads' value");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    /* `- 1` is because we have the main thread that already uses one TCS */
+    g_unused_tcs_pages_num = thread_num_int64 - 1;
 
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",

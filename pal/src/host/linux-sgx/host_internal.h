@@ -15,6 +15,7 @@
 
 extern const size_t g_page_size;
 extern pid_t g_host_pid;
+extern bool g_vtune_profile_enabled;
 
 #undef IS_ALLOC_ALIGNED
 #undef IS_ALLOC_ALIGNED_PTR
@@ -56,6 +57,8 @@ struct pal_enclave {
 };
 
 extern struct pal_enclave g_pal_enclave;
+
+void* realloc(void* ptr, size_t new_size);
 
 int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
@@ -111,17 +114,19 @@ void eresume_pointer(void);
 void async_exit_pointer_end(void);
 
 int get_tid_from_tcs(void* tcs);
-int clone_thread(void);
+int clone_thread(void* dynamic_tcs);
 
-void create_tcs_mapper(void* tcs_base, unsigned int thread_num);
+int create_tcs_mapper(void* tcs_base, unsigned int thread_num);
 int pal_thread_init(void* tcbptr);
 void map_tcs(unsigned int tid);
-void unmap_tcs(void);
+void unmap_my_tcs(void);
 int current_enclave_thread_cnt(void);
 void thread_exit(int status);
 
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
+
+int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count);
 
 #ifdef DEBUG
 /* SGX profiling (sgx_profile.c) */

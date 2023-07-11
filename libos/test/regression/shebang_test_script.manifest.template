@@ -10,7 +10,7 @@ fs.mounts = [
   { path = "/bin", uri = "file:/bin" },
 ]
 
-sgx.max_threads = 16
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

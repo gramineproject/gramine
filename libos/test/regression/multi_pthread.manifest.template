@@ -9,7 +9,7 @@ fs.mounts = [
 ]
 
 # app runs with 4 parallel threads + Gramine has couple internal threads
-sgx.max_threads = 8
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}

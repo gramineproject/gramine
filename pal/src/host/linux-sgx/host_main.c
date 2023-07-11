@@ -252,12 +252,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     unsigned long enclave_heap_min;
     char* sig_path = NULL;
     int sigfile_fd = -1;
-    int enclave_mem = -1;
     size_t areas_size = 0;
     struct mem_area* areas = NULL;
 
-    /* this array may overflow the stack, so we allocate it in BSS */
-    static void* tcs_addrs[MAX_DBG_THREADS];
+    void** tcs_addrs = (void**)malloc(sizeof(void*) * enclave->thread_num);
+    if (!tcs_addrs) {
+        return -ENOMEM;
+    }
 
     enclave_image = DO_SYSCALL(open, enclave->libpal_uri + URI_PREFIX_FILE_LEN,
                                O_RDONLY | O_CLOEXEC, 0);
@@ -417,7 +418,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     struct mem_area* tls_area = &areas[area_num++];
 
     struct mem_area* stack_areas = &areas[area_num]; /* memorize for later use */
-    for (uint32_t t = 0; t < enclave->thread_num; t++) {
+    for (size_t t = 0; t < enclave->thread_num; t++) {
         areas[area_num] = (struct mem_area){.desc         = "stack",
                                             .skip_eextend = false,
                                             .data_src     = ZERO,
@@ -429,7 +430,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     }
 
     struct mem_area* sig_stack_areas = &areas[area_num]; /* memorize for later use */
-    for (uint32_t t = 0; t < enclave->thread_num; t++) {
+    for (size_t t = 0; t < enclave->thread_num; t++) {
         areas[area_num] = (struct mem_area){.desc         = "sig_stack",
                                             .skip_eextend = false,
                                             .data_src     = ZERO,
@@ -507,7 +508,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         }
 
         if (areas[i].data_src == TLS) {
-            for (uint32_t t = 0; t < enclave->thread_num; t++) {
+            for (size_t t = 0; t < enclave->thread_num; t++) {
                 struct pal_enclave_tcb* gs = data + g_page_size * t;
                 memset(gs, 0, g_page_size);
                 assert(sizeof(*gs) <= g_page_size);
@@ -526,7 +527,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 gs->thread = NULL;
             }
         } else if (areas[i].data_src == TCS) {
-            for (uint32_t t = 0; t < enclave->thread_num; t++) {
+            for (size_t t = 0; t < enclave->thread_num; t++) {
                 sgx_arch_tcs_t* tcs = data + g_page_size * t;
                 memset(tcs, 0, g_page_size);
                 // .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs.
@@ -567,7 +568,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
-    create_tcs_mapper((void*)tcs_area->addr, enclave->thread_num);
+    ret = create_tcs_mapper((void*)tcs_area->addr, enclave->thread_num);
+    if (ret < 0) {
+        log_error("Create tcs mapper failed: %s", unix_strerror(ret));
+        goto out;
+    }
 
     struct enclave_dbginfo* dbg = (void*)DO_SYSCALL(mmap, DBGINFO_ADDR,
                                                     sizeof(struct enclave_dbginfo),
@@ -587,39 +592,13 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         dbg->aep            = async_exit_pointer;
         dbg->eresume        = eresume_pointer;
         dbg->thread_tids[0] = dbg->pid;
-        for (int i = 0; i < MAX_DBG_THREADS; i++)
-            dbg->tcs_addrs[i] = tcs_addrs[i];
+        for (size_t t = 0; t < enclave->thread_num; t++)
+            dbg->tcs_addrs[t] = tcs_addrs[t];
     }
 
-    if (g_sgx_enable_stats || g_vtune_profile_enabled) {
-        /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
-        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
-        if (ret < 0) {
-            log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            goto out;
-        }
-        enclave_mem = ret;
-
-        for (size_t i = 0; i < enclave->thread_num; i++) {
-            uint64_t tcs_flags;
-            uint64_t* tcs_flags_ptr = tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
-
-            ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                             (off_t)tcs_flags_ptr);
-            if (ret < 0) {
-                log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-                goto out;
-            }
-
-            tcs_flags |= TCS_FLAGS_DBGOPTIN;
-
-            ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                             (off_t)tcs_flags_ptr);
-            if (ret < 0) {
-                log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-                goto out;
-            }
-        }
+    ret = set_tcs_debug_flag_if_debugging(tcs_addrs, enclave->thread_num);
+    if (ret < 0) {
+        goto out;
     }
 
 #ifdef DEBUG
@@ -630,7 +609,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * We report it here, before enclave start (as opposed to setup_pal_binary()), because we want
      * both GDB integration and profiling to be active from the very beginning of enclave execution.
      */
-
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
 #endif
@@ -645,10 +623,9 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     ret = 0;
 
 out:
+    free(tcs_addrs);
     if (enclave_image >= 0)
         DO_SYSCALL(close, enclave_image);
-    if (enclave_mem >= 0)
-        DO_SYSCALL(close, enclave_mem);
     if (sigfile_fd >= 0)
         DO_SYSCALL(close, sigfile_fd);
     if (areas)
@@ -1055,8 +1032,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* initialize TCB at the top of the alternative stack */
     PAL_HOST_TCB* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_HOST_TCB);
-    pal_host_tcb_init(tcb, /*stack=*/NULL,
-                      alt_stack); /* main thread uses the stack provided by Linux */
+    /* main thread uses the stack provided by Linux */
+    pal_host_tcb_init(tcb, /*stack=*/NULL, alt_stack);
     ret = pal_thread_init(tcb);
     if (ret < 0)
         return ret;
@@ -1078,7 +1055,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         &qe_targetinfo, &topo_info, &dns_conf, enclave->edmm_enabled,
                         reserved_mem_ranges, reserved_mem_ranges_size);
 
-    unmap_tcs();
+    unmap_my_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
     DO_SYSCALL(exit, 0);
     die_or_inf_loop();

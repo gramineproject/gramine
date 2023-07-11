@@ -723,11 +723,16 @@ Number of threads
     sgx.max_threads = [NUM]
     (Default: 4)
 
-This syntax specifies the maximum number of threads that can be created inside
-the enclave (recall that SGX |~| v1 requires a |~| predetermined maximum number
-of thread slots). The application cannot have more threads than this limit *at
-a time* (however, it is possible to create new threads after old threads are
-destroyed).
+If :term:`EDMM` is not enabled (``sgx.edmm_enable = false``), then this syntax
+specifies the maximum number of threads that can be created inside the enclave
+(recall that SGX |~| v1 requires a |~| predetermined maximum number of thread
+slots). The application cannot have more threads than this limit *at a time*
+(however, it is possible to create new threads after old threads are destroyed).
+
+If :term:`EDMM` is enabled (``sgx.edmm_enable = true``), then this syntax
+specifies the number of pre-allocated thread slots (must be at least ``1``).
+However, the maximum number of threads can exceed this limit during enclave
+execution, by dynamically allocating new thread slots.
 
 Note that Gramine uses several helper threads internally:
 
@@ -746,6 +751,9 @@ Given these internal threads, ``sgx.max_threads`` should be set to at least
 ``4`` even for single-threaded applications (to accommodate for the main thread,
 the IPC thread, the Async thread and one TLS-handshake thread).
 
+.. note::
+   This option will be renamed after non-:term:`EDMM` platform support is
+   dropped.
 
 Number of RPC threads (Exitless feature)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
