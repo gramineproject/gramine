@@ -106,7 +106,7 @@ typedef struct pal_host_tcb {
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
 } PAL_HOST_TCB;
 
-extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
+extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* tcs, void* stack, void* alt_stack);
 
 static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
     PAL_HOST_TCB* tcb;

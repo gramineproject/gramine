@@ -447,6 +447,7 @@ int edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
 int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
     assert(addr >= g_pal_enclave.baseaddr);
 
+    int ret;
     size_t i = 0;
     while (i < count) {
         struct sgx_enclave_modify_types params = {
@@ -454,7 +455,7 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
             .length = (count - i) * PAGE_SIZE,
             .page_type = type,
         };
-        int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_MODIFY_TYPES, &params);
+        ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_MODIFY_TYPES, &params);
         assert(params.count % PAGE_SIZE == 0);
         i += params.count / PAGE_SIZE;
         if (ret < 0) {
@@ -463,6 +464,16 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
             }
             log_error("SGX_IOC_ENCLAVE_MODIFY_TYPES failed: (%llu) %s",
                       (unsigned long long)params.result, unix_strerror(ret));
+            return ret;
+        }
+    }
+
+    if (type == SGX_PAGE_TYPE_TCS) {
+        /* ask Intel SGX driver to actually mmap the TCS pages */
+        uint64_t mapped = DO_SYSCALL(mmap, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
+        if (IS_PTR_ERR(mapped)) {
+            ret = PTR_TO_ERR(mapped);
+            log_error("Cannot map enclave pages: %s", unix_strerror(ret));
             return ret;
         }
     }
