@@ -242,8 +242,7 @@ static long sgx_ocall_sched_getaffinity(void* args) {
 }
 
 static long sgx_ocall_clone_thread(void* args) {
-    __UNUSED(args);
-    return clone_thread();
+    return clone_thread(args);
 }
 
 static long sgx_ocall_create_process(void* args) {

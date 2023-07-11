@@ -23,6 +23,7 @@ manifests = [
   "Process4",
   "Symbols",
   "Thread2",
+  "Thread2_edmm",
   "Thread2_exitless",
   "normalize_path",
   "printf_test",

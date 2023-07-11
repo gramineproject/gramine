@@ -587,7 +587,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         dbg->aep            = async_exit_pointer;
         dbg->eresume        = eresume_pointer;
         dbg->thread_tids[0] = dbg->pid;
-        for (int i = 0; i < MAX_DBG_THREADS; i++)
+        for (unsigned int i = 0; i < enclave->thread_num; i++)
             dbg->tcs_addrs[i] = tcs_addrs[i];
     }
 
@@ -1055,7 +1055,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* initialize TCB at the top of the alternative stack */
     PAL_HOST_TCB* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_HOST_TCB);
-    pal_host_tcb_init(tcb, /*stack=*/NULL,
+    pal_host_tcb_init(tcb, /*tcs=*/NULL, /*stack=*/NULL,
                       alt_stack); /* main thread uses the stack provided by Linux */
     ret = pal_thread_init(tcb);
     if (ret < 0)

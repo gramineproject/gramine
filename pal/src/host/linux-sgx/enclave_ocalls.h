@@ -81,7 +81,7 @@ int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_
 
 int ocall_sched_getaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len);
 
-int ocall_clone_thread(void);
+int ocall_clone_thread(void* new_dynamic_tcs);
 
 int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
                          size_t reserved_mem_ranges_len, int* out_stream_fd);
