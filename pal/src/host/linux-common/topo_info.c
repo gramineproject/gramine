@@ -291,7 +291,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
     struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
-    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
+    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances)); // overapproximate
     if (!threads || !caches || !cores || !sockets || !numa_nodes || !distances) {
         ret = -ENOMEM;
         goto fail;
@@ -357,7 +357,13 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
+    size_t online_nodes_cnt = 0; /* Required for `distance` which reflects only online nodes */
     for (size_t i = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online)
+            continue;
+
+        online_nodes_cnt++;
+
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
             .threads = threads,
@@ -367,17 +373,32 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (ret < 0)
             goto fail;
 
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
-        if (ret < 0)
-            goto fail;
-        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
-        if (ret < 0)
-            goto fail;
-
         /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
          * of zero */
         numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+    }
+
+    /*
+     * Be careful to reflect only online nodes in the `distances` array. E.g. if a system has node 0
+     * online, node 1 offline and node 2 online, then distances should look like this:
+     *
+     *   [ node 0 -> node 0, node 0 -> node 2
+     *     node 2 -> node 0, node 2 -> node 2 ]
+     */
+    for (size_t i = 0, i_online = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online)
+            continue;
+
+        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+        if (ret < 0)
+            goto fail;
+        ret = read_numbers_from_file(path, distances + i_online * online_nodes_cnt,
+                                     online_nodes_cnt);
+        if (ret < 0)
+            goto fail;
+
+        i_online++;
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
