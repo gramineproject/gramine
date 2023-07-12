@@ -238,6 +238,7 @@ int sys_resource_list_names(struct libos_dentry* parent, readdir_callback_t call
 int sys_node_general_load(struct libos_dentry* dent, char** out_data, size_t* out_size);
 int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size);
 int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* out_size);
+bool sys_node_exists_only_if_online(struct libos_dentry* parent, const char* name);
 int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out_size);
 int sys_cpu_load_online(struct libos_dentry* dent, char** out_data, size_t* out_size);
 int sys_cpu_load_topology(struct libos_dentry* dent, char** out_data, size_t* out_size);

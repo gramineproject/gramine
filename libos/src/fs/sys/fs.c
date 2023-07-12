@@ -249,13 +249,15 @@ static void init_node_dir(struct pseudo_node* node) {
     nodeX->name_exists = &sys_resource_name_exists;
     nodeX->list_names = &sys_resource_list_names;
 
-    pseudo_add_str(nodeX, "cpumap", &sys_node_load);
-    pseudo_add_str(nodeX, "distance", &sys_node_load);
-    pseudo_add_str(nodeX, "meminfo", &sys_node_meminfo_load);
+    struct pseudo_node* cpumap = pseudo_add_str(nodeX, "cpumap", &sys_node_load);
+    cpumap->name_exists = &sys_node_exists_only_if_online;
+    struct pseudo_node* distance = pseudo_add_str(nodeX, "distance", &sys_node_load);
+    distance->name_exists = &sys_node_exists_only_if_online;
+    struct pseudo_node* meminfo = pseudo_add_str(nodeX, "meminfo", &sys_node_meminfo_load);
+    meminfo->name_exists = &sys_node_exists_only_if_online;
 
-    // TODO(mkow): Does this show up for offline nodes? I never succeeded in shutting down one, even
-    // after shutting down all CPUs inside the node it shows up as online on `node/online` list.
     struct pseudo_node* hugepages = pseudo_add_dir(nodeX, "hugepages");
+    hugepages->name_exists = &sys_node_exists_only_if_online;
     struct pseudo_node* hugepages_2m = pseudo_add_dir(hugepages, "hugepages-2048kB");
     pseudo_add_str(hugepages_2m, "nr_hugepages", &sys_node_load);
     struct pseudo_node* hugepages_1g = pseudo_add_dir(hugepages, "hugepages-1048576kB");
