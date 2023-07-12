@@ -183,10 +183,14 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
         return -PAL_ERROR_INVAL;
     }
 
+    /* Required for `numa_distance_matrix` which reflects only online nodes */
+    size_t online_nodes_cnt = 0;
+
     for (size_t i = 0; i < topo_info->numa_nodes_cnt; i++) {
         struct pal_numa_node_info* node = &topo_info->numa_nodes[i];
         coerce_untrusted_bool(&node->is_online);
         if (node->is_online) {
+            online_nodes_cnt++;
             for (size_t j = 0; j < HUGEPAGES_MAX; j++) {
                 size_t unused; // can't use __builtin_mul_overflow_p because clang doesn't have it.
                 if (__builtin_mul_overflow(node->nr_hugepages[j], hugepage_size[j], &unused))
@@ -200,12 +204,12 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < topo_info->numa_nodes_cnt; i++) {
-        /* Note: Linux doesn't guarantee that distance i -> i is 0, so we aren't checking this (it's
-         * actually non-zero on all machines we have). */
-        for (size_t j = 0; j < topo_info->numa_nodes_cnt; j++) {
-            if (   topo_info->numa_distance_matrix[i*topo_info->numa_nodes_cnt + j]
-                != topo_info->numa_distance_matrix[j*topo_info->numa_nodes_cnt + i])
+    for (size_t i = 0; i < online_nodes_cnt; i++) {
+        /* Note: distance i -> i is 10 according to the ACPI 2.0 SLIT spec, but to accomodate for
+         * weird BIOS settings we aren't checking this. */
+        for (size_t j = 0; j < online_nodes_cnt; j++) {
+            if (   topo_info->numa_distance_matrix[i*online_nodes_cnt + j]
+                != topo_info->numa_distance_matrix[j*online_nodes_cnt + i])
                 return -PAL_ERROR_INVAL;
         }
     }

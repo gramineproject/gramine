@@ -110,7 +110,15 @@ struct pal_topo_info {
     size_t numa_nodes_cnt;
     struct pal_numa_node_info* numa_nodes;
 
-    /* Has `numa_nodes_cnt * numa_nodes_cnt` elements.
-     * numa_distance_matrix[i*numa_nodes_cnt + j] is NUMA distance from node i to node j. */
+    /*
+     * Has `online_numa_nodes_cnt * online_numa_nodes_cnt` elements, where `online_numa_nodes_cnt`
+     * is the number of NUMA nodes that have `is_online == true`.
+     *
+     * Value in `numa_distance_matrix[i*online_numa_nodes_cnt + j]` is a NUMA distance from online
+     * node i to online node j.
+     *
+     * It may be surprising that this array contains only online nodes, but this is what Linux does:
+     *   https://github.com/torvalds/linux/blob/v6.4/drivers/base/node.c#L543-L564
+     */
     size_t* numa_distance_matrix;
 };
