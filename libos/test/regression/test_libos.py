@@ -1142,6 +1142,10 @@ class TC_40_FileSystem(RegressionTestCase):
         lines = stdout.splitlines()
 
         self.assertIn('/sys/devices/system/cpu: directory', lines)
+        self.assertIn('/sys/devices/system/cpu/online: file', lines)
+        self.assertIn('/sys/devices/system/cpu/offline: file', lines)
+        self.assertIn('/sys/devices/system/cpu/possible: file', lines)
+        self.assertIn('/sys/devices/system/cpu/present: file', lines)
         for i in range(cpus_cnt):
             cpu = f'/sys/devices/system/cpu/cpu{i}'
             self.assertIn(f'{cpu}: directory', lines)
@@ -1167,6 +1171,8 @@ class TC_40_FileSystem(RegressionTestCase):
                 self.assertIn(f'{cache}/physical_line_partition: file', lines)
 
         self.assertIn('/sys/devices/system/node: directory', lines)
+        self.assertIn('/sys/devices/system/node/online: file', lines)
+        self.assertIn('/sys/devices/system/node/possible: file', lines)
         nodes_cnt = len([line for line in lines
                          if re.match(r'/sys/devices/system/node/node[0-9]+:', line)])
         self.assertGreater(nodes_cnt, 0)
