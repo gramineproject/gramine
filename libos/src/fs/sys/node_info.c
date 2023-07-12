@@ -65,15 +65,27 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
     const char* name = dent->name;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const struct pal_numa_node_info* numa_node = &topo->numa_nodes[node_id];
+    if (!numa_node->is_online)
+        return -ENOENT;
+
     char str[PAL_SYSFS_MAP_FILESZ] = {0};
     if (strcmp(name, "cpumap") == 0) {
         ret = sys_print_as_bitmask(str, sizeof(str), topo->threads_cnt, is_in_same_node, &node_id);
     } else if (strcmp(name, "distance") == 0) {
-        size_t* distances = topo->numa_distance_matrix + node_id * topo->numa_nodes_cnt;
-        size_t str_pos = 0;
+        size_t online_nodes_cnt = 0; /* `numa_distance_matrix` reflects only online nodes */
+        size_t i_online = 0;
         for (size_t i = 0; i < topo->numa_nodes_cnt; i++) {
+            struct pal_numa_node_info* node = &topo->numa_nodes[i];
+            if (i == node_id)
+                i_online = online_nodes_cnt;
+            if (node->is_online)
+                online_nodes_cnt++;
+        }
+        size_t* distances = topo->numa_distance_matrix + i_online * online_nodes_cnt;
+        size_t str_pos = 0;
+        for (size_t i = 0; i < online_nodes_cnt; i++) {
             ret = snprintf(str + str_pos, sizeof(str) - str_pos,
-                           "%zu%s", distances[i], i != (topo->numa_nodes_cnt - 1) ? " " : "\n");
+                           "%zu%s", distances[i], i != (online_nodes_cnt - 1) ? " " : "\n");
             if (ret < 0)
                 return ret;
             if ((size_t)ret >= sizeof(str) - str_pos)
@@ -114,6 +126,11 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
     int ret = sys_resource_find(dent, "node", &node_id);
     if (ret < 0)
         return ret;
+
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_numa_node_info* numa_node = &topo->numa_nodes[node_id];
+    if (!numa_node->is_online)
+        return -ENOENT;
 
     size_t size = 0, max = 256;
     char* str = malloc(max);
