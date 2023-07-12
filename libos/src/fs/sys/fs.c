@@ -13,6 +13,13 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
+#define KERNEL_MAX_CPUS 8191
+
+static int sys_cpu_kernel_max(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+    return sys_load(XSTRINGIFY(KERNEL_MAX_CPUS) "\n", out_data, out_size);
+}
+
 int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
                         bool (*is_present)(size_t ind, const void* arg), const void* callback_arg) {
     size_t buf_pos = 0;
@@ -212,6 +219,14 @@ int sys_load(const char* str, char** out_data, size_t* out_size) {
 }
 
 static void init_cpu_dir(struct pseudo_node* cpu) {
+    if (g_pal_public_state->topo_info.threads_cnt > KERNEL_MAX_CPUS) {
+        log_warning("Actual number of CPUs (%lu) is greater than the value (%u) hard-coded into "
+                    "/sys/devices/system/cpu/kernel_max. This may confuse apps that rely on the "
+                    "value in this file.", g_pal_public_state->topo_info.threads_cnt,
+                    KERNEL_MAX_CPUS);
+    }
+
+    pseudo_add_str(cpu, "kernel_max", &sys_cpu_kernel_max);
     pseudo_add_str(cpu, "online", &sys_cpu_general_load);
     pseudo_add_str(cpu, "offline", &sys_cpu_general_load);
     pseudo_add_str(cpu, "possible", &sys_cpu_general_load);
