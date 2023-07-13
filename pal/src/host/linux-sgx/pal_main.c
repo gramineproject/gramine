@@ -397,6 +397,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool use_host_env         = false;
     bool disable_aslr         = false;
     bool allow_eventfd        = false;
+    bool experimental_flock   = false;
     bool allow_all_files      = false;
     bool use_allowed_files    = g_allowed_files_warn;
     bool encrypted_files_keys = false;
@@ -434,6 +435,11 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.experimental__enable_flock",
+                       /*defaultval=*/false, &experimental_flock);
+    if (ret < 0)
+        goto out;
+
     if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
         allow_all_files = true;
 
@@ -451,7 +457,8 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     }
 
     if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
-            !allow_eventfd && !allow_all_files && !use_allowed_files && !encrypted_files_keys) {
+            !allow_eventfd && !experimental_flock && !allow_all_files && !use_allowed_files &&
+            !encrypted_files_keys) {
         /* there are no insecure configurations, skip printing */
         ret = 0;
         goto out;
@@ -484,6 +491,10 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (allow_eventfd)
         log_always("  - sys.insecure__allow_eventfd = true         "
                    "(host-based eventfd is enabled)");
+
+    if (experimental_flock)
+        log_always("  - sys.experimental__enable_flock = true      "
+                   "(flock syscall is enabled; still under development and may contain bugs)");
 
     if (allow_all_files)
         log_always("  - sgx.file_check_policy = allow_all_but_log  "
