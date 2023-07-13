@@ -13,11 +13,18 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
-#define KERNEL_MAX_CPUS 8191
+#define DEFAULT_KERNEL_MAX_CPUS 8191
+static uint32_t g_kernel_max_cpus = DEFAULT_KERNEL_MAX_CPUS;
 
 static int sys_cpu_kernel_max(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
-    return sys_load(XSTRINGIFY(KERNEL_MAX_CPUS) "\n", out_data, out_size);
+
+    char str[32];
+    int ret = snprintf(str, sizeof(str), "%u\n", g_kernel_max_cpus);
+    if (ret < 0)
+        return ret;
+
+    return sys_load(str, out_data, out_size);
 }
 
 int sys_print_as_ranges(char* buf, size_t buf_size, size_t count,
@@ -219,11 +226,16 @@ int sys_load(const char* str, char** out_data, size_t* out_size) {
 }
 
 static void init_cpu_dir(struct pseudo_node* cpu) {
-    if (g_pal_public_state->topo_info.threads_cnt > KERNEL_MAX_CPUS) {
-        log_warning("Actual number of CPUs (%lu) is greater than the value (%u) hard-coded into "
-                    "/sys/devices/system/cpu/kernel_max. This may confuse apps that rely on the "
-                    "value in this file.", g_pal_public_state->topo_info.threads_cnt,
-                    KERNEL_MAX_CPUS);
+    if (g_pal_public_state->topo_info.threads_cnt > DEFAULT_KERNEL_MAX_CPUS) {
+        assert(g_kernel_max_cpus == DEFAULT_KERNEL_MAX_CPUS);
+        uint32_t next_power_of_2 = 1;
+        while (next_power_of_2 <= g_pal_public_state->topo_info.threads_cnt) {
+            /* this should never happen in real systems, so BUG() railguard is enough */
+            if (__builtin_mul_overflow(next_power_of_2, 2, &next_power_of_2))
+                BUG();
+        }
+        /* `- 1` because Linux always reports kernel_max like this */
+        g_kernel_max_cpus = next_power_of_2 - 1;
     }
 
     pseudo_add_str(cpu, "kernel_max", &sys_cpu_kernel_max);
