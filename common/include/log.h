@@ -14,25 +14,15 @@ enum {
     LOG_LEVEL_ALL     = 5,
 };
 
-/*
- * __FILE_NAME__ was introduced in GCC12 and clang9.
- * If it's not defined we have to do our own magic.
- */
 #ifndef __FILE_NAME__
-static inline const char* truncate_file_name(const char* filename) {
-    const char* ret = filename;
-
-    while (*filename != '\0') {
-        if (*filename == '/') {
-            ret = filename + 1;
-        }
-        filename++;
-    }
-
-    return ret;
-}
-
-#define __FILE_NAME__ (truncate_file_name(__FILE__))
+/*
+ * __FILE_NAME__ was introduced in GCC12 and clang9. If it's not defined then use clunky __FILE__.
+ *
+ * (Previously we had a function that emulated __FILE_NAME__ by truncating the file name in a loop
+ * but it led to unnecessary calls to this func even when logs were disabled, ultimately resulting
+ * in perf overhead).
+ */
+#define __FILE_NAME__ __FILE__
 #endif
 
 /* All of them implicitly append a newline at the end of the message. */
