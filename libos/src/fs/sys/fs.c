@@ -13,14 +13,15 @@
 #include "libos_fs.h"
 #include "libos_fs_pseudo.h"
 
-#define DEFAULT_KERNEL_MAX_CPUS 8191
+#define DEFAULT_KERNEL_MAX_CPUS 8192
 static uint32_t g_kernel_max_cpus = DEFAULT_KERNEL_MAX_CPUS;
 
 static int sys_cpu_kernel_max(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
-
     char str[32];
-    int ret = snprintf(str, sizeof(str), "%u\n", g_kernel_max_cpus);
+
+    /* `- 1` because Linux always reports kernel_max like this */
+    int ret = snprintf(str, sizeof(str), "%u\n", g_kernel_max_cpus - 1);
     if (ret < 0)
         return ret;
 
@@ -226,17 +227,15 @@ int sys_load(const char* str, char** out_data, size_t* out_size) {
 }
 
 static void init_cpu_dir(struct pseudo_node* cpu) {
-    if (g_pal_public_state->topo_info.threads_cnt > DEFAULT_KERNEL_MAX_CPUS) {
-        assert(g_kernel_max_cpus == DEFAULT_KERNEL_MAX_CPUS);
-        uint32_t next_power_of_2 = 1;
-        while (next_power_of_2 <= g_pal_public_state->topo_info.threads_cnt) {
-            /* this should never happen in real systems, so BUG() railguard is enough */
-            if (__builtin_mul_overflow(next_power_of_2, 2, &next_power_of_2))
-                BUG();
-        }
-        /* `- 1` because Linux always reports kernel_max like this */
-        g_kernel_max_cpus = next_power_of_2 - 1;
+    uint32_t next_power_of_2 = DEFAULT_KERNEL_MAX_CPUS;
+    assert(IS_POWER_OF_2(next_power_of_2));
+
+    while (next_power_of_2 < g_pal_public_state->topo_info.threads_cnt) {
+        /* this should never happen in real systems, so BUG() railguard is enough */
+        if (__builtin_mul_overflow(next_power_of_2, 2, &next_power_of_2))
+            BUG();
     }
+    g_kernel_max_cpus = next_power_of_2;
 
     pseudo_add_str(cpu, "kernel_max", &sys_cpu_kernel_max);
     pseudo_add_str(cpu, "online", &sys_cpu_general_load);
