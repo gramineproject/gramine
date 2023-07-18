@@ -318,7 +318,7 @@ also git submodules. For this you need to create a |~| dummy builddir using
 
     meson setup build-dist/ \
         -Ddirect=disabled -Dsgx=disabled -Dskeleton=enabled \
-        -Dlibc=glibc -Dlibgomp-enabled
+        -Dlibc=glibc -Dlibgomp=enabled
     meson dist -C build-dist/ --no-tests --include-subprojects --formats=gztar
 
 The options specified with ``-D`` (especially ``-Dlibc`` and ``-Dlibgomp``) are
