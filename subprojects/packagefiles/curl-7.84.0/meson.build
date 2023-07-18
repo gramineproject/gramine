@@ -18,6 +18,6 @@ curl = custom_target('curl',
 )
 
 curl_minimal_dep = declare_dependency(
-    link_with: curl,
+    link_with: [curl[0]],
     include_directories: 'include',
 )
