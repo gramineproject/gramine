@@ -147,11 +147,14 @@ void notify_failure(unsigned long error);
  * \param first_thread    First thread handle.
  * \param arguments       Application arguments.
  * \param environments    Environment variables.
+ * \param post_callback   Callback into host-specific loader, useful for post-initialization actions
+ *                        like additional logging.
  *
  * This function must be called by the host-specific loader.
  */
 noreturn void pal_main(uint64_t instance_id, PAL_HANDLE parent_process, PAL_HANDLE first_thread,
-                       const char** arguments, const char** environments);
+                       const char** arguments, const char** environments,
+                       void (*post_callback)(void));
 
 /* For initialization */
 
