@@ -390,5 +390,6 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     }
 
     /* call to main function */
-    pal_main(instance_id, parent, first_thread, first_process ? argv + 3 : argv + 5, envp);
+    pal_main(instance_id, parent, first_thread, first_process ? argv + 3 : argv + 5, envp,
+             /*post_callback=*/NULL);
 }

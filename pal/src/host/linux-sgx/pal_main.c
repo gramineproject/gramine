@@ -519,6 +519,13 @@ out:
     return ret;
 }
 
+static void post_callback(void) {
+    if (print_warnings_on_insecure_configs(g_pal_common_state.parent_process) < 0) {
+        log_error("Cannot parse the manifest (while checking for insecure configurations)");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+}
+
 __attribute_no_sanitize_address
 static void do_preheat_enclave(void) {
     for (uint8_t* i = g_pal_linuxsgx_state.heap_min; i < (uint8_t*)g_pal_linuxsgx_state.heap_max;
@@ -779,12 +786,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
     g_pal_public_state.attestation_type = attestation_type_to_str(attestation_type);
 
-    /* this should be placed *after all* initialize-from-manifest routines */
-    if ((ret = print_warnings_on_insecure_configs(parent)) < 0) {
-        log_error("Cannot parse the manifest (while checking for insecure configurations)");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
     /* set up thread handle */
     PAL_HANDLE first_thread = calloc(1, HANDLE_SIZE(thread));
     if (!first_thread) {
@@ -809,5 +810,5 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_linuxsgx_state.enclave_initialized = true;
 
     /* call main function */
-    pal_main(instance_id, parent, first_thread, arguments, environments);
+    pal_main(instance_id, parent, first_thread, arguments, environments, post_callback);
 }

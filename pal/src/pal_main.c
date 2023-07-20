@@ -368,7 +368,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                        PAL_HANDLE parent_process,  /* parent process if it's a child */
                        PAL_HANDLE first_thread,    /* first thread handle */
                        const char** arguments,     /* application arguments */
-                       const char** environments   /* environment variables */) {
+                       const char** environments   /* environment variables */,
+                       void (*post_callback)(void) /* callback into host-specific loader */) {
     if (!instance_id) {
         assert(!parent_process);
         if (_PalRandomBitsRead(&instance_id, sizeof(instance_id)) < 0) {
@@ -580,6 +581,9 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (ret < 0)
         INIT_FAIL("Unable to load loader.entrypoint: %ld", ret);
     free(entrypoint_name);
+
+    if (post_callback)
+        post_callback();
 
     pal_disable_early_memory_bookkeeping();
 
