@@ -340,8 +340,11 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
     }
 }
 
-static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, size_t* out_size,
-                void* addr, size_t addrlen, bool force_nonblocking) {
+static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t msg_controllen, size_t* out_size, void* addr, size_t addrlen,
+                bool force_nonblocking) {
+    __UNUSED(msg_control);
+    __UNUSED(msg_controllen);
     assert(handle->type == TYPE_SOCK);
 
     struct libos_sock_handle* sock = &handle->info.sock;
@@ -383,8 +386,11 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
     return ret;
 }
 
-static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
-                size_t* out_total_size, void* addr, size_t* addrlen, bool force_nonblocking) {
+static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len, void* msg_control,
+                size_t* msg_controllen_ptr, size_t* out_total_size, void* addr, size_t* addrlen_ptr,
+                bool force_nonblocking) {
+    __UNUSED(msg_control);
+    __UNUSED(msg_controllen_ptr);
     assert(handle->type == TYPE_SOCK);
 
     switch (handle->info.sock.type) {
@@ -406,9 +412,9 @@ static int recv(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
         size_t linux_addr_len = sizeof(linux_addr);
         pal_to_linux_sockaddr(&pal_sockaddr, &linux_addr, &linux_addr_len);
         /* If the user provided buffer is too small, the address is truncated, but we report
-         * the actual address size in `addrlen`. */
-        memcpy(addr, &linux_addr, MIN(*addrlen, linux_addr_len));
-        *addrlen = linux_addr_len;
+         * the actual address size in `addrlen_ptr`. */
+        memcpy(addr, &linux_addr, MIN(*addrlen_ptr, linux_addr_len));
+        *addrlen_ptr = linux_addr_len;
     }
     return 0;
 }

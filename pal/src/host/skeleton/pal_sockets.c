@@ -6,7 +6,8 @@
 #include "pal_internal.h"
 
 int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                     pal_stream_options_t options, PAL_HANDLE* out_handle) {
+                     pal_socket_protocol protocol, pal_stream_options_t options,
+                     PAL_HANDLE* out_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
