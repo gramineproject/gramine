@@ -28,10 +28,10 @@ static inline const char* truncate_file_name(const char* filename) {
     return ret;
 }
 #define __FILE_NAME__ (truncate_file_name(__FILE__))
-#else  // ifndef __OPTIMIZE__
+#else // ifndef __OPTIMIZE__
 /* Below macros will be optimized at compile-time, incurring no perf overhead at runtime. */
 #define TRY_TRUNCATE_FILE_NAME_AT_LOC(s, loc) \
-    (sizeof(s) > (loc) && (s)[sizeof(s)-(loc)] == '/') ? ((s) + sizeof(s) - (loc) + 1)
+    (sizeof(s) >= (loc) && (s)[sizeof(s)-(loc)] == '/') ? ((s) + sizeof(s) - (loc) + 1)
 #define TRUNCATE_FILE_NAME(s) \
     (TRY_TRUNCATE_FILE_NAME_AT_LOC(s, 1)  : TRY_TRUNCATE_FILE_NAME_AT_LOC(s, 2)  : \
      TRY_TRUNCATE_FILE_NAME_AT_LOC(s, 3)  : TRY_TRUNCATE_FILE_NAME_AT_LOC(s, 4)  : \
