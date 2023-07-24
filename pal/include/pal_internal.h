@@ -148,7 +148,7 @@ void notify_failure(unsigned long error);
  * \param arguments       Application arguments.
  * \param environments    Environment variables.
  * \param post_callback   Callback into host-specific loader, useful for post-initialization actions
- *                        like additional logging.
+ *                        like additional logging. Can be NULL.
  *
  * This function must be called by the host-specific loader.
  */
