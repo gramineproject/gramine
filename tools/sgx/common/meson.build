@@ -1,6 +1,4 @@
 sgx_util = static_library('sgx_util',
-    'ias.c',
-    'ias.h',
     'pf_util.c',
     'pf_util.h',
     'quote.c',
@@ -17,11 +15,9 @@ sgx_util = static_library('sgx_util',
         common_inc,
     ],
     dependencies: [
-        cjson_dep,
         common_utils_dep,
-        libcurl_dep,
-        protected_files_dep,
         mbedtls_static_dep,
+        protected_files_dep,
     ],
 
     install: true,
@@ -34,5 +30,27 @@ sgx_util_dep = declare_dependency(
         include_directories('.'),
         pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
         protected_files_inc,
+    ],
+)
+
+sgx_ias_util = static_library('sgx_ias_util',
+    'ias.c',
+    'ias.h',
+
+    include_directories: [
+        common_inc,
+    ],
+    dependencies: [
+        cjson_dep,
+        common_utils_dep,
+        libcurl_dep,
+        mbedtls_static_dep,
+    ],
+)
+
+sgx_ias_util_dep = declare_dependency(
+    link_with: sgx_ias_util,
+    include_directories: [
+        include_directories('.'),
     ],
 )
