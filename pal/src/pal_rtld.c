@@ -228,6 +228,11 @@ static int perform_relocations(struct link_map* map) {
             case DT_PLTRELSZ:
                 plt_relas_size = dynamic_section_entry->d_un.d_val;
                 break;
+            case DT_RELR:
+            case DT_RELRSZ:
+                log_error("Unsupported relocation type DT_RELR; you may need to rebuild Gramine "
+                          "with `-Wl,-z,nopack-relative-relocs` linker option");
+                return -PAL_ERROR_DENIED;
             }
         dynamic_section_entry++;
     }
