@@ -42,6 +42,7 @@
  * doesn't require relocation. */
 extern const elf_ehdr_t __ehdr_start __attribute__((visibility("hidden")));
 
+static const char* g_pal_soname = NULL;
 static struct link_map g_pal_map;
 static struct link_map g_entrypoint_map;
 
@@ -202,6 +203,130 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
     return -PAL_ERROR_DENIED;
 }
 
+static int verify_dynamic_entries(struct link_map* map) {
+    elf_addr_t base_diff = map->l_base_diff;
+    elf_dyn_t* dynamic_section_entry = map->l_ld;
+
+    const char* string_table = NULL;
+    elf_xword_t string_table_size = 0;
+
+    /* DT_NEEDED entries contain offsets into the string table (DT_STRTAB) */
+    elf_xword_t needed_offset = 0;
+    bool needed_offset_found  = false;
+
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        switch (dynamic_section_entry->d_tag) {
+            case DT_RELACOUNT:
+            case DT_RELA:
+            case DT_RELASZ:
+            case DT_JMPREL:
+            case DT_PLTRELSZ:
+                /* recognized relocation types, used in perform_relocations() */
+                break;
+            case DT_RELENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_rel_t)) {
+                    log_error("Unexpected DT_RELENT (size of one Rel reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_RELAENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_rela_t)) {
+                    log_error("Unexpected DT_RELAENT (size of one Rela reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_RELRENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_relr_t)) {
+                    log_error("Unexpected DT_RELRENT (size of one Relr reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_SYMENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_sym_t)) {
+                    log_error("Unexpected DT_SYMENT (size of one symbol table entry)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_PLTREL:
+                if (dynamic_section_entry->d_un.d_val != DT_RELA) {
+                    log_error("Unexpected DT_PLTREL (type of relocs in PLT must be Rela)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_NEEDED:
+                if (needed_offset_found) {
+                    log_error("Loaded binary has more than one dependency (must be only one "
+                              "dependency -- the PAL binary)");
+                    return -PAL_ERROR_DENIED;
+                }
+                needed_offset = dynamic_section_entry->d_un.d_val;
+                needed_offset_found = true;
+                break;
+            case DT_SONAME:
+                /* unused, semantically a no-op (for PAL binary, extracted in setup_pal_binary()) */
+                break;
+            case DT_DEBUG:
+                /* unused, semantically a no-op */
+                break;
+            case DT_PLTGOT:
+                /* address of PLT -- unused because Rela relocs include this addr in the offset */
+            case DT_FLAGS:
+            case DT_FLAGS_1:
+                /* additional linker flags -- unclear how to verify them so currently ignore */
+            case DT_VERDEF:
+            case DT_VERDEFNUM:
+            case DT_VERNEED:
+            case DT_VERNEEDNUM:
+            case DT_VERSYM:
+                /* versioning entries -- unclear how to verify them so currently ignore */
+                break;
+            case DT_INIT_ARRAY:
+            case DT_FINI_ARRAY:
+            case DT_INIT_ARRAYSZ:
+            case DT_FINI_ARRAYSZ:
+                /* init/fini routines -- used by AddressSanitizer; unclear how to verify them */
+                break;
+            case DT_STRTAB:
+                string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_diff);
+                break;
+            case DT_STRSZ:
+                string_table_size = dynamic_section_entry->d_un.d_val;
+                break;
+            case DT_HASH:
+            case DT_SYMTAB:
+                /* used in find_string_and_symbol_tables() */
+                break;
+            case DT_RELR:
+            case DT_RELRSZ:
+                /* be explicit about unsupported RELR relocation type */
+                log_error("Unsupported relocation type DT_RELR; you may need to rebuild Gramine "
+                          "with `-Wl,-z,nopack-relative-relocs` linker option");
+                return -PAL_ERROR_DENIED;
+            default:
+                log_error("Unrecognized dynamic entry (DT_*) %ld", dynamic_section_entry->d_tag);
+                return -PAL_ERROR_DENIED;
+
+            }
+        dynamic_section_entry++;
+    }
+
+    if (!string_table || !string_table_size) {
+        log_error("Loaded binary doesn't have string table or it is empty (DT_STRTAB/DT_STRSZ)");
+        return -PAL_ERROR_DENIED;
+    }
+
+    /* verify DT_NEEDED: LibOS and PAL tests have PAL lib; PAL doesn't have this entry */
+    if (needed_offset_found) {
+        const char* needed = string_table + needed_offset;
+        if (strcmp(needed, g_pal_soname) != 0) {
+            log_error("Unexpected DT_NEEDED (must be name of the PAL library)");
+            return -PAL_ERROR_DENIED;
+        }
+    }
+
+    return 0;
+}
+
 static int perform_relocations(struct link_map* map) {
     int ret;
 
@@ -214,8 +339,14 @@ static int perform_relocations(struct link_map* map) {
     elf_rela_t* plt_relas_addr = NULL;
     elf_xword_t plt_relas_size = 0;
 
+    elf_xword_t relas_count = 0;
+    elf_xword_t expected_relas_count = 0;
+
     while (dynamic_section_entry->d_tag != DT_NULL) {
         switch (dynamic_section_entry->d_tag) {
+            case DT_RELACOUNT:
+                expected_relas_count = dynamic_section_entry->d_un.d_val;
+                break;
             case DT_RELA:
                 relas_addr = (elf_rela_t*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
@@ -243,6 +374,7 @@ static int perform_relocations(struct link_map* map) {
         if (ELF_R_TYPE(rela->r_info) == R_X86_64_RELATIVE) {
             elf_addr_t* addr_to_relocate = (elf_addr_t*)(rela->r_offset + base_diff);
             *addr_to_relocate = *addr_to_relocate + base_diff;
+            relas_count++;
         } else if (ELF_R_TYPE(rela->r_info) == R_X86_64_GLOB_DAT) {
             elf_addr_t symbol_addr;
             ret = find_symbol_in_loaded_maps(map, rela, &symbol_addr);
@@ -256,7 +388,6 @@ static int perform_relocations(struct link_map* map) {
                       "R_X86_64_RELATIVE and R_X86_64_GLOB_DAT relocations");
             return -PAL_ERROR_DENIED;
         }
-
     }
 
     if (!plt_relas_addr && plt_relas_size) {
@@ -280,6 +411,11 @@ static int perform_relocations(struct link_map* map) {
 
         elf_addr_t* addr_to_relocate = (elf_addr_t*)(plt_rela->r_offset + base_diff);
         *addr_to_relocate = symbol_addr + plt_rela->r_addend;
+    }
+
+    if (relas_count != expected_relas_count) {
+        log_error("Expected %ld Rela relocs but got %ld", expected_relas_count, relas_count);
+        return -PAL_ERROR_DENIED;
     }
 
     return 0;
@@ -429,6 +565,10 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
     g_entrypoint_map.l_entry = g_entrypoint_map.l_entry + g_entrypoint_map.l_base_diff;
     g_entrypoint_map.l_ld = (elf_dyn_t*)((elf_addr_t)g_entrypoint_map.l_ld +
                                          g_entrypoint_map.l_base_diff);
+
+    ret = verify_dynamic_entries(&g_entrypoint_map);
+    if (ret < 0)
+        goto out;
 
     ret = find_string_and_symbol_tables(g_entrypoint_map.l_map_start, g_entrypoint_map.l_base_diff,
                                         &g_entrypoint_map.string_table,
@@ -584,11 +724,33 @@ int setup_pal_binary(void) {
     g_pal_map.l_base_diff = pal_base_diff;
     g_pal_map.l_ld = dynamic_section;
 
+    ret = verify_dynamic_entries(&g_pal_map);
+    if (ret < 0)
+        return ret;
+
     ret = find_string_and_symbol_tables(g_pal_map.l_map_start, g_pal_map.l_base_diff,
                                         &g_pal_map.string_table, &g_pal_map.symbol_table,
                                         &g_pal_map.symbol_table_cnt);
     if (ret < 0)
         return ret;
+
+    /* find soname of PAL binary -- will be used during DT_NEEDED verification of other binaries */
+    elf_dyn_t* dynamic_section_entry = dynamic_section;
+    elf_xword_t soname_offset = 0;
+    bool soname_offset_found  = false;
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        if (dynamic_section_entry->d_tag == DT_SONAME) {
+            soname_offset = dynamic_section_entry->d_un.d_val;
+            soname_offset_found = true;
+            break;
+        }
+        dynamic_section_entry++;
+    }
+    if (!soname_offset_found) {
+        log_error("Did not find DT_SONAME for PAL binary (name of the PAL library)");
+        return -PAL_ERROR_DENIED;
+    }
+    g_pal_soname = g_pal_map.string_table + soname_offset;
 
     ret = perform_relocations(&g_pal_map);
     return ret;
