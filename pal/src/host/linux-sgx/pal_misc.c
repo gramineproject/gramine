@@ -104,12 +104,12 @@ static uint64_t get_tsc_hz_hypervisor(void) {
         return 0;
     }
 
-    if (words[CPUID_WORD_EAX] < HYPERVISOR_TIME_LEAF) {
+    if (words[CPUID_WORD_EAX] < HYPERVISOR_VMWARE_TIME_LEAF) {
         /* virtual TSC frequency is not available */
         return 0;
     }
 
-    _PalCpuIdRetrieve(HYPERVISOR_TIME_LEAF, 0, words);
+    _PalCpuIdRetrieve(HYPERVISOR_VMWARE_TIME_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX]) {
         /* TSC frequency (in kHz) is not enumerated, can't calculate frequency */
         return 0;
@@ -131,7 +131,7 @@ void init_tsc(void) {
         return;
 
     /* hypervisors may not expose crystal-clock frequency CPUID leaves, so instead try
-     * hypervisor-special synthetic CPUID leaf 0x40000010 (Timing Information) */
+     * hypervisor-special synthetic CPUID leaf 0x40000010 (VMWare-style Timing Information) */
     g_tsc_hz = get_tsc_hz_hypervisor();
     if (g_tsc_hz)
         return;
@@ -496,11 +496,11 @@ static const struct cpuid_leaf cpuid_known_leaves[] = {
 
     /* hypervisor-specific CPUID leaf functions (0x40000000 - 0x400000FF) start here */
     {.leaf = 0x40000000, .zero_subleaf = true, .cache = true},  /* CPUID Info */
-    {.leaf = 0x40000010, .zero_subleaf = true, .cache = true},  /* Timing Info */
+    {.leaf = 0x40000010, .zero_subleaf = true, .cache = true},  /* VMWare-style Timing Info */
     /* NOTE: currently only the above two leaves are used, see also get_tsc_hz_hypervisor() */
 
     /* invalid CPUID leaf functions (no existing or future CPU will return any meaningful
-     * information in these leaves) occupy 0x40000100 - 0x4FFFFFFFH -- they are treated the same as
+     * information in these leaves) occupy 0x40000100 - 0x4FFFFFFF -- they are treated the same as
      * unrecognized leaves, see code below */
 
     /* extended CPUID leaf functions start here */
