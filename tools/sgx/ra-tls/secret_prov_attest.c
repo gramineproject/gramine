@@ -420,9 +420,9 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
                 exit(1);
             }
 
-            int fd = open(path_buf, O_WRONLY);
+            int fd = open(path_buf, O_WRONLY | O_CREAT | O_TRUNC);
             if (fd < 0) {
-                ERROR("Secret provisioning cannot open '%s'\n", path_buf);
+                ERROR("Secret provisioning cannot open '%s' for writing\n", path_buf);
                 exit(1);
             }
 
