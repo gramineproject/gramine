@@ -43,6 +43,13 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
     }
     ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
 
+    size_t siblings_of_thread = 0;
+    for (size_t j = 0; j < topo->threads_cnt; j++) { // slow, but shouldn't matter
+        if (topo->threads[j].is_online && topo->threads[j].core_id == thread->core_id)
+            siblings_of_thread++;
+    }
+    ADD_INFO("siblings\t: %zu\n", siblings_of_thread * cores_in_socket);
+
     char* cpu_flags = NULL;
     int ret = libos_get_cpu_flags(&cpu_flags);
     if (ret < 0) {
