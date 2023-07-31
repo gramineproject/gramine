@@ -202,6 +202,90 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
     return -PAL_ERROR_DENIED;
 }
 
+static int verify_dynamic_entries(struct link_map* map) {
+    elf_dyn_t* dynamic_section_entry = map->l_ld;
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        switch (dynamic_section_entry->d_tag) {
+            case DT_RELA:
+            case DT_RELASZ:
+            case DT_JMPREL:
+            case DT_PLTRELSZ:
+                /* recognized relocation types, used in perform_relocations() */
+                break;
+            case DT_RELENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_rel_t)) {
+                    log_error("Unexpected DT_RELENT (size of one Rel reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_RELAENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_rela_t)) {
+                    log_error("Unexpected DT_RELAENT (size of one Rela reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_RELRENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_relr_t)) {
+                    log_error("Unexpected DT_RELRENT (size of one Relr reloc)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_SYMENT:
+                if (dynamic_section_entry->d_un.d_val != sizeof(elf_sym_t)) {
+                    log_error("Unexpected DT_SYMENT (size of one symbol table entry)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_PLTREL:
+                if (dynamic_section_entry->d_un.d_val != DT_RELA) {
+                    log_error("Unexpected DT_PLTREL (type of relocs in PLT must be Rela)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_NEEDED:
+                /* benign -- LibOS and PAL tests have PAL shared lib here, PAL has nothing */
+            case DT_DEBUG:
+                /* benign -- PAL tests may set this */
+            case DT_RELCOUNT:
+            case DT_RELACOUNT:
+                /* benign and unused -- number of relocations to perform */
+            case DT_PLTGOT:
+                /* benign and unused -- address of PLT */
+            case DT_STRSZ:
+                /* benign and unused -- size of the string table */
+            case DT_SONAME:
+                /* benign -- library name, e.g. `libsysdb.so` and `libpal.so` */
+            case DT_FLAGS:
+            case DT_FLAGS_1:
+                /* benign -- additional linker flags */
+            case DT_VERDEF:
+            case DT_VERDEFNUM:
+            case DT_VERNEED:
+            case DT_VERNEEDNUM:
+            case DT_VERSYM:
+                /* benign and unused -- versioning entries */
+                break;
+            case DT_HASH:
+            case DT_STRTAB:
+            case DT_SYMTAB:
+                /* used in find_string_and_symbol_tables() */
+                break;
+            case DT_RELR:
+            case DT_RELRSZ:
+                /* be explicit about unsupported RELR relocation type */
+                log_error("Unsupported relocation type DT_RELR; you may need to rebuild Gramine "
+                          "with `-Wl,-z,nopack-relative-relocs` linker option");
+                return -PAL_ERROR_DENIED;
+            default:
+                log_error("Unrecognized dynamic entry (DT_*) %ld", dynamic_section_entry->d_tag);
+                return -PAL_ERROR_DENIED;
+
+            }
+        dynamic_section_entry++;
+    }
+    return 0;
+}
+
 static int perform_relocations(struct link_map* map) {
     int ret;
 
@@ -228,11 +312,6 @@ static int perform_relocations(struct link_map* map) {
             case DT_PLTRELSZ:
                 plt_relas_size = dynamic_section_entry->d_un.d_val;
                 break;
-            case DT_RELR:
-            case DT_RELRSZ:
-                log_error("Unsupported relocation type DT_RELR; you may need to rebuild Gramine "
-                          "with `-Wl,-z,nopack-relative-relocs` linker option");
-                return -PAL_ERROR_DENIED;
             }
         dynamic_section_entry++;
     }
@@ -435,6 +514,10 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
     g_entrypoint_map.l_ld = (elf_dyn_t*)((elf_addr_t)g_entrypoint_map.l_ld +
                                          g_entrypoint_map.l_base_diff);
 
+    ret = verify_dynamic_entries(&g_entrypoint_map);
+    if (ret < 0)
+        goto out;
+
     ret = find_string_and_symbol_tables(g_entrypoint_map.l_map_start, g_entrypoint_map.l_base_diff,
                                         &g_entrypoint_map.string_table,
                                         &g_entrypoint_map.symbol_table,
@@ -588,6 +671,10 @@ int setup_pal_binary(void) {
     g_pal_map.l_map_start = pal_binary_addr;
     g_pal_map.l_base_diff = pal_base_diff;
     g_pal_map.l_ld = dynamic_section;
+
+    ret = verify_dynamic_entries(&g_pal_map);
+    if (ret < 0)
+        return ret;
 
     ret = find_string_and_symbol_tables(g_pal_map.l_map_start, g_pal_map.l_base_diff,
                                         &g_pal_map.string_table, &g_pal_map.symbol_table,
