@@ -382,6 +382,7 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
+extern uint64_t g_tsc_hz;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     int ret;
@@ -524,6 +525,14 @@ out:
     free(log_level_str);
     free(protected_files_key_str);
     return ret;
+}
+
+static void print_warning_on_invariant_tsc(PAL_HANDLE parent_process) {
+    if (!parent_process && !g_tsc_hz) {
+        /* Warn only in the first process. */
+        log_warning("Could not set up Invariant TSC (CPU is too old or you run on a VM that does "
+                    "not expose corresponding CPUID leaves). This degrades performance.");
+    }
 }
 
 __attribute_no_sanitize_address
@@ -788,6 +797,9 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+
+    /* FIXME: after rebase to latest master, move this to post_callback() */
+    print_warning_on_invariant_tsc(parent);
 
     /* set up thread handle */
     PAL_HANDLE first_thread = calloc(1, HANDLE_SIZE(thread));

@@ -37,7 +37,7 @@ static seqlock_t g_tsc_lock = INIT_SEQLOCK_UNLOCKED;
 static bool is_tsc_usable(void) {
     uint32_t words[CPUID_WORD_NUM];
     _PalCpuIdRetrieve(INVARIANT_TSC_LEAF, 0, words);
-    return words[CPUID_WORD_EDX] & 1 << 8;
+    return words[CPUID_WORD_EDX] & (1 << 8);
 }
 
 /* return TSC frequency or 0 if invariant TSC is not supported */
@@ -51,10 +51,15 @@ static uint64_t get_tsc_hz_baremetal(void) {
     }
 
     if (words[CPUID_WORD_ECX] > 0) {
-        /* calculate TSC frequency as core crystal clock frequency (EAX) * EBX / EAX; cast to 64-bit
-         * first to prevent integer overflow */
-        uint64_t ecx_hz = words[CPUID_WORD_ECX];
-        return ecx_hz * words[CPUID_WORD_EBX] / words[CPUID_WORD_EAX];
+        /*
+         * Calculate TSC frequency as ECX * EBX / EAX, where
+         *   - EAX is denominator of the TSC/"core crystal clock" ratio,
+         *   - EBX is numerator of the TSC/"core crystal clock" ratio,
+         *   - ECX is core crystal clock frequency in Hz.
+         *
+         * Cast to 64-bit first to prevent integer overflow.
+         */
+        return (uint64_t)words[CPUID_WORD_ECX] * words[CPUID_WORD_EBX] / words[CPUID_WORD_EAX];
     }
 
     /* some Intel CPUs do not report nominal frequency of crystal clock, let's calculate it
@@ -68,8 +73,7 @@ static uint64_t get_tsc_hz_baremetal(void) {
 
     /* processor base frequency is in MHz but we need to return TSC frequency in Hz; cast to 64-bit
      * first to prevent integer overflow */
-    uint64_t base_frequency_mhz = words[CPUID_WORD_EAX];
-    return base_frequency_mhz * 1000000;
+    return (uint64_t)words[CPUID_WORD_EAX] * 1000000;
 }
 
 /* return TSC frequency or 0 if invariant TSC is not supported */
@@ -117,8 +121,7 @@ static uint64_t get_tsc_hz_hypervisor(void) {
 
     /* TSC frequency is in kHz but we need to return TSC frequency in Hz; cast to 64-bit first to
      * prevent integer overflow */
-    uint64_t tsc_frequency_khz = words[CPUID_WORD_EAX];
-    return tsc_frequency_khz * 1000;
+    return (uint64_t)words[CPUID_WORD_EAX] * 1000;
 }
 
 /* initialize the data structures used for date/time emulation using TSC */
@@ -135,10 +138,6 @@ void init_tsc(void) {
     g_tsc_hz = get_tsc_hz_hypervisor();
     if (g_tsc_hz)
         return;
-
-    /* can't use log_warning because at this point we didn't parse the manifest yet */
-    log_error("Could not set up Invariant TSC (CPU is too old or you run on a VM that does not "
-              "expose corresponding CPUID leaves). This degrades performance.");
 }
 
 /* TODO: result comes from the untrusted host, introduce some schielding */
