@@ -1142,6 +1142,7 @@ class TC_40_FileSystem(RegressionTestCase):
         lines = stdout.splitlines()
 
         self.assertIn('/sys/devices/system/cpu: directory', lines)
+        self.assertIn('/sys/devices/system/cpu/kernel_max: file', lines)
         for i in range(cpus_cnt):
             cpu = f'/sys/devices/system/cpu/cpu{i}'
             self.assertIn(f'{cpu}: directory', lines)
