@@ -1146,6 +1146,7 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('/sys/devices/system/cpu/offline: file', lines)
         self.assertIn('/sys/devices/system/cpu/possible: file', lines)
         self.assertIn('/sys/devices/system/cpu/present: file', lines)
+        self.assertIn('/sys/devices/system/cpu/kernel_max: file', lines)
         for i in range(cpus_cnt):
             cpu = f'/sys/devices/system/cpu/cpu{i}'
             self.assertIn(f'{cpu}: directory', lines)
