@@ -207,7 +207,9 @@ int sys_load(const char* str, char** out_data, size_t* out_size) {
 
 static void init_cpu_dir(struct pseudo_node* cpu) {
     pseudo_add_str(cpu, "online", &sys_cpu_general_load);
+    pseudo_add_str(cpu, "offline", &sys_cpu_general_load);
     pseudo_add_str(cpu, "possible", &sys_cpu_general_load);
+    pseudo_add_str(cpu, "present", &sys_cpu_general_load);
 
     struct pseudo_node* cpuX = pseudo_add_dir(cpu, NULL);
     cpuX->name_exists = &sys_resource_name_exists;

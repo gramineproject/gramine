@@ -17,6 +17,10 @@ static bool is_online(size_t ind, const void* arg) {
     return g_pal_public_state->topo_info.threads[ind].is_online;
 }
 
+static bool is_offline(size_t ind, const void* arg) {
+    return !is_online(ind, arg);
+}
+
 static bool return_true(size_t ind, const void* arg) {
     __UNUSED(ind);
     __UNUSED(arg);
@@ -31,7 +35,11 @@ int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out
 
     if (strcmp(name, "online") == 0) {
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, is_online, NULL);
-    } else if (strcmp(name, "possible") == 0) {
+    } else if (strcmp(name, "offline") == 0) {
+        ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, is_offline, NULL);
+    } else if (strcmp(name, "possible") == 0 || strcmp(name, "present") == 0) {
+        /* we simplify and always output "present" CPUs same as "possible" CPUs; this will need to
+         * be changed if we add support for hot-plugging CPUs / shutting down / powering up CPUs */
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, return_true, NULL);
     } else {
         log_debug("unrecognized file: %s", name);
