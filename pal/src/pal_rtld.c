@@ -203,9 +203,21 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
 }
 
 static int verify_dynamic_entries(struct link_map* map) {
+    elf_addr_t base_diff = map->l_base_diff;
     elf_dyn_t* dynamic_section_entry = map->l_ld;
+
+    const char* string_table = NULL;
+    elf_xword_t string_table_size = 0;
+
+    /* DT_SONAME and DT_NEEDED entries contain offsets into the string table (DT_STRTAB) */
+    elf_xword_t soname_offset = 0;
+    elf_xword_t needed_offset = 0;
+    bool soname_offset_found  = false;
+    bool needed_offset_found  = false;
+
     while (dynamic_section_entry->d_tag != DT_NULL) {
         switch (dynamic_section_entry->d_tag) {
+            case DT_RELACOUNT:
             case DT_RELA:
             case DT_RELASZ:
             case DT_JMPREL:
@@ -242,31 +254,42 @@ static int verify_dynamic_entries(struct link_map* map) {
                     return -PAL_ERROR_DENIED;
                 }
                 break;
-            case DT_NEEDED:
-                /* benign -- LibOS and PAL tests have PAL shared lib here, PAL has nothing */
-            case DT_DEBUG:
-                /* benign -- PAL tests may set this */
-            case DT_RELCOUNT:
-            case DT_RELACOUNT:
-                /* benign and unused -- number of relocations to perform */
-            case DT_PLTGOT:
-                /* benign and unused -- address of PLT */
-            case DT_STRSZ:
-                /* benign and unused -- size of the string table */
             case DT_SONAME:
-                /* benign -- library name, e.g. `libsysdb.so` and `libpal.so` */
+                soname_offset = dynamic_section_entry->d_un.d_val;
+                soname_offset_found = true;
+                break;
+            case DT_NEEDED:
+                needed_offset = dynamic_section_entry->d_un.d_val;
+                needed_offset_found = true;
+                break;
+            case DT_DEBUG:
+                /* If the executable's dynamic section has DT_DEBUG, the run-time linker sets its
+                 * value to the address where the `debug rendezvous` structure can be found -- not
+                 * relevant for our linker */
+                if (dynamic_section_entry->d_un.d_val != 0) {
+                    log_error("Unexpected DT_DEBUG (must be zero)");
+                    return -PAL_ERROR_DENIED;
+                }
+                break;
+            case DT_PLTGOT:
+                /* address of PLT -- unused because Rela relocs include this addr in the offset */
             case DT_FLAGS:
             case DT_FLAGS_1:
-                /* benign -- additional linker flags */
+                /* additional linker flags -- unclear how to verify them so currently ignore */
             case DT_VERDEF:
             case DT_VERDEFNUM:
             case DT_VERNEED:
             case DT_VERNEEDNUM:
             case DT_VERSYM:
-                /* benign and unused -- versioning entries */
+                /* versioning entries -- unclear how to verify them so currently ignore */
+                break;
+            case DT_STRTAB:
+                string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_diff);
+                break;
+            case DT_STRSZ:
+                string_table_size = dynamic_section_entry->d_un.d_val;
                 break;
             case DT_HASH:
-            case DT_STRTAB:
             case DT_SYMTAB:
                 /* used in find_string_and_symbol_tables() */
                 break;
@@ -283,6 +306,31 @@ static int verify_dynamic_entries(struct link_map* map) {
             }
         dynamic_section_entry++;
     }
+
+    if (!string_table || !string_table_size) {
+        log_error("Loaded binary doesn't have string table or its empty (DT_STRTAB and DT_STRSZ)");
+        return -PAL_ERROR_DENIED;
+    }
+
+    /* verify DT_SONAME: must be `libsysdb.so` for LibOS and `libpal.so` for PAL; PAL tests don't
+     * have this entry */
+    if (soname_offset_found) {
+        const char* soname = string_table + soname_offset;
+        if (strcmp(soname, "libsysdb.so") != 0 && strcmp(soname, "libpal.so") != 0) {
+            log_error("Unexpected DT_SONAME (must be name of the LibOS or PAL library)");
+            return -PAL_ERROR_DENIED;
+        }
+    }
+
+    /* verify DT_NEEDED: LibOS and PAL tests have PAL lib; PAL doesn't have this entry */
+    if (needed_offset_found) {
+        const char* needed = string_table + needed_offset;
+        if (strcmp(needed, "libpal.so") != 0) {
+            log_error("Unexpected DT_NEEDED (must be name of the PAL library)");
+            return -PAL_ERROR_DENIED;
+        }
+    }
+
     return 0;
 }
 
@@ -298,8 +346,14 @@ static int perform_relocations(struct link_map* map) {
     elf_rela_t* plt_relas_addr = NULL;
     elf_xword_t plt_relas_size = 0;
 
+    elf_xword_t relas_count = 0;
+    elf_xword_t expected_relas_count = 0;
+
     while (dynamic_section_entry->d_tag != DT_NULL) {
         switch (dynamic_section_entry->d_tag) {
+            case DT_RELACOUNT:
+                expected_relas_count = dynamic_section_entry->d_un.d_val;
+                break;
             case DT_RELA:
                 relas_addr = (elf_rela_t*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
@@ -327,6 +381,7 @@ static int perform_relocations(struct link_map* map) {
         if (ELF_R_TYPE(rela->r_info) == R_X86_64_RELATIVE) {
             elf_addr_t* addr_to_relocate = (elf_addr_t*)(rela->r_offset + base_diff);
             *addr_to_relocate = *addr_to_relocate + base_diff;
+            relas_count++;
         } else if (ELF_R_TYPE(rela->r_info) == R_X86_64_GLOB_DAT) {
             elf_addr_t symbol_addr;
             ret = find_symbol_in_loaded_maps(map, rela, &symbol_addr);
@@ -340,7 +395,6 @@ static int perform_relocations(struct link_map* map) {
                       "R_X86_64_RELATIVE and R_X86_64_GLOB_DAT relocations");
             return -PAL_ERROR_DENIED;
         }
-
     }
 
     if (!plt_relas_addr && plt_relas_size) {
@@ -364,6 +418,11 @@ static int perform_relocations(struct link_map* map) {
 
         elf_addr_t* addr_to_relocate = (elf_addr_t*)(plt_rela->r_offset + base_diff);
         *addr_to_relocate = symbol_addr + plt_rela->r_addend;
+    }
+
+    if (relas_count != expected_relas_count) {
+        log_error("Expected %ld Rela relocs but got %ld", expected_relas_count, relas_count);
+        return -PAL_ERROR_DENIED;
     }
 
     return 0;
