@@ -528,6 +528,13 @@ keys:
   describing linked lists.
 - ``array_len`` is an optional number of items in the ``ptr`` array. This field
   cannot be specified with non-``ptr`` sub-regions. The default value is ``1``.
+- ``onlyif = "simple boolean expression"`` allows to condition the sub-region
+  based on a boolean expression. The sub-region is taken into account only if
+  the expression evaluates to true. The only currently supported formats of
+  expressions are ``token1 == token2`` and ``token1 != token2``, where
+  ``token1`` and ``token2`` may be constant non-negative integers or sub-region
+  names (referenced sub-regions must contain a native-endian integer value of
+  size 1..8B).
 
 Consider this simple C snippet:
 

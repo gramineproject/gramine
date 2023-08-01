@@ -52,6 +52,11 @@ sys.ioctl_structs.wrong_direction_string = [
     { size = 1, direction = "dummy" },
 ]
 
+# Expression in `onlyif` field must be in format "token1 {== | !=} token2"
+sys.ioctl_structs.bad_onlyif_expr = [
+    { onlyif = "42 === 24", size = 1 },
+]
+
 sys.allowed_ioctls = [
   { request_code = 0x8100,     struct = "not_real_struct" },                          # REWIND
   { request_code = 0x8103,     struct = "subregion_is_not_a_table" },                 # GETSIZE
@@ -60,4 +65,5 @@ sys.allowed_ioctls = [
   { request_code = 0xc0208102, struct = "pointer_of_wrong_size" },                    # READ
   { request_code = 0x40108105, struct = "alignment_specified_in_second_subregion" },  # REPLACE_ARR
   { request_code = 0x40108106, struct = "wrong_direction_string" },                   # REPLACE_LIST
+  { request_code = 0xc0108107, struct = "bad_onlyif_expr" },                          # GET_SET_SIZE
 ]

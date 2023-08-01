@@ -84,6 +84,11 @@
  *  8. The first sub-region (and only the first!) may specify the alignment of the memory region.
  *  9. The total size of a sub-region is calculated as `size * unit + adjustment`. By default `unit`
  *     is 1 byte and `adjustment` is 0. Note that `adjustment` may be a negative number.
+ * 10. Sub-regions may be conditioned using `onlyif = "simple boolean expression"`. The only
+ *     currently supported format of expressions are: (`token1` and `token2` may be constant
+ *     non-negative integers or sub-region names)
+ *       - "token1 == token2"
+ *       - "token1 != token2"
  *
  * The diagram below shows how this complex object is copied from Gramine memory (left side) to
  * host memory (right side). MR stands for "memory region", SR stands for "sub-region". Note how

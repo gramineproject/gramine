@@ -136,6 +136,28 @@ int main(void) {
     if (strcmp(buf, STRING_IOCTL))
         errx(1, "read `%s` from /dev/gramine_test_dev but expected `%s`", buf, STRING_IOCTL);
 
+    /* test 5 -- use ioctl(GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE) syscall to test `onlyif` syntax */
+    struct gramine_test_dev_ioctl_get_set_size get_set_size = {
+        .do_set = 0,          /* get size */
+        .size   = UINT64_MAX  /* will be overwritten by ioctl result */
+    };
+    CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE, &get_set_size));
+    if (get_set_size.size != sizeof(STRING_IOCTL))
+        errx(1, "/dev/gramine_test_dev ioctl(GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE) didn't return "
+                " size %lu (returned: %lu)", sizeof(STRING_IOCTL), get_set_size.size);
+
+    /* use a static const variable so that it is put into the .rodata section and thus protected
+     * against writes -- this is to catch bugs if Gramine IOCTL logic tries to write into it */
+    static const struct gramine_test_dev_ioctl_get_set_size const_set_size = {
+        .do_set = 1, /* set size to zero */
+        .size   = 0
+    };
+    CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE, &const_set_size));
+    devfd_size = CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GETSIZE));
+    if (devfd_size != 0)
+        errx(1, "/dev/gramine_test_dev ioctl(GRAMINE_TEST_DEV_IOCTL_GETSIZE) didn't return 0 "
+                "(returned: %ld)", devfd_size);
+
     CHECK(close(devfd));
     puts("TEST OK");
     return 0;
