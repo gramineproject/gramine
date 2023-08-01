@@ -216,6 +216,131 @@ static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
     return 0;
 }
 
+static int get_sub_region_value(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
+                                const char* sub_region_name, uint64_t* out_value) {
+    size_t found_idx;
+    int ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
+    if (ret < 0)
+        return ret;
+
+    void* addr_of_value_field  = all_sub_regions[found_idx].gramine_addr;
+    size_t size_of_value_field = all_sub_regions[found_idx].size;
+    uint64_t read_value;
+
+    ret = copy_value(addr_of_value_field, size_of_value_field, &read_value);
+    if (ret < 0)
+        return ret;
+
+    *out_value = read_value;
+    return 0;
+}
+
+static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
+                                 const toml_table_t* toml_sub_region, bool* out_value) {
+    char* expr;
+    int ret = toml_string_in(toml_sub_region, "onlyif", &expr);
+    if (ret < 0)
+        return -PAL_ERROR_INVAL;
+
+    if (!expr) {
+        *out_value = true; /* no `onlyif` field, must use this sub-region */
+        return 0;
+    }
+
+    uint64_t value1;
+    uint64_t value2;
+
+    char* cur = expr;
+    while (*cur == ' ' || *cur == '\t')
+        cur++;
+
+    /* read first token */
+    char* token1 = cur;
+    while (isalnum(*cur) || *cur == '_' || *cur == '-')
+        cur++;
+    size_t token1_len = cur - token1;
+    while (*cur == ' ' || *cur == '\t')
+        cur++;
+
+    /* read comparator */
+    char* compar = cur;
+    while (*cur == '=' || *cur == '!')
+        cur++;
+    size_t compar_len = cur - compar;
+    while (*cur == ' ' || *cur == '\t')
+        cur++;
+
+    /* read second token */
+    char* token2 = cur;
+    while (isalnum(*cur) || *cur == '_' || *cur == '-')
+        cur++;
+    size_t token2_len = cur - token2;
+    while (*cur == ' ' || *cur == '\t')
+        cur++;
+
+    /* make sure the whole string is in allowed format "token1 {== | !=} token2" */
+    if (compar_len != 2 || (memcmp(compar, "==", 2) && memcmp(compar, "!=", 2))) {
+        log_error("IOCTL: only-if expression '%s' doesn't have '==' or '!=' comparator", expr);
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    if (*cur != '\0' || !token1_len || !token2_len) {
+        log_error("IOCTL: cannot parse only-if expression '%s'", expr);
+        ret = -PAL_ERROR_INVAL;
+        goto out;
+    }
+
+    /* get actual values for two tokens */
+    char* endptr = NULL;
+    token1[token1_len] = '\0';
+    long long v1 = strtoll(token1, &endptr, /*base=*/0);
+    if (endptr == token1 + token1_len) {
+        /* constant integer, check it is a legit unsigned int */
+        if (v1 < 0) {
+            log_error("IOCTL: first value in only-if expression '%s' is negative", expr);
+            ret = -PAL_ERROR_INVAL;
+            goto out;
+        }
+        value1 = (uint64_t)v1;
+    } else {
+        /* could not read the constant integer, the token must be a string-name of a sub region */
+        ret = get_sub_region_value(all_sub_regions, all_sub_regions_cnt, token1, &value1);
+        if (ret < 0) {
+            log_error("IOCTL: cannot find first sub region in only-if expression '%s'", expr);
+            goto out;
+        }
+    }
+
+    token2[token2_len] = '\0';
+    long long v2 = strtoll(token2, &endptr, /*base=*/0);
+    if (endptr == token2 + token2_len) {
+        if (v2 < 0) {
+            log_error("IOCTL: second value in only-if expression '%s' is negative", expr);
+            ret = -PAL_ERROR_INVAL;
+            goto out;
+        }
+        value2 = (uint64_t)v2;
+    } else {
+        ret = get_sub_region_value(all_sub_regions, all_sub_regions_cnt, token2, &value2);
+        if (ret < 0) {
+            log_error("IOCTL: cannot find second sub region in only-if expression '%s'", expr);
+            goto out;
+        }
+    }
+
+    if (!(memcmp(compar, "==", 2))) {
+        *out_value = value1 == value2;
+    } else {
+        *out_value = value1 != value2;
+    }
+
+    ret = 0;
+out:
+    free(expr);
+    return ret;
+}
+
 /* Caller sets `mem_regions_cnt_ptr` to the length of `mem_regions` array; this variable is updated
  * to return the number of actually used `mem_regions`. Similarly with `sub_regions`. */
 int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_toml_mem_region,
@@ -275,6 +400,18 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
                 log_error("IOCTL: each memory sub-region must be a TOML table");
                 ret = -PAL_ERROR_INVAL;
                 goto out;
+            }
+
+            bool onlyif_value;
+            ret = get_sub_region_onlyif(sub_regions, sub_regions_cnt, toml_sub_region,
+                                        &onlyif_value);
+            if (ret < 0) {
+                log_error("IOCTL: parsing of 'onlyif' field failed");
+                goto out;
+            }
+            if (!onlyif_value) {
+                /* onlyif expression is false, we must skip this sub region completely */
+                continue;
             }
 
             if (sub_regions_cnt == max_sub_regions) {

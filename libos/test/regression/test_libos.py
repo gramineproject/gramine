@@ -1077,6 +1077,9 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('error: IOCTL: \'alignment\' may be specified only at beginning of mem '
                       'region', stderr)
         self.assertIn('error: IOCTL: parsing of \'direction\' field failed', stderr)
+        self.assertIn('error: IOCTL: only-if expression \'42 === 24\' doesn\'t have \'==\' or '
+                      '\'!=\' comparator', stderr)
+
         self.assertIn('TEST OK', stdout)
 
     def test_010_path(self):

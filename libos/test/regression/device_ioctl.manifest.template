@@ -45,6 +45,13 @@ sys.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
     { ptr = "gramine_test_dev_ioctl_replace_list" },  # next
 ]
 
+sys.ioctl_structs.gramine_test_dev_ioctl_get_set_size = [
+    { size = 1, direction = "out", name = "do_set" },
+    { size = 7, direction = "none" }, # 7B padding
+    { onlyif = "do_set != 0", size = 8, direction = "out" },  # setting the size
+    { onlyif = "do_set == 0", size = 8, direction = "in" },   # getting the size
+]
+
 sys.allowed_ioctls = [
   # three IOCTLs below test different "no struct needed" syntaxes of the `struct` key
   { request_code = 0x8100, struct = "" },  # REWIND
@@ -55,4 +62,5 @@ sys.allowed_ioctls = [
   { request_code = 0xc0208102, struct = "gramine_test_dev_ioctl_read" },         # READ
   { request_code = 0x40108105, struct = "gramine_test_dev_ioctl_replace_arr" },  # REPLACE_ARR
   { request_code = 0x40108106, struct = "gramine_test_dev_ioctl_replace_list" }, # REPLACE_LIST
+  { request_code = 0xc0108107, struct = "gramine_test_dev_ioctl_get_set_size" }, # GET_SET_SIZE
 ]

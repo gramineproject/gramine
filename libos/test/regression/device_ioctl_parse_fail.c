@@ -65,6 +65,13 @@ int main(void) {
         errx(1, "ioctl(GRAMINE_TEST_DEV_IOCTL_REPLACE_LIST) didn't fail on parsing "
                 "(returned: %d, errno: %d)", ret, errno);
 
+    /* test 8: bad expression in `onlyif` field */
+    errno = 0;
+    ret = ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE);
+    if (ret != -1 || errno != EINVAL)
+        errx(1, "ioctl(GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE) didn't fail on parsing "
+                "(returned: %d, errno: %d)", ret, errno);
+
     CHECK(close(devfd));
     puts("TEST OK");
     return 0;
