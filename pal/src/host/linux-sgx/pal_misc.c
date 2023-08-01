@@ -44,6 +44,13 @@ static bool is_tsc_usable(void) {
 static uint64_t get_tsc_hz_baremetal(void) {
     uint32_t words[CPUID_WORD_NUM];
 
+    /*
+     * Based on "Time Stamp Counter and Nominal Core Crystal Clock Information" leaf, calculate TSC
+     * frequency as ECX * EBX / EAX, where
+     *   - EAX is denominator of the TSC/"core crystal clock" ratio,
+     *   - EBX is numerator of the TSC/"core crystal clock" ratio,
+     *   - ECX is core crystal clock (nominal) frequency in Hz.
+     */
     _PalCpuIdRetrieve(TSC_FREQ_LEAF, 0, words);
     if (!words[CPUID_WORD_EAX] || !words[CPUID_WORD_EBX]) {
         /* TSC/core crystal clock ratio is not enumerated, can't use RDTSC for accurate time */
@@ -51,14 +58,7 @@ static uint64_t get_tsc_hz_baremetal(void) {
     }
 
     if (words[CPUID_WORD_ECX] > 0) {
-        /*
-         * Calculate TSC frequency as ECX * EBX / EAX, where
-         *   - EAX is denominator of the TSC/"core crystal clock" ratio,
-         *   - EBX is numerator of the TSC/"core crystal clock" ratio,
-         *   - ECX is core crystal clock frequency in Hz.
-         *
-         * Cast to 64-bit first to prevent integer overflow.
-         */
+        /* cast to 64-bit first to prevent integer overflow */
         return (uint64_t)words[CPUID_WORD_ECX] * words[CPUID_WORD_EBX] / words[CPUID_WORD_EAX];
     }
 
