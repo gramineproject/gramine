@@ -1,0 +1,44 @@
+# This is a general manifest template for running MongoDB.
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ execdir }}/mongod"
+
+loader.log_level = "{{ log_level }}"
+
+loader.argv = ["mongod", "--nounixsocket"]
+
+loader.env.LD_LIBRARY_PATH = "/lib:/usr{{ arch_libdir }}"
+loader.env.PATH = "{{ execdir }}"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ execdir }}/mongod", uri = "file:{{ execdir }}/mongod" },
+  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/data/db", uri = "file:data/db" },
+]
+
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+sgx.enclave_size = "4G"
+sgx.max_threads = 64
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ execdir }}/mongod",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:/usr/{{ arch_libdir }}/",
+]
+
+sgx.allowed_files = [
+  "file:data/db/",    # MongoDB data will be stored in plaintext; this is insecure!
+]
+
+# MongoDB requires eventfd, and the Gramine implementation
+# currently relies on the host in an insecure manner. This setting isn't
+# suitable for production deployment, but works well as a stopgap during
+# development while a proper implementation in Gramine is being worked on.
+sys.insecure__allow_eventfd = true
+
+# BSD (flock) locks are currently experimental
+sys.experimental__enable_flock = true
