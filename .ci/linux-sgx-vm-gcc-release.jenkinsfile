@@ -33,7 +33,7 @@ node('whatnots') {
 
     docker.build(
         "local:${env.BUILD_TAG}",
-        '-f .ci/ubuntu22.04.dockerfile .'
+        '-f .ci/debian12.dockerfile .'
     ).inside("${env.DOCKER_ARGS_COMMON} ${env.DOCKER_ARGS_SGX}") {
         load '.ci/lib/config.jenkinsfile'
         load '.ci/lib/config-release.jenkinsfile'
