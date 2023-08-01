@@ -283,6 +283,12 @@ static int verify_dynamic_entries(struct link_map* map) {
             case DT_VERSYM:
                 /* versioning entries -- unclear how to verify them so currently ignore */
                 break;
+            case DT_INIT_ARRAY:
+            case DT_FINI_ARRAY:
+            case DT_INIT_ARRAYSZ:
+            case DT_FINI_ARRAYSZ:
+                /* init/fini routines -- used by AddressSanitizer; unclear how to verify them */
+                break;
             case DT_STRTAB:
                 string_table = (const char*)(dynamic_section_entry->d_un.d_ptr + base_diff);
                 break;
