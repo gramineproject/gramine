@@ -27,6 +27,15 @@ int main(int argc, const char** argv) {
              __LINE__, a, next, 0, ptr);
     }
 
+    /* corner case of parsing "0" with base 0 -- Gramine had a bug of not updating `next` */
+    ptr = "0";
+    next = ptr;
+    a = strtoll(ptr, (char**)&next, 0);
+    if (a != 0 || next != ptr + 1) {
+        FAIL("Wrong return values in %d, got (a, next) = (%lld, %p), expected (%d, %p)",
+             __LINE__, a, next, 0, ptr + 1);
+    }
+
     pal_printf("TEST OK\n");
     return 0;
 }

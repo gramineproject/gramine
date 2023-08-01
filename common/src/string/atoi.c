@@ -48,6 +48,7 @@ long strtol(const char* str, char** out_end, int base) {
     const char* s;
     int sign;
 
+    int original_base = base;
     begin_number(str, base, &s, &base, &sign);
 
     long value = 0;
@@ -67,6 +68,13 @@ long strtol(const char* str, char** out_end, int base) {
 
         s++;
         nothing_parsed = false;
+    }
+
+    if (nothing_parsed && original_base == 0 && base == 8) {
+        /* corner case of parsing strtol("+0", .., 0) -- the only digit '0' was eaten by
+         * begin_number() which considered it an octal-base prefix, revert it */
+        nothing_parsed = false;
+        value = 0;
     }
 
     if (out_end)
