@@ -83,7 +83,7 @@ static uint64_t get_tsc_hz_hypervisor(void) {
     /*
      * We rely on the Generic CPUID space for hypervisors:
      *   - 0x40000000: EAX: The maximum input value for CPUID supported by the hypervisor
-     *   -             EBX, ECX, EDX: Hypervisor vendor ID signature (`hypervisor_id`)
+     *   -             EBX, ECX, EDX: Hypervisor vendor ID signature (hypervisor_id)
      *
      * If we detect QEMU/KVM or Cloud Hypervisor/KVM (hypervisor_id = "KVMKVMKVM") or VMWare
      * ("VMwareVMware"), then we assume that leaf 0x40000010 contains virtual TSC frequency in kHz
@@ -98,12 +98,14 @@ static uint64_t get_tsc_hz_hypervisor(void) {
      */
     _PalCpuIdRetrieve(HYPERVISOR_INFO_LEAF, 0, words);
 
-    uint32_t hypervisor_id[3];
-    hypervisor_id[0] = words[CPUID_WORD_EBX];
-    hypervisor_id[1] = words[CPUID_WORD_ECX];
-    hypervisor_id[2] = words[CPUID_WORD_EDX];
-    if (memcmp(hypervisor_id, "KVMKVMKVM\0\0\0", 12) != 0 &&
-            memcmp(hypervisor_id, "VMWareVMWare", 12) != 0) {
+    bool is_kvm    = words[CPUID_WORD_EBX] == 0x4b4d564b
+                         && words[CPUID_WORD_ECX] == 0x564b4d56
+                         && words[CPUID_WORD_EDX] == 0x0000004d;
+    bool is_vmware = words[CPUID_WORD_EBX] == 0x61774d56
+                         && words[CPUID_WORD_ECX] == 0x4d566572
+                         && words[CPUID_WORD_EDX] == 0x65726177;
+
+    if (!is_kvm && !is_vmware) {
         /* not a hypervisor that contains "virtual TSC frequency" in leaf 0x40000010 */
         return 0;
     }
