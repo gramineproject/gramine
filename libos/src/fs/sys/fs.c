@@ -24,6 +24,8 @@ static int sys_cpu_kernel_max(struct libos_dentry* dent, char** out_data, size_t
     int ret = snprintf(str, sizeof(str), "%u\n", g_kernel_max_cpus - 1);
     if (ret < 0)
         return ret;
+    if ((size_t)ret >= sizeof(str))
+        return -ERANGE;
 
     return sys_load(str, out_data, out_size);
 }
