@@ -37,15 +37,15 @@ int proc_cpuinfo_display_cpu(char** str, size_t* size, size_t* max,
     ADD_INFO("core id\t\t: %lu\n",   thread->core_id);
 
     size_t cores_in_socket = 0;
-    for (size_t j = 0; j < topo->cores_cnt; j++) { // slow, but shouldn't matter
-        if (topo->cores[j].socket_id == core->socket_id)
+    for (size_t i = 0; i < topo->cores_cnt; i++) { // slow, but shouldn't matter
+        if (topo->cores[i].socket_id == core->socket_id)
             cores_in_socket++;
     }
     ADD_INFO("cpu cores\t: %zu\n", cores_in_socket);
 
     size_t siblings_of_thread = 0;
-    for (size_t j = 0; j < topo->threads_cnt; j++) { // slow, but shouldn't matter
-        if (topo->threads[j].is_online && topo->threads[j].core_id == thread->core_id)
+    for (size_t i = 0; i < topo->threads_cnt; i++) { // slow, but shouldn't matter
+        if (topo->threads[i].is_online && topo->threads[i].core_id == thread->core_id)
             siblings_of_thread++;
     }
     ADD_INFO("siblings\t: %zu\n", siblings_of_thread * cores_in_socket);
