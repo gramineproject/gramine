@@ -42,6 +42,7 @@
  * doesn't require relocation. */
 extern const elf_ehdr_t __ehdr_start __attribute__((visibility("hidden")));
 
+static const char* g_pal_soname = NULL;
 static struct link_map g_pal_map;
 static struct link_map g_entrypoint_map;
 
@@ -209,10 +210,8 @@ static int verify_dynamic_entries(struct link_map* map) {
     const char* string_table = NULL;
     elf_xword_t string_table_size = 0;
 
-    /* DT_SONAME and DT_NEEDED entries contain offsets into the string table (DT_STRTAB) */
-    elf_xword_t soname_offset = 0;
+    /* DT_NEEDED entry contains an offset into the string table (DT_STRTAB) */
     elf_xword_t needed_offset = 0;
-    bool soname_offset_found  = false;
     bool needed_offset_found  = false;
 
     while (dynamic_section_entry->d_tag != DT_NULL) {
@@ -254,22 +253,15 @@ static int verify_dynamic_entries(struct link_map* map) {
                     return -PAL_ERROR_DENIED;
                 }
                 break;
-            case DT_SONAME:
-                soname_offset = dynamic_section_entry->d_un.d_val;
-                soname_offset_found = true;
-                break;
             case DT_NEEDED:
                 needed_offset = dynamic_section_entry->d_un.d_val;
                 needed_offset_found = true;
                 break;
+            case DT_SONAME:
+                /* unused, semantically a no-op (for PAL binary, extracted in setup_pal_binary()) */
+                break;
             case DT_DEBUG:
-                /* If the executable's dynamic section has DT_DEBUG, the run-time linker sets its
-                 * value to the address where the `debug rendezvous` structure can be found -- not
-                 * relevant for our linker */
-                if (dynamic_section_entry->d_un.d_val != 0) {
-                    log_error("Unexpected DT_DEBUG (must be zero)");
-                    return -PAL_ERROR_DENIED;
-                }
+                /* unused, semantically a no-op */
                 break;
             case DT_PLTGOT:
                 /* address of PLT -- unused because Rela relocs include this addr in the offset */
@@ -314,24 +306,14 @@ static int verify_dynamic_entries(struct link_map* map) {
     }
 
     if (!string_table || !string_table_size) {
-        log_error("Loaded binary doesn't have string table or its empty (DT_STRTAB and DT_STRSZ)");
+        log_error("Loaded binary doesn't have string table or it is empty (DT_STRTAB/DT_STRSZ)");
         return -PAL_ERROR_DENIED;
-    }
-
-    /* verify DT_SONAME: must be `libsysdb.so` for LibOS and `libpal.so` for PAL; PAL tests don't
-     * have this entry */
-    if (soname_offset_found) {
-        const char* soname = string_table + soname_offset;
-        if (strcmp(soname, "libsysdb.so") != 0 && strcmp(soname, "libpal.so") != 0) {
-            log_error("Unexpected DT_SONAME (must be name of the LibOS or PAL library)");
-            return -PAL_ERROR_DENIED;
-        }
     }
 
     /* verify DT_NEEDED: LibOS and PAL tests have PAL lib; PAL doesn't have this entry */
     if (needed_offset_found) {
         const char* needed = string_table + needed_offset;
-        if (strcmp(needed, "libpal.so") != 0) {
+        if (strcmp(needed, g_pal_soname) != 0) {
             log_error("Unexpected DT_NEEDED (must be name of the PAL library)");
             return -PAL_ERROR_DENIED;
         }
@@ -746,6 +728,25 @@ int setup_pal_binary(void) {
                                         &g_pal_map.symbol_table_cnt);
     if (ret < 0)
         return ret;
+
+    /* find soname of the PAL binary -- will be used during DT_NEEDED verification of other binaries */
+    elf_dyn_t* dynamic_section_entry = dynamic_section;
+    elf_xword_t soname_offset = 0;
+    bool soname_offset_found  = false;
+    while (dynamic_section_entry->d_tag != DT_NULL) {
+        switch (dynamic_section_entry->d_tag) {
+            case DT_SONAME:
+                soname_offset = dynamic_section_entry->d_un.d_val;
+                soname_offset_found = true;
+                break;
+            }
+        dynamic_section_entry++;
+    }
+    if (!soname_offset_found) {
+        log_error("Did not find DT_SONAME for PAL binary (name of the PAL library)");
+        return -PAL_ERROR_DENIED;
+    }
+    g_pal_soname = g_pal_map.string_table + soname_offset;
 
     ret = perform_relocations(&g_pal_map);
     return ret;
