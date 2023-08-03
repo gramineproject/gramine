@@ -210,7 +210,7 @@ static int verify_dynamic_entries(struct link_map* map) {
     const char* string_table = NULL;
     elf_xword_t string_table_size = 0;
 
-    /* DT_NEEDED entry contains an offset into the string table (DT_STRTAB) */
+    /* DT_NEEDED entries contain offsets into the string table (DT_STRTAB) */
     elf_xword_t needed_offset = 0;
     bool needed_offset_found  = false;
 
@@ -254,6 +254,11 @@ static int verify_dynamic_entries(struct link_map* map) {
                 }
                 break;
             case DT_NEEDED:
+                if (needed_offset_found) {
+                    log_error("Loaded binary has more than one dependency (must be only one "
+                              "dependency -- the PAL binary)");
+                    return -PAL_ERROR_DENIED;
+                }
                 needed_offset = dynamic_section_entry->d_un.d_val;
                 needed_offset_found = true;
                 break;
@@ -729,17 +734,16 @@ int setup_pal_binary(void) {
     if (ret < 0)
         return ret;
 
-    /* find soname of the PAL binary -- will be used during DT_NEEDED verification of other binaries */
+    /* find soname of PAL binary -- will be used during DT_NEEDED verification of other binaries */
     elf_dyn_t* dynamic_section_entry = dynamic_section;
     elf_xword_t soname_offset = 0;
     bool soname_offset_found  = false;
     while (dynamic_section_entry->d_tag != DT_NULL) {
-        switch (dynamic_section_entry->d_tag) {
-            case DT_SONAME:
-                soname_offset = dynamic_section_entry->d_un.d_val;
-                soname_offset_found = true;
-                break;
-            }
+        if (dynamic_section_entry->d_tag == DT_SONAME) {
+            soname_offset = dynamic_section_entry->d_un.d_val;
+            soname_offset_found = true;
+            break;
+        }
         dynamic_section_entry++;
     }
     if (!soname_offset_found) {
