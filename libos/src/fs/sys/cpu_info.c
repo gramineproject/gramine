@@ -38,7 +38,8 @@ int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out
     } else if (strcmp(name, "offline") == 0) {
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, is_offline, NULL);
     } else if (strcmp(name, "possible") == 0 || strcmp(name, "present") == 0) {
-        /* we simplify and always output "present" CPUs same as "possible" CPUs */
+        /* we simplify and always output "present" CPUs same as "possible" CPUs; this will need to
+         * be changed if we add support for hot-plugging CPUs / shutting down / powering up CPUs */
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, return_true, NULL);
     } else {
         log_debug("unrecognized file: %s", name);
