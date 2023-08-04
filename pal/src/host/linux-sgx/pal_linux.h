@@ -94,6 +94,11 @@ void init_xsave_size(uint64_t xfrm);
 void save_xregs(PAL_XREGS_STATE* xsave_area);
 void restore_xregs(const PAL_XREGS_STATE* xsave_area);
 noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave_area);
+noreturn void _apply_mitigation_and_restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave_area, uintptr_t stp, uintptr_t dtp, uintptr_t ctp, uintptr_t c3_byte_addr);
+
+extern bool g_aex_notify_enabled;
+void init_aex_notify_for_thread(void);
+void fini_aex_notify_for_thread(void);
 
 void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo);

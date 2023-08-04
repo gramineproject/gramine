@@ -83,6 +83,8 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->profile_sample_time = 0;
 
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
+    tcb->aex_sync_event   = PAL_EVENT_NO_EVENT;
+    tcb->aex_async_event  = PAL_EVENT_NO_EVENT;
 }
 
 static spinlock_t tcs_lock = INIT_SPINLOCK_UNLOCKED;

@@ -93,8 +93,8 @@ static bool interrupted_in_enclave(struct ucontext* uc) {
     return rip >= (unsigned long)async_exit_pointer && rip < (unsigned long)async_exit_pointer_end;
 }
 
-static bool interrupted_in_aex_profiling(void) {
-    return pal_get_host_tcb()->is_in_aex_profiling != 0;
+static bool interrupted_in_aex(void) {
+    return pal_get_host_tcb()->is_in_aex != 0;
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
@@ -107,10 +107,20 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         for (size_t i = 0; i < g_rpc_queue->rpc_threads_cnt; i++)
             DO_SYSCALL(tkill, g_rpc_queue->rpc_threads[i], SIGUSR2);
 
+    if (event == PAL_EVENT_MEMFAULT &&
+            ucontext_get_ip(uc) == (unsigned long)&sgx_raise_eenter_instr) {
+        /* this is #GP on EENTER instruction during sgx_raise() -- means that some async signal
+         * arrived while the enclave thread executes in CSSA=1 (stage-1 exception handler); we
+         * should ignore this fault by skipping EENTER, see also sgx_handle_aex_signal() */
+        ucontext_set_ip(uc, ucontext_get_ip(uc) + /*sizeof(ENCLU)=*/3);
+        return;
+    }
+
     if (interrupted_in_enclave(uc)) {
-        /* exception happened in app/LibOS/trusted PAL code, handle signal inside enclave */
+        /* exception happened in app/LibOS/trusted PAL code, mark to handle signal inside enclave */
+        assert(pal_get_host_tcb()->aex_sync_event == PAL_EVENT_NO_EVENT);
+        pal_get_host_tcb()->aex_sync_event = event;
         pal_get_host_tcb()->sync_signal_cnt++;
-        sgx_raise(event);
         return;
     }
 
@@ -158,15 +168,19 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
         for (size_t i = 0; i < g_rpc_queue->rpc_threads_cnt; i++)
             DO_SYSCALL(tkill, g_rpc_queue->rpc_threads[i], SIGUSR2);
 
-    if (interrupted_in_enclave(uc) || interrupted_in_aex_profiling()) {
-        /* signal arrived while in app/LibOS/trusted PAL code or when handling another AEX, handle
-         * signal inside enclave */
+    assert(event == PAL_EVENT_INTERRUPTED || event == PAL_EVENT_QUIT);
+
+    if (interrupted_in_enclave(uc) || interrupted_in_aex()) {
+        /* signal arrived while in app/LibOS/trusted PAL code or when handling another AEX, mark to
+         * handle signal inside enclave */
+        if (pal_get_host_tcb()->aex_async_event != PAL_EVENT_QUIT) {
+            /* Do not overwrite `PAL_EVENT_QUIT`. See explanation below. */
+            pal_get_host_tcb()->aex_async_event = event;
+        }
         pal_get_host_tcb()->async_signal_cnt++;
-        sgx_raise(event);
         return;
     }
 
-    assert(event == PAL_EVENT_INTERRUPTED || event == PAL_EVENT_QUIT);
     if (pal_get_host_tcb()->last_async_event != PAL_EVENT_QUIT) {
         /* Do not overwrite `PAL_EVENT_QUIT`. The only other possible event here is
          * `PAL_EVENT_INTERRUPTED`, which is basically a no-op (just makes sure that a thread
@@ -186,6 +200,40 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     __UNUSED(info);
     __UNUSED(uc);
     /* we need this handler to interrupt blocking syscalls in RPC threads */
+}
+
+/* The handle_sync_signal() and handle_async_signal() functions, executed in signal-handling
+ * context, added sync/async signals to process (that happened during enclave-thread execution)
+ * -- now the regular context must inform the enclave about these events. This function is
+ * potentially noreturn -- if there is at least one signal, and the enclave is ready to handle it,
+ * then the call to sgx_raise() never returns. Only one of potentially two signals (one sync and
+ * one async) will be added by this function, because sgx_raise() doesn't return; the hope is that
+ * the second (async) signal will be added on some later AEX. Also note that new sync signals
+ * cannot occur while in this function, but new async signals can occur (since we are in regular
+ * context and cannot block async signals), thus handling async signals must be aware of concurrent
+ * signal handling code. */
+void sgx_handle_aex_signal(void) {
+    if (pal_get_host_tcb()->aex_sync_event != PAL_EVENT_NO_EVENT) {
+        /* sync event must always be consumed by the enclave (there is no scenario where in-enclave
+         * stage-1 handling of another sync/async event would generate a sync event) */
+        enum pal_event event = pal_get_host_tcb()->aex_sync_event;
+        pal_get_host_tcb()->aex_sync_event = PAL_EVENT_NO_EVENT;
+        sgx_raise(event);
+        return;
+    }
+
+    enum pal_event event = __atomic_exchange_n(&pal_get_host_tcb()->aex_async_event,
+            PAL_EVENT_NO_EVENT, __ATOMIC_RELAXED);
+    if (event != PAL_EVENT_NO_EVENT) {
+        /* if async event is consumed by the enclave, then below sgx_raise() does not return;
+         * otherwise it means that the enclave was already in the middle of stage-1 handler and
+         * could not consume this async event: simply ignore for now; the very next AEX will try to
+         * raise this async event again */
+        sgx_raise(event);
+        enum pal_event no_event = PAL_EVENT_NO_EVENT;
+        __atomic_compare_exchange_n(&pal_get_host_tcb()->aex_async_event, &no_event, event,
+                                    /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
+    }
 }
 
 int sgx_signal_setup(void) {

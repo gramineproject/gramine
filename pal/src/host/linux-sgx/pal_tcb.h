@@ -15,6 +15,12 @@ struct untrusted_area {
     bool valid;
 };
 
+struct aex_notify_entropy {
+    uint32_t entropy_cache;
+    int32_t count;
+};
+typedef struct aex_notify_entropy aex_notify_entropy_t;
+
 /*
  * Beside the classic thread control block (like ustack, thread, etc.) the TCB area is also used to
  * pass parameters needed during enclave or thread initialization. Some of them are thread specific
@@ -46,7 +52,14 @@ struct pal_enclave_tcb {
     void*     heap_min;
     void*     heap_max;
     int*      clear_child_tid;
+
     struct untrusted_area untrusted_area_cache;
+
+     /* below fields are used by AEX Notify */
+    uint64_t  ready_for_aex_notify;
+    uint64_t  aex_notify_flag;
+    uint64_t  aex_counter;
+    aex_notify_entropy_t entropy;
 };
 
 #ifndef DEBUG
@@ -96,7 +109,7 @@ typedef struct pal_host_tcb {
     sgx_arch_tcs_t* tcs;           /* TCS page of SGX corresponding to thread, for EENTER */
     void* stack;                   /* bottom of stack, for later freeing when thread exits */
     void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
-    uint8_t is_in_aex_profiling;   /* non-zero if thread is currently doing AEX profiling */
+    uint8_t is_in_aex;             /* non-zero if thread is currently in untrusted AEX code */
     atomic_ulong eenter_cnt;       /* # of EENTERs, corresponds to # of ECALLs */
     atomic_ulong eexit_cnt;        /* # of EEXITs, corresponds to # of OCALLs */
     atomic_ulong aex_cnt;          /* # of AEXs, corresponds to # of interrupts/signals */
@@ -104,6 +117,8 @@ typedef struct pal_host_tcb {
     atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
+    int32_t aex_sync_event;        /* sync signal that happened during enclave execution */
+    int32_t aex_async_event;       /* async signal that happened during enclave execution */
 } PAL_HOST_TCB;
 
 extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);

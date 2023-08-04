@@ -73,6 +73,8 @@ class SgxCpuChecker {
     bool sgx_mem_concurrency_supported_ = false;
     bool cet_supported_ = false;
     bool kss_supported_ = false;
+    bool aex_notify_supported_ = false;
+    bool aex_notify_leaf_supported_ = false;
     bool miscselect_exinfo_pfgp_supported_ = false;
     bool miscselect_exinfo_cp_supported_ = false;
     uint64_t maximum_enclave_size_x86_ = 0;
@@ -125,6 +127,8 @@ public:
         miscselect_exinfo_cp_supported_ = cpuid_12_0_ebx & (1 << 1);
         cet_supported_ = cpuid_12_1_eax & (1 << 6);
         kss_supported_ = cpuid_12_1_eax & (1 << 7);
+        aex_notify_supported_ = cpuid_12_1_eax & (1 << 10);
+        aex_notify_leaf_supported_ = cpuid_12_0_eax & (1 << 11);
         maximum_enclave_size_x86_ = saturating_exp2<uint64_t>(cpuid_12_0_edx & 0xFF);
         maximum_enclave_size_x64_ = saturating_exp2<uint64_t>((cpuid_12_0_edx >> 8) & 0xFF);
         // Check if there's any EPC region allocated by BIOS
@@ -161,6 +165,9 @@ public:
     bool cet_supported() const { return cet_supported_; }
     // Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, ISVFAMILYID report fields)
     bool kss_supported() const { return kss_supported_; }
+    // AEX Notify support
+    bool aex_notify_supported() const { return aex_notify_supported_; }
+    bool aex_notify_leaf_supported() const { return aex_notify_leaf_supported_; }
     // Fields of MISC region of State Save Area (see Table 34-12 in the SMD).
     bool miscselect_exinfo_pfgp_supported() const { return miscselect_exinfo_pfgp_supported_; }
     bool miscselect_exinfo_cp_supported() const { return miscselect_exinfo_cp_supported_; }
@@ -210,6 +217,8 @@ void print_detailed_info(const SgxCpuChecker& cpu_checker) {
            bool2str(cpu_checker.cet_supported()));
     printf("Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, "
            "ISVFAMILYID report fields): %s\n", bool2str(cpu_checker.kss_supported()));
+    printf("AEX Notify support: %s\n", bool2str(cpu_checker.aex_notify_supported()));
+    printf("AEX Notify (EDECCSSA): %s\n", bool2str(cpu_checker.aex_notify_leaf_supported()));
     printf("Max enclave size (32-bit): 0x%" PRIx64 "\n", cpu_checker.maximum_enclave_size_x86());
     printf("Max enclave size (64-bit): 0x%" PRIx64 "\n", cpu_checker.maximum_enclave_size_x64());
     printf("EPC size: 0x%" PRIx64 "\n", cpu_checker.epc_region_size());

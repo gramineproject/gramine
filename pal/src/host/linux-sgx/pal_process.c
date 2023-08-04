@@ -244,6 +244,8 @@ out_error:
 }
 
 noreturn void _PalProcessExit(int exitcode) {
+    fini_aex_notify_for_thread();
+
     if (exitcode)
         log_debug("PalProcessExit: Returning exit code %d", exitcode);
     ocall_exit(exitcode, /*is_exitgroup=*/true);
