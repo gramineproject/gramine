@@ -567,7 +567,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
-    create_tcs_mapper((void*)tcs_area->addr, enclave->thread_num);
+    ret = create_tcs_mapper((void*)tcs_area->addr, enclave->thread_num);
+    if (ret < 0) {
+        log_error("Create tcs mapper failed: %s", unix_strerror(ret));
+        goto out;
+    }
 
     struct enclave_dbginfo* dbg = (void*)DO_SYSCALL(mmap, DBGINFO_ADDR,
                                                     sizeof(struct enclave_dbginfo),

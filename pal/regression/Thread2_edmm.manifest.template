@@ -3,7 +3,6 @@
 loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
 
 sgx.max_threads = 1
-sgx.enable_stats = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

@@ -147,7 +147,7 @@ int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
     return 0;
 }
 
-int sgx_edmm_convert_tcs_pages(uint64_t addr, size_t count) {
+int sgx_edmm_convert_pages_to_tcs(uint64_t addr, size_t count) {
     int ret = ocall_edmm_modify_pages_type(addr, count, SGX_PAGE_TYPE_TCS);
     if (ret < 0) {
         return unix_to_pal_error(ret);

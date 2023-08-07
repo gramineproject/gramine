@@ -25,70 +25,74 @@ struct thread_param {
     void* param;
 };
 
-typedef void (*entry_t)(void);
-extern entry_t  enclave_entry; /* enclave_entry() in enclave_entry.S */
+extern void* enclave_entry; /* enclave_entry() asm function in enclave_entry.S */
 
 extern uintptr_t g_enclave_base;
-struct thread_meta_map_t {
-    void* thread_meta_addr;
+
+struct enclave_thread_map {
     void* tcs;
     bool used;
 };
 
-static struct thread_meta_map_t* g_thread_meta_map = NULL;
-static size_t g_thread_meta_num                    = 0;
-static size_t g_thread_meta_avaliable_num          = 0;
-static size_t g_thread_meta_num_max                = 0;
-static spinlock_t g_thread_meta_lock = INIT_SPINLOCK_UNLOCKED;
+static struct enclave_thread_map* g_enclave_thread_map = NULL;
+static size_t g_enclave_thread_num                    = 0;
+static size_t g_avaliable_enclave_thread_num          = 0;
+static size_t g_max_enclave_thread_num                = 0;
+static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
 
-/* This function initializes TCB, TCS, etc. of a new thread meta. The TCS is properly filled and
- * ready to be coverted to TCS page following SGX EDMM process.
- * Layout for the thread meta looks like this
+/*
+ * This function initializes the TCB, SSA, TCS, etc. of a new enclave thread (dynamically
+ * allocated using EDMM). The TCS is properly filled out and ready to be converted to the
+ * TCS page using the SGX EDMM flow (see `sgx_edmm_convert_pages_to_tcs()`).
+ *
+ * This function is equivalent to host_main.c:initialize_enclave()
+ *
+ * Layout of the enclave thread:
  *
  *                  +-------------------+
+ *                  |  stack            | ENCLAVE_STACK_SIZE
+ *       stack +--> +-------------------+
+ *                  |  sig_stack        | ENCLAVE_SIG_STACK_SIZE
+ *   sig_stack +--> +-------------------+
+ *                  |  TCB              | PAGE_SIZE
+ *         TCB +--> +-------------------+
  *                  |  SSA              | SSA_FRAME_NUM * SSA_FRAME_SIZE
  *         SSA +--> +-------------------+
  *                  |  TCS              | PAGE_SIZE
  *         TCS +--> +-------------------+
- *                  |  TCB              | PAGE_SIZE
- *         TCB +--> +-------------------+
- *                  |  stack            | THREAD_STACK_SIZE
- *       stack +--> +-------------------+
- *                  |  sig_stack        | THREAD_STACK_SIZE
- *   sig_stack +--> +-------------------+
  *
  */
 #define THREAD_META_SIZE                                                           \
     (SSA_FRAME_NUM * SSA_FRAME_SIZE + PAGE_SIZE + PAGE_SIZE + ENCLAVE_STACK_SIZE + \
      ENCLAVE_SIG_STACK_SIZE)
 static void init_thread_meta(void* addr) {
-    uint64_t sig_stack         = (uint64_t)addr;
-    uint64_t stack             = sig_stack + ENCLAVE_SIG_STACK_SIZE;
-    struct pal_enclave_tcb* gs = (struct pal_enclave_tcb*)(stack + ENCLAVE_STACK_SIZE);
-    sgx_arch_tcs_t* tcs        = (void*)gs + PAGE_SIZE;
-    void* ssa                  = (void*)tcs + PAGE_SIZE;
+    sgx_arch_tcs_t* tcs         = addr;
+    void* ssa                   = (char*)tcs + PAGE_SIZE;
+    struct pal_enclave_tcb* tcb = (struct pal_enclave_tcb*)(ssa + SSA_FRAME_NUM * SSA_FRAME_SIZE);
+    void* sig_stack             = (char*)tcb + PAGE_SIZE;
+    void* stack                 = sig_stack + ENCLAVE_SIG_STACK_SIZE;
 
-    assert(sizeof(*gs) <= PAGE_SIZE);
-    gs->common.self                   = (PAL_TCB*)gs;
-    gs->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
-    gs->enclave_size                  = GET_ENCLAVE_TCB(enclave_size);
-    gs->tcs_offset                    = (uint64_t)tcs - g_enclave_base;
-    gs->initial_stack_addr            = stack + ENCLAVE_STACK_SIZE;
-    gs->sig_stack_low                 = sig_stack;
-    gs->sig_stack_high                = sig_stack + ENCLAVE_SIG_STACK_SIZE;
-    gs->ssa                           = ssa;
-    gs->gpr                           = ssa + SSA_FRAME_SIZE - sizeof(sgx_pal_gpr_t);
-    gs->manifest_size                 = GET_ENCLAVE_TCB(manifest_size);
-    gs->heap_min                      = GET_ENCLAVE_TCB(heap_min);
-    gs->heap_max                      = GET_ENCLAVE_TCB(heap_max);
-    gs->thread                        = NULL;
+    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb too long");
+    tcb->common.self                   = (PAL_TCB*)tcb;
+    tcb->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
+    tcb->enclave_size                  = GET_ENCLAVE_TCB(enclave_size);
+    tcb->tcs_offset                    = (uint64_t)tcs - g_enclave_base;
+    tcb->initial_stack_addr            = (uint64_t)stack + ENCLAVE_STACK_SIZE;
+    tcb->sig_stack_low                 = (uint64_t)sig_stack;
+    tcb->sig_stack_high                = (uint64_t)sig_stack + ENCLAVE_SIG_STACK_SIZE;
+    tcb->ssa                           = ssa;
+    tcb->gpr                           = ssa + SSA_FRAME_SIZE - sizeof(sgx_pal_gpr_t);
+    tcb->manifest_size                 = GET_ENCLAVE_TCB(manifest_size);
+    tcb->heap_min                      = GET_ENCLAVE_TCB(heap_min);
+    tcb->heap_max                      = GET_ENCLAVE_TCB(heap_max);
+    tcb->thread                        = NULL;
 
     // .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs.
     tcs->ossa      = (uint64_t)ssa - g_enclave_base;
     tcs->nssa      = SSA_FRAME_NUM;
     tcs->oentry    = (uint64_t)&enclave_entry - g_enclave_base;
     tcs->ofs_base  = 0;
-    tcs->ogs_base  = (uint64_t)gs - g_enclave_base;
+    tcs->ogs_base  = (uint64_t)tcb - g_enclave_base;
     tcs->ofs_limit = 0xfff;
     tcs->ogs_limit = 0xfff;
 }
@@ -97,28 +101,28 @@ static void init_thread_meta(void* addr) {
  * initialize a dynamic TCS page, return address of the new dynamic TCS page. Child thread will
  * choose avaliable static or dynamic TCS in host.
  */
-static int get_dynamic_tcs(void** out_tcs) {
+static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     int ret;
-    spinlock_lock(&g_thread_meta_lock);
-    if (g_thread_meta_avaliable_num) {
-        g_thread_meta_avaliable_num--;
+    spinlock_lock(&g_enclave_thread_map_lock);
+    if (g_avaliable_enclave_thread_num) {
+        g_avaliable_enclave_thread_num--;
         *out_tcs = NULL;
         ret      = 0;
         goto out;
     }
 
-    if (g_thread_meta_num == g_thread_meta_num_max) {
-        /* realloc g_thread_meta_map to accommodate more objects (includes the very first time) */
-        g_thread_meta_num_max += 8;
-        struct thread_meta_map_t* tmp = malloc(g_thread_meta_num_max * sizeof(*tmp));
+    if (g_enclave_thread_num == g_max_enclave_thread_num) {
+        /* realloc g_enclave_thread_map to accommodate more objects (includes the very first time) */
+        g_max_enclave_thread_num += 8;
+        struct enclave_thread_map* tmp = calloc(g_max_enclave_thread_num, sizeof(*tmp));
         if (!tmp) {
             ret = PAL_ERROR_NOMEM;
             goto out;
         }
 
-        memcpy(tmp, g_thread_meta_map, g_thread_meta_num * sizeof(*tmp));
-        free(g_thread_meta_map);
-        g_thread_meta_map = tmp;
+        memcpy(tmp, g_enclave_thread_map, g_enclave_thread_num * sizeof(*tmp));
+        free(g_enclave_thread_map);
+        g_enclave_thread_map = tmp;
     }
 
     void* addr;
@@ -126,22 +130,21 @@ static int get_dynamic_tcs(void** out_tcs) {
     if (ret)
         goto out;
 
-    void * tcs = addr + ENCLAVE_SIG_STACK_SIZE + ENCLAVE_STACK_SIZE + PAGE_SIZE;
-
-    g_thread_meta_map[g_thread_meta_num].thread_meta_addr = addr;
-    g_thread_meta_map[g_thread_meta_num].tcs              = tcs;
-    g_thread_meta_map[g_thread_meta_num].used             = false;
-    g_thread_meta_num++;
-    *out_tcs = tcs;
-
-    spinlock_unlock(&g_thread_meta_lock);
+    g_enclave_thread_map[g_enclave_thread_num].tcs  = addr;
+    g_enclave_thread_map[g_enclave_thread_num].used = false;
+    g_enclave_thread_num++;
 
     init_thread_meta(addr);
-    ret = sgx_edmm_convert_tcs_pages((uint64_t)tcs, 1);
-    return ret;
+    spinlock_unlock(&g_enclave_thread_map_lock);
+
+    ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, 1);
+    if (ret < 0)
+        BUG(); /* cannot recover anyway */
+    *out_tcs = addr;
+    return 0;
 
 out:
-    spinlock_unlock(&g_thread_meta_lock);
+    spinlock_unlock(&g_enclave_thread_map_lock);
     return ret;
 }
 
@@ -169,14 +172,14 @@ void pal_start_thread(void) {
         return;
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        spinlock_lock(&g_thread_meta_lock);
-        for (size_t i = 0; i < g_thread_meta_num; i++) {
-            if (g_thread_meta_map[i].tcs == new_thread->tcs) {
-                g_thread_meta_map[i].used = true;
+        spinlock_lock(&g_enclave_thread_map_lock);
+        for (size_t i = 0; i < g_enclave_thread_num; i++) {
+            if (g_enclave_thread_map[i].tcs == new_thread->tcs) {
+                g_enclave_thread_map[i].used = true;
                 break;
             }
         }
-        spinlock_unlock(&g_thread_meta_lock);
+        spinlock_unlock(&g_enclave_thread_map_lock);
     }
 
     struct thread_param* thread_param = (struct thread_param*)new_thread->param;
@@ -213,13 +216,6 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     new_thread->thread.tcs = NULL;
 
-    void* new_dynamic_tcs = NULL;
-    if (g_pal_linuxsgx_state.edmm_enabled) {
-        ret = get_dynamic_tcs(&new_dynamic_tcs);
-        if (ret < 0) {
-            goto out_err;
-        }
-    }
     INIT_LIST_HEAD(&new_thread->thread, list);
     struct thread_param* thread_param = malloc(sizeof(struct thread_param));
     if (!thread_param) {
@@ -230,11 +226,18 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     thread_param->param    = param;
     new_thread->thread.param = (void*)thread_param;
 
+    void* dynamic_tcs = NULL;
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        ret = create_dynamic_tcs_if_none_available(&dynamic_tcs);
+        if (ret < 0) {
+            goto out_err;
+        }
+    }
     spinlock_lock(&g_thread_list_lock);
     LISTP_ADD_TAIL(&new_thread->thread, &g_thread_list, list);
     spinlock_unlock(&g_thread_list_lock);
 
-    ret = ocall_clone_thread(new_dynamic_tcs);
+    ret = ocall_clone_thread(dynamic_tcs);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         spinlock_lock(&g_thread_list_lock);
@@ -243,10 +246,10 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
         goto out_err;
     }
 
-    if (new_dynamic_tcs) {
-        spinlock_lock(&g_thread_meta_lock);
-        g_thread_meta_avaliable_num++;
-        spinlock_unlock(&g_thread_meta_lock);
+    if (dynamic_tcs) {
+        spinlock_lock(&g_enclave_thread_map_lock);
+        g_avaliable_enclave_thread_num++;
+        spinlock_unlock(&g_enclave_thread_map_lock);
     }
 
     /* There can be subtle race between the parent and child so hold the parent until child updates
@@ -280,20 +283,21 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
     /* main thread is not part of the g_thread_list */
     if (exiting_thread != &g_pal_public_state.first_thread->thread) {
         void* tcs = exiting_thread->tcs;
+        assert(tcs);
         spinlock_lock(&g_thread_list_lock);
         LISTP_DEL(exiting_thread, &g_thread_list, list);
         spinlock_unlock(&g_thread_list_lock);
 
-        if (g_pal_linuxsgx_state.edmm_enabled && tcs) {
-            spinlock_lock(&g_thread_meta_lock);
-            for (size_t i = 0; i < g_thread_meta_num; i++) {
-                if (g_thread_meta_map[i].tcs == tcs) {
-                    g_thread_meta_map[i].used = false;
-                    g_thread_meta_avaliable_num++;
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            spinlock_lock(&g_enclave_thread_map_lock);
+            for (size_t i = 0; i < g_enclave_thread_num; i++) {
+                if (g_enclave_thread_map[i].tcs == tcs) {
+                    g_enclave_thread_map[i].used = false;
+                    g_avaliable_enclave_thread_num++;
                     break;
                 }
             }
-            spinlock_unlock(&g_thread_meta_lock);
+            spinlock_unlock(&g_enclave_thread_map_lock);
         }
     }
 
