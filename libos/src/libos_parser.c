@@ -34,6 +34,7 @@ static void parse_pipe_fds(struct print_buf*, va_list*);
 static void parse_signum(struct print_buf*, va_list*);
 static void parse_sigmask(struct print_buf*, va_list*);
 static void parse_sigprocmask_how(struct print_buf*, va_list*);
+static void parse_msync_flags(struct print_buf*, va_list*);
 static void parse_madvise_behavior(struct print_buf*, va_list* ap);
 static void parse_timespec(struct print_buf*, va_list*);
 static void parse_sockaddr(struct print_buf*, va_list*);
@@ -115,7 +116,8 @@ struct parser_table {
                      parse_pointer_arg, parse_pointer_arg, parse_pointer_arg, parse_pointer_arg}},
     [__NR_sched_yield] = {.slow = false, .name = "sched_yield", .parser = {parse_long_arg}},
     [__NR_mremap] = {.slow = false, .name = "mremap", .parser = {NULL}},
-    [__NR_msync] = {.slow = false, .name = "msync", .parser = {NULL}},
+    [__NR_msync] = {.slow = false, .name = "msync", .parser = {parse_long_arg, parse_pointer_arg,
+                    parse_pointer_arg, parse_msync_flags}},
     [__NR_mincore] = {.slow = false, .name = "mincore", .parser = {parse_long_arg,
                       parse_pointer_arg, parse_pointer_arg, parse_pointer_arg}},
     [__NR_madvise] = {.slow = false, .name = "madvise", .parser = {parse_long_arg,
@@ -1023,6 +1025,22 @@ static void parse_sigprocmask_how(struct print_buf* buf, va_list* ap) {
             buf_puts(buf, "<unknown>");
             break;
     }
+}
+
+static void parse_msync_flags(struct print_buf* buf, va_list* ap) {
+    int flags = va_arg(*ap, int);
+
+#define FLG(n) { #n, n }
+    const struct flag_table all_flags[] = {
+        FLG(MS_ASYNC),
+        FLG(MS_INVALIDATE),
+        FLG(MS_SYNC),
+    };
+#undef FLG
+
+    flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
+    if (flags)
+        buf_printf(buf, "|0x%x", flags);
 }
 
 static void parse_madvise_behavior(struct print_buf* buf, va_list* ap) {
