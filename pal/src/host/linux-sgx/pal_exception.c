@@ -15,6 +15,7 @@
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "toml_utils.h"
 
 #define ADDR_IN_PAL(addr) ((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END)
 
@@ -321,6 +322,22 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
+            if (FIRST_TIME()) {
+                bool require_exinfo;
+                int ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.require_exinfo",
+                                       /*defaultval=*/false, &require_exinfo);
+                if (ret < 0) {
+                    log_error("Cannot parse 'sgx.require_exinfo'");
+                    _PalProcessExit(1);
+                }
+                if (!require_exinfo) {
+                    log_error("Tried to handle a memory fault with 'sgx.require_exinfo = false'. "
+                              "Gramine cannot handle faulting addresses in this case since the "
+                              "faulting address will always be reported as 0 by SGX. "
+                              "Please consider enabling 'sgx.require_exinfo' in the manifest.");
+                    _PalProcessExit(1);
+                }
+            }
             addr = ctx.cr2;
             break;
         default:
