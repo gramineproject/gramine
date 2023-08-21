@@ -203,25 +203,31 @@ class TC_10_Exception(RegressionTestCase):
 
     @unittest.skipUnless(ON_X86, "x86-specific")
     def test_000_exception(self):
-        _, stderr = self.run_binary(['Exception'])
+        try:
+            _, stderr = self.run_binary(['Exception'])
+            if HAS_SGX and not HAS_EDMM:
+                self.fail('expected to return nonzero')
+        except subprocess.CalledProcessError as e:
+            if HAS_SGX and not HAS_EDMM:
+                self.assertNotEqual(e.returncode, 0)
+                stderr = e.stderr.decode()
+            else:
+                self.fail('expected to return zero')
 
         self.assertTrue(self.is_altstack_different_from_main_stack(stderr))
 
         # Exception Handling (Div-by-Zero)
-        self.assertIn('Arithmetic Exception Handler', stderr)
-
-        # Exception Handling (Memory Fault)
-        self.assertIn('Memory Fault Exception Handler', stderr)
-
-        # Exception Handler Swap
         self.assertIn('Arithmetic Exception Handler 1', stderr)
         self.assertIn('Arithmetic Exception Handler 2', stderr)
 
-        # Exception Handling (Set Context)
-        self.assertIn('Arithmetic Exception Handler 1', stderr)
-
         # Exception Handling (Red zone)
+        self.assertIn('Arithmetic Exception Handler 3', stderr)
         self.assertIn('Red zone test ok.', stderr)
+
+        if not HAS_SGX or HAS_EDMM:
+            # Exception Handling (Memory Fault)
+            self.assertIn('Memory Fault Exception Handler', stderr)
+            self.assertNotIn('Wrong faulting address', stderr)
 
 class TC_20_SingleProcess(RegressionTestCase):
     def test_000_exit_code(self):
