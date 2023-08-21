@@ -33,27 +33,18 @@ static void handler2(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
         context->rip++;
 }
 
+atomic_bool handler3_called = false;
+
 static void handler3(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
 
-    pal_printf("Memory Fault Exception Handler: 0x%08lx, rip = 0x%08lx\n", addr, context->rip);
-
-    while (*(unsigned char*)context->rip != 0x90)
-        context->rip++;
-}
-
-atomic_bool handler4_called = false;
-
-static void handler4(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
-    __UNUSED(is_in_pal);
-
-    pal_printf("Arithmetic Exception Handler 4: 0x%" PRIx64 ", rip = 0x%" PRIx64 "\n", addr,
+    pal_printf("Arithmetic Exception Handler 3: 0x%" PRIx64 ", rip = 0x%" PRIx64 "\n", addr,
                context->rip);
 
     while (*(unsigned char*)context->rip != 0x90)
         context->rip++;
 
-    handler4_called = true;
+    handler3_called = true;
 }
 
 static void red_zone_test(void) {
@@ -94,7 +85,7 @@ static void red_zone_test(void) {
         :
         : "rax", "rbx", "rcx", "rdx", "cc", "memory");
 
-    if (!handler4_called) {
+    if (!handler3_called) {
         pal_printf("Exception handler was not called!\n");
         return;
     }
@@ -105,6 +96,20 @@ static void red_zone_test(void) {
     }
 
     pal_printf("Red zone test ok.\n");
+}
+
+#define INVALID_ADDR 0x1000
+
+static void handler4(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
+    __UNUSED(is_in_pal);
+
+    pal_printf("Memory Fault Exception Handler: 0x%08lx, rip = 0x%08lx\n", addr, context->rip);
+
+    if (addr != INVALID_ADDR)
+        pal_printf("Wrong faulting address: expected: 0x%08x, got: 0x%08lx\n", INVALID_ADDR, addr);
+
+    while (*(unsigned char*)context->rip != 0x90)
+        context->rip++;
 }
 
 int main(void) {
@@ -128,12 +133,15 @@ int main(void) {
             "nop\n"
             ::: "rax", "rbx", "rdx", "cc");
 
-    PalSetExceptionHandler(handler3, PAL_EVENT_MEMFAULT);
-    *(volatile long*)0x1000 = 0;
-    __asm__ volatile("nop");
-
-    PalSetExceptionHandler(handler4, PAL_EVENT_ARITHMETIC_ERROR);
+    PalSetExceptionHandler(handler3, PAL_EVENT_ARITHMETIC_ERROR);
     red_zone_test();
+
+    /* For Gramine-SGX, memory fault exception handling test will error out and fail on machines
+     * that do not support EXINFO. We thus put it as the last test so that we could still check on
+     * the other tests in such case. */
+    PalSetExceptionHandler(handler4, PAL_EVENT_MEMFAULT);
+    *(volatile long*)INVALID_ADDR = 0;
+    __asm__ volatile("nop");
 
     return 0;
 }

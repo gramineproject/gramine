@@ -5,6 +5,9 @@ loader.insecure__use_cmdline_argv = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
+# for Exception test (memfault handler)
+sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
 sgx.allowed_files = [
   "file:test.txt", # for File2 test
   "file:to_send.tmp", # for PalSendHandle test

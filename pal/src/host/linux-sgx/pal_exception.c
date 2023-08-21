@@ -303,6 +303,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
     PAL_CONTEXT ctx = { 0 };
     save_pal_context(&ctx, uc, xregs_state);
 
+    bool has_hw_fault_address = false;
+
     if (ei.info.valid) {
         ctx.trapno = ei.info.vector;
         /* Only these two exceptions save information in EXINFO. */
@@ -312,6 +314,7 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
         if (ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
             ctx.cr2 = exinfo->maddr;
+            has_hw_fault_address = true;
         }
     }
 
@@ -321,6 +324,11 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
+            if (!has_hw_fault_address) {
+                log_error("Tried to handle a memory fault with no faulting address reported by "
+                          "SGX. Please consider enabling 'sgx.use_exinfo' in the manifest.");
+                _PalProcessExit(1);
+            }
             addr = ctx.cr2;
             break;
         default:
