@@ -1,8 +1,8 @@
 Technical Charter
 =================
 
-This is a Technical Charter (the "Charter") for Gramine Project, a Series of LF
-Projects LLC. Adopted on 14 September 2020.
+This is the Technical Charter (the "Charter") for Gramine Project, a Series of
+LF Projects LLC. Adopted on 14 September 2020.
 
 This Charter sets forth the responsibilities and procedures for technical
 contribution to, and oversight of, the Gramine open source project, which has
