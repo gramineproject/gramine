@@ -54,7 +54,7 @@ sys.ioctl_structs.wrong_direction_string = [
 
 # Expression in `onlyif` field must be in format "token1 {== | !=} token2"
 sys.ioctl_structs.bad_onlyif_expr = [
-    { onlyif= "42 === 24", size = 1 },
+    { onlyif = "42 === 24", size = 1 },
 ]
 
 sys.allowed_ioctls = [
