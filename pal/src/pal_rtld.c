@@ -11,7 +11,12 @@
  *   - They must be linked with RELRO (Relocation Read-Only); this simplifies relocation because
  *     only R_X86_64_RELATIVE, R_X86_64_GLOB_DAT and R_X86_64_JUMP_SLOT reloc schemes are used. If
  *     we add support for archs other than x86_64 in future, we need to add more reloc schemes.
- *     Corresponding linker flags are `-Wl,-zrelro -Wl,-znow`.
+ *     Corresponding linker flag is `-Wl,-zrelro`.
+ *
+ *   - They must be linked with immediate binding (in constrast to the linker's default lazy
+ *     binding). Our code performs relocations immediately, i.e., all relocations are processed
+ *     before passing control to the loaded object. Corresponding linker flag is `-Wl,-znow`.
+ *     Note that some linkers generate DT_BIND_NOW entry and some generate the DF_BIND_NOW flag.
  *
  *   - They must have old-style hash (DT_HASH) table; our code doesn't use the hash table itself but
  *     only reads the number of available dynamic symbols from this table and then simply iterates
@@ -261,6 +266,9 @@ static int verify_dynamic_entries(struct link_map* map) {
                 }
                 needed_offset = dynamic_section_entry->d_un.d_val;
                 needed_offset_found = true;
+                break;
+            case DT_BIND_NOW:
+                /* unused, our code always uses immediate binding (doesn't support lazy binding) */
                 break;
             case DT_SONAME:
                 /* unused, semantically a no-op (for PAL binary, extracted in setup_pal_binary()) */
