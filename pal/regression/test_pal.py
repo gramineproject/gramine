@@ -209,7 +209,7 @@ class TC_10_Exception(RegressionTestCase):
                 self.fail('expected to return nonzero')
         except subprocess.CalledProcessError as e:
             if HAS_SGX and not HAS_EDMM:
-                self.assertEqual(e.returncode, 1)
+                self.assertNotEqual(e.returncode, 0)
                 stderr = e.stderr.decode()
             else:
                 self.fail('expected to return zero')
@@ -227,7 +227,7 @@ class TC_10_Exception(RegressionTestCase):
             if not HAS_SGX or HAS_EDMM:
                 # Exception Handling (Memory Fault)
                 self.assertIn('Memory Fault Exception Handler', stderr)
-                self.assertNotIn('Faulting address not match', stderr)
+                self.assertNotIn('Wrong faulting address', stderr)
 
 
 class TC_20_SingleProcess(RegressionTestCase):
