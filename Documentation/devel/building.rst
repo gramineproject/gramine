@@ -16,7 +16,7 @@ performance reasons. You can choose at most one of the libcs available. By
 default glibc is built.
 
 Gramine currently only works on the x86_64 architecture. Gramine is currently
-tested on Ubuntu 18.04/20.04, along with Linux kernel version 5.x. We recommend
+tested on Ubuntu 20.04/22.04, along with Linux kernel version 5.x. We recommend
 building and installing Gramine on Ubuntu with Linux kernel version 5.11 or
 higher. If you find problems with Gramine on other Linux distributions, contact
 us with a |~| detailed `bug report
@@ -108,7 +108,7 @@ Additional information, package descriptions, etc. can be found in the official
 """"""""""""""""""""""""""""""""
 
 If you plan on enabling ``-Ddcap`` option, you need to install
-``libsgx-dcap-quote-verify`` package (and it's development counterpart)::
+``libsgx-dcap-quote-verify`` package (and its development counterpart)::
 
    # Below commands work on Ubuntu 22.04 LTS and 20.04 LTS
    sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
