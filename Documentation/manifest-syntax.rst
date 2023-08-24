@@ -533,7 +533,8 @@ keys:
   the expression evaluates to true. The only currently supported formats of
   expressions are ``token1 == token2`` and ``token1 != token2``, where
   ``token1`` and ``token2`` may be constant non-negative integers or sub-region
-  names (referenced sub-regions must contain an integer value of size 1..8B).
+  names (referenced sub-regions must contain a native-endian non-negative
+  integer value of size 1..8B).
 
 Consider this simple C snippet:
 

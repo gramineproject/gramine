@@ -148,11 +148,11 @@ int main(void) {
 
     /* use a static const variable so that it is put into the .rodata section and thus protected
      * against writes -- this is to catch bugs if Gramine IOCTL logic tries to write into it */
-    static const struct gramine_test_dev_ioctl_get_set_size static_set_size = {
+    static const struct gramine_test_dev_ioctl_get_set_size const_set_size = {
         .do_set = 1, /* set size to zero */
         .size   = 0
     };
-    CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE, &static_set_size));
+    CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GET_SET_SIZE, &const_set_size));
     devfd_size = CHECK(ioctl(devfd, GRAMINE_TEST_DEV_IOCTL_GETSIZE));
     if (devfd_size != 0)
         errx(1, "/dev/gramine_test_dev ioctl(GRAMINE_TEST_DEV_IOCTL_GETSIZE) didn't return 0 "

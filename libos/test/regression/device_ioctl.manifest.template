@@ -45,11 +45,12 @@ sys.ioctl_structs.gramine_test_dev_ioctl_replace_list = [
     { ptr = "gramine_test_dev_ioctl_replace_list" },  # next
 ]
 
+# weird spacing in `onlyif` region is on purpose, to test the expression parsing
 sys.ioctl_structs.gramine_test_dev_ioctl_get_set_size = [
     { size = 1, direction = "out", name = "do_set" },
     { size = 7, direction = "none" }, # 7B padding
-    { onlyif = "do_set != 0", size = 8, direction = "out" },  # setting the size
-    { onlyif = "do_set == 0", size = 8, direction = "in" },   # getting the size
+    { onlyif = "do_set!=0", size = 8, direction = "out" },      # setting the size
+    { onlyif = "do_set  ==  0  ", size = 8, direction = "in" }, # getting the size
 ]
 
 sys.allowed_ioctls = [

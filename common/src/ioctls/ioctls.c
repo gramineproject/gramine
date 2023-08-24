@@ -12,7 +12,7 @@ static bool strings_equal(const char* s1, const char* s2) {
     return !strcmp(s1, s2);
 }
 
-static int copy_value(void* addr, size_t size, uint64_t* out_value) {
+static int copy_value_to_uint64(void* addr, size_t size, uint64_t* out_value) {
     if (!addr || size > sizeof(*out_value))
         return -PAL_ERROR_INVAL;
 
@@ -164,11 +164,11 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
     if (ret < 0)
         return ret;
 
-    void* addr_of_size_field  = all_sub_regions[found_idx].gramine_addr;
+    void*  addr_of_size_field = all_sub_regions[found_idx].gramine_addr;
     size_t size_of_size_field = all_sub_regions[found_idx].size;
     uint64_t read_size;
 
-    ret = copy_value(addr_of_size_field, size_of_size_field, &read_size);
+    ret = copy_value_to_uint64(addr_of_size_field, size_of_size_field, &read_size);
     if (ret < 0)
         return ret;
 
@@ -216,18 +216,18 @@ static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
     return 0;
 }
 
-static int get_sub_region_value(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
-                                const char* sub_region_name, uint64_t* out_value) {
+static int get_sub_region_uint_value(struct sub_region* all_sub_regions, size_t all_sub_regions_cnt,
+                                     const char* sub_region_name, uint64_t* out_value) {
     size_t found_idx;
     int ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
     if (ret < 0)
         return ret;
 
-    void* addr_of_value_field  = all_sub_regions[found_idx].gramine_addr;
+    void*  addr_of_value_field = all_sub_regions[found_idx].gramine_addr;
     size_t size_of_value_field = all_sub_regions[found_idx].size;
     uint64_t read_value;
 
-    ret = copy_value(addr_of_value_field, size_of_value_field, &read_value);
+    ret = copy_value_to_uint64(addr_of_value_field, size_of_value_field, &read_value);
     if (ret < 0)
         return ret;
 
@@ -293,6 +293,7 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
 
     /* get actual values for two tokens */
     char* endptr = NULL;
+    char original_symbol = token1[token1_len];
     token1[token1_len] = '\0';
     long long v1 = strtoll(token1, &endptr, /*base=*/0);
     if (endptr == token1 + token1_len) {
@@ -305,13 +306,15 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
         value1 = (uint64_t)v1;
     } else {
         /* could not read the constant integer, the token must be a string-name of a sub region */
-        ret = get_sub_region_value(all_sub_regions, all_sub_regions_cnt, token1, &value1);
+        ret = get_sub_region_uint_value(all_sub_regions, all_sub_regions_cnt, token1, &value1);
         if (ret < 0) {
             log_error("IOCTL: cannot find first sub region in only-if expression '%s'", expr);
             goto out;
         }
     }
+    token1[token1_len] = original_symbol;
 
+    original_symbol = token2[token2_len];
     token2[token2_len] = '\0';
     long long v2 = strtoll(token2, &endptr, /*base=*/0);
     if (endptr == token2 + token2_len) {
@@ -322,18 +325,22 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
         }
         value2 = (uint64_t)v2;
     } else {
-        ret = get_sub_region_value(all_sub_regions, all_sub_regions_cnt, token2, &value2);
+        ret = get_sub_region_uint_value(all_sub_regions, all_sub_regions_cnt, token2, &value2);
         if (ret < 0) {
             log_error("IOCTL: cannot find second sub region in only-if expression '%s'", expr);
             goto out;
         }
     }
+    token2[token2_len] = original_symbol;
 
-    if (!(memcmp(compar, "==", 2))) {
+    if (!memcmp(compar, "==", 2)) {
         *out_value = value1 == value2;
-    } else {
+    } else if (!memcmp(compar, "!=", 2)) {
         *out_value = value1 != value2;
+    } else {
+        BUG();
     }
+
 
     ret = 0;
 out:
@@ -552,10 +559,11 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
                     goto out;
                 }
 
-                void* addr_of_array_len_field  = sub_regions[found_idx].gramine_addr;
+                void*  addr_of_array_len_field = sub_regions[found_idx].gramine_addr;
                 size_t size_of_array_len_field = sub_regions[found_idx].size;
                 uint64_t array_len;
-                ret = copy_value(addr_of_array_len_field, size_of_array_len_field, &array_len);
+                ret = copy_value_to_uint64(addr_of_array_len_field, size_of_array_len_field,
+                                           &array_len);
                 if (ret < 0) {
                     log_error("IOCTL: cannot get array len from '%s'",
                               sub_regions[i].array_len.sub_region_name);
