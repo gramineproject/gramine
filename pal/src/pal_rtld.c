@@ -8,12 +8,12 @@
  * other. Note that PAL loads only two kinds of ELF binaries: the LibOS shared library and the PAL
  * regression tests. Both these kinds of ELF binaries are assumed to have specific ELF config:
  *
- *   - They must be linked with RELRO (Relocation Read-Only); this simplifies relocation because
- *     only R_X86_64_RELATIVE, R_X86_64_GLOB_DAT and R_X86_64_JUMP_SLOT reloc schemes are used. If
- *     we add support for archs other than x86_64 in future, we need to add more reloc schemes.
- *     Corresponding linker flag is `-Wl,-zrelro`.
+ *   - They must be linked with Full RELRO (Relocation Read-Only); this simplifies relocation
+ *     because only R_X86_64_RELATIVE, R_X86_64_GLOB_DAT and R_X86_64_JUMP_SLOT reloc schemes are
+ *     used. If we add support for archs other than x86_64 in future, we need to add more reloc
+ *     schemes. Corresponding linker flags are `-Wl,-zrelro -Wl,-znow`.
  *
- *   - They must be linked with immediate binding (in constrast to the linker's default lazy
+ *   - They must be linked with immediate binding (in contrast to the linker's default lazy
  *     binding). Our code performs relocations immediately, i.e., all relocations are processed
  *     before passing control to the loaded object. Corresponding linker flag is `-Wl,-znow`.
  *     Note that some linkers generate DT_BIND_NOW entry and some generate the DF_BIND_NOW flag.
