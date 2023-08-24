@@ -188,11 +188,12 @@ struct pal_public_state* PalGetPalPublicState(void);
 
 /*! memory protection flags */
 typedef uint32_t pal_prot_flags_t; /* bitfield */
-#define PAL_PROT_READ      0x1
-#define PAL_PROT_WRITE     0x2
-#define PAL_PROT_EXEC      0x4
-#define PAL_PROT_WRITECOPY 0x8
-#define PAL_PROT_MASK      0xF
+#define PAL_PROT_READ       0x1
+#define PAL_PROT_WRITE      0x2
+#define PAL_PROT_EXEC       0x4
+#define PAL_PROT_WRITECOPY  0x8
+#define PAL_PROT_LAZYALLOC 0x10
+#define PAL_PROT_MASK      0x1F
 
 struct pal_initial_mem_range {
     uintptr_t start;
@@ -245,13 +246,16 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 /*!
  * \brief Set upcalls for memory bookkeeping
  *
- * \param alloc  Function to call to get a memory range.
- * \param free   Function to call to release the memory range.
+ * \param alloc         Function to call to get a memory range.
+ * \param free          Function to call to release the memory range.
+ * \param get_vma_info  Function to call to get the VMA info (currently only PAL prot flags).
  *
  * Both \p alloc and \p free must be thread-safe.
  */
 void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_addr),
-                                    int (*free)(uintptr_t addr, size_t size));
+                                    int (*free)(uintptr_t addr, size_t size),
+                                    int (*get_vma_info)(uintptr_t addr,
+                                                        pal_prot_flags_t* out_prot_flags));
 
 /*
  * PROCESS CREATION
@@ -1005,5 +1009,35 @@ void PalDebugMapRemove(void* start_addr);
 /* Describe the code under given address (see `describe_location()` in `callbacks.h`). Without
  * DEBUG, falls back to raw value ("0x1234"). */
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
+
+/*!
+ * \brief Get the lazily-committed pages of a given memory area via a bitvector.
+ *
+ * \param      addr       Starting address of the memory area.
+ * \param      size       Size of the memory area.
+ * \param[out] bitvector  On success, will contain the commit status of the pages in the
+ *                        memory area.
+ *
+ * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
+ * be sent to the child process, as a perf optimization specific for SGX EDMM).
+ */
+void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
+
+/*!
+ * \brief Free the committed pages within a given memory area but automatically recommit them on
+ *        subsequent accesses.
+ *
+ * \param addr  Starting address of the memory area.
+ * \param size  Size of the memory area.
+ *
+ * \returns 0 on success, negative error code on failure.
+ *
+ * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
+ * `[addr; addr+size)` must be a continuous memory range without any holes.
+ *
+ * This API is currently used for `madvise(MADV_DONTNEED)` logic to turn the pages into
+ * "lazy-alloc-on-access" states.
+ */
+int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size);
 
 #undef INSIDE_PAL_H

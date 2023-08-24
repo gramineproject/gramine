@@ -285,6 +285,7 @@ int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr);
 int pal_internal_memory_alloc(size_t size, void** out_addr);
 int pal_internal_memory_free(void* addr, size_t size);
 void pal_disable_early_memory_bookkeeping(void);
+int initial_mem_bkeep(size_t size, uintptr_t* out_addr);
 
 void init_slab_mgr(void);
 void* malloc(size_t size);
@@ -312,3 +313,8 @@ const char* pal_event_name(enum pal_event event);
         _PalProcessExit(1);                    \
     } while (0)
 #include "uthash.h"
+
+extern int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* out_flags);
+
+void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
+int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size);

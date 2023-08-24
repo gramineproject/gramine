@@ -366,3 +366,9 @@ random bits, to obtain an attestation report and quote, etc.
 
 .. doxygenfunction:: PalDeviceMap
    :project: pal
+
+.. doxygenfunction:: PalGetLazyCommitPages
+   :project: pal
+
+.. doxygenfunction:: PalFreeThenLazyReallocCommittedPages
+   :project: pal

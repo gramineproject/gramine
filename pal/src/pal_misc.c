@@ -51,3 +51,19 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
+
+void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size) || !bitvector) {
+        BUG();
+    }
+
+    return _PalGetLazyCommitPages(addr, size, bitvector);
+}
+
+int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    return _PalFreeThenLazyReallocCommittedPages(addr, size);
+}
