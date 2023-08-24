@@ -113,6 +113,26 @@ int sgx_edmm_remove_pages(uint64_t addr, size_t count) {
     return 0;
 }
 
+/* wrapper functions for the callbacks */
+int sgx_edmm_add_pages_callback(uintptr_t addr, size_t count, void* prot) {
+    int ret = sgx_edmm_add_pages(addr, count, *(uint64_t*)prot);
+    if (ret < 0)
+        return ret;
+
+    set_enclave_addr_range((uintptr_t)addr, count);
+    return 0;
+}
+
+int sgx_edmm_remove_pages_callback(uintptr_t addr, size_t count,
+                                   void* unused __attribute__((unused))) {
+    int ret = sgx_edmm_remove_pages(addr, count);
+    if (ret < 0)
+        return ret;
+
+    unset_enclave_addr_range((uintptr_t)addr, count);
+    return 0;
+}
+
 int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
     if (prot & SGX_SECINFO_FLAGS_W) {
         /* HW limitation. */

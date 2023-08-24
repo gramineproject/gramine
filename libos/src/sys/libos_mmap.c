@@ -144,6 +144,11 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             default:
                 return (void*)-EINVAL;
         }
+
+        /* ignore MAP_NORESERVE for file-backed mappings as we consider this rare and not worth
+         * optimizing for performance */
+        if (flags & MAP_NORESERVE)
+            flags &= ~MAP_NORESERVE;
     }
 
 #ifdef MAP_32BIT

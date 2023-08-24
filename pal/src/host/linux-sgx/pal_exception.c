@@ -15,6 +15,7 @@
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "pal_sgx.h"
 
 #define ADDR_IN_PAL(addr) ((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END)
 
@@ -327,11 +328,31 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             break;
     }
 
+    if (event_num == PAL_EVENT_MEMFAULT && g_pal_linuxsgx_state.edmm_enabled) {
+        assert(g_mem_bkeep_get_vma_info_upcall);
+        assert(g_enclave_page_tracker);
+
+        int ret;
+        pal_prot_flags_t prot_flags;
+
+        ret = g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags);
+        if (ret == 0 && (prot_flags & PAL_PROT_NORESERVE)) {
+            prot_flags &= ~PAL_PROT_NORESERVE;
+            ret = _PalVirtualMemoryAlloc((void*)addr, g_page_size, prot_flags);
+            if (ret < 0) {
+                log_error("failed to allocate page at 0x%lx: %s", addr, pal_strerror(ret));
+                _PalProcessExit(1);
+            }
+            goto out;
+        }
+    }
+
     pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);
     }
 
+out:
     restore_pal_context(uc, &ctx);
 }
 

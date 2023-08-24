@@ -9,6 +9,7 @@
 struct vma {
     uintptr_t begin;
     uintptr_t end;
+    pal_prot_flags_t prot_flags;
 };
 
 /* Array of allocated memory ranges. Always kept sorted in descending order. */
@@ -34,6 +35,7 @@ int mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
             g_vmas[i] = (struct vma){
                 .begin = g_vmas[i - 1].begin - size,
                 .end = g_vmas[i - 1].begin,
+                .prot_flags = PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_WRITECOPY,
             };
             g_vmas_len++;
             *out_addr = g_vmas[i].begin;
@@ -62,6 +64,21 @@ int mem_bkeep_free(uintptr_t addr, size_t size) {
     return -PAL_ERROR_NOMEM;
 }
 
+int mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
+    assert(g_vmas_len);
+
+    *out_prot_flags = 0;
+
+    for (size_t i = 0; i < g_vmas_len; i++) {
+        if (g_vmas[i].begin <= addr && addr < g_vmas[i].end) {
+            *out_prot_flags = g_vmas[i].prot_flags;
+            return 0;
+        }
+    }
+
+    return -PAL_ERROR_NOMEM;
+}
+
 void init_memory_management(void) {
     struct pal_public_state* pal_public_state = PalGetPalPublicState();
     /* Because we are looking at free space between memory ranges, we need a VMA marking the end of
@@ -69,6 +86,7 @@ void init_memory_management(void) {
     g_vmas[0] = (struct vma){
         .begin = (uintptr_t)pal_public_state->memory_address_end,
         .end = (uintptr_t)pal_public_state->memory_address_end,
+        .prot_flags = PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_WRITECOPY,
     };
 
     if (ARRAY_LEN(g_vmas) < pal_public_state->initial_mem_ranges_len + 2) {
@@ -83,6 +101,7 @@ void init_memory_management(void) {
         g_vmas[1 + i] = (struct vma){
             .begin = pal_public_state->initial_mem_ranges[i].start,
             .end = pal_public_state->initial_mem_ranges[i].end,
+            .prot_flags = PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_WRITECOPY,
         };
         if (g_vmas[1 + i].begin >= (uintptr_t)pal_public_state->memory_address_end
                 || g_vmas[1 + i].end <= (uintptr_t)pal_public_state->memory_address_start) {
@@ -96,6 +115,7 @@ void init_memory_management(void) {
     g_vmas[1 + pal_public_state->initial_mem_ranges_len] = (struct vma){
         .begin = (uintptr_t)pal_public_state->memory_address_start,
         .end = (uintptr_t)pal_public_state->memory_address_start,
+        .prot_flags = PAL_PROT_READ | PAL_PROT_WRITE | PAL_PROT_WRITECOPY,
     };
     g_vmas_len = pal_public_state->initial_mem_ranges_len + 2;
 
@@ -112,7 +132,7 @@ void init_memory_management(void) {
     g_vmas_len -= ignored_ranges;
     assert(g_vmas_len >= 2);
 
-    PalSetMemoryBookkeepingUpcalls(mem_bkeep_alloc, mem_bkeep_free);
+    PalSetMemoryBookkeepingUpcalls(mem_bkeep_alloc, mem_bkeep_free, mem_bkeep_get_vma_info);
 }
 
 int memory_alloc(size_t size, pal_prot_flags_t prot, void** out_addr) {

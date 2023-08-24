@@ -308,3 +308,5 @@ const char* pal_event_name(enum pal_event event);
         _PalProcessExit(1);                    \
     } while (0)
 #include "uthash.h"
+
+extern int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* out_flags);

@@ -34,7 +34,7 @@ static size_t g_peak_total_memory_size = 0;
  * MAP_FIXED or unsupported flags. */
 static int filter_saved_flags(int flags) {
     return flags & (MAP_SHARED | MAP_SHARED_VALIDATE | MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN
-                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK
+                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK | MAP_NORESERVE
                     | VMA_UNMAPPED | VMA_INTERNAL | VMA_TAINTED);
 }
 
@@ -548,6 +548,7 @@ static int _bkeep_initial_vma(struct libos_vma* new_vma) {
 
 static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
 static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags);
 
 #define ASLR_BITS 12
 /* This variable is written to only once, during initialization, so it does not need to
@@ -555,7 +556,8 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
 static void* g_aslr_addr_top = NULL;
 
 int init_vma(void) {
-    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free);
+    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free,
+                                   pal_mem_bkeep_get_vma_info);
 
     size_t initial_ranges_count = 0;
     for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
@@ -1139,6 +1141,17 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
     }
     /* Remove the temporary VMA immediately - PAL already freed the memory. */
     bkeep_remove_tmp_vma(tmp_vma);
+    return 0;
+}
+
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
+    struct libos_vma_info vma_info;
+    int ret = lookup_vma((void*)addr, &vma_info);
+    if (ret < 0) {
+        *out_prot_flags = 0;
+        return ret;
+    }
+    *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
     return 0;
 }
 
