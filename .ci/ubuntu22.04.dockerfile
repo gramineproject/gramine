@@ -86,15 +86,15 @@ RUN python3 -m pip install -U \
 RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cpio \
     dwarves \
-    g++-10 \
-    gcc-10 \
+    g++-12 \
+    gcc-12 \
     kmod \
     qemu-kvm
 
-# Kernel on the host machine is built with GCC-10, so we need to set it as default in Docker
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10 && \
-    update-alternatives --set gcc /usr/bin/gcc-10 && \
-    update-alternatives --set g++ /usr/bin/g++-10
+# Kernel on the host machine is built with GCC-12, so we need to set it as default in Docker
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 10 && \
+    update-alternatives --set gcc /usr/bin/gcc-12 && \
+    update-alternatives --set g++ /usr/bin/g++-12
 
 CMD ["bash"]
