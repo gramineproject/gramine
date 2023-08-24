@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  * Copyright (C) 2020 Invisible Things Lab
+ * Copyright (C) 2024 Intel Corporation
+ *                    Kailun Qin <kailun.qin@intel.com>
  */
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
@@ -34,7 +36,7 @@ static size_t g_peak_total_memory_size = 0;
  * MAP_FIXED or unsupported flags. */
 static int filter_saved_flags(int flags) {
     return flags & (MAP_SHARED | MAP_SHARED_VALIDATE | MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN
-                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK
+                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK | MAP_NORESERVE
                     | VMA_UNMAPPED | VMA_INTERNAL | VMA_TAINTED);
 }
 
@@ -591,6 +593,7 @@ static int _bkeep_initial_vma(struct libos_vma* new_vma) {
 
 static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
 static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags);
 
 #define ASLR_BITS 12
 /* This variable is written to only once, during initialization, so it does not need to
@@ -598,7 +601,8 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
 static void* g_aslr_addr_top = NULL;
 
 int init_vma(void) {
-    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free);
+    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free,
+                                   pal_mem_bkeep_get_vma_info);
 
     size_t initial_ranges_count = 0;
     for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
@@ -1226,6 +1230,21 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
     return 0;
 }
 
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
+    struct libos_vma_info vma_info;
+    int ret = lookup_vma((void*)addr, &vma_info);
+    if (ret < 0)
+        return ret;
+
+    *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
+
+    if (vma_info.file) {
+        put_handle(vma_info.file);
+    }
+
+    return 0;
+}
+
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     vma_info->addr         = (void*)vma->begin;
     vma_info->length       = vma->end - vma->begin;
@@ -1380,6 +1399,8 @@ struct madvise_dontneed_ctx {
 };
 
 static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
     struct madvise_dontneed_ctx* ctx = (struct madvise_dontneed_ctx*)visitor_arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL)) {
@@ -1398,32 +1419,14 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         return true;
     }
 
-    uintptr_t zero_start = MAX(ctx->begin, vma->begin);
-    uintptr_t zero_end = MIN(ctx->end, vma->valid_end);
-
-    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags);
-    pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
-
-    if (pal_prot != pal_prot_writable) {
-        /* make the area writable so that it can be memset-to-zero */
-        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start,
-                                          pal_prot_writable);
-        if (ret < 0) {
-            ctx->error = pal_to_unix_errno(ret);
-            return false;
-        }
+    uintptr_t start = MAX(ctx->begin, vma->begin);
+    uintptr_t end = MIN(ctx->end, vma->end);
+    int ret = PalFreeThenLazyReallocCommittedPages((void*)start, end - start);
+    if (ret < 0) {
+        ctx->error = pal_to_unix_errno(ret);
+        return false;
     }
 
-    memset((void*)zero_start, 0, zero_end - zero_start);
-
-    if (pal_prot != pal_prot_writable) {
-        /* the area was made writable above; restore the original permissions */
-        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start, pal_prot);
-        if (ret < 0) {
-            log_error("restoring original permissions failed: %s", pal_strerror(ret));
-            BUG();
-        }
-    }
     return true;
 }
 
@@ -1770,10 +1773,33 @@ BEGIN_CP_FUNC(vma) {
 
             if (!vma->file) {
                 /* Send anonymous memory region. */
-                struct libos_mem_entry* mem;
+                assert(IS_ALLOC_ALIGNED_PTR(vma->addr));
+                assert(IS_ALLOC_ALIGNED(vma->length));
                 assert(vma->valid_length == vma->length);
-                DO_CP_SIZE(memory, vma->addr, vma->valid_length, &mem);
-                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+
+                size_t vma_pages = vma->length / PAGE_SIZE;
+                size_t bitvector_size = UDIV_ROUND_UP(vma_pages, 8);
+                uint8_t* bitvector = calloc(1, bitvector_size);
+                if (!bitvector)
+                    return -ENOMEM;
+
+                PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector);
+
+                for (size_t bit_idx = 0; bit_idx < vma_pages; bit_idx++) {
+                    size_t byte_idx = bit_idx / 8;
+                    size_t bit_position = bit_idx % 8;
+
+                    uint8_t byte = bitvector[byte_idx];
+                    /* skip the lazily-committed pages */
+                    if ((byte & (1 << bit_position)))
+                        continue;
+
+                    struct libos_mem_entry* mem;
+                    DO_CP_SIZE(memory, vma->addr + bit_idx * PAGE_SIZE, PAGE_SIZE, &mem);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                }
+
+                free(bitvector);
             } else {
                 /*
                  * Send file-backed memory region.

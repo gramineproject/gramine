@@ -60,6 +60,7 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
  */
 static int (*g_mem_bkeep_alloc_upcall)(size_t size, uintptr_t* out_addr) = NULL;
 static int (*g_mem_bkeep_free_upcall)(uintptr_t addr, size_t size) = NULL;
+int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* out_prot_flags) = NULL;
 
 static bool g_initial_mem_disabled = false;
 static uintptr_t g_last_alloc_addr = UINTPTR_MAX;
@@ -67,12 +68,15 @@ static uintptr_t g_last_alloc_addr = UINTPTR_MAX;
 struct pal_initial_mem_range g_initial_mem_ranges[0x100] = { 0 };
 
 void PalSetMemoryBookkeepingUpcalls(int (*alloc)(size_t size, uintptr_t* out_addr),
-                                    int (*free)(uintptr_t addr, size_t size)) {
+                                    int (*free)(uintptr_t addr, size_t size),
+                                    int (*get_vma_info)(uintptr_t addr,
+                                                        pal_prot_flags_t* out_prot_flags)) {
     if (!FIRST_TIME()) {
         BUG();
     }
     g_mem_bkeep_alloc_upcall = alloc;
     g_mem_bkeep_free_upcall = free;
+    g_mem_bkeep_get_vma_info_upcall = get_vma_info;
 }
 
 static void insert_range_at(size_t idx, uintptr_t addr, size_t size, pal_prot_flags_t prot,
@@ -235,7 +239,7 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
 
 /* This function is called only in early init code which is single-threaded, hence it does not need
  * any locking. */
-static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
+int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
     if (g_initial_mem_disabled) {
         return PAL_ERROR_INVAL;
     }
