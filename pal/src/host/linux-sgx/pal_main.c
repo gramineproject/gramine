@@ -28,6 +28,7 @@
 #include "pal_linux_error.h"
 #include "pal_rpc_queue.h"
 #include "pal_rtld.h"
+#include "pal_sgx.h"
 #include "pal_topology.h"
 #include "toml.h"
 #include "toml_utils.h"
@@ -696,6 +697,17 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     init_slab_mgr();
+
+    /* initialize the enclave lazy commit page tracker as soon as we initialized the slab memory
+     * allocator */
+    if (edmm_enabled) {
+        size_t enclave_pages = UDIV_ROUND_UP(GET_ENCLAVE_TCB(enclave_size), PAGE_SIZE);
+        ret = initialize_enclave_lazy_commit_page_tracker((uintptr_t)g_enclave_base, enclave_pages);
+        if (ret < 0) {
+            log_error("Initializing enclave lazy alloc page tracker failed");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    }
 
     /* initialize enclave properties */
     ret = init_enclave();

@@ -652,12 +652,14 @@ not support :term:`EDMM` feature.
 
 When this feature is enabled, Gramine does not add heap pages (uninitialized
 memory) to the enclave at creation time. Instead, memory is added to the enclave
-on demand. This can greatly reduce startup time for bigger enclaves, reduce
-the :term:`EPC` usage (as only actually allocated memory is used) and allow for
-changing memory permissions (without this Gramine allocates all dynamic memory
-as RWX). Unfortunately it can negatively impact performance, as adding a page
-to the enclave at runtime is a more expensive operation than adding the page
-before enclave creation (because it involves more enclave exits and syscalls).
+on demand (note that for mappings requested with `MAP_NORESERVE`, the enclave
+pages are lazily committed on page fault events). This can greatly reduce
+startup time for bigger enclaves, reduce the :term:`EPC` usage (as only actually
+allocated memory is used) and allow for changing memory permissions (without
+this Gramine allocates all dynamic memory as RWX). Unfortunately it can
+negatively impact performance, as adding a page to the enclave at runtime is a
+more expensive operation than adding the page before enclave creation (because
+it involves more enclave exits and syscalls).
 
 When this feature is enabled, it is not necessary to specify
 ``sgx.enclave_size`` (Gramine will automatically set it to 1TB which should be

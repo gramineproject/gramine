@@ -25,6 +25,12 @@ fs.mounts = [
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+# `use_exinfo = true` is needed because Blender uses `madvise(MADV_DONTNEED)`. When EDMM is enabled,
+# it will free the committed pages but automatically recommit them on subsequent accesses via page
+# fault handling.
+sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
 sys.stack.size = "8M"
 sgx.enclave_size = "2048M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '64' }}

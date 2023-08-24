@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  *               2020 Intel Labs
+ *               2024 Intel Corporation
+ *                    Kailun Qin <kailun.qin@intel.com>
  */
 
 /*
@@ -15,6 +17,7 @@
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
+#include "pal_sgx.h"
 
 #define ADDR_IN_PAL(addr) ((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END)
 
@@ -390,8 +393,15 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         _PalProcessExit(1);
     }
 
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
-    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
+    bool async_event = (event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED);
+    bool memfault_with_edmm = (event_num == PAL_EVENT_MEMFAULT &&
+                               g_pal_linuxsgx_state.edmm_enabled);
+
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault with EDMM
+     * enabled (which could happen legitimately when some syscalls try to access user buffers
+     * that're created using mappings with `MAP_NORESERVE`) -- this should be handled later in the
+     * lazy-allocation logic */
+    if (ADDR_IN_PAL(uc->rip) && !async_event && !memfault_with_edmm) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
@@ -442,10 +452,56 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             break;
     }
 
+    if (memfault_with_edmm) {
+        /* EDMM lazy allocation */
+        assert(g_mem_bkeep_get_vma_info_upcall);
+
+        pal_prot_flags_t prot_flags;
+
+        if (g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) == 0) {
+            prot_flags &= ~PAL_PROT_LAZYALLOC;
+
+            assert(ctx.err);
+            if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
+                ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
+                 (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS) ) {
+                /* the memfault can be caused by e.g. insufficient access rights rather than page
+                 * not existing, which should be propagated in this case */
+                goto propagate_memfault;
+            }
+
+            /* The page's set/unset status will be double-checked against the status recorded in the
+             * enclave page tracker, and if it has already been committed, the page will be skipped.
+             * See `walk_pages()` in "pal/src/host/linux-sgx/enclave_edmm.c" for details.
+             *
+             * This avoids a potential security issue where a malicious host could trick us into
+             * committing the page twice (which would effectively allow the host to replace a
+             * lazily-allocated page with 0s) by removing the page and forcing a page fault. */
+            int ret = commit_lazy_alloc_pages(ALLOC_ALIGN_DOWN_PTR(addr), /*count=*/1, prot_flags);
+            if (ret < 0) {
+                log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
+                _PalProcessExit(1);
+            }
+            goto out;
+        } else if (ADDR_IN_PAL(uc->rip)) {
+            /* inside PAL, and we failed to get the VMA info of the faulting address or we hit a
+             * memfault on a not lazily-allocated page */
+            char buf[LOCATION_BUF_SIZE];
+            pal_describe_location(uc->rip, buf, sizeof(buf));
+
+            log_error("Unexpected memory fault occurred inside PAL (%s)", buf);
+            _PalProcessExit(1);
+        }
+
+        /* propagate the unhandled memfaults to LibOS via upcall */
+    }
+
+propagate_memfault:;
     pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);
     }
 
+out:
     restore_pal_context(uc, &ctx);
 }
