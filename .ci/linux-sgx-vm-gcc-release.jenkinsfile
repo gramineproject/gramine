@@ -19,6 +19,12 @@ node('whatnots') {
     // kernel for simplicity)
     env.DOCKER_ARGS_COMMON += ' --volume=/boot:/boot:ro'
 
+    // Required because host Debian's path /usr/src/linux-headers-<version>/scripts is a symlink
+    // to /usr/lib/linux-kbuild-<version>, thus the latter path must be explicitly forwarded
+    kernel_ver = sh(returnStdout: true, script: 'uname -r | cut -d. -f1,2').trim()
+    env.DOCKER_ARGS_COMMON +=
+        " --volume=/usr/lib/linux-kbuild-${kernel_ver}:/usr/lib/linux-kbuild-${kernel_ver}:ro"
+
     // only root and `kvm` group can access /dev/kvm, so add `kvm` GID to the in-Docker user
     kvm_gid = sh(returnStdout: true, script: 'getent group kvm | cut -d: -f3').trim()
     env.DOCKER_ARGS_COMMON += ' --group-add ' + kvm_gid
