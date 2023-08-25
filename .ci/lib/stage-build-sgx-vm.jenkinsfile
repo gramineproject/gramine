@@ -5,6 +5,7 @@ stage('build') {
 
         git clone https://github.com/gramineproject/device-testing-tools.git
         cd device-testing-tools
+        git checkout d3d88863d9c90da6984a814cc8e3739529a4fc48 # FOR TESTING ONLY, REMOVE ON MERGE
 
         cd initramfs_builder
         {
