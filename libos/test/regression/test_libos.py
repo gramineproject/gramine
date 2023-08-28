@@ -807,12 +807,13 @@ class TC_30_Syscall(RegressionTestCase):
         try:
             stdout, _ = self.run_binary(['large_mmap'], timeout=480)
 
-            # Ftruncate
-            self.assertIn('large_mmap: ftruncate OK', stdout)
+            # Large anonymous mmap with `MAP_NORESERVE`
+            self.assertIn('large_mmap: mmap 1 (anonymous) completed OK', stdout)
 
-            # Large mmap
-            self.assertIn('large_mmap: mmap 1 completed OK', stdout)
-            self.assertIn('large_mmap: mmap 2 completed OK', stdout)
+            # Large mmap on files
+            self.assertIn('large_mmap: mmap 2 (file-backed) completed OK', stdout)
+
+            self.assertIn('TEST OK', stdout)
         finally:
             # This test generates a 4 GB file, don't leave it in FS.
             os.remove('testfile')

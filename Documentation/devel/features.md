@@ -1699,8 +1699,8 @@ Some exotic flags and features are not implemented, but we didn't observe any ap
 would fail or behave incorrectly because of that.
 
 `mmap()` supports anonymous (`MAP_ANONYMOUS`) and file-backed (`MAP_FILE`) mappings. All commonly
-used flags like `MAP_SHARED`, `MAP_PRIVATE`, `MAP_FIXED`, `MAP_FIXED_NOREPLACE`, `MAP_STACK`,
-`MAP_GROWSDOWN`, `MAP_32BIT` are supported.
+used flags like `MAP_SHARED`, `MAP_PRIVATE`, `MAP_FIXED`, `MAP_FIXED_NOREPLACE`, `MAP_NORESERVE`,
+`MAP_STACK`, `MAP_GROWSDOWN`, `MAP_32BIT` are supported.
 
 In case of SGX backend, `MAP_SHARED` flag is ignored for anonymous mappings, and for file-backed
 mappings, it depends on the type of file:
@@ -1709,13 +1709,19 @@ mappings, it depends on the type of file:
 - allowed for encrypted files (but synchronization happens only on explicit system calls like
   `msync()` and `close()`).
 
-`MAP_LOCKED`, `MAP_NORESERVE`, `MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`,
-`MAP_HUGE_1GB` flags are ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
+In case of SGX backend, `MAP_NORESERVE` flag is only supported for anonymous mappings and on
+[systems supporting EDMM](../sgx-intro.html#term-edmm) (otherwise it's silently ignored). When
+supported, instead of pre-accepting the region of enclave pages on mmap requests, the enclave pages
+are lazily accepted on page-fault events. Note that the current implementation has one caveat that
+when a process forks, the child process inherits the `MAP_NORESERVE` memory mappings of the parent
+process, but the content isn't copied (via checkpoint-and-restore in Gramine).
+
+`MAP_LOCKED`, MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags are
+ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
-- on [systems supporting EDMM](../sgx-intro.html#term-edmm), `mprotect()` correctly applies
-  permissions;
+- on systems supporting EDMM, `mprotect()` correctly applies permissions;
 - on systems not supporting EDMM, all enclave memory is allocated with Read-Write-Execute
   permissions, and `mprotect()` calls are silently ignored.
 

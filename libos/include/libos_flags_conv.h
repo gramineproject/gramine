@@ -26,7 +26,7 @@ static inline pal_prot_flags_t LINUX_PROT_TO_PAL(int prot, int map_flags) {
            (prot & PROT_WRITE ? PAL_PROT_WRITE : 0) |
            (prot & PROT_EXEC  ? PAL_PROT_EXEC  : 0) |
            (map_flags & MAP_PRIVATE   ? PAL_PROT_WRITECOPY : 0) |
-           (map_flags & MAP_NORESERVE ? PAL_PROT_NORESERVE : 0);
+           (map_flags & MAP_NORESERVE ? PAL_PROT_LAZYALLOC : 0);
 }
 
 static inline int PAL_PROT_TO_LINUX(pal_prot_flags_t prot) {

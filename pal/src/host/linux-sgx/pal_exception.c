@@ -282,8 +282,11 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
     }
 
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
-    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault (which
+     * might be handled later) */
+    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT &&
+                                event_num != PAL_EVENT_INTERRUPTED &&
+                                event_num != PAL_EVENT_MEMFAULT) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
@@ -336,8 +339,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         pal_prot_flags_t prot_flags;
 
         ret = g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags);
-        if (ret == 0 && (prot_flags & PAL_PROT_NORESERVE)) {
-            prot_flags &= ~PAL_PROT_NORESERVE;
+        if (ret == 0 && (prot_flags & PAL_PROT_LAZYALLOC)) {
+            prot_flags &= ~PAL_PROT_LAZYALLOC;
             ret = _PalVirtualMemoryAlloc((void*)addr, g_page_size, prot_flags);
             if (ret < 0) {
                 log_error("failed to allocate page at 0x%lx: %s", addr, pal_strerror(ret));

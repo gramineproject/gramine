@@ -20,13 +20,21 @@
 #include "pal_sgx.h"
 #include "spinlock.h"
 
+/*
+ * Global enclave page tracker purely used for EDMM lazy allocation (based on a bitmap vector).
+ *
+ * This is required for the memory-free flows, where we have to know whether the to-be-freed pages
+ * were already EACCEPTed (so that we need to remove them) or not not (so that we can simply skip
+ * them). Note that such commit status of enclave pages cannot be provided via SGX driver APIs since
+ * they're not trusted under the threat model of SGX; also no user-space SGX instruction is
+ * currently giving such info.
+ *
+ * Besides, for the additional info required in the #PF flow (e.g., enclave-page permissions), it's
+ * taken from the LibOS VMA subsystem, for which we use a special upcall.
+ */
 enclave_page_tracker_t* g_enclave_page_tracker = NULL;
 
 static spinlock_t g_enclave_page_lock = INIT_SPINLOCK_UNLOCKED;
-
-#define ENCLAVE_PAGE_LOCK()   spinlock_lock(&g_enclave_page_lock)
-#define ENCLAVE_PAGE_UNLOCK() spinlock_unlock(&g_enclave_page_lock)
-#define ENCLAVE_PAGE_LOCKED() spinlock_is_locked(&g_enclave_page_lock)
 
 typedef struct {
     uintptr_t addr;
@@ -45,7 +53,7 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
         /* defer page accepts to page-fault events when `MAP_NORESERVE` is set */
-        if (prot & PAL_PROT_NORESERVE)
+        if (prot & PAL_PROT_LAZYALLOC)
             return 0;
 
         int ret;
@@ -196,7 +204,7 @@ int init_reserved_ranges(void* urts_ptr, size_t urts_size) {
     return 0;
 }
 
-/* Create a new page tracker with the specified base address, number of pages, and page size */
+/* create a new page tracker with the specified base address, number of pages, and page size */
 static enclave_page_tracker_t* create_enclave_page_tracker(uintptr_t base_address,
                                                            size_t num_pages, size_t page_size) {
     enclave_page_tracker_t* tracker = malloc(sizeof(enclave_page_tracker_t));
@@ -238,42 +246,42 @@ static inline uintptr_t index_to_address(size_t index) {
 
 /* set an enclave page as allocated in the page tracker */
 static inline void set_enclave_page(size_t index) {
-    assert(ENCLAVE_PAGE_LOCKED());
+    assert(spinlock_is_locked(&g_enclave_page_lock));
     g_enclave_page_tracker->data[index / 8] |= 1 << (index % 8);
 }
 
 /* set an enclave page as free in the page tracker */
 static inline void unset_enclave_page(size_t index) {
-    assert(ENCLAVE_PAGE_LOCKED());
+    assert(spinlock_is_locked(&g_enclave_page_lock));
     g_enclave_page_tracker->data[index / 8] &= ~(1 << (index % 8));
 }
 
 /* check if an enclave page is allocated in the page tracker */
 static inline bool is_enclave_page_set(size_t index) {
-    assert(ENCLAVE_PAGE_LOCKED());
+    assert(spinlock_is_locked(&g_enclave_page_lock));
     return (g_enclave_page_tracker->data[index / 8] & (1 << (index % 8))) != 0;
 }
 
 /* set a range of enclave pages as allocated according to the memory address and number of pages */
 void set_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    ENCLAVE_PAGE_LOCK();
+    spinlock_lock(&g_enclave_page_lock);
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * g_enclave_page_tracker->page_size;
         size_t index = address_to_index(address);
         set_enclave_page(index);
     }
-    ENCLAVE_PAGE_UNLOCK();
+    spinlock_unlock(&g_enclave_page_lock);
 }
 
 /* set a range of enclave pages as free according to the memory address and number of pages */
 void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    ENCLAVE_PAGE_LOCK();
+    spinlock_lock(&g_enclave_page_lock);
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * g_enclave_page_tracker->page_size;
         size_t index = address_to_index(address);
         unset_enclave_page(index);
     }
-    ENCLAVE_PAGE_UNLOCK();
+    spinlock_unlock(&g_enclave_page_lock);
 }
 
 /* iterate over the given range of enclave pages in the tracker and perform the specified `callback`
@@ -290,7 +298,7 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set,
         size_t consecutive_count = 0;
 
         /* find consecutive set/unset pages */
-        ENCLAVE_PAGE_LOCK();
+        spinlock_lock(&g_enclave_page_lock);
         if (is_enclave_page_set(i) == walk_set) {
             consecutive_start_addr = index_to_address(i);
             while (i < end && i < g_enclave_page_tracker->size &&
@@ -301,7 +309,7 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set,
         } else {
             i++;
         }
-        ENCLAVE_PAGE_UNLOCK();
+        spinlock_unlock(&g_enclave_page_lock);
 
         if (consecutive_count > 0) {
             /* invoke the `callback` on the consecutive pages */

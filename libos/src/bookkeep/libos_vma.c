@@ -1454,7 +1454,8 @@ BEGIN_CP_FUNC(vma) {
                 /* Send anonymous memory region. */
                 struct libos_mem_entry* mem;
                 DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
-                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                /* Propogate `MAP_NORESERVE` flag if it's set. */
+                mem->prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags & MAP_NORESERVE);
             } else {
                 /* Send file-backed memory region. */
                 uint64_t file_size = 0;
