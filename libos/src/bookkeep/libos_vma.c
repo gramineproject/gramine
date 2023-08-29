@@ -513,6 +513,7 @@ out:
 static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
         put_handle(vma->file);
+        (void)__atomic_sub_fetch(&vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
     }
 
     if (add_to_thread_vma_cache(vma)) {
@@ -800,6 +801,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
+        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1047,6 +1049,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
+        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1357,6 +1360,70 @@ static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
         return false;
 
     return true;
+}
+
+static bool vma_filter_needs_read(struct libos_vma* vma, void* arg) {
+    struct libos_handle* hdl = arg;
+
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS))
+        return false;
+
+    assert(vma->file);
+
+    if (hdl && vma->file != hdl)
+        return false;
+
+    if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->read)
+        return false;
+
+    if (!(vma->file->acc_mode & MAY_READ))
+        return false;
+
+    return true;
+}
+
+static int read_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
+    assert(IS_ALLOC_ALIGNED(begin));
+    assert(end == UINTPTR_MAX || IS_ALLOC_ALIGNED(end));
+
+    struct libos_vma_info* vma_infos;
+    size_t count;
+
+    int ret = dump_vmas(&vma_infos, &count, begin, end, vma_filter_needs_read, hdl);
+    if (ret < 0)
+        return ret;
+
+    for (size_t i = 0; i < count; i++) {
+        struct libos_vma_info* vma_info = &vma_infos[i];
+
+        struct libos_handle* file = vma_info->file;
+        assert(file && file->fs && file->fs->fs_ops && file->fs->fs_ops->read);
+
+        /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
+         * another thread by the time we get to `read`. */
+        uintptr_t read_begin = MAX(begin, (uintptr_t)vma_info->addr);
+        uintptr_t read_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->length);
+        assert(IS_ALLOC_ALIGNED(read_begin));
+        assert(IS_ALLOC_ALIGNED(read_end));
+
+        ret = file->fs->fs_ops->read(file, (void*)read_begin, read_end - read_begin,
+                                     (file_off_t*)&vma_info->file_offset);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free_vma_info_array(vma_infos, count);
+    return ret;
+}
+
+int read_range(uintptr_t begin, uintptr_t end) {
+    return read_all(begin, end, /*hdl=*/NULL);
+}
+
+int read_handle(struct libos_handle* hdl) {
+    return read_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
 }
 
 static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
