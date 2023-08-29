@@ -834,7 +834,6 @@ static void parse_mmap_flags(struct print_buf* buf, va_list* ap) {
         buf_puts(buf, "MAP_SHARED");
         flags &= ~MAP_SHARED;
     } else {
-        assert(flags & MAP_PRIVATE);
         buf_puts(buf, "MAP_PRIVATE");
         flags &= ~MAP_PRIVATE;
     }
