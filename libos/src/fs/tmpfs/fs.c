@@ -254,8 +254,10 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     struct libos_mem_file* mem = inode->data;
 
     ret = mem_file_write(mem, *pos, buf, size);
-    if (ret < 0)
-        goto out;
+    if (ret < 0) {
+        unlock(&inode->lock);
+        return ret;
+    }
 
     inode->size = mem->size;
 
@@ -263,8 +265,12 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     inode->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
-out:
     unlock(&inode->lock);
+
+    /* If there are any MAP_SHARED mappings for the file, this will read data from `hdl`. */
+    if (__atomic_load_n(&hdl->num_mmapped, __ATOMIC_ACQUIRE) != 0)
+        (void)reload_mmaped_from_file_handle(hdl);
+
     return ret;
 }
 

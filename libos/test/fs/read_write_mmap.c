@@ -1,6 +1,6 @@
 #include "common.h"
 
-static void read_write(const char* file_path) {
+static void read_write_mmap(const char* file_path) {
     const size_t size = 1024 * 1024;
     int fd = open_output_fd(file_path, /*rdwr=*/true);
     printf("open(%s) RW (mmap) OK\n", file_path);
@@ -23,23 +23,23 @@ static void read_write(const char* file_path) {
     }
 
     read_fd(file_path, fd, buf_read, size);
-    printf("read(%s) RW (mmap) OK\n", file_path);
+    printf("read(%s) 1 RW (mmap) OK\n", file_path);
     if (memcmp(m, buf_read, size) != 0)
-        fatal_error("Read data is different from what was written in the mapping\n");
+        fatal_error("Read data via read() is different from what was written in the mapping\n");
 
     fill_random(buf_write, size);
     seek_fd(file_path, fd, 0, SEEK_SET);
-    printf("seek(%s) RW (mmap) OK\n", file_path);
+    printf("seek(%s) 1 RW (mmap) OK\n", file_path);
     write_fd(file_path, fd, buf_write, size);
     printf("write(%s) RW (mmap) OK\n", file_path);
     seek_fd(file_path, fd, 0, SEEK_SET);
-    printf("seek(%s) RW (mmap) OK\n", file_path);
+    printf("seek(%s) 2 RW (mmap) OK\n", file_path);
     read_fd(file_path, fd, buf_read, size);
-    printf("read(%s) RW (mmap) OK\n", file_path);
+    printf("read(%s) 2 RW (mmap) OK\n", file_path);
     if (memcmp(buf_write, buf_read, size) != 0)
-        fatal_error("Read data is different from what was written\n");
+        fatal_error("Read data via read() is different from what was written via write()\n");
     if (memcmp(buf_write, m, size) != 0)
-        fatal_error("Read data in the mapping is different from what was written\n");
+        fatal_error("Read data in the mapping is different from what was written via write()\n");
     printf("compare(%s) RW (mmap) OK\n", file_path);
 
     munmap_fd(file_path, m, size);
@@ -55,6 +55,6 @@ int main(int argc, char* argv[]) {
         fatal_error("Usage: %s <file_path>\n", argv[0]);
 
     setup();
-    read_write(argv[1]);
+    read_write_mmap(argv[1]);
     return 0;
 }

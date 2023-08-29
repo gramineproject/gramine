@@ -513,7 +513,7 @@ out:
 static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
         put_handle(vma->file);
-        (void)__atomic_sub_fetch(&vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
+        (void)__atomic_sub_fetch(&vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
     }
 
     if (add_to_thread_vma_cache(vma)) {
@@ -801,7 +801,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
-        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
+        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1049,7 +1049,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
-        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELEASE);
+        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1365,7 +1365,7 @@ static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
 static bool vma_filter_needs_read(struct libos_vma* vma, void* arg) {
     struct libos_handle* hdl = arg;
 
-    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS))
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
 
     assert(vma->file);
@@ -1418,11 +1418,11 @@ out:
     return ret;
 }
 
-int read_range(uintptr_t begin, uintptr_t end) {
+int reload_mmaped_from_file_range(uintptr_t begin, uintptr_t end) {
     return read_all(begin, end, /*hdl=*/NULL);
 }
 
-int read_handle(struct libos_handle* hdl) {
+int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
     return read_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
 }
 

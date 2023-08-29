@@ -131,10 +131,10 @@ int msync_range(uintptr_t begin, uintptr_t end);
 int msync_handle(struct libos_handle* hdl);
 
 /* Call `read` for file mappings in given range (should be page-aligned) */
-int read_range(uintptr_t begin, uintptr_t end);
+int reload_mmaped_from_file_range(uintptr_t begin, uintptr_t end);
 
 /* Call `read` for file mappings of `hdl` */
-int read_handle(struct libos_handle* hdl);
+int reload_mmaped_from_file_handle(struct libos_handle* hdl);
 
 void debug_print_all_vmas(void);
 
