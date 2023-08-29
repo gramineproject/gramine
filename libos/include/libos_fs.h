@@ -282,6 +282,9 @@ struct libos_inode {
     /* Filesystem-specific data */
     void* data;
 
+    /* Number of VMAs the file is mmapped to; should be accessed using atomic operations. */
+    uint64_t num_mmapped;
+
     struct libos_lock lock;
     refcount_t ref_count;
 };

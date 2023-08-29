@@ -91,6 +91,33 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         self.verify_open_close(stdout, stderr, output_path, 'output')
         self.assertTrue(os.path.isfile(output_path))
 
+    # overrides TC_00_FileSystem to not skip Gramine-SGX
+    def test_111_read_write_mmap(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_111') # new file to be created
+        stdout, stderr = self.run_binary(['read_write_mmap', file_path])
+        size = '1048576'
+        self.assertNotIn('ERROR: ', stderr)
+        self.assertTrue(os.path.isfile(file_path))
+
+        self.assertIn('open(' + file_path + ') RW (mmap) OK', stdout)
+        self.assertIn('mmap_fd(' + size + ') OK', stdout)
+        self.assertIn('read(' + file_path + ') 1 RW (mmap) OK', stdout)
+        self.assertIn('seek(' + file_path + ') 1 RW (mmap) OK', stdout)
+        self.assertIn('write(' + file_path + ') RW (mmap) OK', stdout)
+        self.assertIn('seek(' + file_path + ') 2 RW (mmap) OK', stdout)
+        self.assertIn('read(' + file_path + ') 2 RW (mmap) OK', stdout)
+        self.assertIn('compare(' + file_path + ') RW (mmap) OK', stdout)
+        self.assertIn('munmap_fd(' + size + ') OK', stdout)
+        self.assertIn('close(' + file_path + ') RW (mmap) OK', stdout)
+
+        self.assertIn('open(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('open(' + file_path + ') RW fd2 OK', stdout)
+        self.assertIn('mmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('write(' + file_path + ') RW fd2 OK', stdout)
+        self.assertIn('munmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd2 OK', stdout)
+
     # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted)
     def test_115_seek_tell(self):
         # the test binary expects a path to read-only (existing) file and two paths to files that

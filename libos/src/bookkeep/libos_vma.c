@@ -70,6 +70,8 @@ static void copy_vma(struct libos_vma* old_vma, struct libos_vma* new_vma) {
     new_vma->flags = old_vma->flags;
     new_vma->file  = old_vma->file;
     if (new_vma->file) {
+        if (new_vma->file->inode)
+            (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
         get_handle(new_vma->file);
     }
     new_vma->offset = old_vma->offset;
@@ -512,6 +514,12 @@ out:
 
 static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
+        if (vma->file->inode) {
+            uint64_t old_num_mmapped = __atomic_fetch_sub(&vma->file->inode->num_mmapped, 1,
+                                                          __ATOMIC_RELAXED);
+            assert(old_num_mmapped > 0);
+            (void)old_num_mmapped;
+        }
         put_handle(vma->file);
     }
 
@@ -800,6 +808,8 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
+        if (new_vma->file->inode)
+            (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1049,6 +1059,8 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
+        if (new_vma->file->inode)
+            (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1359,6 +1371,110 @@ static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
         return false;
 
     return true;
+}
+
+static bool vma_filter_needs_reload(struct libos_vma* vma, void* arg) {
+    struct libos_handle* hdl = arg;
+    assert(hdl && hdl->inode); /* guaranteed to have inode because invoked from `write` callback */
+
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
+        return false;
+
+    assert(vma->file); /* check above filtered out non-file-backed mappings */
+
+    if (!vma->file->inode || vma->file->inode != hdl->inode)
+        return false;
+
+    if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->read)
+        return false;
+
+    if (!(vma->file->acc_mode & MAY_READ))
+        return false;
+
+    return true;
+}
+
+static int reload_vma(struct libos_vma_info* vma_info) {
+    int ret;
+    struct libos_handle* file = vma_info->file;
+    assert(file && file->fs && file->fs->fs_ops && file->fs->fs_ops->read);
+
+    /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
+     * another thread by the time we get to `read`. */
+    uintptr_t read_begin = (uintptr_t)vma_info->addr;
+    uintptr_t read_end = (uintptr_t)vma_info->addr + vma_info->length;
+    assert(IS_ALLOC_ALIGNED(read_begin));
+    assert(IS_ALLOC_ALIGNED(read_end));
+
+    size_t size = read_end - read_begin;
+    size_t read = 0;
+    file_off_t pos = (file_off_t)vma_info->file_offset;
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma_info->prot, vma_info->flags);
+    pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
+
+    if (pal_prot != pal_prot_writable) {
+        /* make the area writable so that it can be reloaded */
+        ret = PalVirtualMemoryProtect((void*)read_begin, size, pal_prot_writable);
+        if (ret < 0)
+            return pal_to_unix_errno(ret);
+    }
+
+    while (read < size) {
+        size_t to_read = size - read;
+        ssize_t count = file->fs->fs_ops->read(file, (void*)(read_begin + read), to_read, &pos);
+        if (count < 0) {
+            if (count == -EINTR || count == -EAGAIN) {
+                continue;
+            }
+            ret = count;
+            goto out;
+        } else if (count == 0) {
+            /* it's possible that the underlying file contents do not cover the whole VMA region */
+            break;
+        }
+        assert((size_t)count <= to_read);
+        read += count;
+    }
+
+    ret = 0;
+out:
+    if (pal_prot != pal_prot_writable) {
+        /* the area was made writable above; restore the original permissions */
+        int protect_ret = PalVirtualMemoryProtect((void*)read_begin, size, pal_prot);
+        if (protect_ret < 0) {
+            log_error("restore original permissions failed: %s", pal_strerror(protect_ret));
+            BUG();
+        }
+    }
+
+    return ret;
+}
+
+/* This helper function is to reload the VMA contents of a given file handle on `write`.
+ *
+ * NOTE: the `write` callback can be invoked from multiple paths (syscalls like `munmap()`,
+ * `mmap(MAP_FIXED_NOREPLACE)` and `msync()`) via the `msync` callback, so blindly reloading the VMA
+ * contents on e.g. `munmap()` can be inefficient (but unmapping file-backed memory regions
+ * shouldn't be a frequent operation). */
+int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
+    struct libos_vma_info* vma_infos;
+    size_t count;
+
+    int ret = dump_vmas(&vma_infos, &count, /*begin=*/0, /*end=*/UINTPTR_MAX,
+                        vma_filter_needs_reload, hdl);
+    if (ret < 0)
+        return ret;
+
+    for (size_t i = 0; i < count; i++) {
+        ret = reload_vma(&vma_infos[i]);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free_vma_info_array(vma_infos, count);
+    return ret;
 }
 
 static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {

@@ -450,18 +450,28 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
     lock(&hdl->inode->lock);
 
     int ret = encrypted_file_write(enc, buf, count, *pos, &actual_count);
-    if (ret < 0)
-        goto out;
+    if (ret < 0) {
+        unlock(&hdl->inode->lock);
+        return ret;
+    }
 
     assert(actual_count <= count);
     *pos += actual_count;
     if (hdl->inode->size < *pos)
         hdl->inode->size = *pos;
 
-    ret = 0;
-out:
     unlock(&hdl->inode->lock);
-    return ret < 0 ? ret : (ssize_t)actual_count;
+
+    /* If there are any MAP_SHARED mappings for the file, this will read data from `enc`. */
+    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
+        ret = reload_mmaped_from_file_handle(hdl);
+        if (ret < 0) {
+            log_error("reload mmapped regions of file failed: %s", unix_strerror(ret));
+            BUG();
+        }
+    }
+
+    return (ssize_t)actual_count;
 }
 
 static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) {
