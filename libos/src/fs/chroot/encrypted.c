@@ -440,18 +440,18 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
     lock(&hdl->inode->lock);
 
     int ret = encrypted_file_write(enc, buf, count, *pos, &actual_count);
-    if (ret < 0) {
-        unlock(&hdl->inode->lock);
-        return ret;
-    }
+    if (ret < 0)
+        goto out;
 
     assert(actual_count <= count);
     *pos += actual_count;
     if (hdl->inode->size < *pos)
         hdl->inode->size = *pos;
 
+    ret = 0;
+out:
     unlock(&hdl->inode->lock);
-    return actual_count;
+    return ret < 0 ? ret : (ssize_t)actual_count;
 }
 
 static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) {
