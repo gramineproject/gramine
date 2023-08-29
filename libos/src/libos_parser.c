@@ -688,14 +688,21 @@ static int parse_flags(struct print_buf* buf, int flags, const struct flag_table
 static void parse_open_flags(struct print_buf* buf, va_list* ap) {
     int flags = va_arg(*ap, int);
 
-    if (flags & O_WRONLY) {
-        buf_puts(buf, "O_WRONLY");
-        flags &= ~O_WRONLY;
-    } else if (flags & O_RDWR) {
-        buf_puts(buf, "O_RDWR");
-        flags &= ~O_RDWR;
-    } else {
-        buf_puts(buf, "O_RDONLY");
+    switch (flags & O_ACCMODE) {
+        case O_RDONLY:
+            buf_puts(buf, "O_RDONLY");
+            flags &= ~O_RDONLY;
+            break;
+        case O_WRONLY:
+            buf_puts(buf, "O_WRONLY");
+            flags &= ~O_WRONLY;
+            break;
+        case O_RDWR:
+            buf_puts(buf, "O_RDWR");
+            flags &= ~O_RDWR;
+            break;
+        default:
+            break;
     }
 
     if (flags & O_APPEND) {
@@ -833,8 +840,7 @@ static void parse_mmap_flags(struct print_buf* buf, va_list* ap) {
     } else if (flags & MAP_SHARED) {
         buf_puts(buf, "MAP_SHARED");
         flags &= ~MAP_SHARED;
-    } else {
-        assert(flags & MAP_PRIVATE);
+    } else if (flags & MAP_PRIVATE) {
         buf_puts(buf, "MAP_PRIVATE");
         flags &= ~MAP_PRIVATE;
     }
