@@ -1382,7 +1382,7 @@ static bool vma_filter_needs_read(struct libos_vma* vma, void* arg) {
     return true;
 }
 
-static int read_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
+static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
     assert(IS_ALLOC_ALIGNED(begin));
     assert(end == UINTPTR_MAX || IS_ALLOC_ALIGNED(end));
 
@@ -1419,11 +1419,11 @@ out:
 }
 
 int reload_mmaped_from_file_range(uintptr_t begin, uintptr_t end) {
-    return read_all(begin, end, /*hdl=*/NULL);
+    return reload_mmaped_from_file_all(begin, end, /*hdl=*/NULL);
 }
 
 int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
-    return read_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
+    return reload_mmaped_from_file_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
 }
 
 static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {

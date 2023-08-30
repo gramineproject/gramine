@@ -95,10 +95,10 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('compare(' + file_path + ') RW OK', stdout)
         self.assertIn('close(' + file_path + ') RW OK', stdout)
 
-    # Gramine's implementation of file_map doesn't currently support shared memory-mapped
-    # files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
-    # Below test requires it, so skip it. We decided not to implement it as we don't know
-    # any workload using it.
+    # Gramine's implementation of file_map doesn't currently support shared memory-mapped regular
+    # chroot files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
+    # Below test requires it, so skip it. We decided not to implement it as we don't know any
+    # workload using it.
     @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_111_read_write_mmap(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_111') # new file to be created
