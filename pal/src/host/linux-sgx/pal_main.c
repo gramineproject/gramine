@@ -628,7 +628,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     init_slab_mgr();
 
-    /* initialize the enclave page tracker as soon as we Initialized the slab memory allocator */
+    /* initialize the enclave page tracker as soon as we initialized the slab memory allocator */
     if (edmm_enabled) {
         initialize_enclave_page_tracker((uintptr_t)g_enclave_base, GET_ENCLAVE_TCB(enclave_size),
                                         g_page_size);

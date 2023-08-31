@@ -1147,10 +1147,9 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
 static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
     struct libos_vma_info vma_info;
     int ret = lookup_vma((void*)addr, &vma_info);
-    if (ret < 0) {
-        *out_prot_flags = 0;
+    if (ret < 0)
         return ret;
-    }
+
     *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
     return 0;
 }
@@ -1452,10 +1451,44 @@ BEGIN_CP_FUNC(vma) {
 
             if (!vma->file) {
                 /* Send anonymous memory region. */
-                struct libos_mem_entry* mem;
-                DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
-                /* Propogate `MAP_NORESERVE` flag if it's set. */
-                mem->prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags & MAP_NORESERVE);
+                if (vma->flags & MAP_NORESERVE) {
+                    /* lazy allocation of pages, send only committed pages */
+                    size_t start_idx;
+                    size_t bv_size = ((vma->length + PAGE_SIZE - 1) / PAGE_SIZE + 7) / 8 + 1;
+                    unsigned char* bitvector = calloc(1, bv_size);
+                    if (!bitvector)
+                        return -ENOMEM;
+
+                    int ret = PalGetCommittedPages((uintptr_t)vma->addr, vma->length, bitvector,
+                                                   &bv_size, &start_idx);
+                    if (ret < 0) {
+                        free(bitvector);
+                        return pal_to_unix_errno(ret);
+                    }
+
+                    size_t byte_idx = 0;
+                    while (byte_idx < bv_size) {
+                        unsigned char byte = bitvector[byte_idx];
+                        size_t bit_idx = 0;
+                        while (bit_idx < 8) {
+                            if (byte & (1 << bit_idx)) {
+                                struct libos_mem_entry* mem;
+                                size_t relative_idx = (byte_idx * 8 + bit_idx - start_idx);
+                                DO_CP_SIZE(memory, vma->addr + relative_idx * PAGE_SIZE, PAGE_SIZE,
+                                           &mem);
+                                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                            }
+                            bit_idx++;
+                        }
+                        byte_idx++;
+                    }
+                    free(bitvector);
+                } else {
+                    /* no lazy allocation of pages, send the whole memory region of VMA */
+                    struct libos_mem_entry* mem;
+                    DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                }
             } else {
                 /* Send file-backed memory region. */
                 uint64_t file_size = 0;

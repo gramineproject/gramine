@@ -810,8 +810,11 @@ class TC_30_Syscall(RegressionTestCase):
             # Large anonymous mmap with `MAP_NORESERVE`
             self.assertIn('large_mmap: mmap 1 (anonymous) completed OK', stdout)
 
+            # Large anonymous mmap with `MAP_NORESERVE` on fork
+            self.assertIn('large_mmap: mmap 2 (anonymous) completed OK', stdout)
+
             # Large mmap on files
-            self.assertIn('large_mmap: mmap 2 (file-backed) completed OK', stdout)
+            self.assertIn('large_mmap: mmap 3 (file-backed) completed OK', stdout)
 
             self.assertIn('TEST OK', stdout)
         finally:

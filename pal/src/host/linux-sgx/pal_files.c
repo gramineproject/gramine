@@ -276,8 +276,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         assert(g_enclave_page_tracker);
         /* Enclave pages will be written to below, so we must add W permission. */
         uint64_t prot_flags = PAL_TO_SGX_PROT(prot | PAL_PROT_WRITE);
-        int ret = walk_unset_pages((uintptr_t)addr, size / PAGE_SIZE, sgx_edmm_add_pages_callback,
-                                   &prot_flags);
+        int ret = add_uncommitted_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
         if (ret < 0)
             return ret;
     } else {
@@ -366,8 +365,7 @@ out:
     if (ret < 0) {
         if (g_pal_linuxsgx_state.edmm_enabled) {
             assert(g_enclave_page_tracker);
-            int tmp_ret = walk_set_pages((uintptr_t)addr, size / PAGE_SIZE,
-                                         sgx_edmm_remove_pages_callback, NULL);
+            int tmp_ret = remove_committed_pages((uintptr_t)addr, size / PAGE_SIZE);
             if (tmp_ret < 0) {
                 log_error("removing previously allocated pages failed: %s (%d)",
                           pal_strerror(tmp_ret), ret);

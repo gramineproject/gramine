@@ -11,9 +11,11 @@
 
 #define TEST_LENGTH  0x10000f000
 #define TEST_LENGTH2 0x8000f000
+#define TEST_LENGTH3 0x800f000
 
 int main(void) {
     setbuf(stdout, NULL);
+    const char expected_val = 0xff;
 
     /* test large anonymous mappings with `MAP_NORESERVE` */
     void* a = mmap(NULL, TEST_LENGTH, PROT_READ | PROT_WRITE,
@@ -21,11 +23,37 @@ int main(void) {
     if (a == MAP_FAILED)
         err(1, "mmap 1");
 
-    ((char*)a)[0x100000000] = 0xff;
+    ((char*)a)[0x100000000] = expected_val;
     printf("large_mmap: mmap 1 (anonymous) completed OK\n");
 
     CHECK(munmap(a, TEST_LENGTH));
 
+    /* test large anonymous mappings with `MAP_NORESERVE` on fork, we pick relatively small length
+     * of mapping to avoid exceeding the maximum number of memory map areas of a process */
+    a = mmap(NULL, TEST_LENGTH3, PROT_READ | PROT_WRITE,
+             MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+    if (a == MAP_FAILED)
+        err(1, "mmap 2");
+
+    ((char*)a)[0x8000000] = expected_val;
+    pid_t pid = CHECK(fork());
+    if (pid == 0) {
+        char data = ((char*)a)[0x8000000];
+        if (data != expected_val)
+            errx(1, "child: unexpected value read (expected: %x, actual: %x)", expected_val, data);
+        exit(0);
+    }
+    if (pid > 0) {
+        int status;
+        CHECK(wait(&status));
+        if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
+            errx(1, "child wait status: %#x", status);
+    }
+    printf("large_mmap: mmap 2 (anonymous) completed OK\n");
+
+    CHECK(munmap(a, TEST_LENGTH3));
+
+    /* test large file-backed mappings */
     FILE* fp = fopen("testfile", "a+");
     if (!fp) {
         perror("fopen");
@@ -34,13 +62,12 @@ int main(void) {
 
     CHECK(ftruncate(fileno(fp), TEST_LENGTH));
 
-    /* test large file-backed mappings */
     a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
     if (a == MAP_FAILED)
-        err(1, "mmap 2");
+        err(1, "mmap 3");
 
-    ((char*)a)[0x80000000] = 0xff;
-    printf("large_mmap: mmap 2 (file-backed) completed OK\n");
+    ((char*)a)[0x80000000] = expected_val;
+    printf("large_mmap: mmap 3 (file-backed) completed OK\n");
 
     CHECK(munmap(a, TEST_LENGTH2));
 
@@ -52,18 +79,20 @@ int main(void) {
 
     a = mmap(NULL, TEST_LENGTH, PROT_READ | PROT_WRITE, MAP_PRIVATE, fileno(fp), 0);
     if (a == MAP_FAILED)
-        err(1, "mmap 3");
+        err(1, "mmap 4");
 
-    ((char*)a)[0x100000000] = 0xff;
-    printf("large_mmap: mmap 3 (file-backed) completed OK\n");
+    ((char*)a)[0x100000000] = expected_val;
+    printf("large_mmap: mmap 4 (file-backed) completed OK\n");
 
-    pid_t pid = CHECK(fork());
+    pid = CHECK(fork());
     if (pid > 0) {
         int status;
         CHECK(wait(&status));
         if (!WIFEXITED(status) || WEXITSTATUS(status) != 0)
             errx(1, "child wait status: %#x", status);
     }
+
+    CHECK(munmap(a, TEST_LENGTH));
 #endif
 
     puts("TEST OK");
