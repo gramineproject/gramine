@@ -1712,9 +1712,7 @@ mappings, it depends on the type of file:
 In case of SGX backend, `MAP_NORESERVE` flag is only supported for anonymous mappings and on
 [systems supporting EDMM](../sgx-intro.html#term-edmm) (otherwise it's silently ignored). When
 supported, instead of pre-accepting the region of enclave pages on mmap requests, the enclave pages
-are lazily accepted on page-fault events. Note that the current implementation has one caveat that
-when a process forks, the child process inherits the `MAP_NORESERVE` memory mappings of the parent
-process, but the content isn't copied (via checkpoint-and-restore in Gramine).
+are lazily accepted on page-fault events.
 
 `MAP_LOCKED`, MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags are
 ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
