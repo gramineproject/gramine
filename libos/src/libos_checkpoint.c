@@ -218,7 +218,7 @@ static int send_memory_on_stream(PAL_HANDLE stream, struct libos_cp_store* store
         void*            mem_addr = entry->addr;
         pal_prot_flags_t mem_prot = entry->prot;
 
-        if (entry->dummy || mem_prot & PAL_PROT_LAZYALLOC) {
+        if (entry->dummy) {
             entry = entry->next;
             continue;
         }
@@ -323,16 +323,6 @@ static int receive_memory_on_stream(PAL_HANDLE handle, struct checkpoint_hdr* hd
                     log_error("failed to bookkeep temporary VMA for memory at %p-%p", addr,
                               (char*)addr + size);
                     return ret;
-                }
-                continue;
-            }
-
-            if (prot & PAL_PROT_LAZYALLOC) {
-                /* FIXME: skip receiving memory for mappings that require lazy allocation */
-                ret = PalVirtualMemoryAlloc(addr, size, prot);
-                if (ret < 0) {
-                    log_error("failed allocating %p-%p", addr, addr + size);
-                    return pal_to_unix_errno(ret);
                 }
                 continue;
             }

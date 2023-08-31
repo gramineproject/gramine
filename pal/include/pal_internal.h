@@ -310,3 +310,6 @@ const char* pal_event_name(enum pal_event event);
 #include "uthash.h"
 
 extern int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* out_flags);
+
+int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
+                          size_t* out_bv_index);

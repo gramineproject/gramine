@@ -51,3 +51,8 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
+
+int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
+                          size_t* out_bv_index) {
+    return _PalGetCommittedPages(addr, size, bitvector, bv_size, out_bv_index);
+}

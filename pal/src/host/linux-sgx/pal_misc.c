@@ -17,6 +17,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
+#include "pal_sgx.h"
 #include "seqlock.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
@@ -810,4 +811,9 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
         default:
             return -PAL_ERROR_INVAL;
     }
+}
+
+int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
+                          size_t* out_bv_index) {
+    return get_bitvector_slice(addr, size, bitvector, bv_size, out_bv_index);
 }
