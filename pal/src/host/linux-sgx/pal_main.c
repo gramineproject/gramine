@@ -852,6 +852,13 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         do_preheat_enclave();
     }
 
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.enable_aex_notify",
+                    /*defaultval=*/false, &g_aex_notify_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.enable_aex_notify' (the value must be `true` or `false`)");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
@@ -922,6 +929,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     assert(!g_pal_linuxsgx_state.enclave_initialized);
     g_pal_linuxsgx_state.enclave_initialized = true;
 
+    init_aex_notify_for_thread();
     /* call main function */
     pal_main(instance_id, parent, first_thread, arguments, environments, post_callback);
 }

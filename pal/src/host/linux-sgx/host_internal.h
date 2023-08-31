@@ -62,7 +62,7 @@ void* realloc(void* ptr, size_t new_size);
 
 int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
-
+bool is_aexnotify_supported(void);
 int read_enclave_token(int token_file, sgx_arch_token_t* out_token);
 int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token);
 int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig);

@@ -100,6 +100,7 @@ def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, sec
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
+        'enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
     }
     flags = collect_bits(manifest_sgx, flags_dict)
     if ARCHITECTURE == 'amd64':
@@ -290,6 +291,8 @@ def gen_area_content(attr, areas, enclave_base, enclave_heap_min):
         set_tcs_field(t, offs.TCS_OGS_BASE, '<Q', tls_area.addr - enclave_base + offs.PAGESIZE * t)
         set_tcs_field(t, offs.TCS_OFS_LIMIT, '<L', 0xfff)
         set_tcs_field(t, offs.TCS_OGS_LIMIT, '<L', 0xfff)
+        if (attr['flags'] & offs.SGX_FLAGS_AEXNOTIFY):
+            set_tcs_field(t, offs.TCS_FLAGS, '<Q', offs.TCS_FLAGS_AEXNOTIFY)
 
         set_tls_field(t, offs.SGX_COMMON_SELF, tls_area.addr + offs.PAGESIZE * t)
         set_tls_field(t, offs.SGX_COMMON_STACK_PROTECTOR_CANARY,

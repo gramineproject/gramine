@@ -66,6 +66,7 @@ typedef uint8_t sgx_isvfamily_id_t[SGX_ISV_FAMILY_ID_SIZE];
 #define SGX_FLAGS_MODE64BIT     0x04ULL
 #define SGX_FLAGS_PROVISION_KEY 0x10ULL
 #define SGX_FLAGS_LICENSE_KEY   0x20ULL
+#define SGX_FLAGS_AEXNOTIFY     0x400ULL
 
 /* EINIT must verify *all* SECS.ATTRIBUTES[63..0] bits (FLAGS bits) against
  * SIGSTRUCT.ATTRIBUTES[63..0].
@@ -169,6 +170,7 @@ typedef struct {
 static_assert(sizeof(sgx_arch_tcs_t) == 4096, "incorrect struct size");
 
 #define TCS_FLAGS_DBGOPTIN (01ULL)
+#define TCS_FLAGS_AEXNOTIFY (02ULL)
 
 typedef struct {
     uint64_t rax;
@@ -192,7 +194,8 @@ typedef struct {
     uint64_t ursp;
     uint64_t urbp;
     uint32_t exitinfo;
-    uint32_t reserved;
+    uint8_t  reserved[3];
+    uint8_t  aexnotify;
     uint64_t fsbase;
     uint64_t gsbase;
 } sgx_pal_gpr_t;
@@ -435,6 +438,7 @@ static inline int enclu(uint32_t eax, uint64_t rbx, uint64_t rcx, uint64_t rdx) 
 #define EACCEPT     5
 #define EMODPE      6
 #define EACCEPTCOPY 7
+#define EDECCSSA    9
 
 #define SGX_LAUNCH_KEY         0
 #define SGX_PROVISION_KEY      1

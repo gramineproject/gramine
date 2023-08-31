@@ -330,6 +330,8 @@ class Manifest:
             sgx_cpu_features.setdefault('mpx', "disabled")
             sgx_cpu_features.setdefault('pkru', "disabled")
 
+        sgx.setdefault('enable_aex_notify', False)
+
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
                   "https://gramine.readthedocs.io/en/latest/manifest-syntax.html#trusted-files")
