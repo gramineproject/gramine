@@ -15,6 +15,12 @@ struct untrusted_area {
     bool valid;
 };
 
+struct aex_notify_entropy {
+    uint32_t entropy_cache;
+    int32_t count;
+};
+typedef struct aex_notify_entropy aex_notify_entropy_t;
+
 /*
  * Beside the classic thread control block (like ustack, thread, etc.) the TCB area is also used to
  * pass parameters needed during enclave or thread initialization. Some of them are thread specific
@@ -47,6 +53,12 @@ struct pal_enclave_tcb {
     void*     heap_max;
     int*      clear_child_tid;
     struct untrusted_area untrusted_area_cache;
+
+    /* below fields are used by AEX Notify */
+    uint64_t  ready_for_aex_notify; /* Set when it is ready to enable aex-notify*/
+    uint64_t  aex_notify_flag;      /* Used to indicate whether we need to handle aex-notify across enclave boundary*/
+    uint64_t  aex_counter;          /* Counter for AEXs*/
+    aex_notify_entropy_t entropy;   /* An entropy used in aex-notify mitigation*/
 };
 
 #ifndef DEBUG
