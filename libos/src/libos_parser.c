@@ -694,8 +694,9 @@ static void parse_open_flags(struct print_buf* buf, va_list* ap) {
     } else if (flags & O_RDWR) {
         buf_puts(buf, "O_RDWR");
         flags &= ~O_RDWR;
-    } else {
+    } else if (flags & O_RDONLY) {
         buf_puts(buf, "O_RDONLY");
+        flags &= ~O_RDONLY;
     }
 
     if (flags & O_APPEND) {
@@ -833,7 +834,7 @@ static void parse_mmap_flags(struct print_buf* buf, va_list* ap) {
     } else if (flags & MAP_SHARED) {
         buf_puts(buf, "MAP_SHARED");
         flags &= ~MAP_SHARED;
-    } else {
+    } else if (flags & MAP_PRIVATE) {
         buf_puts(buf, "MAP_PRIVATE");
         flags &= ~MAP_PRIVATE;
     }
