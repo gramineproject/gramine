@@ -274,6 +274,8 @@ void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
 int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
                         size_t* out_bv_index) {
     assert(bitvector);
+    assert(bv_size);
+    assert(out_bv_index);
 
     uintptr_t start_page = address_to_index(addr);
     uintptr_t end_page = address_to_index(addr + size - 1);

@@ -84,7 +84,12 @@ int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
                           size_t* out_bv_index) {
     __UNUSED(addr);
     __UNUSED(size);
-    __UNUSED(out_bv_index);
+    assert(bitvector);
+    assert(bv_size);
+    assert(out_bv_index);
+
     memset(bitvector, 1, *bv_size);
+    *out_bv_index = 0;
+
     return 0;
 }
