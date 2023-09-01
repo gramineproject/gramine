@@ -943,6 +943,7 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
                           uint64_t offset);
 int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset);
+int generic_truncate(struct libos_handle* hdl, file_off_t size);
 
 int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm);
 
