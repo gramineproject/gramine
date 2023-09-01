@@ -242,6 +242,45 @@ static int get_enclave_token(sgx_arch_token_t* enclave_token, sgx_sigstruct_t* e
     #error This config should be unreachable.
 #endif
 
+int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
+    if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
+        return 0;
+
+    /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
+    int ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
+    if (ret < 0) {
+        log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+        return ret;
+    }
+    int enclave_mem = ret;
+
+    for (size_t i = 0; i < count; i++) {
+        uint64_t tcs_flags;
+        uint64_t* tcs_flags_ptr = tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
+
+        ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
+                            (off_t)tcs_flags_ptr);
+        if (ret < 0) {
+            log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        tcs_flags |= TCS_FLAGS_DBGOPTIN;
+
+        ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
+                            (off_t)tcs_flags_ptr);
+        if (ret < 0) {
+            log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+            goto out;
+        }
+    }
+    ret = 0;
+out:
+    if (enclave_mem >= 0)
+        DO_SYSCALL(close, enclave_mem);
+    return ret;
+}
+
 static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure) {
     int ret = 0;
     int enclave_image = -1;
@@ -252,7 +291,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     unsigned long enclave_heap_min;
     char* sig_path = NULL;
     int sigfile_fd = -1;
-    int enclave_mem = -1;
     size_t areas_size = 0;
     struct mem_area* areas = NULL;
 
@@ -595,35 +633,9 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             dbg->tcs_addrs[i] = tcs_addrs[i];
     }
 
-    if (g_sgx_enable_stats || g_vtune_profile_enabled) {
-        /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
-        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
-        if (ret < 0) {
-            log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            goto out;
-        }
-        enclave_mem = ret;
-
-        for (size_t i = 0; i < enclave->thread_num; i++) {
-            uint64_t tcs_flags;
-            uint64_t* tcs_flags_ptr = tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
-
-            ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                             (off_t)tcs_flags_ptr);
-            if (ret < 0) {
-                log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-                goto out;
-            }
-
-            tcs_flags |= TCS_FLAGS_DBGOPTIN;
-
-            ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                             (off_t)tcs_flags_ptr);
-            if (ret < 0) {
-                log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-                goto out;
-            }
-        }
+    ret = set_tcs_debug_flag(tcs_addrs, enclave->thread_num);
+    if (ret < 0) {
+        goto out;
     }
 
 #ifdef DEBUG
@@ -634,7 +646,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * We report it here, before enclave start (as opposed to setup_pal_binary()), because we want
      * both GDB integration and profiling to be active from the very beginning of enclave execution.
      */
-
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
     sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
 #endif
@@ -651,8 +662,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
 out:
     if (enclave_image >= 0)
         DO_SYSCALL(close, enclave_image);
-    if (enclave_mem >= 0)
-        DO_SYSCALL(close, enclave_mem);
     if (sigfile_fd >= 0)
         DO_SYSCALL(close, sigfile_fd);
     if (areas)

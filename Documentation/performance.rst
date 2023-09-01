@@ -428,7 +428,8 @@ enclave size by tweaking ``sgx.enclave_size = "512M"``,
 doesn't help, it could be due to insufficient stack size: in this case try to
 increase ``sys.stack.size = "256K"``, ``sys.stack.size = "2M"``,
 ``sys.stack.size = "4M"`` and so on. Finally, if Gramine complains about
-insufficient number of TCSs or threads, increase ``sgx.max_threads = 4``,
+insufficient number of TCSs or threads only when :term:`EDMM` is not
+used (``sgx.edmm_enable = false``), increase ``sgx.max_threads = 4``,
 ``sgx.max_threads = 8``, ``sgx.max_threads = 16``, and so on.
 
 Do not forget about the cost of software encryption! Gramine transparently

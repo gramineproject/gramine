@@ -13,8 +13,6 @@
 #include "host_internal.h"
 #include "spinlock.h"
 
-extern bool g_vtune_profile_enabled;
-
 struct enclave_thread_map {
     unsigned int    tid;
     sgx_arch_tcs_t* tcs;
@@ -23,7 +21,7 @@ struct enclave_thread_map {
 static struct enclave_thread_map* g_enclave_thread_map;
 
 static size_t g_enclave_thread_num_at_startup;
-static size_t g_max_enclave_thread_num;
+static size_t g_enclave_thread_num;
 static size_t g_enclave_thread_map_size;
 
 bool g_sgx_enable_stats = false;
@@ -109,48 +107,25 @@ int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
         g_enclave_thread_map[i].tid = 0;
         g_enclave_thread_map[i].tcs = &enclave_tcs[i];
     }
-    g_max_enclave_thread_num = g_enclave_thread_num_at_startup;
+    g_enclave_thread_num = g_enclave_thread_num_at_startup;
     return 0;
 }
 
 static int add_dynamic_tcs(void) {
     int ret;
     sgx_arch_tcs_t* tcs = pal_get_host_tcb()->tcs;
-    if (g_sgx_enable_stats || g_vtune_profile_enabled) {
-        /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
-        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
-        if (ret < 0) {
-            log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            return ret;
-        }
-        int enclave_mem = ret;
-        uint64_t tcs_flags;
-        uint64_t* tcs_flags_ptr = (void*)tcs + offsetof(sgx_arch_tcs_t, flags);
-        ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags), (off_t)tcs_flags_ptr);
-        if (ret < 0) {
-            log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            DO_SYSCALL(close, enclave_mem);
-            return ret;
-        }
+    struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
 
-        tcs_flags |= TCS_FLAGS_DBGOPTIN;
-
-        ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags), (off_t)tcs_flags_ptr);
-        if (ret < 0) {
-            log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            DO_SYSCALL(close, enclave_mem);
-            return ret;
-        }
-
-        DO_SYSCALL(close, enclave_mem);
+    ret = set_tcs_debug_flag((void**)&tcs, 1);
+    if (ret < 0) {
+        return ret;
     }
 
     size_t i = 0;
-    struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
     spinlock_lock(&g_enclave_thread_map_lock);
-    for (i = 0; i < g_max_enclave_thread_num; i++) {
+    for (i = 0; i < g_enclave_thread_num; i++) {
         if (g_enclave_thread_map[i].tcs == tcs) {
-            log_error("Dynamic TCS page %p was already added to the list of enclave threads\n",
+            log_error("Dynamic TCS page %p was already added to the list of enclave threads",
                       (void*)tcs);
             ret = -EPERM;
             goto out;
@@ -162,18 +137,18 @@ static int add_dynamic_tcs(void) {
         }
     }
 
-    if (i == g_max_enclave_thread_num) {
+    if (i == g_enclave_thread_num) {
         /* Current map is full. */
-        if (g_max_enclave_thread_num > UINT32_MAX) {
+        if (g_enclave_thread_num > UINT32_MAX) {
             log_error("Number of simultaneous enclave threads exceeds %u, not supported",
                       UINT32_MAX);
             ret = -EOVERFLOW;
             goto out;
         }
 
-        g_max_enclave_thread_num *= 2;
+        g_enclave_thread_num *= 2;
         size_t new_enclave_thread_map_size =
-            ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * g_max_enclave_thread_num,
+            ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * g_enclave_thread_num,
                           PRESET_PAGESIZE);
         struct enclave_thread_map* new_enclave_thread_map =
             (struct enclave_thread_map*)DO_SYSCALL(mmap, NULL, new_enclave_thread_map_size,
@@ -206,7 +181,7 @@ out:
 void map_tcs(unsigned int tid) {
     while (true) {
         spinlock_lock(&g_enclave_thread_map_lock);
-        for (size_t i = 0; i < g_max_enclave_thread_num; i++) {
+        for (size_t i = 0; i < g_enclave_thread_num; i++) {
             if (!g_enclave_thread_map[i].tcs)
                 continue;
             if (!g_enclave_thread_map[i].tid) {
@@ -217,14 +192,19 @@ void map_tcs(unsigned int tid) {
                 return;
             }
         }
-        if (g_max_enclave_thread_num == g_enclave_thread_num_at_startup) {
+        if (g_enclave_thread_num == g_enclave_thread_num_at_startup) {
             /* no static or dynamic TCS pages available, bail out */
             spinlock_unlock(&g_enclave_thread_map_lock);
             return;
         }
         spinlock_unlock(&g_enclave_thread_map_lock);
-        /* There are dynamic TCS pages. Parent thread doesn't add new dynamic TCS page because
-         * another thread is exiting. Wait for it to finish `unmap_tcs()`.
+        /*
+         * At least one dynamic TCS is available in the in-enclave map of TCSs. However,
+         * the host-enclave map of TCSs may be briefly out of sync with the in-enclave map
+         * because the enclave decided to reuse some TCS that is being currently unmapped
+         * by another thread -- in this case, the host-enclave map may still have all TCS slots
+         * occupied, but only for a small window of time until the exiting thread calls
+         * `unmap_tcs()`.
          */
         CPU_RELAX();
     }
@@ -232,7 +212,7 @@ void map_tcs(unsigned int tid) {
 
 void unmap_tcs(void) {
     spinlock_lock(&g_enclave_thread_map_lock);
-    for (size_t i = 0; i < g_max_enclave_thread_num; i++)
+    for (size_t i = 0; i < g_enclave_thread_num; i++)
         if (g_enclave_thread_map[i].tcs == pal_get_host_tcb()->tcs) {
             g_enclave_thread_map[i].tid = 0;
             ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i] = 0;
@@ -245,7 +225,7 @@ void unmap_tcs(void) {
 int current_enclave_thread_cnt(void) {
     int ret = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
-    for (size_t i = 0; i < g_max_enclave_thread_num; i++)
+    for (size_t i = 0; i < g_enclave_thread_num; i++)
         if (g_enclave_thread_map[i].tid)
             ret++;
     spinlock_unlock(&g_enclave_thread_map_lock);
@@ -296,11 +276,9 @@ int pal_thread_init(void* tcbptr) {
     map_tcs(tid); /* updates tcb->tcs */
 
     if (!tcb->tcs) {
-        log_error(
-            "There are no available TCS pages left for a new thread!\n"
-            "Please try to increase sgx.max_threads in the manifest.\n"
-            "The current value is %lu",
-            g_enclave_thread_num_at_startup);
+        log_error("There are no available TCS pages left for a new thread. Please try to increase"
+                  " sgx.max_threads in the manifest. The current value is %lu",
+                  g_enclave_thread_num_at_startup);
         ret = -ENOMEM;
         goto out;
     }
@@ -418,7 +396,7 @@ int clone_thread(void* dynamic_tcs) {
 int get_tid_from_tcs(void* tcs) {
     int tid = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
-    for (size_t i = 0; i < g_max_enclave_thread_num; i++) {
+    for (size_t i = 0; i < g_enclave_thread_num; i++) {
         if (g_enclave_thread_map[i].tcs == tcs) {
             tid = g_enclave_thread_map[i].tid;
             break;
