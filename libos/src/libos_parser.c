@@ -691,6 +691,7 @@ static void parse_open_flags(struct print_buf* buf, va_list* ap) {
     switch (flags & O_ACCMODE) {
         case O_RDONLY:
             buf_puts(buf, "O_RDONLY");
+            flags &= ~O_RDONLY;
             break;
         case O_WRONLY:
             buf_puts(buf, "O_WRONLY");
