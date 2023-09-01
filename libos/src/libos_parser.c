@@ -688,15 +688,20 @@ static int parse_flags(struct print_buf* buf, int flags, const struct flag_table
 static void parse_open_flags(struct print_buf* buf, va_list* ap) {
     int flags = va_arg(*ap, int);
 
-    if (flags & O_WRONLY) {
-        buf_puts(buf, "O_WRONLY");
-        flags &= ~O_WRONLY;
-    } else if (flags & O_RDWR) {
-        buf_puts(buf, "O_RDWR");
-        flags &= ~O_RDWR;
-    } else if (flags & O_RDONLY) {
-        buf_puts(buf, "O_RDONLY");
-        flags &= ~O_RDONLY;
+    switch (flags & O_ACCMODE) {
+        case O_RDONLY:
+            buf_puts(buf, "O_RDONLY");
+            break;
+        case O_WRONLY:
+            buf_puts(buf, "O_WRONLY");
+            flags &= ~O_WRONLY;
+            break;
+        case O_RDWR:
+            buf_puts(buf, "O_RDWR");
+            flags &= ~O_RDWR;
+            break;
+        default:
+            break;
     }
 
     if (flags & O_APPEND) {
