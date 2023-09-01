@@ -31,13 +31,12 @@ extern uintptr_t g_enclave_base;
 
 struct enclave_thread_map {
     void* tcs;
-    bool used;
 };
 
 static struct enclave_thread_map* g_enclave_thread_map = NULL;
-static size_t g_enclave_thread_num                    = 0;
-static size_t g_avaliable_enclave_thread_num          = 0;
-static size_t g_max_enclave_thread_num                = 0;
+static size_t g_enclave_thread_num                     = 0;
+static size_t g_available_enclave_thread_num           = 0;
+static size_t g_enclave_thread_map_size                = 0;
 static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
 
 /*
@@ -62,17 +61,17 @@ static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
  *         TCS +--> +-------------------+
  *
  */
-#define THREAD_META_SIZE                                                           \
+#define THREAD_DATA_SIZE                                                           \
     (SSA_FRAME_NUM * SSA_FRAME_SIZE + PAGE_SIZE + PAGE_SIZE + ENCLAVE_STACK_SIZE + \
      ENCLAVE_SIG_STACK_SIZE)
-static void init_thread_meta(void* addr) {
+static void init_dynamic_thread(void* addr) {
     sgx_arch_tcs_t* tcs         = addr;
     void* ssa                   = (char*)tcs + PAGE_SIZE;
     struct pal_enclave_tcb* tcb = (struct pal_enclave_tcb*)(ssa + SSA_FRAME_NUM * SSA_FRAME_SIZE);
     void* sig_stack             = (char*)tcb + PAGE_SIZE;
     void* stack                 = sig_stack + ENCLAVE_SIG_STACK_SIZE;
 
-    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb too long");
+    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb doesdn't fit into one page");
     tcb->common.self                   = (PAL_TCB*)tcb;
     tcb->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
     tcb->enclave_size                  = GET_ENCLAVE_TCB(enclave_size);
@@ -97,24 +96,20 @@ static void init_thread_meta(void* addr) {
     tcs->ogs_limit = 0xfff;
 }
 
-/* Only decrease avaliable number if there are avaliable dynamic TCS. Otherwise allocate and
- * initialize a dynamic TCS page, return address of the new dynamic TCS page. Child thread will
- * choose avaliable static or dynamic TCS in host.
- */
 static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     int ret;
     spinlock_lock(&g_enclave_thread_map_lock);
-    if (g_avaliable_enclave_thread_num) {
-        g_avaliable_enclave_thread_num--;
+    if (g_available_enclave_thread_num) {
+        g_available_enclave_thread_num--;
         *out_tcs = NULL;
         ret      = 0;
         goto out;
     }
 
-    if (g_enclave_thread_num == g_max_enclave_thread_num) {
-        /* realloc g_enclave_thread_map to accommodate more objects (includes the very first time) */
-        g_max_enclave_thread_num += 8;
-        struct enclave_thread_map* tmp = calloc(g_max_enclave_thread_num, sizeof(*tmp));
+    if (g_enclave_thread_num == g_enclave_thread_map_size) {
+        /* realloc g_enclave_thread_map to accommodate more objects (includes very first time) */
+        g_enclave_thread_map_size += 8;
+        struct enclave_thread_map* tmp = calloc(g_enclave_thread_map_size, sizeof(*tmp));
         if (!tmp) {
             ret = PAL_ERROR_NOMEM;
             goto out;
@@ -126,15 +121,15 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     }
 
     void* addr;
-    ret = pal_internal_memory_alloc(THREAD_META_SIZE, &addr);
+    ret = pal_internal_memory_alloc(THREAD_DATA_SIZE, &addr);
     if (ret)
         goto out;
 
     g_enclave_thread_map[g_enclave_thread_num].tcs  = addr;
-    g_enclave_thread_map[g_enclave_thread_num].used = false;
     g_enclave_thread_num++;
 
-    init_thread_meta(addr);
+    init_dynamic_thread(addr);
+
     spinlock_unlock(&g_enclave_thread_map_lock);
 
     ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, 1);
@@ -170,17 +165,6 @@ void pal_start_thread(void) {
 
     if (!new_thread)
         return;
-
-    if (g_pal_linuxsgx_state.edmm_enabled) {
-        spinlock_lock(&g_enclave_thread_map_lock);
-        for (size_t i = 0; i < g_enclave_thread_num; i++) {
-            if (g_enclave_thread_map[i].tcs == new_thread->tcs) {
-                g_enclave_thread_map[i].used = true;
-                break;
-            }
-        }
-        spinlock_unlock(&g_enclave_thread_map_lock);
-    }
 
     struct thread_param* thread_param = (struct thread_param*)new_thread->param;
     int (*callback)(void*) = thread_param->callback;
@@ -248,7 +232,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     if (dynamic_tcs) {
         spinlock_lock(&g_enclave_thread_map_lock);
-        g_avaliable_enclave_thread_num++;
+        g_available_enclave_thread_num++;
         spinlock_unlock(&g_enclave_thread_map_lock);
     }
 
@@ -292,8 +276,7 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
             spinlock_lock(&g_enclave_thread_map_lock);
             for (size_t i = 0; i < g_enclave_thread_num; i++) {
                 if (g_enclave_thread_map[i].tcs == tcs) {
-                    g_enclave_thread_map[i].used = false;
-                    g_avaliable_enclave_thread_num++;
+                    g_available_enclave_thread_num++;
                     break;
                 }
             }

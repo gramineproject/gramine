@@ -710,9 +710,12 @@ Number of threads
 
 This syntax specifies the maximum number of threads that can be created inside
 the enclave (recall that SGX |~| v1 requires a |~| predetermined maximum number
-of thread slots). The application cannot have more threads than this limit *at
-a time* (however, it is possible to create new threads after old threads are
-destroyed).
+of thread slots) if :term:`EDMM` is not enabled (``sgx.edmm_enable = false``). The
+application cannot have more threads than this limit *at a time* (however, it
+is possible to create new threads after old threads are destroyed).
+It specifies the maximum number of preallocated thread slots if :term:`EDMM` is
+enabled (``sgx.edmm_enable = true``). The maximum number of threads can exceed it
+during enclave execution by dynamically allocating thread slots.
 
 Note that Gramine uses several helper threads internally:
 
