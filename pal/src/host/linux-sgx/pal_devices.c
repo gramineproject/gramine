@@ -42,6 +42,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
     if (!strcmp(uri, "tty")) {
         /* special case of "dev:tty" device which is the standard input + standard output */
+        hdl->dev.is_tty      = true;
         hdl->dev.nonblocking = false;
 
         if (access == PAL_ACCESS_RDONLY) {
@@ -57,6 +58,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         }
     } else {
         /* other devices must be opened through the host */
+        hdl->dev.is_tty      = false;
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
         ret = ocall_open(uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
@@ -119,9 +121,8 @@ static int dev_close(PAL_HANDLE handle) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    /* currently we just assign `0`/`1` FDs without duplicating, so close is a no-op for them */
     int ret = 0;
-    if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
+    if (handle->dev.fd != PAL_IDX_POISON && !handle->dev.is_tty) {
         ret = ocall_close(handle->dev.fd);
     }
     handle->dev.fd = PAL_IDX_POISON;
@@ -178,7 +179,7 @@ static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    if (handle->dev.fd == 0 || handle->dev.fd == 1) {
+    if (handle->dev.is_tty) {
         /* special case of "dev:tty" device which is the standard input + standard output */
         attr->share_flags  = 0;
         attr->pending_size = 0;
@@ -203,7 +204,7 @@ static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
     if (handle->hdr.type != PAL_TYPE_DEV)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->dev.fd == 0 || handle->dev.fd == 1))
+    if (!handle->dev.is_tty)
         return -PAL_ERROR_NOTSUPPORT;
 
     if (length != 0)
