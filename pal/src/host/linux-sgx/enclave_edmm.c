@@ -271,8 +271,8 @@ void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
 
 /* get a copy of bitvector slice according to the memory address and the size in bytes; also give
  * the starting index of the corresponding address in the slice */
-int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
-                        size_t* out_bv_index) {
+int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector,
+                        size_t* bitvector_size) {
     size_t start_page = address_to_index(addr);
     size_t num_pages = (size + g_enclave_page_tracker->page_size - 1) /
                        g_enclave_page_tracker->page_size;
@@ -280,23 +280,29 @@ int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector, s
 
     size_t start_byte = start_page / 8;
     size_t num_bytes = (num_pages + 7) / 8;
-    if (num_bytes > *bv_size)
+    if (num_bytes > *bitvector_size)
         return -PAL_ERROR_NOMEM;
-    *bv_size = num_bytes;
+    *bitvector_size = num_bytes;
 
+    size_t start_offset = start_page % 8;
     spinlock_lock(&g_enclave_page_lock);
-    memcpy(bitvector, &g_enclave_page_tracker->data[start_byte], num_bytes);
+    if (start_offset == 0) {
+        memcpy(bitvector, &g_enclave_page_tracker->data[start_byte], num_bytes);
+    } else {
+        unsigned char val_cur = g_enclave_page_tracker->data[start_byte];
+        for (size_t i = 0; i < num_bytes; i++) {
+            unsigned char val_next = g_enclave_page_tracker->data[start_byte + i + 1];
+            bitvector[i] = ((val_next & (0xFF >> (8 - start_offset))) << (8 - start_offset)) |
+                           ((val_cur & (0xFF << start_offset)) >> start_offset);
+            val_cur = val_next;
+        }
+    }
     spinlock_unlock(&g_enclave_page_lock);
 
-    *out_bv_index = start_page % 8;
-    if (*out_bv_index != 0) {
-        /* clear the trailing bits in the first byte of the slice */
-        bitvector[0] &= (0xFF << *out_bv_index);
-    }
-
-    if (end_page % 8 != 7) {
+    size_t end_offset = (end_page % 8 + 8 - start_offset) % 8;
+    if (end_offset % 8 != 7) {
         /* clear the leading bits in the last byte of the slice */
-        bitvector[num_bytes - 1] &= (0xFF >> (7 - (end_page % 8)));
+        bitvector[num_bytes - 1] &= (0xFF >> (7 - end_offset));
     }
 
     return 0;

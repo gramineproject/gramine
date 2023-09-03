@@ -1007,17 +1007,17 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 /*!
  * \brief Get the committed pages of a given memory area via a bitvector.
  *
- * \param         addr         Starting address of the memory area.
- * \param         size         Size of the memory area.
- * \param[in,out] bitvector    On success, will contain the commit status of the pages in the memory
- *                             area.
- * \param[in,out] bv_size      On success, will contain the actual size of the bitvector.
- * \param[out]    out_bv_index On success, will contain the starting index of the corresponding
- *                             address in the bitvector.
+ * \param         addr           Starting address of the memory area.
+ * \param         size           Size of the memory area.
+ * \param[in,out] bitvector      On success, will contain the commit status of the pages in the memory
+ *                               area.
+ * \param[in,out] bitvector_size On success, will contain the actual size of the bitvector.
  *
- * Returns all-ones for non-SGX non-EDMM PALs; returns a populated bitvector slice for SGX EDMM PAL.
+ * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
+ * be sent to the child process, as a perf optimization specific for SGX EDMM). Returns all-ones for
+ * non-SGX non-EDMM PALs; returns a populated bitvector slice for SGX EDMM PAL.
  */
-int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
-                         size_t* out_bv_index);
+int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
+                         size_t* bitvector_size);
 
 #undef INSIDE_PAL_H

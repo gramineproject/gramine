@@ -37,7 +37,7 @@ extern enclave_page_tracker_t* g_enclave_page_tracker;
 void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size, size_t page_size);
 void set_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 void unset_enclave_addr_range(uintptr_t start_address, size_t num_pages);
-int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector, size_t* bv_size,
-                        size_t* out_bv_index);
+int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector,
+                        size_t* bitvector_size);
 int remove_committed_pages(uintptr_t start_addr, size_t count);
 int add_uncommitted_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags);

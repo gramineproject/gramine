@@ -1453,34 +1453,28 @@ BEGIN_CP_FUNC(vma) {
                 /* Send anonymous memory region. */
                 if (vma->flags & MAP_NORESERVE) {
                     /* lazy allocation of pages, send only committed pages */
-                    size_t start_idx;
-                    size_t bv_size = ((vma->length + PAGE_SIZE - 1) / PAGE_SIZE + 7) / 8 + 1;
-                    unsigned char* bitvector = calloc(1, bv_size);
+                    size_t bitvector_size = ((vma->length + PAGE_SIZE - 1) / PAGE_SIZE + 7) / 8;
+                    unsigned char* bitvector = calloc(1, bitvector_size);
                     if (!bitvector)
                         return -ENOMEM;
 
                     int ret = PalGetCommittedPages((uintptr_t)vma->addr, vma->length, bitvector,
-                                                   &bv_size, &start_idx);
+                                                   &bitvector_size);
                     if (ret < 0) {
                         free(bitvector);
                         return pal_to_unix_errno(ret);
                     }
 
-                    size_t byte_idx = 0;
-                    while (byte_idx < bv_size) {
+                    for (size_t byte_idx = 0; byte_idx < bitvector_size; byte_idx++) {
                         unsigned char byte = bitvector[byte_idx];
-                        size_t bit_idx = 0;
-                        while (bit_idx < 8) {
+                        for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
                             if (byte & (1 << bit_idx)) {
                                 struct libos_mem_entry* mem;
-                                size_t relative_idx = (byte_idx * 8 + bit_idx - start_idx);
-                                DO_CP_SIZE(memory, vma->addr + relative_idx * PAGE_SIZE, PAGE_SIZE,
-                                           &mem);
+                                DO_CP_SIZE(memory, vma->addr + (byte_idx * 8 + bit_idx) * PAGE_SIZE,
+                                           PAGE_SIZE, &mem);
                                 mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                             }
-                            bit_idx++;
                         }
-                        byte_idx++;
                     }
                     free(bitvector);
                 } else {
