@@ -43,7 +43,7 @@ The above dummy values will suffice for simple experiments, but if you wish to
 run `sgx-quote.py` and verify the output, you will need to provide an
 [SPID recognized by Intel][spid].
 
-[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
+[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
 
 # Run Python with Gramine
 

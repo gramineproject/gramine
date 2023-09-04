@@ -12,7 +12,7 @@ DCAP software infrastructure must be installed and work correctly on the host.
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
-https://gramine.readthedocs.io/en/latest/attestation.html.
+https://gramine.readthedocs.io/en/stable/attestation.html.
 
 ## Secret Provisioning servers
 
@@ -85,7 +85,7 @@ export RA_TLS_ALLOW_SW_HARDENING_NEEDED=1
 - Secret Provisioning flows, EPID-based (IAS) attestation (you will need to
   provide an [SPID and the corresponding IAS API keys][spid]):
 
-[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
+[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
 
 ```sh
 make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \

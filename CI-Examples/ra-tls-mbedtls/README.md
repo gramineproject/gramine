@@ -18,7 +18,7 @@ installed together with Gramine (for DCAP version, you need `meson setup ...
 
 The current example works with both EPID (IAS) and ECDSA (DCAP) remote
 attestation schemes. For more documentation, refer to
-https://gramine.readthedocs.io/en/latest/attestation.html.
+https://gramine.readthedocs.io/en/stable/attestation.html.
 
 ## RA-TLS server
 
@@ -71,7 +71,7 @@ obtain them is to run `gramine-sgx-sigstruct-view server.sig`.
 Moreover, for EPID-based (IAS) attestation, you will need to provide
 an [SPID and the corresponding IAS API keys][spid].
 
-[spid]: https://gramine.readthedocs.io/en/latest/sgx-intro.html#term-spid
+[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
 
 For all examples, we set the following environment variables:
 ```sh
