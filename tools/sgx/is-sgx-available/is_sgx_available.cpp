@@ -165,7 +165,7 @@ public:
     bool cet_supported() const { return cet_supported_; }
     // Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, ISVFAMILYID report fields)
     bool kss_supported() const { return kss_supported_; }
-    // AEX Notify support
+    // AEX-Notify support
     bool aex_notify_supported() const { return aex_notify_supported_; }
     bool edeccssa_supported() const { return edeccssa_supported_; }
     // Fields of MISC region of State Save Area (see Table 34-12 in the SMD).
@@ -217,8 +217,8 @@ void print_detailed_info(const SgxCpuChecker& cpu_checker) {
            bool2str(cpu_checker.cet_supported()));
     printf("Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, "
            "ISVFAMILYID report fields): %s\n", bool2str(cpu_checker.kss_supported()));
-    printf("AEX Notify support: %s\n", bool2str(cpu_checker.aex_notify_supported()));
-    printf("AEX Notify (EDECCSSA) support: %s\n", bool2str(cpu_checker.edeccssa_supported()));
+    printf("AEX-Notify support: %s\n", bool2str(cpu_checker.aex_notify_supported()));
+    printf("AEX-Notify (EDECCSSA) support: %s\n", bool2str(cpu_checker.edeccssa_supported()));
     printf("Max enclave size (32-bit): 0x%" PRIx64 "\n", cpu_checker.maximum_enclave_size_x86());
     printf("Max enclave size (64-bit): 0x%" PRIx64 "\n", cpu_checker.maximum_enclave_size_x64());
     printf("EPC size: 0x%" PRIx64 "\n", cpu_checker.epc_region_size());

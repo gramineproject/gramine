@@ -101,13 +101,12 @@ class Manifest:
         sgx.setdefault('require_exinfo', False)
         sgx.setdefault('enable_stats', False)
         sgx.setdefault('edmm_enable', False)
+        sgx.setdefault('experimental_enable_aex_notify', False)
 
         if sgx['edmm_enable']:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_WITH_EDMM)
         else:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_NO_EDMM)
-
-        sgx.setdefault('enable_aex_notify', False)
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +

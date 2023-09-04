@@ -84,7 +84,7 @@ def collect_bits(manifest_sgx, options_dict):
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
-        'enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
+        'experimental_enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
     }
 
     xfrms_dict = {

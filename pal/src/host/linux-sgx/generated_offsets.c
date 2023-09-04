@@ -56,7 +56,6 @@ const struct generated_offset generated_offsets[] = {
     OFFSET_T(SGX_GPR_RIP, sgx_pal_gpr_t, rip),
     OFFSET_T(SGX_GPR_EXITINFO, sgx_pal_gpr_t, exitinfo),
     OFFSET_T(SGX_GPR_AEXNOTIFY, sgx_pal_gpr_t, aexnotify),
-    OFFSET_T(SGX_GPR_FSBASE, sgx_pal_gpr_t, fsbase),
     DEFINE(SGX_GPR_SIZE, sizeof(sgx_pal_gpr_t)),
 
     /* sgx_cpu_context_t */
@@ -106,9 +105,7 @@ const struct generated_offset generated_offsets[] = {
     OFFSET(SGX_HEAP_MIN, pal_enclave_tcb, heap_min),
     OFFSET(SGX_HEAP_MAX, pal_enclave_tcb, heap_max),
     OFFSET(SGX_CLEAR_CHILD_TID, pal_enclave_tcb, clear_child_tid),
-    OFFSET(SGX_AEX_COUNTER, pal_enclave_tcb, aex_counter),
     OFFSET(SGX_READY_FOR_AEX_NOTIFY, pal_enclave_tcb, ready_for_aex_notify),
-    OFFSET(SGX_AEX_NOTIFY_FLAG, pal_enclave_tcb, aex_notify_flag),
 
     /* struct pal_host_tcb aka PAL_HOST_TCB */
     OFFSET(PAL_HOST_TCB_TCS, pal_host_tcb, tcs),
@@ -172,7 +169,6 @@ const struct generated_offset generated_offsets[] = {
 
     /* pal.h */
     DEFINE(PAL_EVENT_NO_EVENT, PAL_EVENT_NO_EVENT),
-    DEFINE(PAL_EVENT_INTERRUPTED, PAL_EVENT_INTERRUPTED),
     DEFINE(PAL_EVENT_NUM_BOUND, PAL_EVENT_NUM_BOUND),
 
     /* errno */
