@@ -7,6 +7,8 @@
  * Tests for renaming and deleting files. Mostly focus on cases where a file is still open.
  */
 
+#define _DEFAULT_SOURCE /* fchmod */
+
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -224,6 +226,23 @@ static void test_unlink_and_write(const char* path) {
         err(1, "close unlinked %s", path);
 }
 
+static void test_unlink_fchmod(const char* path) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path, /*message=*/NULL, /*len=*/0);
+
+    if (unlink(path) == -1)
+        err(1, "unlink");
+
+    should_not_exist(path);
+
+    if (fchmod(fd, (mode_t)0644) == -1)
+        err(1, "fchmod");
+
+    if (close(fd) == -1)
+        err(1, "close unlinked %s", path);
+}
+
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
@@ -239,6 +258,7 @@ int main(int argc, char* argv[]) {
     test_rename_open_file(path1, path2);
     test_unlink_and_recreate(path1);
     test_unlink_and_write(path1);
+    test_unlink_fchmod(path1);
     printf("TEST OK\n");
     return 0;
 }

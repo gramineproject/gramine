@@ -210,6 +210,12 @@ static int tmpfs_chmod(struct libos_dentry* dent, mode_t perm) {
     return 0;
 }
 
+static int tmpfs_fchmod(struct libos_handle* hdl, mode_t perm) {
+    __UNUSED(hdl);
+    __UNUSED(perm);
+    return 0;
+}
+
 static ssize_t tmpfs_read(struct libos_handle* hdl, void* buf, size_t size, file_off_t* pos) {
     ssize_t ret;
 
@@ -301,6 +307,7 @@ struct libos_fs_ops tmp_fs_ops = {
     .poll     = &generic_inode_poll,
     .mmap     = &generic_emulated_mmap,
     .msync    = &generic_emulated_msync,
+    .fchmod   = &tmpfs_fchmod,
 };
 
 struct libos_d_ops tmp_d_ops = {
