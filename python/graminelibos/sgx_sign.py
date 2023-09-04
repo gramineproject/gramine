@@ -100,7 +100,7 @@ def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, sec
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
-        'enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
+        'experimental_enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
     }
     flags = collect_bits(manifest_sgx, flags_dict)
     if ARCHITECTURE == 'amd64':

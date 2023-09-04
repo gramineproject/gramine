@@ -199,6 +199,7 @@ typedef struct {
     uint64_t fsbase;
     uint64_t gsbase;
 } sgx_pal_gpr_t;
+static_assert(offsetof(sgx_pal_gpr_t, aexnotify) == 167, "The offset of aexnotify must be 167 in SSA.");
 
 typedef struct {
     uint64_t rax;

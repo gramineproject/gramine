@@ -152,7 +152,7 @@ bool is_wrfsbase_supported(void) {
     uint32_t cpuinfo[4];
     cpuid(EXTENDED_FEATURE_FLAGS_LEAF, 0, cpuinfo);
 
-    if (!(cpuinfo[1] & 0x1)) {
+    if (!(cpuinfo[CPUID_WORD_EBX] & 0x1)) {
         log_error(
             "{RD,WR}{FS,GS}BASE instructions are not permitted on this platform. Please check the "
             "instructions under \"Building with SGX support\" from Gramine documentation.");
@@ -162,27 +162,21 @@ bool is_wrfsbase_supported(void) {
     return true;
 }
 
-
 bool is_aexnotify_supported(void) {
     uint32_t cpuinfo[4];
-    memset(cpuinfo, 0, sizeof(cpuinfo));
 
-    /* Check the platform support AEX Notify or not. */
-    cpuid(0x12, 1, cpuinfo);
+    /* Check the platform support AEX-Notify or not. */
+    cpuid(INTEL_SGX_LEAF, 1, cpuinfo);
 
-    if (!((cpuinfo[0] >> 10) & 0x1)) {
-        log_debug(
-            "AEX Notify is not supported.");
+    if (!((cpuinfo[CPUID_WORD_EAX] >> 10) & 0x1)) {
+        log_debug("AEX-Notify hardware feature is not supported.");
         return false;
     }
 
-    memset(cpuinfo, 0, sizeof(cpuinfo));
-    /* Check the platform support ENCLU[EDECCSSA] leaf instruction or not. */
-    cpuid(0x12, 0, cpuinfo);
+    cpuid(INTEL_SGX_LEAF, 0, cpuinfo);
 
-    if (!((cpuinfo[0] >> 11) & 0x1)) {
-        log_debug(
-            "ENCLU[EDECCSSA] leaf instruction is not supported.");
+    if (!((cpuinfo[CPUID_WORD_EAX] >> 11) & 0x1)) {
+        log_debug("ENCLU[EDECCSSA] leaf instruction is not supported.");
         return false;
     }
     return true;
