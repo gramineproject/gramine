@@ -212,35 +212,24 @@ long libos_syscall_fchmod(int fd, mode_t mode) {
     /* This isn't documented, but that's what Linux does. */
     mode_t perm = mode & 07777;
 
-    struct libos_dentry* dent = hdl->dentry;
     int ret = 0;
-
-    lock(&g_dcache_lock);
-    if (!dent) {
-        ret = -EINVAL;
-        goto out;
-    }
-
-    if (!dent->inode) {
-        /* TODO: the `chmod` callback should take a handle, not dentry; otherwise we're not able to
-         * chmod an unlinked file */
+    if (!hdl->inode) {
         ret = -ENOENT;
         goto out;
     }
 
-    struct libos_fs* fs = dent->inode->fs;
-    if (fs && fs->d_ops && fs->d_ops->chmod) {
-        ret = fs->d_ops->chmod(dent, perm);
+    struct libos_fs* fs = hdl->inode->fs;
+    if (fs && fs->d_ops && fs->d_ops->fchmod) {
+        ret = fs->d_ops->fchmod(hdl, perm);
         if (ret < 0)
             goto out;
     }
 
-    lock(&dent->inode->lock);
-    dent->inode->perm = perm;
-    unlock(&dent->inode->lock);
+    lock(&hdl->inode->lock);
+    hdl->inode->perm = perm;
+    unlock(&hdl->inode->lock);
 
 out:
-    unlock(&g_dcache_lock);
     put_handle(hdl);
     return ret;
 }

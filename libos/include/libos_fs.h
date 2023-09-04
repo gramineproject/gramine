@@ -376,6 +376,18 @@ struct libos_d_ops {
     /*
      * \brief Change file permissions.
      *
+     * \param hdl  File handle.
+     * \param perm  New permissions for the file.
+     *
+     * Changes the permissions of a file associated with a given file descriptor.
+     *
+     * On success, the caller should update `hdl->inode->perm`.
+     */
+    int (*fchmod)(struct libos_handle* hdl, mode_t perm);
+
+    /*
+     * \brief Change file permissions.
+     *
      * \param dent  Dentry, positive.
      * \param perm  New permissions for the file.
      *
