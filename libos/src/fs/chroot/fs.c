@@ -467,6 +467,27 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     return 0;
 }
 
+static int chroot_fchmod(struct libos_handle* hdl, mode_t perm) {
+    assert(hdl->inode);
+    int ret;
+
+    lock(&hdl->inode->lock);
+    mode_t host_perm = HOST_PERM(perm);
+    PAL_STREAM_ATTR attr = {.share_flags = host_perm};
+    ret = PalStreamAttributesSetByHandle(hdl->pal_handle, &attr);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    hdl->inode->perm = perm;
+    ret = 0;
+
+out:
+    unlock(&hdl->inode->lock);
+    return ret;
+}
+
 struct libos_fs_ops chroot_fs_ops = {
     .mount      = &chroot_mount,
     .flush      = &chroot_flush,
@@ -492,6 +513,7 @@ struct libos_d_ops chroot_d_ops = {
     .unlink  = &chroot_unlink,
     .rename  = &chroot_rename,
     .chmod   = &chroot_chmod,
+    .fchmod  = &chroot_fchmod,
 };
 
 struct libos_fs chroot_builtin_fs = {
