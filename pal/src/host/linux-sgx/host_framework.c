@@ -164,8 +164,6 @@ bool is_wrfsbase_supported(void) {
 
 bool is_aexnotify_supported(void) {
     uint32_t cpuinfo[4];
-
-    /* Check the platform support AEX-Notify or not. */
     cpuid(INTEL_SGX_LEAF, 1, cpuinfo);
 
     if (!((cpuinfo[CPUID_WORD_EAX] >> 10) & 0x1)) {
