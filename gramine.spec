@@ -28,7 +28,7 @@ BuildRequires: python3-recommonmark
 BuildRequires: python3-sphinx
 BuildRequires: python3-sphinx_rtd_theme
 
-Requires: python3-click
+Requires: python3-click >= 6.7
 Requires: python3-cryptography
 Requires: python3-jinja2
 Requires: python3-protobuf

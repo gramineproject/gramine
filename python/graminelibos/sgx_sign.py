@@ -550,7 +550,10 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     type=click.File('rb'),
     default=os.fspath(SGX_RSA_KEY_PATH),
     help='specify signing key (.pem) file')
-@click.option('--passphrase', '--password', '-p', metavar='PASSPHRASE',
+# Explicit 'passphrase' below is for compatibility with click < 6.8 (supported on .el8),
+# see https://github.com/pallets/click/issues/793 for more info.
+# TODO after deprecating .el8: remove this workaround
+@click.option('--passphrase', '--password', '-p', 'passphrase', metavar='PASSPHRASE',
     help='optional passphrase to decrypt the key')
 def sign_with_file(ctx, key, passphrase):
     try:
