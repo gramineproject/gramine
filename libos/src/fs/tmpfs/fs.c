@@ -307,6 +307,7 @@ struct libos_fs_ops tmp_fs_ops = {
     .poll     = &generic_inode_poll,
     .mmap     = &generic_emulated_mmap,
     .msync    = &generic_emulated_msync,
+    .fchmod   = &tmpfs_fchmod,
 };
 
 struct libos_d_ops tmp_d_ops = {
@@ -319,7 +320,6 @@ struct libos_d_ops tmp_d_ops = {
     .unlink      = &tmpfs_unlink,
     .rename      = &tmpfs_rename,
     .chmod       = &tmpfs_chmod,
-    .fchmod      = &tmpfs_fchmod,
     .idrop       = &tmpfs_idrop,
     .icheckpoint = &tmpfs_icheckpoint,
     .irestore    = &tmpfs_irestore,

@@ -219,8 +219,8 @@ long libos_syscall_fchmod(int fd, mode_t mode) {
     }
 
     struct libos_fs* fs = hdl->inode->fs;
-    if (fs && fs->d_ops && fs->d_ops->fchmod) {
-        ret = fs->d_ops->fchmod(hdl, perm);
+    if (fs && fs->fs_ops && fs->fs_ops->fchmod) {
+        ret = fs->fs_ops->fchmod(hdl, perm);
         if (ret < 0)
             goto out;
     }
