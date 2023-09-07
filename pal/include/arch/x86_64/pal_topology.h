@@ -112,10 +112,13 @@ struct pal_topo_info {
 
     /*
      * Has `online_numa_nodes_cnt * online_numa_nodes_cnt` valid elements, where
-     * `online_numa_nodes_cnt` is the number of NUMA nodes that have `is_online == true`.
+     * `online_numa_nodes_cnt` is the number of NUMA nodes that have `is_online == true`. For
+     * simplicity, this array is allocated as `possible_numa_nodes_cnt * possible_numa_nodes_cnt`
+     * but only the first `online_numa_nodes_cnt` elements in each row/column are usable, and the
+     * rest are invalid.
      *
      * Value in `numa_distance_matrix[i*online_numa_nodes_cnt + j]` is a NUMA distance from online
-     * node i to online node j.
+     * node i to online node j (i.e. indexing only through the online nodes).
      *
      * It may be surprising that this array contains only online nodes, but this is what Linux does:
      *   https://elixir.bootlin.com/linux/v6.4/source/drivers/base/node.c#L543
