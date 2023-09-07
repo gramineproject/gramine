@@ -373,9 +373,6 @@ out:
 }
 
 static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
-    assert(hdl->inode);
-    lock(&hdl->inode->lock);
-
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     int ret = PalStreamAttributesSetByHandle(hdl->pal_handle, &attr);
@@ -383,7 +380,6 @@ static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
-    hdl->inode->perm = perm;
     ret = 0;
 
 out:
@@ -507,6 +503,7 @@ struct libos_fs_ops chroot_encrypted_fs_ops = {
     .migrate    = &chroot_encrypted_migrate,
     .mmap       = &generic_emulated_mmap,
     .msync      = &generic_emulated_msync,
+    .fchmod     = &chroot_encrypted_fchmod,
 };
 
 struct libos_d_ops chroot_encrypted_d_ops = {
@@ -519,7 +516,6 @@ struct libos_d_ops chroot_encrypted_d_ops = {
     .unlink        = &chroot_encrypted_unlink,
     .rename        = &chroot_encrypted_rename,
     .chmod         = &chroot_encrypted_chmod,
-    .fchmod        = &chroot_encrypted_fchmod,
     .idrop         = &chroot_encrypted_idrop,
 };
 

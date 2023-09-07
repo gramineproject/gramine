@@ -185,6 +185,18 @@ struct libos_fs_ops {
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
     int (*migrate)(void* checkpoint, void** mount_data);
+
+    /*
+     * \brief Change file permissions.
+     *
+     * \param hdl  File handle.
+     * \param perm  New permissions for the file.
+     *
+     * Changes the permissions of a file associated with a given file descriptor.
+     *
+     * On success, the caller should update `hdl->inode->perm`.
+     */
+    int (*fchmod)(struct libos_handle* hdl, mode_t perm);
 };
 
 /* Limit for the number of dentry children. This is mostly to prevent overflow if (untrusted) host
@@ -372,18 +384,6 @@ struct libos_d_ops {
      * The caller should hold `g_dcache_lock`. On success, the caller should free `*out_target`.
      */
     int (*follow_link)(struct libos_dentry* dent, char** out_target);
-
-    /*
-     * \brief Change file permissions.
-     *
-     * \param hdl  File handle.
-     * \param perm  New permissions for the file.
-     *
-     * Changes the permissions of a file associated with a given file descriptor.
-     *
-     * On success, the caller should update `hdl->inode->perm`.
-     */
-    int (*fchmod)(struct libos_handle* hdl, mode_t perm);
 
     /*
      * \brief Change file permissions.
