@@ -21,8 +21,18 @@
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
 static int shm_mount(struct libos_mount_params* params, void** mount_data) {
-    __UNUSED(params);
     __UNUSED(mount_data);
+
+    if (!params->uri) {
+        log_error("Missing shared memory URI");
+        return -EINVAL;
+    }
+    if (!strstartswith(params->uri, URI_PREFIX_FILE)
+            && !strstartswith(params->uri, URI_PREFIX_DEV)) {
+        log_error("'%s' is invalid shared memory URI", params->uri);
+        return -EINVAL;
+    }
+
     return 0;
 }
 

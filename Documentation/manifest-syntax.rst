@@ -424,6 +424,9 @@ Gramine currently supports the following types of mount points:
 * ``encrypted``: Host-backed encrypted files. See :ref:`encrypted-files` for
   more information.
 
+* ``shm``: Untrusted shared memory files. See :ref:`untrusted-shared-memory` for
+  more information.
+
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
   empty on Gramine instance startup) and are destroyed when a Gramine instance
@@ -444,43 +447,6 @@ Start (current working) directory
 
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
-
-Untrusted shared memory
-^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sys.insecure__shared_memory = "[none|passthrough]"
-    (Default: "none")
-
-By default, Gramine disables shared memory (i.e., memory shared with the host).
-In Gramine, shared memory applies to pseudo-files located under `/dev/shm/` and
-mapped into application address space with the `MAP_SHARED` flag.
-
-This disablement by default is particularly important for the SGX environment, where
-all data put in shared memory (i.e. memory residing outside of the SGX enclave)
-must be preliminarily encrypted or at least integrity-protected. Unmodified
-applications almost never have such "protect data in shared memory" logic, so
-enabling shared memory in Gramine by default would be insecure.
-
-Specifying `"passthrough"` explicitly allows shared memory. To be more precise,
-the `/dev/shm/` host directory (used for sharing data between processes and devices)
-is mounted inside Gramine, so that the application may create files -- called "shared
-memory objects" in POSIX -- under this directory (for example, this is how `shm_open()`
-Glibc function works).
-
-.. note ::
-   Shared memory is insecure by itself in SGX environments:
-
-       - Typically applications do not encrypt the data put in shared memory,
-         which may lead to leaks of enclave data.
-       - Untrusted host can modify data in shared memory as it wishes, so
-         applications could see or operate on maliciously modified data.
-
-   It is the responsibility of the app developer to correctly use shared memory, with
-   security implications in mind. In most cases, data in shared memory should be
-   preliminarily encrypted or integrity-protected with a key pre-shared between all
-   participating processes (and possibly devices that use this shared memory).
 
 SGX syntax
 ----------
@@ -817,6 +783,53 @@ Gramine:
    and using the same key obtained via ``/dev/attestation/keys/_sgx_mrenclave``
    in the application is insecure. If you need to derive encryption keys from
    such a "doubly-used" key, you must apply a KDF.
+
+.. _untrusted-shared-memory:
+
+Untrusted shared memory
+^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    fs.mounts = [
+      { type = "shm", path = "[PATH]", uri = "[URI]" },
+    ]
+
+This syntax allows mounting shared memory objects that are accessible by
+Gramine, by application running inside Gramine, by host OS, or by native
+process. In Gramine, shared memory applies to pseudo-files and mapped into
+application address space with the `MAP_SHARED` flag.
+
+URI can be a file or a directory. If a directory is mounted, all existing
+files are treated as shared memory objects, while directories within it are
+inaccessible. New files created in a shared memory mount are also automatically
+treated as shared memory objects. Creating directories in a shared memory mount
+is not allowed.
+
+Typically, `/dev/shm/` is mounted. To be more precise, the `/dev/shm/` host
+directory (used for sharing data between processes and devices) is mounted
+inside Gramine, so that the application may create files -- called "shared
+memory objects" in POSIX -- under this directory (for example, this is how
+`shm_open()` Glibc function works).
+
+In the SGX environment, all data put in shared memory (i.e. memory residing
+outside of the SGX enclave) must be preliminarily encrypted or at least
+integrity-protected. Unmodified applications almost never have such "protect
+data in shared memory" logic, so enabling shared memory in Gramine by default
+would be insecure.
+
+.. note ::
+   Shared memory is insecure by itself in SGX environments:
+
+       - Typically applications do not encrypt the data put in shared memory,
+         which may lead to leaks of enclave data.
+       - Untrusted host can modify data in shared memory as it wishes, so
+         applications could see or operate on maliciously modified data.
+
+   It is the responsibility of the app developer to correctly use shared memory, with
+   security implications in mind. In most cases, data in shared memory should be
+   preliminarily encrypted or integrity-protected with a key pre-shared between all
+   participating processes (and possibly devices that use this shared memory).
 
 File check policy
 ^^^^^^^^^^^^^^^^^

@@ -7,9 +7,6 @@ loader.insecure__use_cmdline_argv = true
 # for eventfd test
 sys.insecure__allow_eventfd = true
 
-# for untrusted shared memory test (`shm.c`)
-sys.insecure__shared_memory = "passthrough"
-
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
@@ -22,6 +19,8 @@ fs.mounts = [
   { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
   { type = "encrypted", path = "/encrypted_file_mrenclave.dat", uri = "file:encrypted_file_mrenclave.dat", key_name = "_sgx_mrenclave" },
   { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
+  # for untrusted shared memory test (`shm.c`)
+  { type = "shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
 sgx.max_threads = 16
