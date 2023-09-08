@@ -477,8 +477,10 @@ out:
 }
 
 static int chroot_fchmod(struct libos_handle* hdl, mode_t perm) {
+    assert(hdl->inode);
     int ret;
 
+    lock(&hdl->inode->lock);
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     ret = PalStreamAttributesSetByHandle(hdl->pal_handle, &attr);
@@ -487,9 +489,11 @@ static int chroot_fchmod(struct libos_handle* hdl, mode_t perm) {
         goto out;
     }
 
+    hdl->inode->perm = perm;
     ret = 0;
 
 out:
+    unlock(&hdl->inode->lock);
     return ret;
 }
 

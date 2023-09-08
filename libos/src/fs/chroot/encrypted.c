@@ -233,7 +233,6 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
     get_inode(inode);
     hdl->type = TYPE_CHROOT_ENCRYPTED;
     hdl->pos = 0;
-    hdl->pal_handle = enc->pal_handle;
     ret = 0;
 out:
     free(uri);
@@ -373,16 +372,22 @@ out:
 }
 
 static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
+    assert(hdl->inode);
+    lock(&hdl->inode->lock);
+
+    struct libos_encrypted_file* enc = hdl->inode->data;
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
-    int ret = PalStreamAttributesSetByHandle(hdl->pal_handle, &attr);
+    int ret = PalStreamAttributesSetByHandle(enc->pal_handle, &attr);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
+    hdl->inode->perm = perm;
     ret = 0;
 
 out:
+    unlock(&hdl->inode->lock);
     return ret;
 }
 
