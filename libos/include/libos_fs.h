@@ -189,12 +189,12 @@ struct libos_fs_ops {
     /*
      * \brief Change file permissions.
      *
-     * \param hdl  File handle.
+     * \param hdl   File handle.
      * \param perm  New permissions for the file.
      *
-     * Changes the permissions of a file associated with a given file descriptor.
+     * Changes the permissions of a file associated with a given file handle.
      *
-     * On success, the caller should update `hdl->inode->perm`.
+     * On success, this function should update `hdl->inode->perm`.
      */
     int (*fchmod)(struct libos_handle* hdl, mode_t perm);
 };

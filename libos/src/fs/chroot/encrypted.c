@@ -383,7 +383,6 @@ static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
     ret = 0;
 
 out:
-    unlock(&hdl->inode->lock);
     return ret;
 }
 
