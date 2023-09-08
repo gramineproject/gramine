@@ -246,7 +246,7 @@ int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
     if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
         return 0;
 
-    /* set TCS.FLAGS.DBGOPTIN in all enclave threads to enable perf counters, Intel PT, etc */
+    /* set TCS.FLAGS.DBGOPTIN in enclave threads to enable perf counters, Intel PT, etc */
     int ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
     if (ret < 0) {
         log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
@@ -276,8 +276,7 @@ int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
     }
     ret = 0;
 out:
-    if (enclave_mem >= 0)
-        DO_SYSCALL(close, enclave_mem);
+    DO_SYSCALL(close, enclave_mem);
     return ret;
 }
 
