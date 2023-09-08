@@ -71,7 +71,7 @@ static void init_dynamic_thread(void* addr) {
     void* sig_stack             = (char*)tcb + PAGE_SIZE;
     void* stack                 = sig_stack + ENCLAVE_SIG_STACK_SIZE;
 
-    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb doesdn't fit into one page");
+    static_assert(sizeof(*tcb) <= PAGE_SIZE, "tcb doesn't fit into one page");
     tcb->common.self                   = (PAL_TCB*)tcb;
     tcb->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
     tcb->enclave_size                  = GET_ENCLAVE_TCB(enclave_size);
@@ -217,6 +217,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
             goto out_err;
         }
     }
+
     spinlock_lock(&g_thread_list_lock);
     LISTP_ADD_TAIL(&new_thread->thread, &g_thread_list, list);
     spinlock_unlock(&g_thread_list_lock);

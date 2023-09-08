@@ -469,12 +469,10 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
     }
 
     if (type == SGX_PAGE_TYPE_TCS) {
-        /* ask Intel SGX driver to actually mmap the TCS pages */
-        uint64_t mapped = DO_SYSCALL(mmap, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE,
-                                     MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
-        if (IS_PTR_ERR(mapped)) {
-            ret = PTR_TO_ERR(mapped);
-            log_error("Cannot map enclave pages: %s", unix_strerror(ret));
+        /* TCS pages must have RW protections (other pages were reserved with RWX) */
+        ret = DO_SYSCALL(mprotect, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE);
+        if (ret < 0) {
+            log_error("Changing protections of TCS pages failed: %s", unix_strerror(ret));
             return ret;
         }
     }
