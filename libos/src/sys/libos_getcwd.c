@@ -5,8 +5,6 @@
  * Implementation of system calls "getcwd", "chdir" and "fchdir".
  */
 
-#include <errno.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
@@ -14,6 +12,7 @@
 #include "libos_process.h"
 #include "libos_table.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
 #include "stat.h"
 
 #ifndef ERANGE

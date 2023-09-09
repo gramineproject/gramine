@@ -5,14 +5,13 @@
  * Implementation of system call "execve".
  */
 
-#include <errno.h>
-
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_process.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
+#include "linux_abi/errors.h"
 #include "pal.h"
 
 /* new_argp: pointer to beginning of first stack frame (argc, argv[0], ...)

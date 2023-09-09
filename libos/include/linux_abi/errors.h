@@ -8,7 +8,7 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-#include <asm/errno.h>
+#include "linux_abi/errors_arch.h"
 
 #define ERESTARTSYS     512 /* Usual case - restart if SA_RESTART is set. */
 #define ERESTARTNOINTR  513 /* Always restart. */

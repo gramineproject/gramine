@@ -9,7 +9,6 @@
 /* These need to be binary-identical with the ones used by Linux. */
 
 // TODO: remove all of these includes and make this header libc-independent.
-#include <asm/errno.h>
 #include <asm/poll.h>
 #include <asm/posix_types.h>
 #include <asm/siginfo.h>

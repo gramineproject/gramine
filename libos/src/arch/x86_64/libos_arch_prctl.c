@@ -8,6 +8,7 @@
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_tcb.h"
+#include "linux_abi/errors.h"
 #include "linux_abi/process.h"
 #include "pal.h"
 

@@ -14,12 +14,11 @@
  * the `data` field of the inode (as a pointer to `struct libos_mem_file`).
  */
 
-#include <errno.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_lock.h"
 #include "libos_vma.h"
+#include "linux_abi/errors.h"
 #include "perm.h"
 #include "stat.h"
 

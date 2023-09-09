@@ -5,12 +5,11 @@
  * This file contains code for implementation of 'eventfd' filesystem.
  */
 
-#include <errno.h>
-
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
+#include "linux_abi/errors.h"
 #include "pal.h"
 
 static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {

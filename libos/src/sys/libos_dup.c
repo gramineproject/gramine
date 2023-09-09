@@ -5,12 +5,11 @@
  * Implementation of system calls "dup", "dup2" and "dup3".
  */
 
-#include <errno.h>
-
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
 
 long libos_syscall_dup(unsigned int fd) {
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);

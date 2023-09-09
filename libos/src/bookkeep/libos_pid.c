@@ -11,6 +11,7 @@
 #include "libos_lock.h"
 #include "libos_types.h"
 #include "libos_utils.h"
+#include "linux_abi/errors.h"
 #include "log.h"
 
 /* Represents a range of ids `[start; end]` (i.e. `end` is included). There is no representation of

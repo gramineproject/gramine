@@ -23,6 +23,7 @@
 #include "libos_signal.h"
 #include "libos_thread.h"
 #include "libos_vma.h"
+#include "linux_abi/errors.h"
 #include "list.h"
 #include "pal.h"
 #include "toml_utils.h"

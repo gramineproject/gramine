@@ -15,6 +15,7 @@
 #include "libos_signal.h"
 #include "libos_tcb.h"
 #include "libos_types.h"
+#include "linux_abi/errors.h"
 #include "linux_abi/signals.h"
 #include "list.h"
 #include "pal.h"

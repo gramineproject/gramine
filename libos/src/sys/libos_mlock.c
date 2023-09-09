@@ -13,6 +13,7 @@
 
 #include "api.h"
 #include "libos_table.h"
+#include "linux_abi/errors.h"
 #include "linux_abi/memory.h"
 
 long libos_syscall_mlock(unsigned long start, size_t len) {

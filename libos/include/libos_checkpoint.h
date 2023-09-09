@@ -13,6 +13,7 @@
 #include "libos_ipc.h"
 #include "libos_process.h"
 #include "libos_thread.h"
+#include "linux_abi/errors.h"
 #include "pal.h"
 
 #define __attribute_migratable __attribute__((section(".migratable")))
