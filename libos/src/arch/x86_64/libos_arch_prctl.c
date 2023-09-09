@@ -36,6 +36,9 @@ long libos_syscall_arch_prctl(int code, unsigned long addr) {
             return 0;
 
         case ARCH_GET_FS:
+            if (!is_user_memory_writable((unsigned long*)addr, sizeof(unsigned long))) {
+                return -EFAULT;
+            }
             return pal_to_unix_errno(PalSegmentBaseGet(PAL_SEGMENT_FS, (unsigned long*)addr));
 
         /* Emulate ARCH_GET_XCOMP_SUPP, ARCH_GET_XCOMP_PERM, ARCH_REQ_XCOMP_PERM by querying CPUID,
