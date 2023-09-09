@@ -452,28 +452,19 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
 
     int ret;
 
-    lock(&dent->inode->lock);
-
     PAL_HANDLE palhdl;
     ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
     if (ret < 0)
-        goto out;
+        return ret;
 
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     ret = PalStreamAttributesSetByHandle(palhdl, &attr);
     PalObjectClose(palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
+    if (ret < 0)
+        return pal_to_unix_errno(ret);
 
-    dent->inode->perm = perm;
-    ret = 0;
-
-out:
-    unlock(&dent->inode->lock);
-    return ret;
+    return 0;
 }
 
 struct libos_fs_ops chroot_fs_ops = {

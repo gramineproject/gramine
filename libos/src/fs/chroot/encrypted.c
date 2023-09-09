@@ -341,7 +341,6 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(dent->inode);
 
     char* uri = NULL;
-    lock(&dent->inode->lock);
 
     int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
@@ -362,11 +361,9 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
-    dent->inode->perm = perm;
     ret = 0;
 
 out:
-    unlock(&dent->inode->lock);
     free(uri);
     return ret;
 }
