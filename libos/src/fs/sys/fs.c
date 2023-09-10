@@ -185,6 +185,9 @@ bool sys_resource_name_exists(struct libos_dentry* parent, const char* name) {
     if (pseudo_parse_ulong(&name[prefix_len], total - 1, &n) < 0)
         return false;
 
+    if (!strcmp(parent->name, "node") && !g_pal_public_state->topo_info.numa_nodes[n].is_online)
+        return false;
+
     return true;
 }
 
@@ -198,6 +201,9 @@ int sys_resource_list_names(struct libos_dentry* parent, readdir_callback_t call
     /* Generate "{prefix}N" names for all N less than total */
 
     for (size_t i = 0; i < total; i++) {
+        if (!strcmp(parent->name, "node") && !g_pal_public_state->topo_info.numa_nodes[i].is_online)
+            continue;
+
         char ent_name[strlen(prefix) + 22];
         snprintf(ent_name, sizeof(ent_name), "%s%zu", prefix, i);
         int ret = callback(ent_name, arg);
@@ -283,8 +289,6 @@ static void init_node_dir(struct pseudo_node* node) {
     pseudo_add_str(nodeX, "distance", &sys_node_load);
     pseudo_add_str(nodeX, "meminfo", &sys_node_meminfo_load);
 
-    // TODO(mkow): Does this show up for offline nodes? I never succeeded in shutting down one, even
-    // after shutting down all CPUs inside the node it shows up as online on `node/online` list.
     struct pseudo_node* hugepages = pseudo_add_dir(nodeX, "hugepages");
     struct pseudo_node* hugepages_2m = pseudo_add_dir(hugepages, "hugepages-2048kB");
     pseudo_add_str(hugepages_2m, "nr_hugepages", &sys_node_load);

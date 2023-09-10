@@ -60,9 +60,11 @@ static int get_hw_resource_value(const char* filename, size_t* out_value) {
     return 0;
 }
 
-/* Read a space-separated list of numbers.
- * The file has to contain at least `count` numbers, otherwise this function returns `-EINVAL`. */
-static int read_numbers_from_file(const char* path, size_t* out_arr, size_t count) {
+/* Read a space-separated list of numbers in the format used by
+ * `/sys/devices/system/node/node<i>/distance`, and write the result to the online nodes from
+ * `numa_nodes`. */
+static int read_distances_from_file(const char* path, size_t* out_arr,
+                                    struct pal_numa_node_info* numa_nodes, size_t nodes_cnt) {
     char buf[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
@@ -71,18 +73,26 @@ static int read_numbers_from_file(const char* path, size_t* out_arr, size_t coun
 
     const char* buf_it = buf;
     const char* end;
-    for (size_t i = 0; i < count; i++) {
+    char last_separator = ' ';
+    size_t node_i = 0;
+    for (size_t input_i = 0; /* no condition */; input_i++) {
+        /* Find next online node (only these are listed in `distance` file). */
+        while (node_i < nodes_cnt && !numa_nodes[node_i].is_online)
+            node_i++;
+        if (node_i == nodes_cnt)
+            break;
+        if (last_separator != ' ')
+            return -EINVAL;
+
         unsigned long val;
         ret = str_to_ulong(buf_it, 10, &val, &end);
         if (ret < 0)
             return -EINVAL;
-        char expected_separator = (i != count - 1) ? ' ' : '\n';
-        if (*end != expected_separator)
-            return -EINVAL;
-        buf_it = end + 1;
-        out_arr[i] = (size_t)val;
+        last_separator = *end;
+        buf_it = *end ? end + 1 : end; // don't shift past NULL-byte, possible for malformed inputs
+        out_arr[node_i++] = (size_t)val;
     }
-    return 0;
+    return last_separator == '\n' ? 0 : -EINVAL;
 }
 
 static int iterate_ranges_from_file(const char* path, int (*callback)(size_t index, void* arg),
@@ -358,6 +368,9 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     }
 
     for (size_t i = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online)
+            continue;
+
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
             .threads = threads,
@@ -367,17 +380,38 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (ret < 0)
             goto fail;
 
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
-        if (ret < 0)
-            goto fail;
-        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
-        if (ret < 0)
-            goto fail;
-
         /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
          * of zero */
         numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+    }
+
+    /*
+     * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has node 0
+     * online, node 1 offline and node 2 online, then distances matrix in Linux will look like this:
+     *
+     *   [ node 0 -> node 0, node 0 -> node 2
+     *     node 2 -> node 0, node 2 -> node 2 ]
+     *
+     * Gramine has a different view of the `distances` array -- it includes both online nodes and
+     * offline nodes (distances to offline nodes are 0). Thus, the above system will look like this:
+     *
+     *   [ node 0 -> node 0,    0    , node 0 -> node 2
+     *            0        ,    0    ,        0
+     *     node 2 -> node 0,    0    , node 2 -> node 2 ]
+     */
+    memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
+    for (size_t i = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online)
+            continue;
+
+        /* populate row i of `distances`, setting only online nodes */
+        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+        if (ret < 0)
+            goto fail;
+        ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
+        if (ret < 0)
+            goto fail;
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {

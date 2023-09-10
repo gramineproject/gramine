@@ -201,14 +201,29 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
     }
 
     for (size_t i = 0; i < topo_info->numa_nodes_cnt; i++) {
-        /* Note: Linux doesn't guarantee that distance i -> i is 0, so we aren't checking this (it's
-         * actually non-zero on all machines we have). */
+        /* Note: distance i -> i is 10 according to the ACPI 2.0 SLIT spec, but to accomodate for
+         * weird BIOS settings we aren't checking this. */
         for (size_t j = 0; j < topo_info->numa_nodes_cnt; j++) {
+            if ((!topo_info->numa_nodes[i].is_online || !topo_info->numa_nodes[j].is_online) &&
+                    topo_info->numa_distance_matrix[i*topo_info->numa_nodes_cnt + j] != 0)
+                return -PAL_ERROR_INVAL;
             if (   topo_info->numa_distance_matrix[i*topo_info->numa_nodes_cnt + j]
                 != topo_info->numa_distance_matrix[j*topo_info->numa_nodes_cnt + i])
                 return -PAL_ERROR_INVAL;
         }
     }
+
+    /* Verify that online threads belong to online NUMA nodes (at this point, all indices are
+     * verified to be in-bounds and we can safely use them) */
+    for (size_t i = 0; i < topo_info->threads_cnt; i++) {
+        struct pal_cpu_thread_info* thread = &topo_info->threads[i];
+        if (!thread->is_online)
+            continue;
+        size_t node_id = topo_info->cores[thread->core_id].node_id;
+        if (!topo_info->numa_nodes[node_id].is_online)
+            return -PAL_ERROR_INVAL;
+    }
+
     return 0;
 }
 

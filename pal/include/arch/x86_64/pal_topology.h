@@ -111,6 +111,7 @@ struct pal_topo_info {
     struct pal_numa_node_info* numa_nodes;
 
     /* Has `numa_nodes_cnt * numa_nodes_cnt` elements.
-     * numa_distance_matrix[i*numa_nodes_cnt + j] is NUMA distance from node i to node j. */
+     * numa_distance_matrix[i*numa_nodes_cnt + j] is NUMA distance from node i to node j.
+     * If node i or node j is offline, then NUMA distance is zero. */
     size_t* numa_distance_matrix;
 };

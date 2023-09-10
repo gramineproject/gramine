@@ -65,21 +65,31 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
     const char* name = dent->name;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const struct pal_numa_node_info* numa_node = &topo->numa_nodes[node_id];
+    if (!numa_node->is_online)
+        return -ENOENT;
+
     char str[PAL_SYSFS_MAP_FILESZ] = {0};
     if (strcmp(name, "cpumap") == 0) {
         ret = sys_print_as_bitmask(str, sizeof(str), topo->threads_cnt, is_in_same_node, &node_id);
     } else if (strcmp(name, "distance") == 0) {
+        /* Linux reflects only online nodes in the `distance` file, do the same */
         size_t* distances = topo->numa_distance_matrix + node_id * topo->numa_nodes_cnt;
         size_t str_pos = 0;
         for (size_t i = 0; i < topo->numa_nodes_cnt; i++) {
-            ret = snprintf(str + str_pos, sizeof(str) - str_pos,
-                           "%zu%s", distances[i], i != (topo->numa_nodes_cnt - 1) ? " " : "\n");
+            if (!topo->numa_nodes[i].is_online)
+                continue;
+            assert(distances[i]);
+            ret = snprintf(str + str_pos, sizeof(str) - str_pos, "%s%zu", str_pos ? " " : "",
+                           distances[i]);
             if (ret < 0)
                 return ret;
             if ((size_t)ret >= sizeof(str) - str_pos)
                 return -EOVERFLOW;
             str_pos += ret;
         }
+        if (str_pos >= sizeof(str) - 1)
+            return -EOVERFLOW;
+        str[str_pos] = '\n';
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {
@@ -114,6 +124,11 @@ int sys_node_meminfo_load(struct libos_dentry* dent, char** out_data, size_t* ou
     int ret = sys_resource_find(dent, "node", &node_id);
     if (ret < 0)
         return ret;
+
+    const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
+    const struct pal_numa_node_info* numa_node = &topo->numa_nodes[node_id];
+    if (!numa_node->is_online)
+        return -ENOENT;
 
     size_t size = 0, max = 256;
     char* str = malloc(max);
