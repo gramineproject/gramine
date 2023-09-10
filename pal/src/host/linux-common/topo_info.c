@@ -357,7 +357,13 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
+    size_t online_nodes_cnt = 0; /* Required for `distance` which reflects only online nodes */
     for (size_t i = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online)
+                continue;
+
+        online_nodes_cnt++;
+
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
             .threads = threads,
@@ -367,6 +373,39 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (ret < 0)
             goto fail;
 
+        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+         * of zero */
+        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+    }
+
+    if (online_nodes_cnt < 1) {
+        ret = -EINVAL;
+        goto fail;
+    }
+
+    /*
+     * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has node 0
+     * online, node 1 offline and node 2 online, then distances matrix in Linux will look like this:
+     *
+     *   [ node 0 -> node 0, node 0 -> node 2
+     *     node 2 -> node 0, node 2 -> node 2 ]
+     *
+     * Gramine has a different view of the `distances` array -- it includes both online nodes and
+     * offline nodes (distances to offline nodes are 0). Thus, the above system will look like this:
+     *
+     *   [ node 0 -> node 0,    0    , node 0 -> node 2
+     *            0,            0    ,        0
+     *     node 2 -> node 0,    0    , node 2 -> node 2 ]
+     */
+    for (size_t i = 0; i < nodes_cnt; i++) {
+        if (!numa_nodes[i].is_online) {
+            for (size_t j = 0; j < nodes_cnt; j++)
+                distances[i * nodes_cnt + j] = 0;
+            continue;
+        }
+
+        /* populate row i of `distances`: read a "compressed" view with only online nodes */
         ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
         if (ret < 0)
             goto fail;
@@ -374,10 +413,19 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (ret < 0)
             goto fail;
 
-        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+        /* expand the compressed view: add 0s to represent offline nodes in corresponding cells */
+        size_t online_node_idx = online_nodes_cnt - 1;
+        for (size_t j = nodes_cnt - 1; true; j--) {
+            if (!numa_nodes[j].is_online) {
+                distances[i * nodes_cnt + j] = 0;
+            } else {
+                distances[i * nodes_cnt + j] = distances[i * nodes_cnt + online_node_idx];
+                online_node_idx--;
+            }
+
+            if (!j)
+                break; // exit the loop; this explicit statement is to prevent int wrap
+        }
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
