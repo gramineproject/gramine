@@ -28,7 +28,7 @@ long libos_syscall_getppid(void) {
 long libos_syscall_set_tid_address(int* tidptr) {
     struct libos_thread* cur = get_cur_thread();
     lock(&cur->lock);
-    cur->clear_child_tid = tidptr;
+    cur->clear_child_tid = tidptr; // will be lazy-verified (before writing to it)
     unlock(&cur->lock);
     return cur->tid;
 }

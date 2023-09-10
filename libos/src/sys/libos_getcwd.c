@@ -21,9 +21,6 @@
 #endif
 
 long libos_syscall_getcwd(char* buf, size_t buf_size) {
-    if (!buf || !buf_size)
-        return -EINVAL;
-
     if (!is_user_memory_writable(buf, buf_size))
         return -EFAULT;
 

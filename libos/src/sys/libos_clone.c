@@ -297,8 +297,8 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
 
     int* set_parent_tid = NULL;
     if (flags & CLONE_PARENT_SETTID) {
-        if (!parent_tidptr)
-            return -EINVAL;
+        if (!is_user_memory_writable(parent_tidptr, sizeof(*parent_tidptr)))
+            return -EFAULT;
         set_parent_tid = parent_tidptr;
     }
 
@@ -333,13 +333,12 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
 
     struct libos_thread* thread = get_new_thread();
     if (!thread) {
-        ret = -ENOMEM;
-        goto failed;
+        return -ENOMEM;
     }
 
     if (flags & CLONE_CHILD_SETTID) {
-        if (!child_tidptr) {
-            ret = -EINVAL;
+        if (!is_user_memory_writable(child_tidptr, sizeof(*child_tidptr))) {
+            ret = -EFAULT;
             goto failed;
         }
         thread->set_child_tid = child_tidptr;
@@ -489,7 +488,6 @@ clone_thread_failed:
     if (new_args.initialize_event)
         PalObjectClose(new_args.initialize_event);
 failed:
-    if (thread)
-        put_thread(thread);
+    put_thread(thread);
     return ret;
 }

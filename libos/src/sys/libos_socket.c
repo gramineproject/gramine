@@ -1349,7 +1349,7 @@ long libos_syscall_getsockopt(int fd, int level, int optname, char* optval, int*
         goto out;
     }
 
-    if (!is_user_memory_writable(optlen, sizeof(*optlen))) {
+    if (!is_user_memory_readable(optlen, sizeof(*optlen))) {
         ret = -EFAULT;
         goto out;
     }
@@ -1385,6 +1385,10 @@ long libos_syscall_getsockopt(int fd, int level, int optname, char* optval, int*
     unlock(&sock->lock);
 
     if (ret == 0) {
+        if (!is_user_memory_writable(optlen, sizeof(*optlen))) {
+            ret = -EFAULT;
+            goto out;
+        }
         *optlen = len;
     }
 

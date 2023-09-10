@@ -80,8 +80,9 @@ long libos_syscall_setitimer(int which, struct __kernel_itimerval* value,
     if (which != ITIMER_REAL)
         return -ENOSYS;
 
-    if (!value)
-        return -EFAULT;
+    /* Technically, as of v6.5.2, Linux supports value==NULL with a special meaning (setting timer
+     * to 0), but it throws a warning that it will be removed in the future versions, so we probably
+     * don't have to implement it. */
     if (!is_user_memory_readable(value, sizeof(*value)))
         return -EFAULT;
     if (ovalue && !is_user_memory_writable(ovalue, sizeof(*ovalue)))
@@ -131,8 +132,6 @@ long libos_syscall_getitimer(int which, struct __kernel_itimerval* value) {
     if (which != ITIMER_REAL)
         return -ENOSYS;
 
-    if (!value)
-        return -EFAULT;
     if (!is_user_memory_writable(value, sizeof(*value)))
         return -EFAULT;
 

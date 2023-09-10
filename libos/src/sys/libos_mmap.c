@@ -371,9 +371,9 @@ long libos_syscall_munmap(void* _addr, size_t length) {
     return 0;
 }
 
-/* This emulation of mincore() always tells that pages are _NOT_ in RAM
- * pessimistically due to lack of a good way to know it.
- * Possibly it may cause performance(or other) issue due to this lying.
+/* This emulation of mincore() always pessimistically tells that pages are _NOT_ in RAM due to lack
+ * of a good way to know it.
+ * This lying may possibly cause performance (or other) issues.
  */
 long libos_syscall_mincore(void* addr, size_t len, unsigned char* vec) {
     if (!IS_ALLOC_ALIGNED_PTR(addr))

@@ -85,7 +85,8 @@ struct libos_thread {
 
     /* child tid */
     int* set_child_tid;
-    int* clear_child_tid;    /* LibOS zeroes it to notify parent that thread exited */
+    int* clear_child_tid;    /* LibOS zeroes it to notify parent that thread exited.
+                              * Be careful - unverified user pointer! */
     int clear_child_tid_pal; /* PAL zeroes it to notify LibOS that thread exited */
 
     /* Thread signal mask. Should be accessed with `this_thread->lock` held. Must not be modified
@@ -113,7 +114,7 @@ struct libos_thread {
     stack_t signal_altstack;
 
     /* futex robust list */
-    struct robust_list_head* robust_list;
+    struct robust_list_head* robust_list; // careful - unverified user pointer!
 
     PAL_HANDLE scheduler_event;
 
