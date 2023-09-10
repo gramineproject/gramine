@@ -212,6 +212,18 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
                 return -PAL_ERROR_INVAL;
         }
     }
+
+    /* Verify that online threads belong to online NUMA nodes (at this point, all indices are
+     * verified to be in-bounds and we can safely use them) */
+    for (size_t i = 0; i < topo_info->threads_cnt; i++) {
+        struct pal_cpu_thread_info* thread = &topo_info->threads[i];
+        if (!thread->is_online)
+            continue;
+        size_t node_id = topo_info->cores[thread->core_id].node_id;
+        if (!topo_info->numa_nodes[node_id].is_online)
+            return -PAL_ERROR_INVAL;
+    }
+
     return 0;
 }
 

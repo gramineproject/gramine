@@ -87,11 +87,9 @@ int sys_node_load(struct libos_dentry* dent, char** out_data, size_t* out_size) 
                 return -EOVERFLOW;
             str_pos += ret;
         }
-        ret = snprintf(str + str_pos, sizeof(str) - str_pos, "\n");
-        if (ret < 0)
-            return ret;
-        if ((size_t)ret >= sizeof(str) - str_pos)
+        if (str_pos >= sizeof(str) - 1)
             return -EOVERFLOW;
+        str[str_pos] = '\n';
     } else if (strcmp(name, "nr_hugepages") == 0) {
         const char* parent_name = dent->parent->name;
         if (strcmp(parent_name, "hugepages-2048kB") == 0) {

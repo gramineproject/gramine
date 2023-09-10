@@ -379,11 +379,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
     }
 
-    if (online_nodes_cnt < 1) {
-        ret = -EINVAL;
-        goto fail;
-    }
-
     /*
      * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has node 0
      * online, node 1 offline and node 2 online, then distances matrix in Linux will look like this:
@@ -398,12 +393,10 @@ int get_topology_info(struct pal_topo_info* topo_info) {
      *            0,            0    ,        0
      *     node 2 -> node 0,    0    , node 2 -> node 2 ]
      */
+    memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
     for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online) {
-            for (size_t j = 0; j < nodes_cnt; j++)
-                distances[i * nodes_cnt + j] = 0;
+        if (!numa_nodes[i].is_online)
             continue;
-        }
 
         /* populate row i of `distances`: read a "compressed" view with only online nodes */
         ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
@@ -416,9 +409,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         /* expand the compressed view: add 0s to represent offline nodes in corresponding cells */
         size_t online_node_idx = online_nodes_cnt - 1;
         for (size_t j = nodes_cnt - 1; true; j--) {
-            if (!numa_nodes[j].is_online) {
-                distances[i * nodes_cnt + j] = 0;
-            } else {
+            if (numa_nodes[j].is_online) {
                 distances[i * nodes_cnt + j] = distances[i * nodes_cnt + online_node_idx];
                 online_node_idx--;
             }
