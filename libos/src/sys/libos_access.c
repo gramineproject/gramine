@@ -17,9 +17,6 @@ long libos_syscall_access(const char* file, mode_t mode) {
 }
 
 long libos_syscall_faccessat(int dfd, const char* filename, mode_t mode) {
-    if (!filename)
-        return -EINVAL;
-
     if (!is_user_string_readable(filename))
         return -EFAULT;
 
