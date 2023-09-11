@@ -795,22 +795,22 @@ Untrusted shared memory
       { type = "shm", path = "[PATH]", uri = "[URI]" },
     ]
 
-This syntax allows mounting shared memory objects that are accessible by
-Gramine, by application running inside Gramine, by host OS, or by native
-process. In Gramine, shared memory applies to pseudo-files and mapped into
-application address space with the `MAP_SHARED` flag.
+This syntax allows mounting shared memory objects that are accessible by both
+the application running inside Gramine and by other host software/hardware (host
+OS, other host processes, devices connect to the host). In Gramine, shared
+memory applies to ``shm``-typed pseudo-files which must be mapped into
+application address space with the ``MAP_SHARED`` flag.
 
-URI can be a file or a directory. If a directory is mounted, all existing
-files are treated as shared memory objects, while directories within it are
-inaccessible. New files created in a shared memory mount are also automatically
-treated as shared memory objects. Creating directories in a shared memory mount
-is not allowed.
+URI can be a file or a directory. If a directory is mounted, all files under
+this directory are treated as shared memory objects (but sub-directories are
+inaccessible for security reasons). New files created in a shared memory mount
+are also automatically treated as shared memory objects. Creating
+sub-directories in a shared memory mount is not allowed, for security reasons.
 
-Typically, `/dev/shm/` is mounted. To be more precise, the `/dev/shm/` host
-directory (used for sharing data between processes and devices) is mounted
-inside Gramine, so that the application may create files -- called "shared
-memory objects" in POSIX -- under this directory (for example, this is how
-`shm_open()` Glibc function works).
+Typically, you should mount the directory ``/dev/shm/``: it is used for sharing
+data between processes and devices. When this directory is mounted, the Gramine
+application may create files -- called "shared memory objects" in POSIX -- under
+this directory (for example, this is how ``shm_open()`` Glibc function works).
 
 In the SGX environment, all data put in shared memory (i.e. memory residing
 outside of the SGX enclave) must be preliminarily encrypted or at least
