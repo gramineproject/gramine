@@ -60,9 +60,11 @@ static int get_hw_resource_value(const char* filename, size_t* out_value) {
     return 0;
 }
 
-/* Read a space-separated list of numbers.
- * The file has to contain at least `count` numbers, otherwise this function returns `-EINVAL`. */
-static int read_numbers_from_file(const char* path, size_t* out_arr, size_t count) {
+/* Read a space-separated list of numbers in the format used by
+ * `/sys/devices/system/node/node<i>/distance`, and write the result to the online nodes from
+ * `numa_nodes`. */
+static int read_distances_from_file(const char* path, size_t* out_arr,
+                                    struct pal_numa_node_info* numa_nodes, size_t nodes_cnt) {
     char buf[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
@@ -71,18 +73,26 @@ static int read_numbers_from_file(const char* path, size_t* out_arr, size_t coun
 
     const char* buf_it = buf;
     const char* end;
-    for (size_t i = 0; i < count; i++) {
+    char last_separator = ' ';
+    size_t node_i = 0;
+    for (size_t input_i = 0; /* no condition */; input_i++) {
+        /* Find next online node (only these are listed in `distance` file). */
+        while (node_i < nodes_cnt && !numa_nodes[node_i].is_online)
+            node_i++;
+        if (node_i == nodes_cnt)
+            break;
+        if (last_separator != ' ')
+            return -EINVAL;
+
         unsigned long val;
         ret = str_to_ulong(buf_it, 10, &val, &end);
         if (ret < 0)
             return -EINVAL;
-        char expected_separator = (i != count - 1) ? ' ' : '\n';
-        if (*end != expected_separator)
-            return -EINVAL;
-        buf_it = end + 1;
-        out_arr[i] = (size_t)val;
+        last_separator = *end;
+        buf_it = *end ? end + 1 : end; // don't shift past NULL-byte, possible for malformed inputs
+        out_arr[node_i++] = (size_t)val;
     }
-    return 0;
+    return last_separator == '\n' ? 0 : -EINVAL;
 }
 
 static int iterate_ranges_from_file(const char* path, int (*callback)(size_t index, void* arg),
@@ -357,12 +367,9 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    size_t online_nodes_cnt = 0; /* Required for `distance` which reflects only online nodes */
     for (size_t i = 0; i < nodes_cnt; i++) {
         if (!numa_nodes[i].is_online)
                 continue;
-
-        online_nodes_cnt++;
 
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
@@ -398,25 +405,13 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         if (!numa_nodes[i].is_online)
             continue;
 
-        /* populate row i of `distances`: read a "compressed" view with only online nodes */
+        /* populate row i of `distances`, setting only online nodes */
         ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
         if (ret < 0)
             goto fail;
-        ret = read_numbers_from_file(path, distances + i * nodes_cnt, nodes_cnt);
+        ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
         if (ret < 0)
             goto fail;
-
-        /* expand the compressed view: add 0s to represent offline nodes in corresponding cells */
-        size_t online_node_idx = online_nodes_cnt - 1;
-        for (size_t j = nodes_cnt - 1; true; j--) {
-            if (numa_nodes[j].is_online) {
-                distances[i * nodes_cnt + j] = distances[i * nodes_cnt + online_node_idx];
-                online_node_idx--;
-            }
-
-            if (!j)
-                break; // exit the loop; this explicit statement is to prevent int wrap
-        }
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
