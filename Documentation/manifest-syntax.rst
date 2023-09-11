@@ -797,7 +797,7 @@ Untrusted shared memory
 
 This syntax allows mounting shared memory objects that are accessible by both
 the application running inside Gramine and by other host software/hardware (host
-OS, other host processes, devices connect to the host). In Gramine, shared
+OS, other host processes, devices connected to the host). In Gramine, shared
 memory applies to ``shm``-typed pseudo-files which must be mapped into
 application address space with the ``MAP_SHARED`` flag.
 
