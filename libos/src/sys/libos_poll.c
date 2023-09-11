@@ -28,12 +28,12 @@ typedef unsigned long __fd_mask;
 #define __FDS_BITS(set) ((set)->fds_bits)
 #endif
 
-#define __FD_ZERO(set)                                           \
-    do {                                                         \
-        unsigned int i;                                          \
-        fd_set* arr = (set);                                     \
-        for (i = 0; i < sizeof(fd_set) / sizeof(__fd_mask); i++) \
-            __FDS_BITS(arr)[i] = 0;                              \
+#define __FD_ZERO(set)                                                        \
+    do {                                                                      \
+        unsigned int i;                                                       \
+        struct linux_fd_set* arr = (set);                                     \
+        for (i = 0; i < sizeof(struct linux_fd_set) / sizeof(__fd_mask); i++) \
+            __FDS_BITS(arr)[i] = 0;                                           \
     } while (0)
 
 #define __FD_ELT(d)        ((d) / __NFDBITS)
@@ -275,8 +275,8 @@ long libos_syscall_ppoll(struct pollfd* fds, unsigned int nfds, struct timespec*
     return ret;
 }
 
-static long do_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
-                      uint64_t* timeout_us) {
+static long do_select(int nfds, struct linux_fd_set* read_set, struct linux_fd_set* write_set,
+                      struct linux_fd_set* except_set, uint64_t* timeout_us) {
     size_t total_fds = 0;
     for (size_t i = 0; i < (size_t)nfds; i++) {
         if ((read_set && __FD_ISSET(i, read_set)) || (write_set && __FD_ISSET(i, write_set))
@@ -365,18 +365,20 @@ out:
     return ret;
 }
 
-long libos_syscall_select(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
-                          struct __kernel_timeval* tv) {
+long libos_syscall_select(int nfds, struct linux_fd_set* read_set, struct linux_fd_set* write_set,
+                          struct linux_fd_set* except_set, struct __kernel_timeval* tv) {
     if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
         return -EINVAL;
 
-    /* Each of `read_set`, `write_set` and `except_set` is an array of fd_set items; each fd_set
-     * item has a single inline array `fd_set::fds_bits` of constant size (typically 128B, which
-     * allows to accommodate 1024 bits, i.e. 1024 file descriptors). Therefore we calculate how many
-     * fd_set items are required to accommodate `nfds` number of file descriptors, i.e., we
-     * calculate the length of each of `read_set`, `write_set` and `except_set` arrays. */
-    static_assert(sizeof(((fd_set*)0)->fds_bits) == sizeof(fd_set), "unexpected fd_set struct");
-    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((fd_set*)0)->fds_bits));
+    /* Each of `read_set`, `write_set` and `except_set` is an array of linux_fd_set items; each
+     * linux_fd_set item has a single inline array `linux_fd_set::fds_bits` of constant size
+     * (typically 128B, which allows to accommodate 1024 bits, i.e. 1024 file descriptors).
+     * Therefore we calculate how many linux_fd_set items are required to accommodate `nfds` number
+     * of file descriptors, i.e., we calculate the length of each of `read_set`, `write_set` and
+     * `except_set` arrays. */
+    static_assert(sizeof(((struct linux_fd_set*)0)->fds_bits) == sizeof(struct linux_fd_set),
+                  "unexpected struct linux_fd_set struct");
+    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((struct linux_fd_set*)0)->fds_bits));
     if (read_set && !is_user_memory_writable(read_set, fd_set_arr_len * sizeof(*read_set))) {
             return -EFAULT;
     }
@@ -413,14 +415,16 @@ struct sigset_argpack {
     size_t size;
 };
 
-long libos_syscall_pselect6(int nfds, fd_set* read_set, fd_set* write_set, fd_set* except_set,
-                            struct __kernel_timespec* tsp, void* _sigmask_argpack) {
+long libos_syscall_pselect6(int nfds, struct linux_fd_set* read_set, struct linux_fd_set* write_set,
+                            struct linux_fd_set* except_set, struct __kernel_timespec* tsp,
+                            void* _sigmask_argpack) {
     if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
         return -EINVAL;
 
     /* for explanation on calculations below, see libos_syscall_select() */
-    static_assert(sizeof(((fd_set*)0)->fds_bits) == sizeof(fd_set), "unexpected fd_set struct");
-    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((fd_set*)0)->fds_bits));
+    static_assert(sizeof(((struct linux_fd_set*)0)->fds_bits) == sizeof(struct linux_fd_set),
+                  "unexpected linux_fd_set struct");
+    size_t fd_set_arr_len = UDIV_ROUND_UP(nfds, BITS_IN_TYPE(((struct linux_fd_set*)0)->fds_bits));
     if (read_set && !is_user_memory_writable(read_set, fd_set_arr_len * sizeof(*read_set))) {
             return -EFAULT;
     }
