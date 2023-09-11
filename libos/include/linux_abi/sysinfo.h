@@ -8,6 +8,8 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
+#include <linux/utsname.h>
+
 /* Copied and slightly adapted from linux/include/uapi/linux/sysinfo.h, ver 5.11. */
 struct sysinfo {
     long uptime;             /* Seconds since boot */

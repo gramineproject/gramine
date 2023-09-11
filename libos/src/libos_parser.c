@@ -12,6 +12,7 @@
 #include "libos_types.h"
 #include "libos_vma.h"
 #include "linux_abi/fs.h"
+#include "linux_abi/futex.h"
 #include "linux_abi/ioctl.h"
 #include "linux_abi/memory.h"
 #include "linux_abi/net.h"

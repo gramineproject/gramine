@@ -12,6 +12,7 @@
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "linux_abi/errors.h"
+#include "linux_abi/sysinfo.h"
 
 /* This structure is *not* shared between Gramine processes, despite it should. As a result,
  * effects of set{host,domain}name in process A will not be visible in process B.
