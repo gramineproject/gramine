@@ -397,7 +397,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
      * offline nodes (distances to offline nodes are 0). Thus, the above system will look like this:
      *
      *   [ node 0 -> node 0,    0    , node 0 -> node 2
-     *            0,            0    ,        0
+     *            0        ,    0    ,        0
      *     node 2 -> node 0,    0    , node 2 -> node 2 ]
      */
     memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
