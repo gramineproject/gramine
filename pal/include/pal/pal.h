@@ -1009,8 +1009,8 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
  *
  * \param         addr           Starting address of the memory area.
  * \param         size           Size of the memory area.
- * \param[in,out] bitvector      On success, will contain the commit status of the pages in the memory
- *                               area.
+ * \param[in,out] bitvector      On success, will contain the commit status of the pages in the
+ *                               memory area.
  * \param[in,out] bitvector_size On success, will contain the actual size of the bitvector.
  *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to

@@ -821,9 +821,8 @@ int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
     if (g_pal_linuxsgx_state.edmm_enabled) {
         return get_bitvector_slice(addr, size, bitvector, bitvector_size);
     } else {
-        size_t num_pages = (size + g_page_size - 1) / g_page_size;
-        size_t end_page = num_pages - 1;
-        size_t num_bytes = (num_pages + 7) / 8;
+        size_t num_pages = ALIGN_UP(size, g_page_size) / g_page_size;
+        size_t num_bytes = ALIGN_UP(num_pages, 8) / 8;
         if (num_bytes > *bitvector_size) {
             return -PAL_ERROR_NOMEM;
         }
@@ -831,10 +830,9 @@ int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
 
         memset(bitvector, 0xFF, num_bytes);
 
-        if (end_page % 8 != 7) {
-            /* clear the leading bits in the last byte of the slice */
-            bitvector[num_bytes - 1] &= (0xFF >> (7 - (end_page % 8)));
-        }
+        size_t leftover_pages = num_pages % 8;
+        if (leftover_pages)
+            bitvector[num_bytes - 1] = (1 << leftover_pages) - 1;
 
         return 0;
     }

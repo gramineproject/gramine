@@ -1453,7 +1453,8 @@ BEGIN_CP_FUNC(vma) {
                 /* Send anonymous memory region. */
                 if (vma->flags & MAP_NORESERVE) {
                     /* lazy allocation of pages, send only committed pages */
-                    size_t bitvector_size = ((vma->length + PAGE_SIZE - 1) / PAGE_SIZE + 7) / 8;
+                    size_t bitvector_size =
+                        ALIGN_UP(ALIGN_UP(vma->length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
                     unsigned char* bitvector = calloc(1, bitvector_size);
                     if (!bitvector)
                         return -ENOMEM;

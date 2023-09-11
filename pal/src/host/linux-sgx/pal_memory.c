@@ -26,7 +26,7 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        /* defer page accepts to page-fault events when `MAP_NORESERVE` is set */
+        /* defer page accepts to page-fault events when `PAL_PROT_LAZYALLOC` is set */
         if (prot & PAL_PROT_LAZYALLOC)
             return 0;
 

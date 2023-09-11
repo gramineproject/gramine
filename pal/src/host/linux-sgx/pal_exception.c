@@ -282,11 +282,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
     }
 
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault (which
-     * might be handled later) */
-    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT &&
-                                event_num != PAL_EVENT_INTERRUPTED &&
-                                event_num != PAL_EVENT_MEMFAULT) {
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
+    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
