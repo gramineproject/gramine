@@ -340,7 +340,7 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             prot_flags &= ~PAL_PROT_LAZYALLOC;
             ret = _PalVirtualMemoryAlloc((void*)addr, g_page_size, prot_flags);
             if (ret < 0) {
-                log_error("failed to allocate page at 0x%lx: %s", addr, pal_strerror(ret));
+                log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
                 _PalProcessExit(1);
             }
             goto out;
