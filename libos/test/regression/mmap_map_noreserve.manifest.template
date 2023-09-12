@@ -3,8 +3,8 @@ libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
 
-# application allocates 2GB and 4GB memory regions which may occasionally fail
-# in an SGX enclave restricted to 8GB of virtual space if ASLR is enabled
+# application allocates 4GB memory regions which may occasionally fail in an SGX
+# enclave restricted to 8GB of virtual space if ASLR is enabled
 loader.insecure__disable_aslr = true
 
 fs.mounts = [
@@ -15,10 +15,7 @@ fs.mounts = [
 sgx.enclave_size = "8G"
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-
-sgx.allowed_files = [
-  "file:testfile",
-]
+sgx.require_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

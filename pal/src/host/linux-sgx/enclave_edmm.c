@@ -141,7 +141,7 @@ static int sgx_edmm_add_pages_callback(uintptr_t addr, size_t count, void* prot)
     if (ret < 0)
         return ret;
 
-    set_enclave_addr_range((uintptr_t)addr, count);
+    set_enclave_addr_range(addr, count);
     return 0;
 }
 
@@ -151,7 +151,7 @@ static int sgx_edmm_remove_pages_callback(uintptr_t addr, size_t count,
     if (ret < 0)
         return ret;
 
-    unset_enclave_addr_range((uintptr_t)addr, count);
+    unset_enclave_addr_range(addr, count);
     return 0;
 }
 

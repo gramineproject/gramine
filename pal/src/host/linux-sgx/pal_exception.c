@@ -338,7 +338,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         ret = g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags);
         if (ret == 0 && (prot_flags & PAL_PROT_LAZYALLOC)) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
-            ret = _PalVirtualMemoryAlloc((void*)addr, g_page_size, prot_flags);
+            ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
+                                         prot_flags);
             if (ret < 0) {
                 log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
                 _PalProcessExit(1);
