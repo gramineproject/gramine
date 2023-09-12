@@ -368,6 +368,11 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     }
 
     for (size_t i = 0; i < nodes_cnt; i++) {
+        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+         * of zero (we set them even for offline nodes just to not expose uninitialized data) */
+        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+
         if (!numa_nodes[i].is_online)
                 continue;
 
@@ -379,11 +384,6 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         });
         if (ret < 0)
             goto fail;
-
-        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
     }
 
     /*
