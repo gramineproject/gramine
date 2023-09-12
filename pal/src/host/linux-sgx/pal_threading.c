@@ -25,8 +25,6 @@ struct thread_param {
     void* param;
 };
 
-extern void* enclave_entry; /* enclave_entry() asm function in enclave_entry.S */
-
 extern uintptr_t g_enclave_base;
 
 struct enclave_thread_map {
@@ -34,9 +32,14 @@ struct enclave_thread_map {
 };
 
 static struct enclave_thread_map* g_enclave_thread_map = NULL;
-static size_t g_enclave_thread_num                     = 0;
-static size_t g_available_enclave_thread_num           = 0;
-static size_t g_enclave_thread_map_size                = 0;
+
+/* number of unused items with TCS page */
+static size_t g_available_enclave_thread_num = 0;
+/* number of items with TCS page */
+static size_t g_enclave_thread_num = 0;
+/* total number of items in g_enclave_thread_map */
+static size_t g_enclave_thread_map_size = 0;
+
 static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
 
 /*
@@ -86,7 +89,8 @@ static void init_dynamic_thread(void* addr) {
     tcb->heap_max                      = GET_ENCLAVE_TCB(heap_max);
     tcb->thread                        = NULL;
 
-    // .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs.
+    extern void* enclave_entry; /* enclave_entry() asm function in enclave_entry.S */
+    /* .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs. */
     tcs->ossa      = (uint64_t)ssa - g_enclave_base;
     tcs->nssa      = SSA_FRAME_NUM;
     tcs->oentry    = (uint64_t)&enclave_entry - g_enclave_base;
@@ -124,6 +128,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     }
 
     void* addr;
+    /* This memory is page aligned and never freed but only re-used by new enclave threads */
     ret = pal_internal_memory_alloc(THREAD_DATA_SIZE, &addr);
     if (ret)
         goto out;
