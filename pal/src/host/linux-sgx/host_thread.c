@@ -111,12 +111,11 @@ int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
     return 0;
 }
 
-static int add_dynamic_tcs(void) {
+static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
     int ret;
-    sgx_arch_tcs_t* tcs = pal_get_host_tcb()->tcs;
     struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
 
-    ret = set_tcs_debug_flag((void**)&tcs, 1);
+    ret = set_tcs_debug_flag((void**)&tcs, /*count=*/1);
     if (ret < 0) {
         return ret;
     }
@@ -125,8 +124,7 @@ static int add_dynamic_tcs(void) {
     spinlock_lock(&g_enclave_thread_map_lock);
     for (i = 0; i < g_enclave_thread_num; i++) {
         if (g_enclave_thread_map[i].tcs == tcs) {
-            log_error("Dynamic TCS page %p was already added to the list of enclave threads",
-                      (void*)tcs);
+            log_error("Dynamic TCS page %p was already added to the list of enclave threads", tcs);
             ret = -EPERM;
             goto out;
         }
@@ -139,16 +137,16 @@ static int add_dynamic_tcs(void) {
 
     if (i == g_enclave_thread_num) {
         /* Current map is full. */
-        if (g_enclave_thread_num > UINT32_MAX) {
+        if (g_enclave_thread_num >= MAX_DBG_THREADS) {
             log_error("Number of simultaneous enclave threads exceeds %u, not supported",
                       UINT32_MAX);
             ret = -EOVERFLOW;
             goto out;
         }
 
-        g_enclave_thread_num *= 2;
+        size_t new_enclave_thread_num = MIN(g_enclave_thread_num * 2, (size_t)MAX_DBG_THREADS);
         size_t new_enclave_thread_map_size =
-            ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * g_enclave_thread_num,
+            ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * new_enclave_thread_num,
                           PRESET_PAGESIZE);
         struct enclave_thread_map* new_enclave_thread_map =
             (struct enclave_thread_map*)DO_SYSCALL(mmap, NULL, new_enclave_thread_map_size,
@@ -165,6 +163,7 @@ static int add_dynamic_tcs(void) {
             log_error("Cannot unmap g_enclave_thread_map: %s", unix_strerror(ret));
             goto out;
         }
+        g_enclave_thread_num      = new_enclave_thread_num;
         g_enclave_thread_map      = new_enclave_thread_map;
         g_enclave_thread_map_size = new_enclave_thread_map_size;
 
@@ -266,7 +265,7 @@ int pal_thread_init(void* tcbptr) {
 
     if (tcb->tcs) {
         /* enclave decided to add a new TCS page (to accommodate more enclave threads) */
-        ret = add_dynamic_tcs();
+        ret = add_dynamic_tcs(tcb->tcs);
         if (ret < 0) {
             goto out;
         }

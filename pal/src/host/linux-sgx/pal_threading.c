@@ -108,16 +108,19 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
 
     if (g_enclave_thread_num == g_enclave_thread_map_size) {
         /* realloc g_enclave_thread_map to accommodate more objects (includes very first time) */
-        g_enclave_thread_map_size += 8;
-        struct enclave_thread_map* tmp = calloc(g_enclave_thread_map_size, sizeof(*tmp));
-        if (!tmp) {
-            ret = PAL_ERROR_NOMEM;
+        size_t new_enclave_thread_map_size = g_enclave_thread_map_size + 8;
+        struct enclave_thread_map* new_enclave_thread_map =
+            calloc(new_enclave_thread_map_size, sizeof(*new_enclave_thread_map));
+        if (!new_enclave_thread_map) {
+            ret = -PAL_ERROR_NOMEM;
             goto out;
         }
 
-        memcpy(tmp, g_enclave_thread_map, g_enclave_thread_num * sizeof(*tmp));
+        memcpy(new_enclave_thread_map, g_enclave_thread_map,
+               g_enclave_thread_num * sizeof(*new_enclave_thread_map));
         free(g_enclave_thread_map);
-        g_enclave_thread_map = tmp;
+        g_enclave_thread_map_size = new_enclave_thread_map_size;
+        g_enclave_thread_map      = new_enclave_thread_map;
     }
 
     void* addr;
@@ -125,14 +128,14 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     if (ret)
         goto out;
 
-    g_enclave_thread_map[g_enclave_thread_num].tcs  = addr;
+    g_enclave_thread_map[g_enclave_thread_num].tcs = addr;
     g_enclave_thread_num++;
 
     init_dynamic_thread(addr);
 
     spinlock_unlock(&g_enclave_thread_map_lock);
 
-    ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, 1);
+    ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, /*count=*/1);
     if (ret < 0)
         BUG(); /* cannot recover anyway */
     *out_tcs = addr;
@@ -267,13 +270,13 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
 
     /* main thread is not part of the g_thread_list */
     if (exiting_thread != &g_pal_public_state.first_thread->thread) {
-        void* tcs = exiting_thread->tcs;
-        assert(tcs);
         spinlock_lock(&g_thread_list_lock);
         LISTP_DEL(exiting_thread, &g_thread_list, list);
         spinlock_unlock(&g_thread_list_lock);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
+            void* tcs = exiting_thread->tcs;
+            assert(tcs);
             spinlock_lock(&g_enclave_thread_map_lock);
             for (size_t i = 0; i < g_enclave_thread_num; i++) {
                 if (g_enclave_thread_map[i].tcs == tcs) {
