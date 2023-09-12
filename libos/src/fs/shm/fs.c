@@ -87,7 +87,6 @@ out:
     return ret;
 }
 
-
 static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
                             file_off_t size) {
     assert(locked(&g_dcache_lock));
