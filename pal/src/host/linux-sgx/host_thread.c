@@ -18,11 +18,14 @@ struct enclave_thread_map {
     sgx_arch_tcs_t* tcs;
 };
 
-static struct enclave_thread_map* g_enclave_thread_map;
+static struct enclave_thread_map* g_enclave_thread_map = NULL;
 
-static size_t g_enclave_thread_num_at_startup;
-static size_t g_enclave_thread_num;
-static size_t g_enclave_thread_map_size;
+/* initial number of items in g_enclave_thread_map */
+static size_t g_enclave_thread_num_at_startup = 0;
+/* total numbers of items in g_enclave_thread_map */
+static size_t g_enclave_thread_num = 0;
+/* total size in bytes of g_enclave_thread_map */
+static size_t g_enclave_thread_map_size_in_bytes = 0;
 
 bool g_sgx_enable_stats = false;
 
@@ -90,15 +93,15 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* tcs, void* stack, void* alt_stac
 static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
 
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
-    g_enclave_thread_map_size =
+    g_enclave_thread_map_size_in_bytes =
         ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * thread_num, PRESET_PAGESIZE);
 
     sgx_arch_tcs_t* enclave_tcs = tcs_base;
     g_enclave_thread_num_at_startup = thread_num;
 
     g_enclave_thread_map = (struct enclave_thread_map*)DO_SYSCALL(
-        mmap, NULL, g_enclave_thread_map_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS,
-        -1, 0);
+        mmap, NULL, g_enclave_thread_map_size_in_bytes, PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
     if (IS_PTR_ERR(g_enclave_thread_map)) {
         return PTR_TO_ERR(g_enclave_thread_map);
     }
@@ -145,27 +148,26 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
         }
 
         size_t new_enclave_thread_num = MIN(g_enclave_thread_num * 2, (size_t)MAX_DBG_THREADS);
-        size_t new_enclave_thread_map_size =
+        size_t new_enclave_thread_map_size_in_bytes =
             ALIGN_UP_POW2(sizeof(struct enclave_thread_map) * new_enclave_thread_num,
                           PRESET_PAGESIZE);
-        struct enclave_thread_map* new_enclave_thread_map =
-            (struct enclave_thread_map*)DO_SYSCALL(mmap, NULL, new_enclave_thread_map_size,
-                                                   PROT_READ | PROT_WRITE,
-                                                   MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        struct enclave_thread_map* new_enclave_thread_map = (struct enclave_thread_map*)DO_SYSCALL(
+            mmap, NULL, new_enclave_thread_map_size_in_bytes, PROT_READ | PROT_WRITE,
+            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
         if (IS_PTR_ERR(new_enclave_thread_map)) {
             ret = PTR_TO_ERR(new_enclave_thread_map);
             log_error("Cannot map g_enclave_thread_map: %s", unix_strerror(ret));
             goto out;
         }
-        memcpy(new_enclave_thread_map, g_enclave_thread_map, g_enclave_thread_map_size);
-        ret = DO_SYSCALL(munmap, g_enclave_thread_map, g_enclave_thread_map_size);
+        memcpy(new_enclave_thread_map, g_enclave_thread_map, g_enclave_thread_map_size_in_bytes);
+        ret = DO_SYSCALL(munmap, g_enclave_thread_map, g_enclave_thread_map_size_in_bytes);
         if (ret < 0) {
             log_error("Cannot unmap g_enclave_thread_map: %s", unix_strerror(ret));
             goto out;
         }
-        g_enclave_thread_num      = new_enclave_thread_num;
-        g_enclave_thread_map      = new_enclave_thread_map;
-        g_enclave_thread_map_size = new_enclave_thread_map_size;
+        g_enclave_thread_num               = new_enclave_thread_num;
+        g_enclave_thread_map               = new_enclave_thread_map;
+        g_enclave_thread_map_size_in_bytes = new_enclave_thread_map_size_in_bytes;
 
         g_enclave_thread_map[i].tcs = tcs;
         dbginfo->tcs_addrs[i]       = tcs;
