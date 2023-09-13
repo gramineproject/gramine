@@ -369,7 +369,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
 
     for (size_t i = 0; i < nodes_cnt; i++) {
         if (!numa_nodes[i].is_online)
-                continue;
+            continue;
 
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
@@ -381,7 +381,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             goto fail;
 
         /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero (we set them even for offline nodes just to not expose uninitialized data) */
+         * of zero */
         numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
     }
