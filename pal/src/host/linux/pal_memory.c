@@ -168,13 +168,14 @@ int init_memory_bookkeeping(void) {
 #endif
     /* Allocate a guard page above the stack. We do not support further stack auto growth. */
     void* ptr = (void*)(proc_maps_info.stack_top - PAGE_SIZE);
-    ptr = (void*)DO_SYSCALL(mmap, ptr, PAGE_SIZE, PROT_NONE,
-                            MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    if (IS_PTR_ERR(ptr)) {
-        ret = PTR_TO_ERR(ptr);
+    void* mmap_ret = (void*)DO_SYSCALL(mmap, ptr, PAGE_SIZE, PROT_NONE,
+                                       MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (IS_PTR_ERR(mmap_ret)) {
+        ret = PTR_TO_ERR(mmap_ret);
         log_error("failed to map a stack guard page: %s", unix_strerror(ret));
         return unix_to_pal_error(ret);
     }
+    assert(mmap_ret == ptr);
     ret = pal_add_initial_range((uintptr_t)ptr, PAGE_SIZE, /*prot=*/0, "stack guard");
     if (ret < 0) {
         return ret;
@@ -193,12 +194,9 @@ int init_memory_bookkeeping(void) {
         ptr = (void*)DO_SYSCALL(mmap, start_addr, PAGE_SIZE, PROT_NONE,
                                 MAP_FIXED_NOREPLACE | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
         if (!IS_PTR_ERR(ptr)) {
+            assert(ptr == (void*)start_addr);
             DO_SYSCALL(munmap, ptr, g_pal_public_state.alloc_align);
-            /* Check returned pointer in case of older kernels, which do not support
-             * `MAP_FIXED_NOREPLACE`. */
-            if (ptr == (void*)start_addr) {
-                break;
-            }
+            break;
         } else if (PTR_TO_ERR(ptr) == -EEXIST) {
             break;
         }

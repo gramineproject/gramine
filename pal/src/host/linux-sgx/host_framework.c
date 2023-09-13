@@ -201,7 +201,6 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
         log_error("Allocation of EPC memory failed: %s", unix_strerror(ret));
         return ret;
     }
-
     assert(addr == request_mmap_addr);
 
     struct sgx_enclave_create param = {
@@ -407,7 +406,8 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
     }
 
     /* ask Intel SGX driver to actually mmap the added enclave pages */
-    uint64_t mapped = DO_SYSCALL(mmap, addr, size, prot, MAP_FIXED | MAP_SHARED, g_isgx_device, 0);
+    uint64_t mapped = DO_SYSCALL(mmap, addr, size, prot, MAP_FIXED_NOREPLACE | MAP_SHARED,
+                                 g_isgx_device, 0);
     if (IS_PTR_ERR(mapped)) {
         ret = PTR_TO_ERR(mapped);
         log_error("Cannot map enclave pages: %s", unix_strerror(ret));
