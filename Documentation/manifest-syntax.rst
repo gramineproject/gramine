@@ -1134,3 +1134,20 @@ In addition, the application manifest must also contain ``sgx.debug = true``.
    independently.
 
 See :ref:`vtune-sgx-profiling` for more information.
+
+
+AEX-Notify
+^^^^^^^^^^
+
+::
+
+    sgx.experimental_enable_aex_notify = [true|false]
+    (Default: false)
+
+When enabled, this option instructs Gramine to use the AEX-Notify hardware feature, 
+which is a security feature used to mitigate the `SGX-Step 
+<https://lirias.kuleuven.be/retrieve/473223/>`__ type attackson SGX. 
+The SGX-Step type attacks rely on frequent enclave preemptions (e.g. interrupts)
+to execute an SGX enclave in small increments and strategically extract secret data
+from the enclave through one or more side channels. The AEX-Notify feature allows
+a mitigation handler to run after each asynchronous exit (AEX).

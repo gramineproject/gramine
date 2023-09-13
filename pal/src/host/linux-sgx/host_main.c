@@ -524,6 +524,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 gs->heap_min = (void*)enclave_heap_min;
                 gs->heap_max = (void*)pal_area->addr;
                 gs->thread = NULL;
+                /* below fields are used by AEX-Notify */
+                gs->ready_for_aex_notify = 0;
             }
         } else if (areas[i].data_src == TCS) {
             for (uint32_t t = 0; t < enclave->thread_num; t++) {
@@ -539,6 +541,8 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 tcs->ofs_limit = 0xfff;
                 tcs->ogs_limit = 0xfff;
                 tcs_addrs[t] = (void*)tcs_area->addr + g_page_size * t;
+                if (enclave_token.body.attributes.flags & SGX_FLAGS_AEXNOTIFY)
+                    tcs->flags |= TCS_FLAGS_AEXNOTIFY;
             }
         } else if (areas[i].data_src == BUF) {
             memcpy(data, areas[i].buf, areas[i].buf_size);

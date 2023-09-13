@@ -95,6 +95,10 @@ void save_xregs(PAL_XREGS_STATE* xsave_area);
 void restore_xregs(const PAL_XREGS_STATE* xsave_area);
 noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave_area);
 
+extern bool g_aex_notify_enabled;
+void init_aex_notify_for_thread(void);
+void fini_aex_notify_for_thread(void);
+
 void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo);
 /* `event_` is actually of `enum pal_event` type, but we call it from assembly, so we need to know
