@@ -162,6 +162,32 @@ bool is_wrfsbase_supported(void) {
     return true;
 }
 
+
+bool is_aexnotify_supported(void) {
+    uint32_t cpuinfo[4];
+    memset(cpuinfo, 0, sizeof(cpuinfo));
+
+    /* Check the platform support AEX Notify or not. */
+    cpuid(0x12, 1, cpuinfo);
+
+    if (!((cpuinfo[0] >> 10) & 0x1)) {
+        log_debug(
+            "AEX Notify is not supported.");
+        return false;
+    }
+
+    memset(cpuinfo, 0, sizeof(cpuinfo));
+    /* Check the platform support ENCLU[EDECCSSA] leaf instruction or not. */
+    cpuid(0x12, 0, cpuinfo);
+
+    if (!((cpuinfo[0] >> 11) & 0x1)) {
+        log_debug(
+            "ENCLU[EDECCSSA] leaf instruction is not supported.");
+        return false;
+    }
+    return true;
+}
+
 int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     assert(secs->size && IS_POWER_OF_2(secs->size));
     assert(IS_ALIGNED(secs->base, secs->size));

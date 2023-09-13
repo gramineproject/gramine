@@ -67,26 +67,18 @@ bool sgx_is_valid_untrusted_ptr(const void* _addr, size_t size, size_t alignment
 }
 
 /*
- * When DEBUG is enabled, we run sgx_profile_sample() during asynchronous enclave exit (AEX), which
- * uses the stack. Make sure to update URSP so that the AEX handler does not overwrite the part of
- * the stack that we just allocated.
+ * We run sgx_profile_sample() and sgx_handle_aex_signal() during asynchronous enclave exit (AEX),
+ * which uses the stack. Make sure to update URSP so that the AEX handler does not overwrite the
+ * part of the stack that we just allocated.
  *
  * (Recall that URSP is an outside stack pointer, saved by EENTER and restored on AEX by the SGX
  * hardware itself.)
  */
-#ifdef DEBUG
-
 #define UPDATE_USTACK(_ustack)                           \
     do {                                                 \
         SET_ENCLAVE_TCB(ustack, _ustack);                \
         GET_ENCLAVE_TCB(gpr)->ursp = (uint64_t)_ustack;  \
     } while(0)
-
-#else
-
-#define UPDATE_USTACK(_ustack) SET_ENCLAVE_TCB(ustack, _ustack)
-
-#endif
 
 void* sgx_prepare_ustack(void) {
     void* old_ustack = GET_ENCLAVE_TCB(ustack);
