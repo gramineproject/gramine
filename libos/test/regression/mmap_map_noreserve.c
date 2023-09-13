@@ -3,7 +3,18 @@
  *                    Kailun Qin <kailun.qin@intel.com>
  */
 
-/* Test for creating and accessing anonymous mappings with `MAP_NORESERVE`. */
+/*
+ * Test for creating and accessing anonymous mappings with `MAP_NORESERVE`.
+ *
+ * This test works on both EDMM and non-EDMM platforms, but if EDMM (and EXINFO) is enabled, the
+ * enclave pages are not actually committed on mmap requests, but instead they are lazily committed
+ * on first access. This test also stresses the lazy-allocation logic on fork (again, only the
+ * actually-accessed enclave pages will be copied to the child enclave).
+ *
+ * Therefore, on EDMM-enabled platforms, the test is supposed to be significantly faster than on
+ * non-EDMM-enabled platforms. But functionality-wise it will be the same. For example, on an ICX
+ * machine, this test takes ~0.7s with EDMM enabled and ~17s with EDMM disabled.
+ */
 
 #define _GNU_SOURCE
 #include <err.h>
@@ -17,8 +28,8 @@
 
 #include "common.h"
 
-#define TEST_LENGTH  0x10000f000
-#define TEST_LENGTH2 0x800f000
+#define TEST_LENGTH  0xC0000000
+#define TEST_LENGTH2 0xC000000
 
 int main(void) {
     const char expected_val = 0xff;
