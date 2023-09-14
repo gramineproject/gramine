@@ -82,17 +82,17 @@ def collect_bits(manifest_sgx, options_dict):
     return val
 
 
-def collect_cpu_feature_bits(manifest_sgx, options_dict, val, mask, security_hardening):
+def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, security_hardening):
     for opt, bits in options_dict.items():
-        if manifest_sgx['cpu_features'].get(opt) is None:
+        if manifest_cpu_features.get(opt) is None:
             continue
-        if manifest_sgx['cpu_features'][opt] == "required":
+        if manifest_cpu_features[opt] == "required":
             val |= bits
             mask |= bits
-        elif manifest_sgx['cpu_features'][opt] == "disabled":
+        elif manifest_cpu_features[opt] == "disabled":
             val &= ~bits
             mask |= bits
-        elif security_hardening or manifest_sgx['cpu_features'][opt] != "unspecified":
+        elif security_hardening or manifest_cpu_features[opt] != "unspecified":
             raise KeyError(f'Manifest option `sgx.cpu_features.{opt}` has disallowed value')
     return val, mask
 
@@ -136,10 +136,11 @@ def get_enclave_attributes(manifest_sgx):
         for deprecated_key in deprecated_xfrms_dict:
             if deprecated_key in manifest_sgx:
                 raise KeyError(f'`sgx.cpu_features` cannot coexist with `sgx.{deprecated_key}`')
-        xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx, xfrms_dict, xfrms, xfrms_mask,
-                                                     security_hardening=False)
-        xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx, secure_xfrms_dict, xfrms,
-                                                     xfrms_mask, security_hardening=True)
+        xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx['cpu_features'], xfrms_dict,
+                                                     xfrms, xfrms_mask, security_hardening=False)
+        xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx['cpu_features'],
+                                                     secure_xfrms_dict, xfrms, xfrms_mask,
+                                                     security_hardening=True)
 
     return flags, miscs, xfrms, xfrms_mask
 
