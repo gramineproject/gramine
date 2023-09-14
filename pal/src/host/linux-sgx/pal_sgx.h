@@ -41,3 +41,4 @@ int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector,
                         size_t* bitvector_size);
 int remove_committed_pages(uintptr_t start_addr, size_t count);
 int add_uncommitted_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags);
+int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags);

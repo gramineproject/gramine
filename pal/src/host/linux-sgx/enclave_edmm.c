@@ -155,6 +155,14 @@ static int sgx_edmm_remove_pages_callback(uintptr_t addr, size_t count,
     return 0;
 }
 
+static int sgx_edmm_set_page_permissions_callback(uintptr_t addr, size_t count, void* prot) {
+    int ret = sgx_edmm_set_page_permissions(addr, count, *(uint64_t*)prot);
+    if (ret < 0)
+        return ret;
+
+    return 0;
+}
+
 int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
     if (prot & SGX_SECINFO_FLAGS_W) {
         /* HW limitation. */
@@ -361,4 +369,9 @@ int remove_committed_pages(uintptr_t start_addr, size_t count) {
 int add_uncommitted_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
     return walk_pages(start_addr, count, /*walk_set_pages=*/false, sgx_edmm_add_pages_callback,
                       &prot_flags);
+}
+
+int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
+    return walk_pages(start_addr, count, /*walk_set_pages=*/true,
+                      sgx_edmm_set_page_permissions_callback, &prot_flags);
 }

@@ -101,11 +101,11 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
-                                                PAL_TO_SGX_PROT(prot));
-        if (ret < 0) {
+        assert(g_enclave_page_tracker);
+        int ret = set_committed_page_permissions((uintptr_t)addr, size / PAGE_SIZE,
+                                                 PAL_TO_SGX_PROT(prot));
+        if (ret < 0)
             return ret;
-        }
     } else {
 #ifdef ASAN
         if (prot) {

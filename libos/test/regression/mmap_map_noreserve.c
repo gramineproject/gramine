@@ -37,12 +37,19 @@ int main(void) {
     srand(seed);
 
     /* test anonymous mappings with `MAP_NORESERVE` */
-    void* a = mmap(NULL, TEST_LENGTH, PROT_READ | PROT_WRITE,
+    void* a = mmap(NULL, TEST_LENGTH, PROT_READ,
                    MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
     if (a == MAP_FAILED)
         err(1, "mmap 1");
 
     size_t offset = rand() % TEST_LENGTH;
+    char data = ((char*)a)[offset];
+    if (data != 0)
+        errx(1, "unexpected value read (expected: %x, actual: %x)", 0, data);
+
+    CHECK(mprotect(a, TEST_LENGTH, PROT_READ | PROT_WRITE));
+
+    offset = rand() % TEST_LENGTH;
     ((char*)a)[offset] = expected_val;
 
     CHECK(munmap(a, TEST_LENGTH));
@@ -57,7 +64,7 @@ int main(void) {
     ((char*)a)[offset] = expected_val;
     pid_t pid = CHECK(fork());
     if (pid == 0) {
-        char data = ((char*)a)[offset];
+        data = ((char*)a)[offset];
         if (data != expected_val)
             errx(1, "child: unexpected value read (expected: %x, actual: %x)", expected_val, data);
         exit(0);
