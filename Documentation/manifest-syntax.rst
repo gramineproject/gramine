@@ -785,7 +785,9 @@ SGX EXINFO
 
 If ``sgx.use_exinfo`` is set, user application can retrieve faulting address in
 signal handler in case of a page fault. Otherwise (set to ``false``), the
-faulting address will always be provided as ``0``.
+faulting address will always be provided as ``0``. The default is ``false``
+because some frameworks/runtimes could otherwise print the callstack and
+variables/registers on exceptions, potentially leaking data.
 
 Optional CPU features (AVX, AVX512, AMX, MPX, PKRU)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
