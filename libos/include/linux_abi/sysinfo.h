@@ -10,7 +10,7 @@
 
 #define __NEW_UTS_LEN 64
 
-struct new_utsname {
+struct linux_new_utsname {
     char sysname[__NEW_UTS_LEN + 1];
     char nodename[__NEW_UTS_LEN + 1];
     char release[__NEW_UTS_LEN + 1];

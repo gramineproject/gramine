@@ -18,7 +18,7 @@
  * effects of set{host,domain}name in process A will not be visible in process B.
  * These syscalls are rarely used and are implemented in Gramine mainly to enable LTP to test
  * our `uname` implementation. */
-static struct new_utsname g_current_uname = {
+static struct linux_new_utsname g_current_uname = {
     .sysname  = "Linux",
     .nodename = "(none)", /* overwritten by PAL-provided value at startup */
     .release  = "3.10.0",
@@ -31,7 +31,7 @@ static struct new_utsname g_current_uname = {
     .domainname = "(none)", /* this seems to be the default on Linux */
 };
 
-long libos_syscall_uname(struct new_utsname* buf) {
+long libos_syscall_uname(struct linux_new_utsname* buf) {
     if (!is_user_memory_writable(buf, sizeof(*buf)))
         return -EFAULT;
 

@@ -87,7 +87,7 @@ long libos_syscall_waitid(int which, pid_t id, siginfo_t* infop, int options,
                           struct __kernel_rusage* ru);
 long libos_syscall_wait4(pid_t pid, int* stat_addr, int options, struct __kernel_rusage* ru);
 long libos_syscall_kill(pid_t pid, int sig);
-long libos_syscall_uname(struct new_utsname* buf);
+long libos_syscall_uname(struct linux_new_utsname* buf);
 long libos_syscall_fcntl(int fd, int cmd, unsigned long arg);
 long libos_syscall_flock(unsigned int fd, unsigned int cmd);
 long libos_syscall_fsync(int fd);
