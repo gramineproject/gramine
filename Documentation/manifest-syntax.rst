@@ -780,11 +780,11 @@ SGX EXINFO
 
 ::
 
-    sgx.require_exinfo = [true|false]
+    sgx.use_exinfo = [true|false]
     (Default: false)
 
-If ``sgx.require_exinfo`` is set, user application can retrieve faulting address
-in signal handler in case of a page fault. Otherwise (set to ``false``), the
+If ``sgx.use_exinfo`` is set, user application can retrieve faulting address in
+signal handler in case of a page fault. Otherwise (set to ``false``), the
 faulting address will always be provided as ``0``.
 
 Optional CPU features (AVX, AVX512, AMX, MPX, PKRU)

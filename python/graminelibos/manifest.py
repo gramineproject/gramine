@@ -93,7 +93,7 @@ class Manifest:
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
-        sgx.setdefault('require_exinfo', False)
+        sgx.setdefault('use_exinfo', False)
         sgx.setdefault('enable_stats', False)
         sgx.setdefault('edmm_enable', False)
 
