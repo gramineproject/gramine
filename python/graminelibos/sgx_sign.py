@@ -105,8 +105,12 @@ def get_enclave_attributes(manifest_sgx):
     if ARCHITECTURE == 'amd64':
         flags |= offs.SGX_FLAGS_MODE64BIT
 
+    if manifest_sgx.get('require_exinfo') is not None:
+        raise KeyError(f'Manifest option `sgx.require_exinfo` was renamed to `sgx.use_exinfo`, '
+                        'please modify the manifest file accordingly')
+
     miscs_dict = {
-        'require_exinfo': offs.SGX_MISCSELECT_EXINFO,
+        'use_exinfo': offs.SGX_MISCSELECT_EXINFO,
     }
     miscs = collect_bits(manifest_sgx, miscs_dict)
 
