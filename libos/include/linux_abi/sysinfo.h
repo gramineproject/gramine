@@ -8,7 +8,16 @@
 /* Types and structures used by various Linux ABIs (e.g. syscalls). */
 /* These need to be binary-identical with the ones used by Linux. */
 
-#include <linux/utsname.h>
+#define __NEW_UTS_LEN 64
+
+struct new_utsname {
+    char sysname[__NEW_UTS_LEN + 1];
+    char nodename[__NEW_UTS_LEN + 1];
+    char release[__NEW_UTS_LEN + 1];
+    char version[__NEW_UTS_LEN + 1];
+    char machine[__NEW_UTS_LEN + 1];
+    char domainname[__NEW_UTS_LEN + 1];
+};
 
 /* Copied and slightly adapted from linux/include/uapi/linux/sysinfo.h, ver 5.11. */
 struct sysinfo {
