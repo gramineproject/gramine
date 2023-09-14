@@ -106,7 +106,7 @@ def get_enclave_attributes(manifest_sgx):
         flags |= offs.SGX_FLAGS_MODE64BIT
 
     miscs_dict = {
-        'require_exinfo': offs.SGX_MISCSELECT_EXINFO,
+        'use_exinfo': offs.SGX_MISCSELECT_EXINFO,
     }
     miscs = collect_bits(manifest_sgx, miscs_dict)
 
