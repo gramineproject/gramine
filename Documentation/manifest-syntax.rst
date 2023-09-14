@@ -808,7 +808,9 @@ security-hardening features (MPX and PKRU).
 The ``"unspecified"`` syntax applies only to not-security-hardening features. It
 means that the enclave initialization will succeed regardless of whether the CPU
 feature is available on the platform or not. The CPU features will be enabled in
-the enclave if they are available on the platform.
+the enclave if they are available on the platform. Security-hardening features
+cannot be marked as ``"unspecified"`` because this would lead to different
+security properties of the application on different platforms.
 
 The ``"disabled"`` syntax disables the CPU feature inside the enclave even if
 this CPU feature is available on the platform. This may improve enclave
@@ -1195,6 +1197,11 @@ Optional CPU features (deprecated syntax)
 This syntax specified whether to require certain CPU features to be available on
 the platform where the enclave executes. This syntax has been replaced with
 ``sgx.cpu_features.[avx|avx512|mpx|pkru|amx]``.
+
+Previously, the default value for these features was ``false``. This was
+ambiguous because e.g. ``sgx.require_avx = false`` meant that the AVX feature
+was auto-detected on the platform, whereas ``sgx.require_mpx = false`` meant
+that the MPX feature was always disabled inside the enclave.
 
 .. note ::
    Previously, security-hardening features (MPX and PKRU) were underspecified.
