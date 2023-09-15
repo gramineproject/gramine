@@ -215,7 +215,7 @@ static int read_cache_info(struct pal_cache_info* ci, size_t thread_idx, size_t 
     return 0;
 }
 
-static int get_ranges_end(size_t ind, void* _arg) {
+static int get_ranges_count(size_t ind, void* _arg) {
     *(size_t*)_arg = ind + 1; // can overflow, but this function is used only on trusted data
     return 0;
 }
@@ -285,11 +285,11 @@ static int set_node_id(size_t thr_ind, void* _args) {
 
 int get_topology_info(struct pal_topo_info* topo_info) {
     size_t threads_cnt = 0;
-    int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
+    int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_count, &threads_cnt);
     if (ret < 0)
         return ret;
     size_t nodes_cnt = 0;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
+    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_count, &nodes_cnt);
     if (ret < 0)
         return ret;
 
