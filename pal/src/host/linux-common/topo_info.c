@@ -220,6 +220,11 @@ static int get_ranges_end(size_t ind, void* _arg) {
     return 0;
 }
 
+static int get_ranges_count(size_t ind, void* _arg) {
+    *(size_t*)_arg += 1;
+    return 0;
+}
+
 static int set_thread_online(size_t ind, void* _threads) {
     struct pal_cpu_thread_info* threads = (struct pal_cpu_thread_info*)_threads;
     threads[ind].is_online = true;
@@ -289,7 +294,11 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     if (ret < 0)
         return ret;
     size_t nodes_cnt = 0;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
+    ret = iterate_ranges_from_file("/sys/devices/system/node/online", get_ranges_count, &nodes_cnt);
+    if (ret < 0)
+        return ret;
+    size_t nodes_max = 0;
+    ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_max);
     if (ret < 0)
         return ret;
 
@@ -300,8 +309,8 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     struct pal_cpu_core_info* cores = malloc(threads_cnt * sizeof(*cores)); // overapproximate the count
     size_t sockets_cnt = 0;
     struct pal_socket_info* sockets = malloc(threads_cnt * sizeof(*sockets)); // overapproximate the count
-    struct pal_numa_node_info* numa_nodes = malloc(nodes_cnt * sizeof(*numa_nodes));
-    size_t* distances = malloc(nodes_cnt * nodes_cnt * sizeof(*distances));
+    struct pal_numa_node_info* numa_nodes = malloc(nodes_max * sizeof(*numa_nodes));
+    size_t* distances = malloc(nodes_max * nodes_max * sizeof(*distances));
     if (!threads || !caches || !cores || !sockets || !numa_nodes || !distances) {
         ret = -ENOMEM;
         goto fail;
@@ -316,7 +325,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             threads[i].ids_of_caches[j] = (size_t)-1;
         }
     }
-    for (size_t i = 0; i < nodes_cnt; i++)
+    for (size_t i = 0; i < nodes_max; i++)
         numa_nodes[i].is_online = false;
 
     ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
@@ -400,7 +409,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
      *            0        ,    0    ,        0
      *     node 2 -> node 0,    0    , node 2 -> node 2 ]
      */
-    memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
+    memset(distances, 0, nodes_max * nodes_max * sizeof(*distances));
     for (size_t i = 0; i < nodes_cnt; i++) {
         if (!numa_nodes[i].is_online)
             continue;
