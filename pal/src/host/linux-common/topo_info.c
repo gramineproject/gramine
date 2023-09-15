@@ -60,11 +60,22 @@ static int get_hw_resource_value(const char* filename, size_t* out_value) {
     return 0;
 }
 
+static ssize_t get_next_online_numa_node(struct pal_numa_node_info* numa_nodes, size_t nodes_max,
+                                         size_t sidx) {
+    while (!numa_nodes[sidx].is_online) {
+        sidx++;
+        if (sidx >= nodes_max)
+            return -1;
+    }
+    return sidx;
+}
+
 /* Read a space-separated list of numbers in the format used by
  * `/sys/devices/system/node/node<i>/distance`, and write the result to the online nodes from
  * `numa_nodes`. */
 static int read_distances_from_file(const char* path, size_t* out_arr,
-                                    struct pal_numa_node_info* numa_nodes, size_t nodes_cnt) {
+                                    struct pal_numa_node_info* numa_nodes, size_t nodes_max,
+                                    size_t nodes_cnt) {
     char buf[PAL_SYSFS_BUF_FILESZ];
     int ret = read_file_buffer(path, buf, sizeof(buf) - 1);
     if (ret < 0)
@@ -75,10 +86,14 @@ static int read_distances_from_file(const char* path, size_t* out_arr,
     const char* end;
     char last_separator = ' ';
     size_t node_i = 0;
-    for (size_t input_i = 0; /* no condition */; input_i++) {
+    ssize_t sidx = 0;
+    for (size_t input_i = 0; /* no condition */; input_i++, sidx++) {
         /* Find next online node (only these are listed in `distance` file). */
-        while (node_i < nodes_cnt && !numa_nodes[node_i].is_online)
-            node_i++;
+        if (node_i < nodes_cnt) {
+            sidx = get_next_online_numa_node(numa_nodes, nodes_max, sidx);
+            if (sidx < 0)
+                return -EINVAL;
+        }
         if (node_i == nodes_cnt)
             break;
         if (last_separator != ' ')
@@ -377,11 +392,15 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+    ssize_t sidx = 0;
+    for (size_t i = 0; i < nodes_cnt; i++, sidx++) {
+        sidx = get_next_online_numa_node(numa_nodes, nodes_max, sidx);
+        if (sidx < 0) {
+            ret = -EINVAL;
+            goto fail;
+        }
 
-        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", sidx);
         ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
             .threads = threads,
             .cores = cores,
@@ -411,15 +430,20 @@ int get_topology_info(struct pal_topo_info* topo_info) {
      *     node 2 -> node 0,    0    , node 2 -> node 2 ]
      */
     memset(distances, 0, nodes_max * nodes_max * sizeof(*distances));
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+    sidx = 0;
+    for (size_t i = 0; i < nodes_cnt; i++, sidx++) {
+        sidx = get_next_online_numa_node(numa_nodes, nodes_max, sidx);
+        if (sidx < 0) {
+            ret = -EINVAL;
+            goto fail;
+        }
 
         /* populate row i of `distances`, setting only online nodes */
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", sidx);
         if (ret < 0)
             goto fail;
-        ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
+        ret = read_distances_from_file(path, distances + i * nodes_max, numa_nodes, nodes_max,
+                                       nodes_cnt);
         if (ret < 0)
             goto fail;
     }
