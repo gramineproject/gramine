@@ -1214,3 +1214,14 @@ that the MPX feature was always disabled inside the enclave.
    would result in enclave failures). This is in contrast to
    non-security-hardening features (AVX, AVX512, AMX) which could be
    "unspecified". The new manifest syntax fixes this ambiguity.
+
+SGX EXINFO (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.require_exinfo = [true|false]
+
+This syntax specified whether a user application can retrieve faulting address
+in signal handler in case of a page fault. This syntax was renamed to
+``sgx.use_exinfo``. The default value was ``false``.

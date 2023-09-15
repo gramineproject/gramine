@@ -93,7 +93,6 @@ class Manifest:
         sgx.setdefault('isvsvn', 0)
         sgx.setdefault('remote_attestation', "none")
         sgx.setdefault('debug', False)
-        sgx.setdefault('use_exinfo', False)
         sgx.setdefault('enable_stats', False)
         sgx.setdefault('edmm_enable', False)
 
@@ -102,7 +101,13 @@ class Manifest:
         else:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_NO_EDMM)
 
-        # TODO: below were deprecated in release v1.6, remove this check in v1.7;
+        # TODO: below was deprecated in release v1.6, remove this check in v1.7
+        #       (but keep the `if` body)
+        if not 'require_exinfo' in sgx:
+            sgx.setdefault('use_exinfo', False)
+
+        # TODO: below were deprecated in release v1.6, remove this check in v1.7
+        #       (but keep the `if` body)
         deprecated = ['require_avx', 'require_avx512', 'require_amx', 'require_mpx', 'require_pkru']
         if not any(key in sgx for key in deprecated):
             sgx_cpu_features = sgx.setdefault('cpu_features', {})

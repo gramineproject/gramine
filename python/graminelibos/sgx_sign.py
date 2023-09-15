@@ -84,7 +84,7 @@ def collect_bits(manifest_sgx, options_dict):
 
 def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, security_hardening):
     for opt, bits in options_dict.items():
-        if manifest_cpu_features.get(opt) is None:
+        if opt not in manifest_cpu_features:
             continue
         if manifest_cpu_features[opt] == "required":
             val |= bits
@@ -93,7 +93,7 @@ def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, sec
             val &= ~bits
             mask |= bits
         elif security_hardening or manifest_cpu_features[opt] != "unspecified":
-            raise KeyError(f'Manifest option `sgx.cpu_features.{opt}` has disallowed value')
+            raise KeyError(f'Manifest option `sgx.cpu_features.{opt}` has a disallowed value')
     return val, mask
 
 
@@ -105,9 +105,11 @@ def get_enclave_attributes(manifest_sgx):
     if ARCHITECTURE == 'amd64':
         flags |= offs.SGX_FLAGS_MODE64BIT
 
-    if manifest_sgx.get('require_exinfo') is not None:
-        raise KeyError(f'Manifest option `sgx.require_exinfo` was renamed to `sgx.use_exinfo`, '
-                        'please modify the manifest file accordingly')
+    # TODO: 'require_exinfo' was deprecated in release v1.6, should be removed in v1.7
+    if 'require_exinfo' in manifest_sgx:
+        if 'use_exinfo' in manifest_sgx:
+            raise KeyError(f'`sgx.require_exinfo` cannot coexist with `sgx.use_exinfo`')
+        manifest_sgx['use_exinfo'] = manifest_sgx.pop('require_exinfo')
 
     miscs_dict = {
         'use_exinfo': offs.SGX_MISCSELECT_EXINFO,
