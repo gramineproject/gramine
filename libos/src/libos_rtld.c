@@ -799,6 +799,7 @@ int load_and_check_exec(const char* path, const char* const* argv, struct libos_
         free(*curr_argv);
         free(curr_argv);
         put_handle(file);
+        file = NULL;
 
         curr_argv = new_argv;
     }
