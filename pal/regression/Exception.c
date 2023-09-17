@@ -106,8 +106,7 @@ static void handler4(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     pal_printf("Memory Fault Exception Handler: 0x%08lx, rip = 0x%08lx\n", addr, context->rip);
 
     if (addr != INVALID_ADDR)
-        pal_printf("Wrong faulting address: expected: 0x%08x, got: 0x%08lx\n",
-                   INVALID_ADDR, addr);
+        pal_printf("Wrong faulting address: expected: 0x%08x, got: 0x%08lx\n", INVALID_ADDR, addr);
 
     while (*(unsigned char*)context->rip != 0x90)
         context->rip++;
