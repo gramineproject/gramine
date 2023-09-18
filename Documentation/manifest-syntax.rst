@@ -798,8 +798,8 @@ Untrusted shared memory
 This syntax allows mounting shared memory objects that are accessible by both
 the application running inside Gramine and by other host software/hardware (host
 OS, other host processes, devices connected to the host). In Gramine, shared
-memory applies to ``shm``-typed pseudo-files which must be mapped into
-application address space with the ``MAP_SHARED`` flag.
+memory applies to ``shm``-typed files which must be mapped into application
+address space with the ``MAP_SHARED`` flag.
 
 URI can be a file or a directory. If a directory is mounted, all files under
 this directory are treated as shared memory objects (but sub-directories are
@@ -812,15 +812,10 @@ data between processes and devices. When this directory is mounted, the Gramine
 application may create files -- called "shared memory objects" in POSIX -- under
 this directory (for example, this is how ``shm_open()`` Glibc function works).
 
-In the SGX environment, all data put in shared memory (i.e. memory residing
-outside of the SGX enclave) must be preliminarily encrypted or at least
-integrity-protected. Unmodified applications almost never have such "protect
-data in shared memory" logic, so enabling shared memory in Gramine by default
-would be insecure.
-
 .. note ::
-   Shared memory is insecure by itself in SGX environments:
+   Adding shared memory mounts is insecure by itself in SGX environments:
 
+       - All data put in shared memory reside outside of the SGX enclave.
        - Typically applications do not encrypt the data put in shared memory,
          which may lead to leaks of enclave data.
        - Untrusted host can modify data in shared memory as it wishes, so
@@ -828,8 +823,9 @@ would be insecure.
 
    It is the responsibility of the app developer to correctly use shared memory, with
    security implications in mind. In most cases, data in shared memory should be
-   preliminarily encrypted or integrity-protected with a key pre-shared between all
-   participating processes (and possibly devices that use this shared memory).
+   preliminarily encrypted or integrity-protected by the user app with a key
+   pre-shared between all participating processes (and possibly devices that use
+   this shared memory).
 
 File check policy
 ^^^^^^^^^^^^^^^^^

@@ -13,7 +13,7 @@
 
 #define SHMNAME "/shm_test"
 #define CREATE_MODE 0666
-#define FILE_SIZE 4096 * 4
+#define FILE_SIZE (4096 * 4)
 
 static const char g_shared_text[] = "test_text";
 
