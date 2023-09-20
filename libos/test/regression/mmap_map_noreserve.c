@@ -71,7 +71,7 @@ int main(void) {
     CHECK(lseek(fd, 0, SEEK_SET));
 
     offset = rand() % TEST_LENGTH2;
-    n = read(fd, &((char*)a)[offset], sizeof(expected_val));
+    n = CHECK(read(fd, &((char*)a)[offset], sizeof(expected_val)));
     if (n != sizeof(expected_val))
         err(1, "read");
     if (((char*)a)[offset] != expected_val)
