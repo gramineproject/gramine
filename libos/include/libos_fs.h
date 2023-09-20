@@ -194,7 +194,7 @@ struct libos_fs_ops {
      *
      * Changes the permissions of a file associated with a given file handle.
      *
-     * On success, this function updates `hdl->inode->perm`.
+     * On success, the caller should update `hdl->inode->perm`.
      */
     int (*fchmod)(struct libos_handle* hdl, mode_t perm);
 };

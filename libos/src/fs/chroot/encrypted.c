@@ -370,22 +370,15 @@ out:
 
 static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
     assert(hdl->inode);
-    lock(&hdl->inode->lock);
 
     struct libos_encrypted_file* enc = hdl->inode->data;
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     int ret = PalStreamAttributesSetByHandle(enc->pal_handle, &attr);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
-        goto out;
-    }
-    hdl->inode->perm = perm;
-    ret = 0;
+    if (ret < 0)
+        return pal_to_unix_errno(ret);
 
-out:
-    unlock(&hdl->inode->lock);
-    return ret;
+    return 0;
 }
 
 static int chroot_encrypted_flush(struct libos_handle* hdl) {
