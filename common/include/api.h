@@ -372,6 +372,7 @@ int buf_flush(struct print_buf* buf);
 #define URI_TYPE_DIR      "dir"
 #define URI_TYPE_PIPE     "pipe"
 #define URI_TYPE_PIPE_SRV "pipe.srv"
+#define URI_TYPE_CONSOLE  "console"
 #define URI_TYPE_DEV      "dev"
 #define URI_TYPE_EVENTFD  "eventfd"
 #define URI_TYPE_FILE     "file"
@@ -379,6 +380,7 @@ int buf_flush(struct print_buf* buf);
 #define URI_PREFIX_DIR      URI_TYPE_DIR URI_PREFIX_SEPARATOR
 #define URI_PREFIX_PIPE     URI_TYPE_PIPE URI_PREFIX_SEPARATOR
 #define URI_PREFIX_PIPE_SRV URI_TYPE_PIPE_SRV URI_PREFIX_SEPARATOR
+#define URI_PREFIX_CONSOLE  URI_TYPE_CONSOLE URI_PREFIX_SEPARATOR
 #define URI_PREFIX_DEV      URI_TYPE_DEV URI_PREFIX_SEPARATOR
 #define URI_PREFIX_EVENTFD  URI_TYPE_EVENTFD URI_PREFIX_SEPARATOR
 #define URI_PREFIX_FILE     URI_TYPE_FILE URI_PREFIX_SEPARATOR

@@ -11,7 +11,7 @@ commands
 
   # Check if we can break inside PAL and get a full backtrace (across libc).
 
-  tbreak dev_write
+  tbreak console_write
   commands
     echo \n<backtrace 2 start>\n
     backtrace

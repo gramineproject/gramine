@@ -63,6 +63,9 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PIPESRV:
             /* no need to serialize ssl_ctx and handshake_helper_thread_hdl */
             break;
+        case PAL_TYPE_CONSOLE:
+            /* console (stdin/stdout/stderr) has no fields to serialize */
+            break;
         case PAL_TYPE_DEV:
             /* devices have no fields to serialize */
             break;
@@ -159,6 +162,8 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         case PAL_TYPE_PIPESRV:
             hdl->pipe.ssl_ctx = NULL;
             hdl->pipe.handshake_helper_thread_hdl = NULL;
+            break;
+        case PAL_TYPE_CONSOLE:
             break;
         case PAL_TYPE_DEV:
             break;

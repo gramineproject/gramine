@@ -491,6 +491,10 @@ static int pseudo_poll(struct libos_handle* hdl, int events, int* out_events) {
         }
 
         case PSEUDO_DEV: {
+            if (node->dev.dev_ops.poll)
+                return node->dev.dev_ops.poll(hdl, events, out_events);
+
+            /* if no handle-specific poll, then use a generic one */
             *out_events = 0;
             if (node->dev.dev_ops.read)
                 *out_events |= events & (POLLIN | POLLRDNORM);

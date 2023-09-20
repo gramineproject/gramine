@@ -10,10 +10,11 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-/* Stream handler table: this table corresponds to all the handle type supported by PAL. Threads
+/* Stream handler table: this table corresponds to all the handle types supported by PAL. Threads
  * are not streams, so they need no handler. Sockets have their own table. */
 extern struct handle_ops g_file_ops;
 extern struct handle_ops g_pipe_ops;
+extern struct handle_ops g_console_ops;
 extern struct handle_ops g_dev_ops;
 extern struct handle_ops g_dir_ops;
 extern struct handle_ops g_thread_ops;
@@ -26,6 +27,7 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
     [PAL_TYPE_PIPE]    = &g_pipe_ops,
     [PAL_TYPE_PIPESRV] = &g_pipe_ops,
     [PAL_TYPE_PIPECLI] = &g_pipe_ops,
+    [PAL_TYPE_CONSOLE] = &g_console_ops,
     [PAL_TYPE_DEV]     = &g_dev_ops,
     [PAL_TYPE_DIR]     = &g_dir_ops,
     [PAL_TYPE_PROCESS] = &g_proc_ops,
@@ -73,9 +75,12 @@ static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops**
 
         case 8: ;
             static_assert(static_strlen(URI_PREFIX_EVENTFD) == 8, "URI_PREFIX_EVENTFD has unexpected length");
+            static_assert(static_strlen(URI_PREFIX_CONSOLE) == 8, "URI_PREFIX_CONSOLE has unexpected length");
 
             if (strstartswith(u, URI_PREFIX_EVENTFD))
                 hops = &g_eventfd_ops;
+            else if (strstartswith(u, URI_PREFIX_CONSOLE))
+                hops = &g_console_ops;
             break;
 
         case 9: ;

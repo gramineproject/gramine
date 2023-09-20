@@ -113,14 +113,16 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
 
         if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->poll) {
             ret = handle->fs->fs_ops->poll(handle, events, &events);
-            /*
-             * FIXME: remove this hack.
-             * Initial 0,1,2 fds in Gramine are represented by "/dev/tty" (whatever that means)
-             * and have `generic_inode_poll` set as poll callback, which returns `-EAGAIN` on
-             * non-regular-file handles. In such case we let PAL do the actual polling.
-             */
-            if (ret == -EAGAIN && handle->uri && !strcmp(handle->uri, "dev:tty")) {
-                goto dev_tty_hack;
+
+            if (ret == -ENOSYS) {
+                /*
+                 * Some handles (e.g. tty/console) implement a dummy poll callback that returns
+                 * "Function not implemented" error. Unfortunately it is impossible to *not* assign
+                 * a callback, because such handles have two layers of poll indirection (first the
+                 * "pseudo" poll callback, then the actual handle callback). In such case we let PAL
+                 * do the actual polling.
+                 */
+                goto use_pal_polling;
             }
 
             if (ret < 0) {
@@ -135,7 +137,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
 
             continue;
 
-            dev_tty_hack:;
+            use_pal_polling:;
         }
 
         PAL_HANDLE pal_handle;

@@ -59,6 +59,7 @@ struct libos_dev_ops {
     int (*flush)(struct libos_handle* hdl);
     int64_t (*seek)(struct libos_handle* hdl, int64_t offset, int whence);
     int (*truncate)(struct libos_handle* hdl, uint64_t len);
+    int (*poll)(struct libos_handle* hdl, int in_events, int* out_events);
 };
 
 #define PSEUDO_PERM_DIR     PERM_r_xr_xr_x  /* default for directories */

@@ -8,6 +8,7 @@ manifests = [
   "bootstrap",
   "bootstrap_pie",
   "bootstrap_static",
+  "console",
   "debug",
   "debug_log_file",
   "debug_log_inline",

@@ -9,6 +9,7 @@ pal_skeleton_map = custom_target('pal.map[skeleton]',
 )
 
 libpal_skeleton = shared_library('pal',
+    'pal_console.c',
     'pal_devices.c',
     'pal_eventfd.c',
     'pal_events.c',
