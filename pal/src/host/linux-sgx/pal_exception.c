@@ -282,8 +282,12 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
     }
 
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
-    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault (which
+     * could happen when some syscalls try to access user buffers that're created using mappings
+     * with `MAP_NORESERVE`- this should be handled later in the lazy-allocation logic) */
+    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT &&
+                                event_num != PAL_EVENT_INTERRUPTED &&
+                                event_num != PAL_EVENT_MEMFAULT) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
@@ -345,6 +349,13 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                 _PalProcessExit(1);
             }
             goto out;
+        }
+        if (ADDR_IN_PAL(uc->rip)) {
+            char buf[LOCATION_BUF_SIZE];
+            pal_describe_location(uc->rip, buf, sizeof(buf));
+
+            log_error("Unexpected memory fault occurred inside PAL (%s)", buf);
+            _PalProcessExit(1);
         }
     }
 

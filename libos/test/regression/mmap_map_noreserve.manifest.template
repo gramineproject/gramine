@@ -17,6 +17,10 @@ sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.require_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
+sgx.allowed_files = [
+  "file:testfile_map_noreserve",
+]
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",

@@ -13,11 +13,12 @@
  *
  * Therefore, on EDMM-enabled platforms, the test is supposed to be significantly faster than on
  * non-EDMM-enabled platforms. But functionality-wise it will be the same. For example, on an ICX
- * machine, this test takes ~0.7s with EDMM enabled and ~17s with EDMM disabled.
+ * machine, this test takes ~0.7s with EDMM enabled and ~19s with EDMM disabled.
  */
 
 #define _GNU_SOURCE
 #include <err.h>
+#include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@
 
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2 0xC000000
+#define TEST_FILE "testfile_map_noreserve"
 
 int main(void) {
     const char expected_val = 0xff;
@@ -37,8 +39,8 @@ int main(void) {
     srand(seed);
 
     /* test anonymous mappings with `MAP_NORESERVE` */
-    void* a = mmap(NULL, TEST_LENGTH, PROT_READ,
-                   MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+    void* a = mmap(NULL, TEST_LENGTH, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1,
+                   0);
     if (a == MAP_FAILED)
         err(1, "mmap 1");
 
@@ -54,11 +56,41 @@ int main(void) {
 
     CHECK(munmap(a, TEST_LENGTH));
 
-    /* test anonymous mappings with `MAP_NORESERVE` on fork */
+    /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write */
     a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
     if (a == MAP_FAILED)
         err(1, "mmap 2");
+
+    int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
+
+    ssize_t n = CHECK(write(fd, &expected_val, sizeof(expected_val)));
+    if (n != sizeof(expected_val))
+        err(1, "write 1");
+
+    CHECK(lseek(fd, 0, SEEK_SET));
+
+    offset = rand() % TEST_LENGTH2;
+    n = read(fd, &((char*)a)[offset], sizeof(expected_val));
+    if (n != sizeof(expected_val))
+        err(1, "read");
+    if (((char*)a)[offset] != expected_val)
+        errx(1, "unexpected value read from file (expected: %x, actual: %x)", expected_val,
+             ((char*)a)[offset]);
+
+    offset = rand() % TEST_LENGTH2;
+    n = CHECK(write(fd, &((char*)a)[offset], sizeof(char)));
+    if (n != sizeof(char))
+        err(1, "write 2");
+
+    CHECK(munmap(a, TEST_LENGTH2));
+    CHECK(close(fd));
+
+    /* test anonymous mappings with `MAP_NORESERVE` on fork */
+    a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE,
+             MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+    if (a == MAP_FAILED)
+        err(1, "mmap 3");
 
     offset = rand() % TEST_LENGTH2;
     ((char*)a)[offset] = expected_val;
