@@ -26,7 +26,7 @@ sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 # for tests that require SIGSEGV handling (e.g., setrlimit01, mmap03)
-sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.use_exinfo = true
 
 sgx.allowed_files = [
   "file:/tmp",
