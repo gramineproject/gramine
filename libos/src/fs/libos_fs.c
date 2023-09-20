@@ -179,14 +179,6 @@ static int mount_sys(void) {
         return ret;
 
     ret = mount_fs(&(struct libos_mount_params){
-        .type = "chroot",
-        .path = "/dev/tty",
-        .uri = URI_PREFIX_DEV "tty",
-    });
-    if (ret < 0)
-        return ret;
-
-    ret = mount_fs(&(struct libos_mount_params){
         .type = "pseudo",
         .path = "/sys",
         .uri = "sys",

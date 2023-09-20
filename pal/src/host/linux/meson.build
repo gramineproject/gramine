@@ -1,4 +1,5 @@
 pal_direct_sources = files(
+    'pal_console.c',
     'pal_devices.c',
     'pal_eventfd.c',
     'pal_events.c',

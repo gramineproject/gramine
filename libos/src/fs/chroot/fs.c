@@ -135,17 +135,9 @@ static int chroot_lookup(struct libos_dentry* dent) {
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix. In
      * most cases, a "file:" prefix is good enough: `PalStreamAttributesQuery` will access the file
      * and report the right file type.
-     *
-     * The only exception is when this is the root dentry of a "dev:" mount, i.e. a directly mounted
-     * device. This is because PAL recognizes a special "dev:tty" device, which needs to be referred
-     * to by this exact URI (and "file:tty" will not work).
      */
     char* uri = NULL;
-    mode_t tmp_type = S_IFREG;
-    if (!dent->parent && strstartswith(dent->mount->uri, URI_PREFIX_DEV))
-        tmp_type = S_IFCHR;
-
-    ret = chroot_dentry_uri(dent, tmp_type, &uri);
+    ret = chroot_dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         goto out;
 

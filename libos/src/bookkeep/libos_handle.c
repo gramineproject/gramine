@@ -31,11 +31,6 @@ static MEM_MGR handle_mgr = NULL;
 
 #define INIT_HANDLE_MAP_SIZE 32
 
-static int init_tty_handle(struct libos_handle* hdl, bool write) {
-    int flags = write ? (O_WRONLY | O_APPEND) : O_RDONLY;
-    return open_namei(hdl, /*start=*/NULL, "/dev/tty", flags, LOOKUP_FOLLOW, /*found=*/NULL);
-}
-
 int open_executable(struct libos_handle* hdl, const char* path) {
     struct libos_dentry* dent = NULL;
 
@@ -186,7 +181,9 @@ int init_std_handles(void) {
             return -ENOMEM;
         }
 
-        if ((ret = init_tty_handle(stdin_hdl, /*write=*/false)) < 0) {
+        ret = open_namei(stdin_hdl, /*start=*/NULL, "/dev/tty", O_RDONLY, LOOKUP_FOLLOW,
+                         /*found=*/NULL);
+        if (ret < 0) {
             rwlock_write_unlock(&handle_map->lock);
             put_handle(stdin_hdl);
             return ret;
@@ -204,7 +201,9 @@ int init_std_handles(void) {
             return -ENOMEM;
         }
 
-        if ((ret = init_tty_handle(stdout_hdl, /*write=*/true)) < 0) {
+        ret = open_namei(stdout_hdl, /*start=*/NULL, "/dev/tty", O_WRONLY | O_APPEND, LOOKUP_FOLLOW,
+                         /*found=*/NULL);
+        if (ret < 0) {
             rwlock_write_unlock(&handle_map->lock);
             put_handle(stdout_hdl);
             return ret;

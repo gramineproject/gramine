@@ -61,7 +61,7 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
 
     switch (cmd) {
         case TIOCGPGRP:
-            if (!hdl->uri || strcmp(hdl->uri, "dev:tty") != 0) {
+            if (!hdl->uri || strcmp(hdl->uri, URI_PREFIX_CONSOLE)) {
                 ret = -ENOTTY;
                 break;
             }

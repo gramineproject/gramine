@@ -74,6 +74,10 @@ typedef struct {
 
         struct {
             PAL_IDX fd;
+        } console;
+
+        struct {
+            PAL_IDX fd;
             bool nonblocking;
         } dev;
 

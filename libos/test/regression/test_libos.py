@@ -87,6 +87,19 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(['toml_parsing'])
         self.assertIn('Hello world!', stdout)
 
+    def test_010_console(self):
+        stdout, stderr = self.run_binary(['console'], timeout=40)
+        # recall that Gramine redirects app's stdout/stderr to host stdout
+        self.assertIn('First hello on stdout!', stdout)
+        self.assertIn('First hello on stderr!', stdout)
+        self.assertIn('Second hello on stdout!', stdout)
+        self.assertIn('Second hello on stderr!', stdout)
+        self.assertNotIn('Ignored hello on stdout!', stdout)
+        self.assertNotIn('Ignored hello on stderr!', stdout)
+        self.assertNotIn('Ignored hello on stdout!', stderr)
+        self.assertNotIn('Ignored hello on stderr!', stderr)
+        self.assertIn('TEST OK', stdout)
+
     def test_100_basic_bootstrapping(self):
         stdout, _ = self.run_binary(['bootstrap'])
 
@@ -1266,7 +1279,7 @@ class TC_50_GDB(RegressionTestCase):
             self.assertNotIn('??', backtrace_1)
 
         backtrace_2 = self.find('backtrace 2', stdout)
-        self.assertIn(' dev_write (', backtrace_2)
+        self.assertIn(' console_write (', backtrace_2)
         self.assertIn(' func ()', backtrace_2)
         self.assertIn(' main ()', backtrace_2)
         self.assertIn(' _start ()', backtrace_2)
@@ -1277,7 +1290,7 @@ class TC_50_GDB(RegressionTestCase):
         if HAS_SGX:
             backtrace_3 = self.find('backtrace 3', stdout)
             self.assertIn(' sgx_ocall_write (', backtrace_3)
-            self.assertIn(' dev_write (', backtrace_3)
+            self.assertIn(' console_write (', backtrace_3)
             self.assertIn(' func ()', backtrace_3)
             self.assertIn(' main ()', backtrace_3)
             self.assertIn(' _start ()', backtrace_3)

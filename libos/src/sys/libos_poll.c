@@ -111,33 +111,42 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
             events &= ~(POLLOUT | POLLWRNORM);
         }
 
+        /*
+         * Some handles (e.g. pipes) do not implement a poll callback at all. In such case we let
+         * PAL do the actual polling.
+         *
+         * Some handles (e.g. files) do have their own, handle-specific poll callback. In such case
+         * we do not add these handles for PAL polling, but instead populate `revents` of a
+         * handle-corresponding FD with the result of the poll callback.
+         *
+         * Finally, some handles (e.g. tty/console) implement a dummy poll callback that returns
+         * "Function not implemented" (-ENOSYS) error. We have this special case because it is
+         * impossible to *not* implement a callback: such handles have two layers of poll
+         * indirection (e.g. tty belongs to the "pseudo" FS which has a generic "pseudo" poll
+         * callback, which calls the actual tty-handle callback).
+         */
+        bool handle_specific_poll_invoked = false;
         if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->poll) {
             ret = handle->fs->fs_ops->poll(handle, events, &events);
-            /*
-             * FIXME: remove this hack.
-             * Initial 0,1,2 fds in Gramine are represented by "/dev/tty" (whatever that means)
-             * and have `generic_inode_poll` set as poll callback, which returns `-EAGAIN` on
-             * non-regular-file handles. In such case we let PAL do the actual polling.
-             */
-            if (ret == -EAGAIN && handle->uri && !strcmp(handle->uri, "dev:tty")) {
-                goto dev_tty_hack;
-            }
-
-            if (ret < 0) {
+            if (ret < 0 && ret != -ENOSYS) {
+                /* ENOSYS implies that no handle-specific poll was found; other errors imply that
+                 * there was a handle-specific poll, but its invocation failed for other reasons */
                 rwlock_read_unlock(&map->lock);
                 goto out;
             }
+            if (ret != -ENOSYS)
+                handle_specific_poll_invoked = true;
+        }
 
+        if (handle_specific_poll_invoked) {
             fds[i].revents = events;
             if (events) {
                 ret_events_count++;
             }
-
-            continue;
-
-            dev_tty_hack:;
+            continue; /* for loop over FDs to poll */
         }
 
+        /* add the handle for PAL polling */
         PAL_HANDLE pal_handle;
         if (handle->type == TYPE_SOCK) {
             pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);

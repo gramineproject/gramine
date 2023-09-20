@@ -88,6 +88,7 @@ enum {
     PAL_TYPE_PIPE,
     PAL_TYPE_PIPESRV,
     PAL_TYPE_PIPECLI,
+    PAL_TYPE_CONSOLE,
     PAL_TYPE_DEV,
     PAL_TYPE_DIR,
     PAL_TYPE_SOCKET,
@@ -343,7 +344,9 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  * Supported URI types:
  * * `%file:...`, `dir:...`: Files or directories on the host file system. If #PAL_CREATE_TRY or
  *   #PAL_CREATE_ALWAYS is given in `create` flags, the file/directory will be created.
- * * `dev:...`: Open a device as a stream. For example, `dev:tty` represents the standard I/O.
+ * * `dev:...`: Open a device as a stream.
+ * * `console:`: Open a console (PAL-specific input/output) as a stream. In case of Linux and
+ *   Linux-SGX PALs, the "input/output" are the stdin and stdout streams of the host process.
  * * `pipe.srv:<name>`, `pipe:<name>`, `pipe:`: Open a byte stream that can be used for RPC between
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
