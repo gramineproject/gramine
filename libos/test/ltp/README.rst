@@ -1,6 +1,9 @@
 LTP FOR GRAMINE
 ===============
 
+*Disclaimer*: LTP is currently tested only on the Linux PAL; it may or may not
+work on Linux-SGX PAL.
+
 Building
 --------
 

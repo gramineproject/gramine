@@ -237,7 +237,7 @@ LTP
 ^^^
 Gramine passes a |nbsp| subset of the LTP tests. New changes should not break
 currently passing LTP tests (and, ideally, might add new passing tests). LTP is
-currently only supported on the Linux PAL.
+currently tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
 
 To run these tests::
 
@@ -245,8 +245,6 @@ To run these tests::
    # consider -j$(nproc) or similar to parallelize and improve the build time.
    make
    make regression
-   # or
-   make SGX=1 regression
    # or run an individual test by name:
    python3 -m pytest -v -k chmod01
 
