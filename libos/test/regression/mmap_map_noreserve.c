@@ -54,6 +54,11 @@ int main(void) {
     offset = rand() % TEST_LENGTH;
     ((char*)a)[offset] = expected_val;
 
+    CHECK(madvise(a, TEST_LENGTH, MADV_DONTNEED));
+    if (((char*)a)[offset] != 0)
+        errx(1, "unexpected value read after 'madvise(MADV_DONTNEED)' (expected: %x, actual: %x)",
+             0, ((char*)a)[offset]);
+
     CHECK(munmap(a, TEST_LENGTH));
 
     /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write */

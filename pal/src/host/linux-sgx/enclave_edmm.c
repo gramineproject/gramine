@@ -224,8 +224,10 @@ void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size,
     g_enclave_page_tracker = create_enclave_page_tracker(base_address, num_pages, page_size);
 
     /* set initial enclave pages allocations by slab allocator and the enclave page tracker */
+    spinlock_lock(&g_enclave_page_tracker_lock);
     for (size_t i = 0; i < g_initial_page_allocs_count; i++)
         set_enclave_addr_range(g_initial_page_allocs[i].addr, g_initial_page_allocs[i].num_pages);
+    spinlock_unlock(&g_enclave_page_tracker_lock);
 }
 
 /* convert an address to an index in the page tracker */
@@ -258,24 +260,22 @@ static inline bool is_enclave_page_set(size_t index) {
 
 /* set a range of enclave pages as allocated according to the memory address and number of pages */
 void set_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    spinlock_lock(&g_enclave_page_tracker_lock);
+    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * g_enclave_page_tracker->page_size;
         size_t index = address_to_index(address);
         set_enclave_page(index);
     }
-    spinlock_unlock(&g_enclave_page_tracker_lock);
 }
 
 /* set a range of enclave pages as free according to the memory address and number of pages */
 void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    spinlock_lock(&g_enclave_page_tracker_lock);
+    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * g_enclave_page_tracker->page_size;
         size_t index = address_to_index(address);
         unset_enclave_page(index);
     }
-    spinlock_unlock(&g_enclave_page_tracker_lock);
 }
 
 static void copy_bitvector_with_offset(unsigned char* dest_bitvector,
@@ -331,13 +331,14 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
     size_t start = address_to_index(start_addr);
     size_t end = start + count;
 
+    spinlock_lock(&g_enclave_page_tracker_lock);
+
     size_t i = start;
     while (i < end && i < g_enclave_page_tracker->size) {
         uintptr_t consecutive_start_addr = 0;
         size_t consecutive_count = 0;
 
         /* find consecutive set/unset pages */
-        spinlock_lock(&g_enclave_page_tracker_lock);
         if (is_enclave_page_set(i) == walk_set_pages) {
             consecutive_start_addr = index_to_address(i);
             while (i < end && i < g_enclave_page_tracker->size &&
@@ -348,7 +349,6 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
         } else {
             i++;
         }
-        spinlock_unlock(&g_enclave_page_tracker_lock);
 
         if (consecutive_count > 0) {
             /* invoke the `callback` on the consecutive pages */
@@ -357,6 +357,8 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
                 break;
         }
     }
+
+    spinlock_unlock(&g_enclave_page_tracker_lock);
 
     return ret;
 }

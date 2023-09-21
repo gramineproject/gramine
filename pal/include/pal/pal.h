@@ -1014,7 +1014,8 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
  * \param[in,out] bitvector_size On success, will contain the actual size of the bitvector.
  *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
- * be sent to the child process, as a perf optimization specific for SGX EDMM). Returns all-ones for
+ * be sent to the child process, as a perf optimization specific for SGX EDMM) and
+ * madvise(MADV_DONTNEED) logic (to learn which pages need to be zeroized). Returns all-ones for
  * non-SGX non-EDMM PALs; returns a populated bitvector slice for SGX EDMM PAL.
  */
 int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,

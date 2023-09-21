@@ -1302,6 +1302,8 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
+    unsigned char* bitvector;
+    size_t bitvector_size;
     int error;
 };
 
@@ -1331,14 +1333,48 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
     uintptr_t zero_end = MIN(ctx->end, vma->end);
-    memset((void*)zero_start, 0, zero_end - zero_start);
+    if (vma->flags & MAP_NORESERVE) {
+        /* Lazy allocation of pages, zeroize only committed pages. Note that in addition to
+         * performance considerations, page faults can happen on uncommitted pages during the
+         * zeroization where both the MADV_DONTNEED visitor and the MAP_NORESERVE lazy allocation
+         * logic require VMA lookup and are thus holding the non-reentrant/recursive
+         * `vma_tree_lock`. */
+        memset(ctx->bitvector, 0, ctx->bitvector_size);
+        size_t actual_bitvector_size = ctx->bitvector_size;
+        int ret = PalGetCommittedPages(zero_start, (zero_end - zero_start), ctx->bitvector,
+                                       &actual_bitvector_size);
+        if (ret < 0)
+            return false;
+
+        for (size_t byte_idx = 0; byte_idx < actual_bitvector_size; byte_idx++) {
+            unsigned char byte = (ctx->bitvector)[byte_idx];
+            for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
+                if (byte & (1 << bit_idx)) {
+                    memset((void*)(zero_start + (byte_idx * 8 + bit_idx) * PAGE_SIZE), 0,
+                           PAGE_SIZE);
+                }
+            }
+        }
+    } else {
+        memset((void*)zero_start, 0, zero_end - zero_start);
+    }
     return true;
 }
 
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
+    /* allocate the bitvector for committed pages info outside the VMA traversing to avoid
+     * recursively holding `vma_tree_lock` */
+    size_t vma_length = end - begin;
+    size_t bitvector_size = ALIGN_UP(ALIGN_UP(vma_length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
+    unsigned char* bitvector = calloc(1, bitvector_size);
+    if (!bitvector)
+        return -ENOMEM;
+
     struct madvise_dontneed_ctx ctx = {
         .begin = begin,
         .end = end,
+        .bitvector = bitvector,
+        .bitvector_size = bitvector_size,
         .error = 0,
     };
 
@@ -1347,7 +1383,9 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     spinlock_unlock(&vma_tree_lock);
 
     if (!is_continuous)
-        return -ENOMEM;
+        ctx.error = -ENOMEM;
+
+    free(bitvector);
     return ctx.error;
 }
 
