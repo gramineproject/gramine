@@ -90,7 +90,7 @@ static int eventfd_using_poll(void) {
     }
 
     while (1) {
-        poll_ret = poll(pollfds, MAX_EFDS, 100);
+        poll_ret = poll(pollfds, MAX_EFDS, 1000);
 
         if (poll_ret == 0) {
             printf("Poll timed out. Exiting.\n");
