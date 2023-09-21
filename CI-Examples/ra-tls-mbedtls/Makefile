@@ -112,7 +112,7 @@ sgx_sign_client_epid: client_epid.manifest client
 .PHONY: check_epid
 check_epid: app epid
 	gramine-sgx server & SERVER_ID=$$!; \
-	sleep 30; \
+	../../scripts/wait_for_server 60 127.0.0.1 4433; \
 	./client epid > OUTPUT; \
 	./client epid 0 0 0 0 >> OUTPUT; \
 	kill -9 $$SERVER_ID
@@ -125,14 +125,14 @@ check_epid: app epid
 .PHONY: check_epid_fail
 check_epid_fail: app epid
 	gramine-sgx server --test-malicious-quote >/dev/null & SERVER_ID=$$!; \
-	sleep 30; \
+	../../scripts/wait_for_server 60 127.0.0.1 4433; \
 	./client epid && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 
 .PHONY: check_dcap
 check_dcap: app dcap
 	gramine-sgx server >/dev/null & SERVER_ID=$$!; \
-	sleep 30; \
+	../../scripts/wait_for_server 60 127.0.0.1 4433; \
 	./client dcap > OUTPUT; \
 	./client dcap 0 0 0 0 >> OUTPUT; \
 	kill -9 $$SERVER_ID
@@ -145,7 +145,7 @@ check_dcap: app dcap
 .PHONY: check_dcap_fail
 check_dcap_fail: app dcap
 	gramine-sgx server --test-malicious-quote >/dev/null & SERVER_ID=$$!; \
-	sleep 30; \
+	../../scripts/wait_for_server 60 127.0.0.1 4433; \
 	./client dcap && exit 1 || echo "[ Success 1/1 ]"; \
 	kill -9 $$SERVER_ID
 

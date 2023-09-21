@@ -75,7 +75,7 @@ do
         echo "wrk -c $CONNECTIONS -d $DURATION -t $CONCURRENCY -R $REQUESTS $DOWNLOAD_HOST/$DOWNLOAD_FILE"
         wrk -c "$CONNECTIONS" -d "$DURATION" -t "$CONCURRENCY" -R "$REQUESTS" "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
 
-        sleep 5
+        sleep 1
 
         THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
         THROUGHPUT=$(throughput_in_bytes "$THROUGHPUT_STR")
