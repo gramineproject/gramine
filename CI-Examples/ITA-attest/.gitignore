@@ -1,0 +1,11 @@
+gsc/
+.#*
+#*
+*.bak
+*.tmp
+.history/
+gramine.manifest
+app/build/
+.vscode/
+*.temp
+*.pem

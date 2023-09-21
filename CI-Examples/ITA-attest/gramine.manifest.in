@@ -1,0 +1,11 @@
+sgx.remote_attestation = "dcap"
+sgx.ra_client_spid = ""
+
+# projectamber.intel.com
+sgx.amber_url = "https://<ITA_SERVER>/appraisal/v1/"
+# sgx.amber_ip = "<ITA_IP>"
+sgx.amber_apikey = "<ITA_API_KEY>"
+
+sgx.amber_cacerts = '''
+<ITA_CA_CERT>
+'''
