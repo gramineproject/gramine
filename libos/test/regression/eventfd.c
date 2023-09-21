@@ -47,7 +47,6 @@ static void* write_eventfd_thread(void* arg) {
     }
 
     for (int i = 0; i < MAX_EFDS; i++) {
-        sleep(1);
         if (write(efds[i], &count, sizeof(count)) != sizeof(count)) {
             perror("write error");
             return NULL;
@@ -91,7 +90,7 @@ static int eventfd_using_poll(void) {
     }
 
     while (1) {
-        poll_ret = poll(pollfds, MAX_EFDS, 5000);
+        poll_ret = poll(pollfds, MAX_EFDS, 1000);
 
         if (poll_ret == 0) {
             printf("Poll timed out. Exiting.\n");

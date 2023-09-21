@@ -5,7 +5,7 @@ set -e
 gramine-sgx nginx &
 pid=$!
 
-sleep 10
+../../scripts/wait_for_server 60 localhost 8000
 
 test "$(curl --insecure -s https://localhost:8000/)" = "$(cat html/index.html)"
 ret=$?
