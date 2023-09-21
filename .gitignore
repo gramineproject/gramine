@@ -49,3 +49,6 @@ TAGS
 cscope.*
 ncscope.*
 *cscope*
+
+.cache
+*.idx

@@ -1,0 +1,5 @@
+[wrap-git]
+directory = jsmn-25647e692c7906b96ffd2b05ca54c097948e879c
+url = https://github.com/zserge/jsmn.git
+revision = 25647e692c7906b96ffd2b05ca54c097948e879c
+patch_directory = jsmn

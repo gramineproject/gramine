@@ -102,7 +102,11 @@ int init_devfs(void) {
     struct pseudo_node* stderr = pseudo_add_link(root, "stderr", NULL);
     stderr->link.target = "/proc/self/fd/2";
 
-    int ret = init_attestation(root);
+    int ret = init_amber(root);
+    if (ret < 0)
+        return ret;
+
+    ret = init_attestation(root);
     if (ret < 0)
         return ret;
 

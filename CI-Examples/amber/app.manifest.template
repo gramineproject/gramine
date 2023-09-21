@@ -1,0 +1,50 @@
+# Project Amber manifest file example
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "app"
+
+loader.log_level = "{{ log_level }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr{{ arch_libdir }}"
+
+loader.insecure__use_cmdline_argv = true
+
+sys.enable_sigterm_injection = true
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/etc", uri = "file:/etc" },
+]
+
+sgx.debug = false
+sgx.remote_attestation = "dcap"
+sgx.ra_client_spid = ""
+
+# dummy configuration for project Amber
+# Fixed IP of project Amber endpoint (Optional)
+# sgx.amber_ip = "127.0.0.1"
+sgx.amber_url = "https://api.trustauthority.intel.com/appraisal/v1/"
+sgx.amber_apikey = "0000000000"
+
+sgx.amber_userdata = "a dummy user data"
+
+# dummy configuration for KBS provided by project Amber
+# the public key component of a 2048-bit RSA key for secret wrapping
+# sgx.kbs_ip = "127.0.0.1"
+# sgx.kbs_url = "https://127.0.0.1:9443/kbs/v1/keys/"
+# sgx.kbs_keyid = "ae6281b3-e4fe-3db5-82fd-eed40f6e4f18"
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:app",
+  "file:{{ gramine.runtimedir() }}/",
+]
+
+sgx.allowed_files = [
+  "file:/etc/nsswitch.conf",
+  "file:/etc/ethers",
+  "file:/etc/hosts",
+  "file:/etc/group",
+  "file:/etc/passwd",
+  "file:/etc/gai.conf",
+]

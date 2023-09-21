@@ -252,6 +252,12 @@ if sgx
 
     cjson_dep = cjson_proj.get_variable('cjson_dep')
 
+    jsmn_proj = subproject('jsmn-25647e692c7906b96ffd2b05ca54c097948e879c')
+    jsmn_dep = jsmn_proj.get_variable('jsmn_dep')
+
+    picohttpparser_proj = subproject('picohttpparser-066d2b1e9ab820703db0837a7255d92d30f0c9f5')
+    picohttpparser_dep = picohttpparser_proj.get_variable('picohttpparser_dep')
+
     protobuf_dep = dependency('libprotobuf-c')
 
     if dcap
