@@ -75,9 +75,8 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
 
-        struct trusted_file* tf = NULL;
         if (!(options & PAL_OPTION_PASSTHROUGH)) {
-            tf = get_trusted_or_allowed_file(normpath);
+            struct trusted_file* tf = get_trusted_or_allowed_file(normpath);
             if (!tf || !tf->allowed) {
                 log_error("Disallowing access to file '%s'; file is not allowed.", normpath);
                 ret = -PAL_ERROR_DENIED;

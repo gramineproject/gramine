@@ -29,10 +29,10 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
   "file:tmp/",
-  "file:root",      # for getdents test
-  "file:testfile",  # for mmap_file test
-  "file:scripts/",  # for exec_script test
-  "file:/dev/shm/", # for shm test
+  "file:root",              # for getdents test
+  "file:testfile",          # for mmap_file test
+  "file:scripts/",          # for exec_script test
+  "file:/dev/shm/shm_test", # for shm test
 ]
 
 sgx.trusted_files = [
