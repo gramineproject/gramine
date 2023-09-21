@@ -174,6 +174,8 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
+    assert(addr >= g_pal_public_state.shared_address_start &&
+           (uintptr_t)addr + size < (uintptr_t)g_pal_public_state.shared_address_end);
     void* mapped_addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot),
                                           MAP_SHARED | MAP_FIXED, handle->dev.fd, offset);
     if (IS_PTR_ERR(mapped_addr))

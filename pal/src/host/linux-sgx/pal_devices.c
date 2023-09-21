@@ -11,6 +11,7 @@
  */
 
 #include "api.h"
+#include "enclave_tf.h"
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_flags_conv.h"
@@ -72,6 +73,16 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
             ret = -PAL_ERROR_DENIED;
             goto fail;
+        }
+
+        struct trusted_file* tf = NULL;
+        if (!(options & PAL_OPTION_PASSTHROUGH)) {
+            tf = get_trusted_or_allowed_file(normpath);
+            if (!tf || !tf->allowed) {
+                log_error("Disallowing access to file '%s'; file is not allowed.", normpath);
+                ret = -PAL_ERROR_DENIED;
+                goto fail;
+            }
         }
 
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
