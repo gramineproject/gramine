@@ -1308,6 +1308,8 @@ struct madvise_dontneed_ctx {
 };
 
 static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
     struct madvise_dontneed_ctx* ctx = (struct madvise_dontneed_ctx*)visitor_arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL)) {
