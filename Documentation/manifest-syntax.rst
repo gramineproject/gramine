@@ -808,16 +808,17 @@ this directory are treated as shared memory objects (but sub-directories are
 inaccessible for security reasons). New files created in a shared memory mount
 are also automatically treated as shared memory objects. Creating
 sub-directories in a shared memory mount is not allowed, for security reasons.
-Files in a shared memory mount or the mounted directory need to be explicitly
-listed as ``allowed_files`` to be accessed. See :ref:`allowed_files` for more
-information.
+Files in a shared memory mount (or the mounted directory itself) need to be
+explicitly listed as ``allowed_files`` to be accessed. See :ref:`allowed_files`
+for more information.
 
 Typically, you should mount the directory ``/dev/shm/`` (it is used for sharing
 data between processes and devices) and allow specific files in it. When this
 directory is mounted, the Gramine application may create the files -- called
 "shared memory objects" in POSIX -- under this directory (for example, this is
-how ``shm_open()`` Glibc function works). It's not recommended to allow a
-directory unless application creates shared memory objects with uncertain names.
+how ``shm_open()`` Glibc function works). It is not recommended to allow a
+directory unless the application creates shared memory objects with
+unpredictable names.
 
 .. note ::
    Adding shared memory mounts is insecure by itself in SGX environments:
