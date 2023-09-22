@@ -135,11 +135,11 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
                 ret_events_count++;
             }
 
+            /* we manually set revents for this fd, no need for PAL polling, continue to next fd */
             continue;
-
-            use_pal_polling:;
         }
 
+use_pal_polling: ;
         PAL_HANDLE pal_handle;
         if (handle->type == TYPE_SOCK) {
             pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
