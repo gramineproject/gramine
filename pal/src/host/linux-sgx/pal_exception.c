@@ -282,12 +282,15 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
     }
 
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault (which
-     * could happen when some syscalls try to access user buffers that're created using mappings
-     * with `MAP_NORESERVE`- this should be handled later in the lazy-allocation logic) */
-    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT &&
-                                event_num != PAL_EVENT_INTERRUPTED &&
-                                event_num != PAL_EVENT_MEMFAULT) {
+    bool async_event = (event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED);
+    bool memfault_with_edmm = (event_num == PAL_EVENT_MEMFAULT &&
+                               g_pal_linuxsgx_state.edmm_enabled);
+
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault with EDMM
+     * enabled (which could happen legitimately when some syscalls try to access user buffers
+     * that're created using mappings with `MAP_NORESERVE`) -- this should be handled later in the
+     * lazy-allocation logic */
+    if (ADDR_IN_PAL(uc->rip) && !async_event && !memfault_with_edmm) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
@@ -332,7 +335,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             break;
     }
 
-    if (event_num == PAL_EVENT_MEMFAULT && g_pal_linuxsgx_state.edmm_enabled) {
+    if (memfault_with_edmm) {
+        /* EDMM lazy allocation */
         assert(g_mem_bkeep_get_vma_info_upcall);
         assert(g_enclave_page_tracker);
 
@@ -340,7 +344,12 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         pal_prot_flags_t prot_flags;
 
         ret = g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags);
-        if (ret == 0 && (prot_flags & PAL_PROT_LAZYALLOC)) {
+        if (ret < 0) {
+            log_error("failed to get VMA info at 0x%lx: %s", addr, pal_strerror(ret));
+            _PalProcessExit(1);
+        }
+
+        if (prot_flags & PAL_PROT_LAZYALLOC) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
             ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
                                          prot_flags);
@@ -349,14 +358,16 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                 _PalProcessExit(1);
             }
             goto out;
-        }
-        if (ADDR_IN_PAL(uc->rip)) {
+        } else if (ADDR_IN_PAL(uc->rip)) {
+            /* inside PAL, and we hit a memfault on a not lazily-allocated page */
             char buf[LOCATION_BUF_SIZE];
             pal_describe_location(uc->rip, buf, sizeof(buf));
 
             log_error("Unexpected memory fault occurred inside PAL (%s)", buf);
             _PalProcessExit(1);
         }
+
+        /* propagate the unhandled memfaults to LibOS via upcall */
     }
 
     pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);

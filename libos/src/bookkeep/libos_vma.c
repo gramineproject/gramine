@@ -1334,11 +1334,12 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
     uintptr_t zero_end = MIN(ctx->end, vma->end);
     if (vma->flags & MAP_NORESERVE) {
-        /* Lazy allocation of pages, zeroize only committed pages. Note that in addition to
-         * performance considerations, page faults can happen on uncommitted pages during the
-         * zeroization where both the MADV_DONTNEED visitor and the MAP_NORESERVE lazy allocation
-         * logic require VMA lookup and are thus holding the non-reentrant/recursive
-         * `vma_tree_lock`. */
+        /* Lazy allocation of pages, zeroize only the committed pages. Note that the uncommitted
+         * pages have to be skipped to avoid deadlocks. This is because we're holding the
+         * non-reentrant/recursive `vma_tree_lock` when we're in this visitor callback (which is
+         * invoked during VMA traversing). And if we hit page faults on accessing the uncommitted
+         * pages, our lazy allocation logic would also try to acquire the same lock for VMA lookup
+         * in g_mem_bkeep_get_vma_info_upcall (see `pal_mem_bkeep_get_vma_info()` for details). */
         memset(ctx->bitvector, 0, ctx->bitvector_size);
         size_t actual_bitvector_size = ctx->bitvector_size;
         int ret = PalGetCommittedPages(zero_start, (zero_end - zero_start), ctx->bitvector,

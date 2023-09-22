@@ -61,7 +61,12 @@ int main(void) {
 
     CHECK(munmap(a, TEST_LENGTH));
 
-    /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write */
+    /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write
+     *
+     * note: we test this because the `read(fd, <mmapped buffer>)` reads into a buffer that was
+     * allocated with `MAP_NORESERVE` and thus will commit the enclave pages on demand, while
+     * executing the code in the PAL layer (this code writes the host-provided bytes from the file
+     * into the mmapped buffer) */
     a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
     if (a == MAP_FAILED)
@@ -71,7 +76,7 @@ int main(void) {
 
     ssize_t n = CHECK(write(fd, &expected_val, sizeof(expected_val)));
     if (n != sizeof(expected_val))
-        err(1, "write 1");
+        err(1, "write");
 
     CHECK(lseek(fd, 0, SEEK_SET));
 
@@ -82,11 +87,6 @@ int main(void) {
     if (((char*)a)[offset] != expected_val)
         errx(1, "unexpected value read from file (expected: %x, actual: %x)", expected_val,
              ((char*)a)[offset]);
-
-    offset = rand() % TEST_LENGTH2;
-    n = CHECK(write(fd, &((char*)a)[offset], sizeof(char)));
-    if (n != sizeof(char))
-        err(1, "write 2");
 
     CHECK(munmap(a, TEST_LENGTH2));
     CHECK(close(fd));

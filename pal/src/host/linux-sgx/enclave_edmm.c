@@ -223,10 +223,15 @@ void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size,
     size_t num_pages = memory_size / page_size;
     g_enclave_page_tracker = create_enclave_page_tracker(base_address, num_pages, page_size);
 
-    /* set initial enclave pages allocations by slab allocator and the enclave page tracker */
+    /* Note: the lock/unlock here is actually not needed since we have a single thread in the
+     * initialization phase of the SGX enclave; it's purely for satisfying the assertion in
+     * `set_enclave_addr_range()` */
     spinlock_lock(&g_enclave_page_tracker_lock);
+
+    /* set initial enclave pages allocations by slab allocator and the enclave page tracker */
     for (size_t i = 0; i < g_initial_page_allocs_count; i++)
         set_enclave_addr_range(g_initial_page_allocs[i].addr, g_initial_page_allocs[i].num_pages);
+
     spinlock_unlock(&g_enclave_page_tracker_lock);
 }
 
