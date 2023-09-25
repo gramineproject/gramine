@@ -28,11 +28,11 @@
 
 int main(void) {
     /* initialization -- write some messages and save stdout/stderr (for further restore) */
-    ssize_t x = CHECK(write(STDOUT_FILENO, FIRST_HELLO_STDOUT, sizeof(FIRST_HELLO_STDOUT)));
-    if (x != sizeof(FIRST_HELLO_STDOUT))
+    ssize_t x = CHECK(write(STDOUT_FILENO, FIRST_HELLO_STDOUT, strlen(FIRST_HELLO_STDOUT)));
+    if (x != strlen(FIRST_HELLO_STDOUT))
         CHECK(-1);
-    x = CHECK(write(STDERR_FILENO, FIRST_HELLO_STDERR, sizeof(FIRST_HELLO_STDERR)));
-    if (x != sizeof(FIRST_HELLO_STDERR))
+    x = CHECK(write(STDERR_FILENO, FIRST_HELLO_STDERR, strlen(FIRST_HELLO_STDERR)));
+    if (x != strlen(FIRST_HELLO_STDERR))
         CHECK(-1);
 
     int saved_stdout = CHECK(dup(STDOUT_FILENO));
@@ -44,10 +44,10 @@ int main(void) {
 
     pid_t p = CHECK(fork());
     if (p == 0) {
-        x = write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, sizeof(IGNORED_HELLO_STDOUT));
+        x = write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, strlen(IGNORED_HELLO_STDOUT));
         if (x != -1 || errno != EBADF)
             errx(1, "write(stdout) didn't fail with EBADF (returned: %ld, errno: %d)", x, errno);
-        x = write(STDERR_FILENO, IGNORED_HELLO_STDERR, sizeof(IGNORED_HELLO_STDERR));
+        x = write(STDERR_FILENO, IGNORED_HELLO_STDERR, strlen(IGNORED_HELLO_STDERR));
         if (x != -1 || errno != EBADF)
             errx(1, "write(stderr) didn't fail with EBADF (returned: %ld, errno: %d)", x, errno);
         return 0;
@@ -62,11 +62,11 @@ int main(void) {
     CHECK(dup2(saved_stdout, STDOUT_FILENO));
     CHECK(dup2(saved_stderr, STDERR_FILENO));
 
-    x = CHECK(write(STDOUT_FILENO, SECOND_HELLO_STDOUT, sizeof(SECOND_HELLO_STDOUT)));
-    if (x != sizeof(SECOND_HELLO_STDOUT))
+    x = CHECK(write(STDOUT_FILENO, SECOND_HELLO_STDOUT, strlen(SECOND_HELLO_STDOUT)));
+    if (x != strlen(SECOND_HELLO_STDOUT))
         CHECK(-1);
-    x = CHECK(write(STDERR_FILENO, SECOND_HELLO_STDERR, sizeof(SECOND_HELLO_STDERR)));
-    if (x != sizeof(SECOND_HELLO_STDERR))
+    x = CHECK(write(STDERR_FILENO, SECOND_HELLO_STDERR, strlen(SECOND_HELLO_STDERR)));
+    if (x != strlen(SECOND_HELLO_STDERR))
         CHECK(-1);
 
     /* test 3 -- redirect stdout/stderr to null, the process should *not* print anything */
@@ -77,21 +77,21 @@ int main(void) {
     CHECK(dup2(dev_null_fd, STDERR_FILENO));
     CHECK(close(dev_null_fd)); /* not needed anymore */
 
-    x = CHECK(write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, sizeof(IGNORED_HELLO_STDOUT)));
-    if (x != sizeof(IGNORED_HELLO_STDOUT))
+    x = CHECK(write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, strlen(IGNORED_HELLO_STDOUT)));
+    if (x != strlen(IGNORED_HELLO_STDOUT))
         CHECK(-1);
-    x = CHECK(write(STDERR_FILENO, IGNORED_HELLO_STDERR, sizeof(IGNORED_HELLO_STDERR)));
-    if (x != sizeof(IGNORED_HELLO_STDERR))
+    x = CHECK(write(STDERR_FILENO, IGNORED_HELLO_STDERR, strlen(IGNORED_HELLO_STDERR)));
+    if (x != strlen(IGNORED_HELLO_STDERR))
         CHECK(-1);
 
     /* test 4 -- spawn a child, the child should *not* print anything */
     p = CHECK(fork());
     if (p == 0) {
-        x = CHECK(write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, sizeof(IGNORED_HELLO_STDOUT)));
-        if (x != sizeof(IGNORED_HELLO_STDOUT))
+        x = CHECK(write(STDOUT_FILENO, IGNORED_HELLO_STDOUT, strlen(IGNORED_HELLO_STDOUT)));
+        if (x != strlen(IGNORED_HELLO_STDOUT))
             CHECK(-1);
-        x = CHECK(write(STDERR_FILENO, IGNORED_HELLO_STDERR, sizeof(IGNORED_HELLO_STDERR)));
-        if (x != sizeof(IGNORED_HELLO_STDERR))
+        x = CHECK(write(STDERR_FILENO, IGNORED_HELLO_STDERR, strlen(IGNORED_HELLO_STDERR)));
+        if (x != strlen(IGNORED_HELLO_STDERR))
             CHECK(-1);
         return 0;
     }

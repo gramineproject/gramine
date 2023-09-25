@@ -25,13 +25,14 @@
 static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
-    __UNUSED(type);
-
     int ret;
     assert(create != PAL_CREATE_IGNORED);
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
+
+    if (strcmp(type, URI_TYPE_DEV))
+        return -PAL_ERROR_INVAL;
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dev));
     if (!hdl)
@@ -69,6 +70,8 @@ fail:
 }
 
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -80,6 +83,8 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
 }
 
 static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -91,6 +96,8 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
 }
 
 static int dev_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
     if (handle->dev.fd != PAL_IDX_POISON) {
         int ret = ocall_close(handle->dev.fd);
         if (ret < 0)
@@ -101,6 +108,8 @@ static int dev_close(PAL_HANDLE handle) {
 }
 
 static int dev_flush(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
     if (handle->dev.fd != PAL_IDX_POISON) {
         int ret = ocall_fsync(handle->dev.fd);
         if (ret < 0)
@@ -111,6 +120,7 @@ static int dev_flush(PAL_HANDLE handle) {
 
 static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     __UNUSED(type);
+    assert(strcmp(type, URI_TYPE_DEV) == 0);
 
     int fd = ocall_open(uri, O_RDONLY | O_CLOEXEC, 0);
     if (fd < 0)
@@ -133,6 +143,8 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 }
 
 static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
     struct stat stat_buf;
     int ret = ocall_fstat(handle->dev.fd, &stat_buf);
     if (ret < 0)

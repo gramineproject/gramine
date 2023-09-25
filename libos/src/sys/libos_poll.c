@@ -111,35 +111,41 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
             events &= ~(POLLOUT | POLLWRNORM);
         }
 
+        /*
+         * Some handles (e.g. pipes) do not implement a poll callback at all. In such case we let
+         * PAL do the actual polling.
+         *
+         * Some handles (e.g. files) do have their own, handle-specific poll callback. In such case
+         * we do not add these handles for PAL polling, but instead populate `revents` of a
+         * handle-corresponding FD with the result of the poll callback.
+         *
+         * Finally, some handles (e.g. tty/console) implement a dummy poll callback that returns
+         * "Function not implemented" (-ENOSYS) error. We have this special case because it is
+         * impossible to *not* implement a callback: such handles have two layers of poll
+         * indirection (e.g. tty belongs to the "pseudo" FS which has a generic "pseudo" poll
+         * callback, which calls the actual tty-handle callback).
+         */
+        bool handle_specific_poll_invoked = false;
         if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->poll) {
             ret = handle->fs->fs_ops->poll(handle, events, &events);
-
-            if (ret == -ENOSYS) {
-                /*
-                 * Some handles (e.g. tty/console) implement a dummy poll callback that returns
-                 * "Function not implemented" error. Unfortunately it is impossible to *not* assign
-                 * a callback, because such handles have two layers of poll indirection (first the
-                 * "pseudo" poll callback, then the actual handle callback). In such case we let PAL
-                 * do the actual polling.
-                 */
-                goto use_pal_polling;
-            }
-
-            if (ret < 0) {
+            if (ret < 0 && ret != -ENOSYS) {
+                /* ENOSYS implies that no handle-specific poll was found; other errors imply that
+                 * there was a handle-specific poll, but its invocation failed for other reasons */
                 rwlock_read_unlock(&map->lock);
                 goto out;
             }
+            if (ret != -ENOSYS)
+                handle_specific_poll_invoked = true;
+        }
 
+        if (handle_specific_poll_invoked) {
             fds[i].revents = events;
             if (events) {
                 ret_events_count++;
             }
-
-            /* we manually set revents for this fd, no need for PAL polling, continue to next fd */
-            continue;
+            continue; /* for loop over FDs to poll */
         }
 
-use_pal_polling: ;
         PAL_HANDLE pal_handle;
         if (handle->type == TYPE_SOCK) {
             pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);

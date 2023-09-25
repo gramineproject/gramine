@@ -2,8 +2,14 @@
 /* Copyright (C) 2023 Intel Labs */
 
 /*
- * Operations to handle the console (stdin/stdout/stderr). Note that some operations (like stat and
- * truncate) are resolved in LibOS and don't have a counterpart in PAL.
+ * Operations to handle the console device. In this PAL, the console is emulated via host process's
+ * stdin and stdout streams (and not encrypted or protected in any way). Note that the host
+ * process's stderr stream is used purely for Gramine's internal messages (like logs), and the
+ * stderr stream of the application running inside Gramine is multiplexed onto the host's stdout
+ * stream.
+ *
+ * Note that some operations (like stat and truncate) are resolved in LibOS and don't have a
+ * counterpart in PAL.
  */
 
 #include "api.h"
@@ -42,6 +48,8 @@ static int console_open(PAL_HANDLE* handle, const char* type, const char* uri,
 }
 
 static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
+    assert(handle->hdr.type == PAL_TYPE_CONSOLE);
+
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -53,6 +61,8 @@ static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, v
 }
 
 static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
+    assert(handle->hdr.type == PAL_TYPE_CONSOLE);
+
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -64,12 +74,16 @@ static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, 
 }
 
 static int console_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_CONSOLE);
+
     /* do not close host stdin/stdout, to allow Gramine itself to use them (e.g. for logs) */
     handle->console.fd = PAL_IDX_POISON;
     return 0;
 }
 
 static int console_flush(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_CONSOLE);
+
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE) || handle->console.fd == PAL_IDX_POISON)
         return -PAL_ERROR_DENIED;
 
