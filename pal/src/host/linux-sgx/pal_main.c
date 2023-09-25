@@ -563,12 +563,12 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
     static_assert(SHARED_ADDR_MIN >= DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
-                      || DBGINFO_ADDR > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
-                  "SHARED_ADDR_MIN overlaps with DBGINFO_ADDR");
+                      || DBGINFO_ADDR >= SHARED_ADDR_MIN + SHARED_MEM_SIZE,
+                  "SHARED_ADDR overlaps with DBGINFO_ADDR");
 #ifdef ASAN
     static_assert(SHARED_ADDR_MIN >= ASAN_SHADOW_START + ASAN_SHADOW_LENGTH
-                      || ASAN_SHADOW_START > SHARED_ADDR_MIN + SHARED_MEM_SIZE,
-                  "SHARED_ADDR_MIN overlaps with ASAN_SHADOW");
+                      || ASAN_SHADOW_START >= SHARED_ADDR_MIN + SHARED_MEM_SIZE,
+                  "SHARED_ADDR overlaps with ASAN_SHADOW");
 #endif
     void* shared_memory_start = (void*)SHARED_ADDR_MIN;
     ret = ocall_mmap_untrusted(&shared_memory_start, SHARED_MEM_SIZE, PROT_NONE,

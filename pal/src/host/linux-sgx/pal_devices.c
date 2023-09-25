@@ -154,6 +154,7 @@ static int dev_close(PAL_HANDLE handle) {
     if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
         ret = ocall_close(handle->dev.fd);
         free(handle->dev.realpath);
+        handle->dev.realpath = NULL;
     }
     handle->dev.fd = PAL_IDX_POISON;
     return ret < 0 ? unix_to_pal_error(ret) : 0;
@@ -261,11 +262,13 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
     /* can only map the file outside of enclave */
     if (addr < g_pal_public_state.shared_address_start
             || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
-        log_warning("It is impossible to map a device into the enclave");
+        log_warning("Could not map a device outside of the shared memory range at %p-%p", addr,
+                    addr + size);
         return -PAL_ERROR_DENIED;
     }
 
     void* mem = addr;
+    /* MAP_FIXED is intentional to override a previous mapping */
     int ret = ocall_mmap_untrusted(&mem, size, PAL_PROT_TO_LINUX(prot), MAP_SHARED | MAP_FIXED,
                                    handle->dev.fd, offset);
     assert(mem == addr);

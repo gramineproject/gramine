@@ -424,8 +424,8 @@ Gramine currently supports the following types of mount points:
 * ``encrypted``: Host-backed encrypted files. See :ref:`encrypted-files` for
   more information.
 
-* ``shm``: Untrusted shared memory files. See :ref:`untrusted-shared-memory` for
-  more information.
+* ``untrusted_shm``: Untrusted shared memory files. See :ref:`untrusted-shared-memory`
+  for more information.
 
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
@@ -794,14 +794,14 @@ Untrusted shared memory
 ::
 
     fs.mounts = [
-      { type = "shm", path = "[PATH]", uri = "[URI]" },
+      { type = "untrusted_shm", path = "[PATH]", uri = "[URI]" },
     ]
 
 This syntax allows mounting shared memory objects that are accessible by both
 the application running inside Gramine and by other host software/hardware (host
-OS, other host processes, devices connected to the host). In Gramine, shared
-memory applies to ``shm``-typed files which must be mapped into application
-address space with the ``MAP_SHARED`` flag.
+OS, other host processes, devices connected to the host). In Gramine, untrusted
+shared memory applies to files which must be mapped into application address
+space with the ``MAP_SHARED`` flag.
 
 URI can be a file or a directory. If a directory is mounted, all files under
 this directory are treated as shared memory objects (but sub-directories are
@@ -818,7 +818,8 @@ directory is mounted, the Gramine application may create the files -- called
 "shared memory objects" in POSIX -- under this directory (for example, this is
 how ``shm_open()`` Glibc function works). It is not recommended to allow a
 directory unless the application creates shared memory objects with
-unpredictable names.
+unpredictable names. Allowing a directory creates a risk of exposing unexpected
+data to the host.
 
 .. note ::
    Adding shared memory mounts is insecure by itself in SGX environments:

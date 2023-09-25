@@ -185,7 +185,7 @@ struct libos_d_ops shm_d_ops = {
 };
 
 struct libos_fs shm_builtin_fs = {
-    .name   = "shm",
+    .name   = "untrusted_shm",
     .fs_ops = &shm_fs_ops,
     .d_ops  = &shm_d_ops,
 };

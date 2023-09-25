@@ -20,7 +20,7 @@ fs.mounts = [
   { type = "encrypted", path = "/encrypted_file_mrenclave.dat", uri = "file:encrypted_file_mrenclave.dat", key_name = "_sgx_mrenclave" },
   { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
   # for untrusted shared memory test (`shm.c`)
-  { type = "shm", path = "/dev/shm", uri = "dev:/dev/shm" },
+  { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
 sgx.max_threads = 16

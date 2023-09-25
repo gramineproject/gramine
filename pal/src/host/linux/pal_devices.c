@@ -140,6 +140,7 @@ static int dev_close(PAL_HANDLE handle) {
     if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
         ret = DO_SYSCALL(close, handle->dev.fd);
         free(handle->dev.realpath);
+        handle->dev.realpath = NULL;
     }
     handle->dev.fd = PAL_IDX_POISON;
     return ret < 0 ? unix_to_pal_error(ret) : 0;
@@ -175,7 +176,9 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
     }
 
     assert(addr >= g_pal_public_state.shared_address_start &&
-           (uintptr_t)addr + size < (uintptr_t)g_pal_public_state.shared_address_end);
+           (uintptr_t)addr + size <= (uintptr_t)g_pal_public_state.shared_address_end);
+
+    /* MAP_FIXED is intentional to override a previous mapping */
     void* mapped_addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot),
                                           MAP_SHARED | MAP_FIXED, handle->dev.fd, offset);
     if (IS_PTR_ERR(mapped_addr))
