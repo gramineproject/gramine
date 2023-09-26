@@ -24,8 +24,8 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int dev_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void dev_destroy(PAL_HANDLE handle) {
+    /* noop */
 }
 
 static int dev_flush(PAL_HANDLE handle) {
@@ -44,7 +44,7 @@ struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
-    .close          = &dev_close,
+    .destroy        = &dev_destroy,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,

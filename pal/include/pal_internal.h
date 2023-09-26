@@ -48,11 +48,14 @@ struct handle_ops {
     int64_t (*read)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer);
     int64_t (*write)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer);
 
-    /* 'close' and 'delete' is used by PalObjectClose and PalStreamDelete, 'close' will close the
-     * stream, while 'delete' actually destroy the stream, such as deleting a file or shutting
-     * down a socket */
-    int (*close)(PAL_HANDLE handle);
+    /* 'delete' is used by PalStreamDelete: for files and dirs it corresponds to unlinking, for
+     * sockets it corresponds to shutting down a socket connection. */
     int (*delete)(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
+
+    /* 'destroy' is used by PalObjectDestroy: it closes all associated resources on the host (e.g.
+     * closes the host FD), frees all sub-objects of the PAL handle (e.g. a filename string) and
+     * finally frees the PAL handle object itself */
+    void (*destroy)(PAL_HANDLE handle);
 
     /*
      * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
@@ -216,7 +219,7 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size);
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot);
 
 /* PalObject calls */
-int _PalObjectClose(PAL_HANDLE object_handle);
+void _PalObjectDestroy(PAL_HANDLE object_handle);
 int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                           pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 

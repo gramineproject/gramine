@@ -31,12 +31,12 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int proc_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void proc_destroy(PAL_HANDLE handle) {
+    /* noop */
 }
 
 struct handle_ops g_proc_ops = {
     .read  = &proc_read,
     .write = &proc_write,
-    .close = &proc_close,
+    .destroy = &proc_destroy,
 };

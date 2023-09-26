@@ -263,7 +263,7 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
         ret = pal_to_unix_errno(ret);
         goto out;
     }
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
 
     inode->type = S_IFDIR;
     inode->perm = perm;
@@ -297,7 +297,7 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
     }
 
     ret = PalStreamDelete(palhdl, PAL_DELETE_ALL);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -356,7 +356,7 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     ret = PalStreamAttributesSetByHandle(palhdl, &attr);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

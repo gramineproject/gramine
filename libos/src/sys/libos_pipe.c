@@ -80,12 +80,12 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
 
 out:;
     int tmp_ret = PalStreamDelete(hdl0, PAL_DELETE_ALL);
-    PalObjectClose(hdl0);
+    PalObjectDestroy(hdl0);
     if (ret || tmp_ret) {
         if (hdl1)
-            PalObjectClose(hdl1);
+            PalObjectDestroy(hdl1);
         if (hdl2)
-            PalObjectClose(hdl2);
+            PalObjectDestroy(hdl2);
 
         free(srv->uri);
         srv->uri = NULL;

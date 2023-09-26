@@ -28,7 +28,7 @@ static inline bool create_lock(struct libos_lock* l) {
 }
 
 static inline void destroy_lock(struct libos_lock* l) {
-    PalObjectClose(l->lock); // TODO: handle errors
+    PalObjectDestroy(l->lock);
     clear_lock(l);
 }
 

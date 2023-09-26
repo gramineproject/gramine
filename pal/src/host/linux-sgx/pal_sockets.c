@@ -149,13 +149,16 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     return 0;
 }
 
-static int close(PAL_HANDLE handle) {
+static void destroy(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
+
     int ret = ocall_close(handle->sock.fd);
     if (ret < 0) {
-        log_error("closing socket fd failed: %s", unix_strerror(ret));
+        log_error("closing socket host fd %d failed: %s", handle->sock.fd, unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
-    return 0;
+
+    free(handle);
 }
 
 static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
@@ -229,12 +232,12 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 
     int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
     if (ret < 0) {
-        _PalObjectClose(client);
+        _PalObjectDestroy(client);
         return ret;
     }
     ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
     if (ret < 0) {
-        _PalObjectClose(client);
+        _PalObjectDestroy(client);
         return ret;
     }
 
@@ -614,14 +617,14 @@ static struct handle_ops g_tcp_handle_ops = {
     .attrquerybyhdl = attrquerybyhdl,
     .attrsetbyhdl = attrsetbyhdl_tcp,
     .delete = delete_tcp,
-    .close = close,
+    .destroy = destroy,
 };
 
 static struct handle_ops g_udp_handle_ops = {
     .attrquerybyhdl = attrquerybyhdl,
     .attrsetbyhdl = attrsetbyhdl_udp,
     .delete = delete_udp,
-    .close = close,
+    .destroy = destroy,
 };
 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle) {

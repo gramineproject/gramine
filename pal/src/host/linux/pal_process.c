@@ -222,10 +222,10 @@ out:
     free(exec_data);
     free(proc_args);
     if (parent_handle)
-        _PalObjectClose(parent_handle);
+        _PalObjectDestroy(parent_handle);
     if (ret < 0) {
         if (child_handle)
-            _PalObjectClose(child_handle);
+            _PalObjectDestroy(child_handle);
     }
     if (reserved_mem_ranges_fd >= 0) {
         DO_SYSCALL(close, reserved_mem_ranges_fd);
@@ -324,13 +324,17 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return bytes;
 }
 
-static int proc_close(PAL_HANDLE handle) {
-    if (handle->process.stream != PAL_IDX_POISON) {
-        DO_SYSCALL(close, handle->process.stream);
-        handle->process.stream = PAL_IDX_POISON;
+static void proc_destroy(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_PROCESS);
+
+    int ret = DO_SYSCALL(close, handle->process.stream);
+    if (ret < 0) {
+        log_error("closing process host fd %d failed: %s", handle->process.stream,
+                  unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
 
-    return 0;
+    free(handle);
 }
 
 static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
@@ -349,18 +353,13 @@ static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    if (handle->process.stream != PAL_IDX_POISON)
-        DO_SYSCALL(shutdown, handle->process.stream, shutdown);
-
+    DO_SYSCALL(shutdown, handle->process.stream, shutdown);
     return 0;
 }
 
 static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret;
     int val;
-
-    if (handle->process.stream == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
 
     attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->process.nonblocking;
@@ -376,9 +375,6 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int proc_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->process.stream == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
     int ret;
     if (attr->nonblocking != handle->process.nonblocking) {
         ret = DO_SYSCALL(fcntl, handle->process.stream, F_SETFL,
@@ -396,7 +392,7 @@ static int proc_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 struct handle_ops g_proc_ops = {
     .read           = &proc_read,
     .write          = &proc_write,
-    .close          = &proc_close,
+    .destroy        = &proc_destroy,
     .delete         = &proc_delete,
     .attrquerybyhdl = &proc_attrquerybyhdl,
     .attrsetbyhdl   = &proc_attrsetbyhdl,

@@ -23,6 +23,6 @@ int main(int argc, char** argv, char** envp) {
         return 1;
     }
 
-    PalObjectClose(out);
+    PalObjectDestroy(out);
     return 0;
 }

@@ -113,15 +113,17 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return ret;
 }
 
-/* 'close' operation for file streams */
-static int file_close(PAL_HANDLE handle) {
-    int fd = handle->file.fd;
+static void file_destroy(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_FILE);
 
-    int ret = DO_SYSCALL(close, fd);
+    int ret = DO_SYSCALL(close, handle->file.fd);
+    if (ret < 0) {
+        log_error("closing file host fd %d failed: %s", handle->file.fd, unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
 
     free(handle->file.realpath);
-
-    return ret < 0 ? unix_to_pal_error(ret) : 0;
+    free(handle);
 }
 
 /* 'delete' operation for file streams */
@@ -236,7 +238,7 @@ struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
     .write          = &file_write,
-    .close          = &file_close,
+    .destroy        = &file_destroy,
     .delete         = &file_delete,
     .map            = &file_map,
     .setlength      = &file_setlength,
@@ -379,23 +381,18 @@ out:
     return (int64_t)bytes_written;
 }
 
-/* 'close' operation of directory streams */
-static int dir_close(PAL_HANDLE handle) {
-    int fd = handle->dir.fd;
+static void dir_destroy(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DIR);
 
-    int ret = DO_SYSCALL(close, fd);
-
-    if (handle->dir.buf) {
-        free(handle->dir.buf);
-        handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
+    int ret = DO_SYSCALL(close, handle->dir.fd);
+    if (ret < 0) {
+        log_error("closing dir host fd %d failed: %s", handle->dir.fd, unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
 
+    free(handle->dir.buf);
     free(handle->dir.realpath);
-
-    if (ret < 0)
-        return -PAL_ERROR_BADHANDLE;
-
-    return 0;
+    free(handle);
 }
 
 /* 'delete' operation of directory streams */
@@ -430,7 +427,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 struct handle_ops g_dir_ops = {
     .open           = &dir_open,
     .read           = &dir_read,
-    .close          = &dir_close,
+    .destroy        = &dir_destroy,
     .delete         = &dir_delete,
     .attrquery      = &file_attrquery,
     .attrquerybyhdl = &file_attrquerybyhdl,

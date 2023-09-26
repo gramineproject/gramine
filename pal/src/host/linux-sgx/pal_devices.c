@@ -75,7 +75,7 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->flags & PAL_HANDLE_FD_READABLE) || handle->dev.fd == PAL_IDX_POISON)
+    if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
     ssize_t bytes = ocall_read(handle->dev.fd, buffer, size);
@@ -88,34 +88,30 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE) || handle->dev.fd == PAL_IDX_POISON)
+    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
     ssize_t bytes = ocall_write(handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
-static int dev_close(PAL_HANDLE handle) {
+static void dev_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
-    if (handle->dev.fd != PAL_IDX_POISON) {
-        int ret = ocall_close(handle->dev.fd);
-        if (ret < 0)
-            return unix_to_pal_error(ret);
+    int ret = ocall_close(handle->dev.fd);
+    if (ret < 0) {
+        log_error("closing dev host fd %d failed: %s", handle->dev.fd, unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
-    handle->dev.fd = PAL_IDX_POISON;
-    return 0;
+
+    free(handle);
 }
 
 static int dev_flush(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
-    if (handle->dev.fd != PAL_IDX_POISON) {
-        int ret = ocall_fsync(handle->dev.fd);
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-    }
-    return 0;
+    int ret = ocall_fsync(handle->dev.fd);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
@@ -161,7 +157,7 @@ struct handle_ops g_dev_ops = {
     .open           = &dev_open,
     .read           = &dev_read,
     .write          = &dev_write,
-    .close          = &dev_close,
+    .destroy        = &dev_destroy,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,
@@ -176,9 +172,6 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         fd = handle->sock.fd;
     else
         return -PAL_ERROR_INVAL;
-
-    if ((PAL_IDX)fd == PAL_IDX_POISON)
-        return -PAL_ERROR_DENIED;
 
     /* find this IOCTL request in the manifest */
     toml_table_t* manifest_sys = toml_table_in(g_pal_public_state.manifest_root, "sys");

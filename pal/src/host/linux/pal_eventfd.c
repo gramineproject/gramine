@@ -105,9 +105,6 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
     int ret;
     int val;
 
-    if (handle->eventfd.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
     attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->eventfd.nonblocking;
 
@@ -121,21 +118,22 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
     return 0;
 }
 
-static int eventfd_pal_close(PAL_HANDLE handle) {
-    if (handle->hdr.type == PAL_TYPE_EVENTFD) {
-        if (handle->eventfd.fd != PAL_IDX_POISON) {
-            DO_SYSCALL(close, handle->eventfd.fd);
-            handle->eventfd.fd = PAL_IDX_POISON;
-        }
+static void eventfd_pal_destroy(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_EVENTFD);
+
+    int ret = DO_SYSCALL(close, handle->eventfd.fd);
+    if (ret < 0) {
+        log_error("closing eventfd host fd %d failed: %s", handle->eventfd.fd, unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
 
-    return 0;
+    free(handle);
 }
 
 struct handle_ops g_eventfd_ops = {
     .open           = &eventfd_pal_open,
     .read           = &eventfd_pal_read,
     .write          = &eventfd_pal_write,
-    .close          = &eventfd_pal_close,
+    .destroy        = &eventfd_pal_destroy,
     .attrquerybyhdl = &eventfd_pal_attrquerybyhdl,
 };

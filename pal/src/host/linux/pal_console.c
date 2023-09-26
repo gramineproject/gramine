@@ -52,7 +52,7 @@ static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, v
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->flags & PAL_HANDLE_FD_READABLE) || handle->console.fd == PAL_IDX_POISON)
+    if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
     int64_t bytes = DO_SYSCALL(read, handle->console.fd, buffer, size);
@@ -65,25 +65,25 @@ static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, 
     if (offset)
         return -PAL_ERROR_INVAL;
 
-    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE) || handle->console.fd == PAL_IDX_POISON)
+    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
     int64_t bytes = DO_SYSCALL(write, handle->console.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
-static int console_close(PAL_HANDLE handle) {
+static void console_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     /* do not close host stdin/stdout, to allow Gramine itself to use them (e.g. for logs) */
-    handle->console.fd = PAL_IDX_POISON;
-    return 0;
+
+    free(handle);
 }
 
 static int console_flush(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
-    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE) || handle->console.fd == PAL_IDX_POISON)
+    if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
     int ret = DO_SYSCALL(fsync, handle->console.fd);
@@ -94,6 +94,6 @@ struct handle_ops g_console_ops = {
     .open           = &console_open,
     .read           = &console_read,
     .write          = &console_write,
-    .close          = &console_close,
+    .destroy        = &console_destroy,
     .flush          = &console_flush,
 };

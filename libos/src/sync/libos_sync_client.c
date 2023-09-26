@@ -52,7 +52,7 @@ static void put_sync_handle(struct sync_handle* handle) {
         free(handle->data);
         destroy_lock(&handle->use_lock);
         destroy_lock(&handle->prop_lock);
-        PalObjectClose(handle->event);
+        PalObjectDestroy(handle->event);
         free(handle);
     }
 }
@@ -199,7 +199,7 @@ err:
     if (lock_created(&handle->prop_lock))
         destroy_lock(&handle->prop_lock);
     if (handle->event)
-        PalObjectClose(handle->event);
+        PalObjectDestroy(handle->event);
     return ret;
 }
 

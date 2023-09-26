@@ -9,39 +9,21 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-int _PalObjectClose(PAL_HANDLE object_handle) {
-    const struct handle_ops* ops = HANDLE_OPS(object_handle);
-    if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+void _PalObjectDestroy(PAL_HANDLE handle) {
+    const struct handle_ops* ops = HANDLE_OPS(handle);
 
-    int ret = 0;
-
-    /* if the operation 'close' is defined, call the function. */
-    if (ops->close)
-        ret = ops->close(object_handle);
-
-    /*
-     * Chia-Che 12/7/2017:
-     *   _PalObjectClose will free the object, unless the handle has a 'close' operation, and the
-     *   operation returns a non-zero value (e.g., 1 for skipping free() or -ERRNO).
-     */
-    if (!ret)
-        free(object_handle);
-
-    return ret;
+    if (ops && ops->destroy) {
+        /* handle-specific callback is required to close + free all resources */
+        ops->destroy(handle);
+    } else {
+        /* no handle-specific callback, just free this PAL handle */
+        free(handle);
+    }
 }
 
-/*
- * TODO: whole LibOS assumes this never returns errors. We need to either make `_PalObjectClose`
- * never fail (from a quick look at the code, seems like it cannot return errors in practice) or
- * make this return an `int` and handle errors in all call sites (hard to do; in most places we
- * cannot handle them in a meaningful way).
- */
-/* PAL call PalObjectClose: Close the given object handle. */
-void PalObjectClose(PAL_HANDLE object_handle) {
-    assert(object_handle);
-
-    _PalObjectClose(object_handle);
+void PalObjectDestroy(PAL_HANDLE handle) {
+    assert(handle);
+    _PalObjectDestroy(handle);
 }
 
 int PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,

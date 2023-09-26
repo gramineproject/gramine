@@ -701,7 +701,7 @@ int load_entrypoint(const char* uri) {
 #endif
 
 out:
-    _PalObjectClose(handle);
+    _PalObjectDestroy(handle);
     return ret;
 }
 

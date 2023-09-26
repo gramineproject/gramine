@@ -27,8 +27,8 @@ static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, 
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int console_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void console_destroy(PAL_HANDLE handle) {
+    /* noop */
 }
 
 static int console_flush(PAL_HANDLE handle) {
@@ -39,6 +39,6 @@ struct handle_ops g_console_ops = {
     .open           = &console_open,
     .read           = &console_read,
     .write          = &console_write,
-    .close          = &console_close,
+    .destroy        = &console_destroy,
     .flush          = &console_flush,
 };
