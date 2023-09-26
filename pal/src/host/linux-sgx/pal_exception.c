@@ -268,6 +268,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                      * kernel), it is still reported by the SGX hardware but considered spurious;
                      * since we are in this exception handler, then it must have been a host-induced
                      * external event (and `event_num` is already set), so handle that event */
+                    memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
                     break;
                 }
                 /* fallthrough */
