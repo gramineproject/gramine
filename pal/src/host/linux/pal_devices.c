@@ -111,17 +111,21 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
-static int dev_close(PAL_HANDLE handle) {
-    if (handle->hdr.type != PAL_TYPE_DEV)
-        return -PAL_ERROR_INVAL;
+static void dev_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DEV);
+
+    if (handle->dev.fd == PAL_IDX_POISON)
+        return;
 
     /* currently we just assign `0`/`1` FDs without duplicating, so close is a no-op for them */
-    int ret = 0;
-    if (handle->dev.fd != PAL_IDX_POISON && handle->dev.fd != 0 && handle->dev.fd != 1) {
-        ret = DO_SYSCALL(close, handle->dev.fd);
+    if (handle->dev.fd != 0 && handle->dev.fd != 1) {
+        int ret = DO_SYSCALL(close, handle->dev.fd);
+        if (ret < 0) {
+            log_error("closing dev fd failed: %s", unix_strerror(ret));
+            /* We cannot do anything about it anyway... */
+        }
     }
     handle->dev.fd = PAL_IDX_POISON;
-    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dev_flush(PAL_HANDLE handle) {

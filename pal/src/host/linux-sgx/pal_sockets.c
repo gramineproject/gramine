@@ -149,13 +149,18 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
     return 0;
 }
 
-static int close(PAL_HANDLE handle) {
+static void close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_SOCKET);
+
+    if (handle->sock.fd == PAL_IDX_POISON)
+        return;
+
     int ret = ocall_close(handle->sock.fd);
     if (ret < 0) {
         log_error("closing socket fd failed: %s", unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
-    return 0;
+    handle->sock.fd = PAL_IDX_POISON;
 }
 
 static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
@@ -229,12 +234,12 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 
     int ret = verify_ip_addr(client->sock.domain, &client_addr, client_addrlen);
     if (ret < 0) {
-        _PalObjectClose(client);
+        _PalObjectDestroy(client);
         return ret;
     }
     ret = verify_ip_addr(client->sock.domain, &local_addr, local_addrlen);
     if (ret < 0) {
-        _PalObjectClose(client);
+        _PalObjectDestroy(client);
         return ret;
     }
 

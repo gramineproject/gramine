@@ -474,8 +474,8 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
     while (!__atomic_load_n(&new_args.is_thread_initialized, __ATOMIC_ACQUIRE)) {
         CPU_RELAX();
     }
-    PalObjectClose(new_args.initialize_event);
-    PalObjectClose(new_args.create_event);
+    PalObjectDestroy(new_args.initialize_event);
+    PalObjectDestroy(new_args.create_event);
 
     put_thread(thread);
     return tid;
@@ -484,9 +484,9 @@ clone_thread_failed:
     if (new_args.thread)
         put_thread(new_args.thread);
     if (new_args.create_event)
-        PalObjectClose(new_args.create_event);
+        PalObjectDestroy(new_args.create_event);
     if (new_args.initialize_event)
-        PalObjectClose(new_args.initialize_event);
+        PalObjectDestroy(new_args.initialize_event);
 failed:
     put_thread(thread);
     return ret;

@@ -24,7 +24,7 @@ int main(int argc, char** argv, char** envp) {
         return 1;
     }
 
-    PalObjectClose(out);
+    PalObjectDestroy(out);
 
     PAL_HANDLE in = NULL;
     ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,

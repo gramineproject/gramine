@@ -23,7 +23,7 @@ static int close(struct libos_handle* handle) {
     free(handle->info.sock.peek.buf);
     /* No need for atomics - we are releasing the last reference, nothing can access it anymore. */
     if (handle->info.sock.pal_handle) {
-        PalObjectClose(handle->info.sock.pal_handle);
+        PalObjectDestroy(handle->info.sock.pal_handle);
     }
     return 0;
 }

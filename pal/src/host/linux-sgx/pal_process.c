@@ -183,7 +183,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 
 failed:
     _PalStreamDelete(child, PAL_DELETE_ALL);
-    _PalObjectClose(child);
+    _PalObjectDestroy(child);
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
@@ -239,7 +239,7 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
 
 out_error:
     _PalStreamDelete(parent, PAL_DELETE_ALL);
-    _PalObjectClose(parent);
+    _PalObjectDestroy(parent);
     return ret < 0 ? ret : -PAL_ERROR_DENIED;
 }
 
@@ -282,18 +282,23 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return bytes;
 }
 
-static int proc_close(PAL_HANDLE handle) {
-    if (handle->process.stream != PAL_IDX_POISON) {
-        ocall_close(handle->process.stream);
-        handle->process.stream = PAL_IDX_POISON;
+static void proc_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_PROCESS);
+
+    if (handle->process.stream == PAL_IDX_POISON)
+        return;
+
+    int ret = ocall_close(handle->process.stream);
+    if (ret < 0) {
+        log_error("closing process fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
+    handle->process.stream = PAL_IDX_POISON;
 
     if (handle->process.ssl_ctx) {
         _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->process.ssl_ctx);
         handle->process.ssl_ctx = NULL;
     }
-
-    return 0;
 }
 
 static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {

@@ -89,7 +89,7 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("Map Test 1 & 2: Failed to map buffer\n");
         }
 
-        PalObjectClose(file1);
+        PalObjectDestroy(file1);
     }
 
     PAL_HANDLE file2 = NULL;
@@ -97,7 +97,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_CREATE_NEVER, /*options=*/0, &file2);
     if (ret >= 0 && file2) {
         pal_printf("File Open Test 2 OK\n");
-        PalObjectClose(file2);
+        PalObjectDestroy(file2);
     }
 
     PAL_HANDLE file3 = NULL;
@@ -105,7 +105,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_CREATE_NEVER, /*options=*/0, &file3);
     if (ret >= 0 && file3) {
         pal_printf("File Open Test 3 OK\n");
-        PalObjectClose(file3);
+        PalObjectDestroy(file3);
     }
 
     PAL_STREAM_ATTR attr2;
@@ -128,7 +128,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, /*options=*/0,
                         &file5);
     if (ret >= 0) {
-        PalObjectClose(file5);
+        PalObjectDestroy(file5);
     } else {
         pal_printf("File Creation Test 2 OK\n");
     }
@@ -139,7 +139,7 @@ int main(int argc, char** argv, char** envp) {
                         &file6);
     if (ret >= 0 && file6) {
         pal_printf("File Creation Test 3 OK\n");
-        PalObjectClose(file6);
+        PalObjectDestroy(file6);
     }
 
     if (file4) {
@@ -167,7 +167,7 @@ int main(int argc, char** argv, char** envp) {
         }
 
     fail_writing:
-        PalObjectClose(file4);
+        PalObjectDestroy(file4);
         if (ret < 0) {
             return 1;
         }
@@ -182,7 +182,7 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("PalStreamDelete failed\n");
             return 1;
         }
-        PalObjectClose(file7);
+        PalObjectDestroy(file7);
     }
 
     return 0;

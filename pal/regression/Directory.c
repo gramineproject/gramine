@@ -27,7 +27,7 @@ int main(int argc, char** argv, char** envp) {
                     pal_printf("Read Directory: %s\n", c);
         }
 
-        PalObjectClose(dir1);
+        PalObjectDestroy(dir1);
     }
 
     PAL_HANDLE dir2 = NULL;
@@ -35,7 +35,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_CREATE_NEVER, /*options=*/0, &dir2);
     if (ret >= 0 && dir2) {
         pal_printf("Directory Open Test 2 OK\n");
-        PalObjectClose(dir2);
+        PalObjectDestroy(dir2);
     }
 
     PAL_HANDLE dir3 = NULL;
@@ -43,7 +43,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_CREATE_NEVER, /*options=*/0, &dir3);
     if (ret >= 0 && dir3) {
         pal_printf("Directory Open Test 3 OK\n");
-        PalObjectClose(dir3);
+        PalObjectDestroy(dir3);
     }
 
     PAL_STREAM_ATTR attr2;
@@ -60,7 +60,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_CREATE_ALWAYS, /*options=*/0, &dir4);
     if (ret >= 0 && dir4) {
         pal_printf("Directory Creation Test 1 OK\n");
-        PalObjectClose(dir4);
+        PalObjectDestroy(dir4);
     }
 
     PAL_HANDLE dir5 = NULL;
@@ -68,7 +68,7 @@ int main(int argc, char** argv, char** envp) {
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_X,
                         PAL_CREATE_ALWAYS, /*options=*/0, &dir5);
     if (ret >= 0) {
-        PalObjectClose(dir5);
+        PalObjectDestroy(dir5);
     } else {
         pal_printf("Directory Creation Test 2 OK\n");
     }
@@ -79,7 +79,7 @@ int main(int argc, char** argv, char** envp) {
                         &dir6);
     if (ret >= 0 && dir6) {
         pal_printf("Directory Creation Test 3 OK\n");
-        PalObjectClose(dir6);
+        PalObjectDestroy(dir6);
     }
 
     PAL_HANDLE dir7 = NULL;
@@ -91,7 +91,7 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("PalStreamDelete failed\n");
             return 1;
         }
-        PalObjectClose(dir7);
+        PalObjectDestroy(dir7);
     }
 
     PAL_HANDLE dir8 = NULL;
@@ -109,7 +109,7 @@ int main(int argc, char** argv, char** envp) {
             pal_printf("PalStreamDelete failed: %d\n", ret);
             return 1;
         }
-        PalObjectClose(dir8);
+        PalObjectDestroy(dir8);
     }
 
     return 0;

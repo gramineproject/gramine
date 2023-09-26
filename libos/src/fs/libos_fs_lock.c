@@ -618,7 +618,7 @@ int file_lock_set(struct libos_dentry* dent, struct libos_file_lock* file_lock, 
 out:
     unlock(&g_fs_lock_lock);
     if (event)
-        PalObjectClose(event);
+        PalObjectDestroy(event);
     return ret;
 }
 

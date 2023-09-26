@@ -383,7 +383,7 @@ void put_thread(struct libos_thread* thread) {
         free(thread->groups_info.groups);
 
         if (thread->pal_handle && thread->pal_handle != g_pal_public_state->first_thread)
-            PalObjectClose(thread->pal_handle);
+            PalObjectDestroy(thread->pal_handle);
 
         if (thread->handle_map) {
             put_handle_map(thread->handle_map);
@@ -398,7 +398,7 @@ void put_thread(struct libos_thread* thread) {
         /* `signal_altstack` is provided by the user, no need for a clean up. */
 
         if (thread->scheduler_event) {
-            PalObjectClose(thread->scheduler_event);
+            PalObjectDestroy(thread->scheduler_event);
         }
 
         /* `wake_queue` is only meaningful when `thread` is part of some wake up queue (is just

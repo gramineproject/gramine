@@ -82,7 +82,7 @@ static void put_ipc_connection(struct libos_ipc_connection* conn) {
     refcount_t ref_count = refcount_dec(&conn->ref_count);
 
     if (!ref_count) {
-        PalObjectClose(conn->handle);
+        PalObjectDestroy(conn->handle);
         destroy_lock(&conn->lock);
         free(conn);
     }
@@ -157,7 +157,7 @@ out:
             destroy_lock(&conn->lock);
         }
         if (conn->handle) {
-            PalObjectClose(conn->handle);
+            PalObjectDestroy(conn->handle);
         }
         free(conn);
     }
@@ -311,7 +311,7 @@ out:
     avl_tree_delete(&g_msg_waiters_tree, &waiter.node);
     unlock(&g_msg_waiters_tree_lock);
     free(waiter.response_data);
-    PalObjectClose(waiter.event);
+    PalObjectDestroy(waiter.event);
     return ret;
 }
 

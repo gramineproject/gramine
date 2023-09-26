@@ -53,7 +53,7 @@ static noreturn int thread_handshake_func(void* param) {
     LISTP_FOR_EACH_ENTRY_SAFE(thread_to_gc, tmp, &g_handshake_helper_thread_list, list) {
         if (__atomic_load_n(&thread_to_gc->clear_on_thread_exit, __ATOMIC_ACQUIRE) == 0) {
             LISTP_DEL(thread_to_gc, &g_handshake_helper_thread_list, list);
-            _PalObjectClose(thread_to_gc->thread_hdl);
+            _PalObjectDestroy(thread_to_gc->thread_hdl);
             free(thread_to_gc);
         }
     }
@@ -414,23 +414,28 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
  * \brief Close pipe.
  *
  * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- *
- * \returns 0 on success, negative PAL error code otherwise.
  */
-static int pipe_close(PAL_HANDLE handle) {
-    if (handle->pipe.fd != PAL_IDX_POISON) {
-        while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
-            CPU_RELAX();
+static void pipe_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_PIPESRV || handle->hdr.type == PAL_TYPE_PIPECLI
+            || handle->hdr.type == PAL_TYPE_PIPE);
 
-        if (handle->pipe.ssl_ctx) {
-            _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
-            handle->pipe.ssl_ctx = NULL;
-        }
-        ocall_close(handle->pipe.fd);
-        handle->pipe.fd = PAL_IDX_POISON;
+    if (handle->pipe.fd == PAL_IDX_POISON)
+        return;
+
+    while (!__atomic_load_n(&handle->pipe.handshake_done, __ATOMIC_ACQUIRE))
+        CPU_RELAX();
+
+    if (handle->pipe.ssl_ctx) {
+        _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->pipe.ssl_ctx);
+        handle->pipe.ssl_ctx = NULL;
     }
 
-    return 0;
+    int ret = ocall_close(handle->pipe.fd);
+    if (ret < 0) {
+        log_error("closing pipe fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
+    handle->pipe.fd = PAL_IDX_POISON;
 }
 
 /*!

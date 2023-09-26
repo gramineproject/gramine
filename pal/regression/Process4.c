@@ -36,15 +36,15 @@ int main(int argc, char** argv) {
         if (ret < 0)
             pal_printf("Can't create process\n");
 
-        PalObjectClose(proc);
+        PalObjectDestroy(proc);
 
         PAL_HANDLE pipe = NULL;
         ret = PalStreamWaitForClient(pipe_srv, &pipe, /*options=*/0);
         if (ret < 0) {
             pal_printf("PalStreamWaitForClient failed: %d\n", ret);
         }
-        PalObjectClose(pipe);
-        PalObjectClose(pipe_srv);
+        PalObjectDestroy(pipe);
+        PalObjectDestroy(pipe_srv);
     } else {
         count = atoi(argv[1]);
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
             if (ret < 0)
                 pal_printf("Can't create process\n");
 
-            PalObjectClose(proc);
+            PalObjectDestroy(proc);
         } else {
             uint64_t end = 0;
             if (PalSystemTimeQuery(&end) < 0) {
@@ -78,7 +78,7 @@ int main(int argc, char** argv) {
                 pal_printf("Failed to open pipe: %d\n", ret);
                 return 1;
             }
-            PalObjectClose(pipe);
+            PalObjectDestroy(pipe);
         }
     }
 

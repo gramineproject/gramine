@@ -25,8 +25,8 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int event_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void event_close(PAL_HANDLE handle) {
+    /* noop */
 }
 
 struct handle_ops g_event_ops = {

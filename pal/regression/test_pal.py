@@ -168,7 +168,7 @@ class TC_02_Symbols(RegressionTestCase):
         'PalEventClear',
         'PalEventWait',
         'PalStreamsWaitEvents',
-        'PalObjectClose',
+        'PalObjectDestroy',
         'PalSystemTimeQuery',
         'PalRandomBitsRead',
     ]

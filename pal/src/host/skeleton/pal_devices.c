@@ -24,8 +24,8 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int dev_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void dev_close(PAL_HANDLE handle) {
+    /* noop */
 }
 
 static int dev_flush(PAL_HANDLE handle) {
