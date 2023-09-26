@@ -755,7 +755,8 @@ sgx_ocall:
     jmp _restore_sgx_context
 
 2:
-    # there was some event, call _PalExceptionHandler(0, event, uc, xregs_state, NULL)
+    # there was some external event, call the exception handler
+    # _PalExceptionHandler(/*trusted_exit_info=*/0, event, uc, xregs_state, /*exinfo=*/NULL)
 
     # clear the Alignment Check flag to prevent #AC-fault side channel
     pushfq
@@ -766,11 +767,11 @@ sgx_ocall:
     leaq g_xsave_reset_state(%rip), %rdi
     callq restore_xregs
 
-    movq $0,   %rdi                         # trusted EXITINFO   (1st arg), not used
-    movq %rsi, %rsi                         # external event     (2nd arg), to be explicit
-    movq %rsp, %rdx                         # SGX context        (3rd arg)
-    leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rcx   # xregs_state        (4th arg)
-    movq $0,   %r8                          # SGX EXINFO pointer (5th arg), not used
+    movq $0,   %rdi                         # trusted EXITINFO  (1st arg), not used
+    movq %rsi, %rsi                         # external event    (2nd arg), to be explicit
+    movq %rsp, %rdx                         # SGX context       (3rd arg)
+    leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rcx   # xregs_state       (4th arg)
+    movq $0,   %r8                          # pointer to EXINFO (5th arg), not used
     callq _PalExceptionHandler
     FAIL_LOOP                               # cannot be reached
 
