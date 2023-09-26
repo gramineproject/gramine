@@ -209,24 +209,13 @@ enclave_entry:
     # SGX_GPR is a base pointer to the SSA[0].GPRSGX region
     movq %gs:SGX_GPR, %rbx
 
-    # first check SSA[0].GPRSGX.EXITINFO -- if VALID bit (0x80000000) is set, then use trusted
-    # SSA[0].GPRSGX.EXITINFO.VECTOR (first 8 bits of EXITINFO) instead of possibly-malicious
-    # "external event" value in RDI
-    movq %rdi, %rsi
-    xorq %rdi, %rdi
-    movl SGX_GPR_EXITINFO(%rbx), %edi
-    testl $0x80000000, %edi
-    jnz .Lcssa1_exception_determine_when
+    # memoize SSA[0].GPRSGX.EXITINFO in r14, we'll forward it to _PalExceptionHandler() as 1st arg
+    movl SGX_GPR_EXITINFO(%rbx), %r14d
 
-    # VALID bit in SSA[0].GPRSGX.EXITINFO is clear, some unknown-to-SGX exception occured, use the
-    # possibly-malicious "external event" value in RDI (only the first 8 bits count)
-    movl %esi, %edi
+    # memoize the possibly-malicious "external event" in r15, we'll forward it to
+    # _PalExceptionHandler() as 2nd arg
     andl $0xff, %edi
-    cmpl $0, %edi
-    jne .Lcssa1_exception_determine_when
-
-    # TODO: we shouldn't ignore definitely-malicious exception, but we do it now
-    jmp .Lcssa1_exception_eexit
+    movl %edi, %r15d
 
 .Lcssa1_exception_determine_when:
     # If this enclave thread has not been initialized yet, we should not try to call an event
@@ -453,15 +442,7 @@ enclave_entry:
     andq $~(PAL_XSTATE_ALIGN - 1), %rsi
     subq $SGX_CPU_CONTEXT_XSTATE_ALIGN_SUB, %rsi
 
-    # Rewire SSA0: pass 1st arg to _PalExceptionHandler():
-    #    - exit info (in RDI, either trusted SSA[0].GPRSGX.EXITINFO or possibly-malicious
-    #                 "external event")
-    #
-    # Also copy SSA[0].GPRSGX.RDI to the CPU context on the stack
-    xchgq %rdi, SGX_GPR_RDI(%rbx)
-    movq %rdi, SGX_CPU_CONTEXT_RDI(%rsi)
-
-    # Copy the rest of SSA[0].GPRSGX to the CPU context on the stack
+    # Copy SSA[0].GPRSGX to the CPU context on the stack
     movq SGX_GPR_RAX(%rbx), %rdi
     movq %rdi, SGX_CPU_CONTEXT_RAX(%rsi)
     movq SGX_GPR_RCX(%rbx), %rdi
@@ -476,7 +457,8 @@ enclave_entry:
     movq %rdi, SGX_CPU_CONTEXT_RBP(%rsi)
     movq SGX_GPR_RSI(%rbx), %rdi
     movq %rdi, SGX_CPU_CONTEXT_RSI(%rsi)
-    /* RDI was saved above */
+    movq SGX_GPR_RDI(%rbx), %rdi
+    movq %rdi, SGX_CPU_CONTEXT_RDI(%rsi)
     movq SGX_GPR_R8(%rbx), %rdi
     movq %rdi, SGX_CPU_CONTEXT_R8(%rsi)
     movq SGX_GPR_R9(%rbx), %rdi
@@ -498,17 +480,23 @@ enclave_entry:
     movq SGX_GPR_RIP(%rbx), %rdi
     movq %rdi, SGX_CPU_CONTEXT_RIP(%rsi)
 
-    # Rewire SSA0: pass more args to _PalExceptionHandler():
-    #    - pointer to sgx_cpu_context_t (SSA[0].GPRSGX.RSI, 2nd arg)
-    #    - pointer to PAL_XREGS_STATE   (SSA[0].GPRSGX.RDX, 3rd arg)
-    movq %rsi, SGX_GPR_RSI(%rbx)
-    movq %rsi, SGX_GPR_RDX(%rbx)
-    addq $SGX_CPU_CONTEXT_SIZE, SGX_GPR_RDX(%rbx)
-
     # Rewire SSA0 (args to _PalExceptionHandler()):
-    #    - pointer to EXINFO            (SSA[0].GPRSGX.RCX, 4rd arg)
+    #    - trusted EXITINFO             (SSA[0].GPRSGX.EXITINFO, 1st arg)
+    #    - untrusted external event     (host's RDI, 2nd arg)
+    movq %r14, SGX_GPR_RDI(%rbx)
+    movq %r15, SGX_GPR_RSI(%rbx)
+
+    # Continue rewire SSA0 (args to _PalExceptionHandler()):
+    #    - pointer to sgx_cpu_context_t (3rd arg)
+    #    - pointer to PAL_XREGS_STATE   (4th arg)
+    movq %rsi, SGX_GPR_RDX(%rbx)
+    movq %rsi, SGX_GPR_RCX(%rbx)
+    addq $SGX_CPU_CONTEXT_SIZE, SGX_GPR_RCX(%rbx)
+
+    # Continue rewire SSA0 (args to _PalExceptionHandler()):
+    #    - pointer to EXINFO            (5th arg)
     sub $SSA_MISC_EXINFO_SIZE, %rsi
-    mov %rsi, SGX_GPR_RCX(%rbx)
+    mov %rsi, SGX_GPR_R8(%rbx)
 
     # Save EXINFO - it's always immediately before GPR in SSA.
     # If EXINFO MISC component is not enabled, it will contain padding with all 0.

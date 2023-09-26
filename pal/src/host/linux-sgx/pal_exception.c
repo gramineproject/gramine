@@ -233,25 +233,19 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
 }
 
 /* perform exception handling inside the enclave */
-void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
+void _PalExceptionHandler(uint32_t trusted_exit_info_,
+                          uint32_t untrusted_external_event, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
 
-    union {
-        sgx_arch_exit_info_t info;
-        unsigned int intval;
-    } ei = {.intval = exit_info};
+    sgx_arch_exit_info_t trusted_exit_info;
+    static_assert(sizeof(trusted_exit_info) == sizeof(trusted_exit_info_), "invalid size");
+    memcpy(&trusted_exit_info, &trusted_exit_info_, sizeof(trusted_exit_info));
 
-    int event_num;
+    uint32_t event_num = untrusted_external_event;
 
-    if (!ei.info.valid) {
-        event_num = exit_info;
-        if (event_num <= 0 || event_num >= PAL_EVENT_NUM_BOUND) {
-            log_error("Illegal exception reported by untrusted PAL: %d", event_num);
-            _PalProcessExit(1);
-        }
-    } else {
-        switch (ei.info.vector) {
+    if (trusted_exit_info.valid) {
+        switch (trusted_exit_info.vector) {
             case SGX_EXCEPTION_VECTOR_BR:
                 log_error("Handling #BR exceptions is currently unsupported by Gramine");
                 _PalProcessExit(1);
@@ -268,8 +262,16 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             case SGX_EXCEPTION_VECTOR_XM:
                 event_num = PAL_EVENT_ARITHMETIC_ERROR;
                 break;
-            case SGX_EXCEPTION_VECTOR_GP:
             case SGX_EXCEPTION_VECTOR_PF:
+                if (!exinfo->errcd.p) {
+                    /* benign #PF (due to non-present page entry, resolved completely by the host
+                     * kernel), it is still reported by the SGX hardware but considered spurious;
+                     * since we are in this exception handler, then it must have been a host-induced
+                     * external event (and `event_num` is already set), so handle that event */
+                    break;
+                }
+                /* fallthrough */
+            case SGX_EXCEPTION_VECTOR_GP:
             case SGX_EXCEPTION_VECTOR_AC:
                 event_num = PAL_EVENT_MEMFAULT;
                 break;
@@ -281,6 +283,11 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
     }
 
+    if (event_num == 0 || event_num >= PAL_EVENT_NUM_BOUND) {
+        log_error("Illegal exception reported: %d", event_num);
+        _PalProcessExit(1);
+    }
+
     /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
     if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
         char buf[LOCATION_BUF_SIZE];
@@ -289,12 +296,12 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         const char* event_name = pal_event_name(event_num);
         log_error("Unexpected %s occurred inside PAL (%s)", event_name, buf);
 
-        if (ei.info.valid) {
+        if (trusted_exit_info.valid) {
             /* EXITINFO field: vector = exception number, exit_type = 0x3 for HW / 0x6 for SW */
-            log_debug("(SGX HW reported AEX vector 0x%x with exit_type = 0x%x)", ei.info.vector,
-                      ei.info.exit_type);
+            log_debug("(SGX HW reported AEX vector 0x%x with exit_type = 0x%x)",
+                      trusted_exit_info.vector, trusted_exit_info.exit_type);
         } else {
-            log_debug("(untrusted PAL sent PAL event 0x%x)", ei.intval);
+            log_debug("(untrusted PAL sent PAL event 0x%x)", untrusted_external_event);
         }
 
         _PalProcessExit(1);
@@ -305,14 +312,14 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
     bool has_hw_fault_address = false;
 
-    if (ei.info.valid) {
-        ctx.trapno = ei.info.vector;
+    if (trusted_exit_info.valid) {
+        ctx.trapno = trusted_exit_info.vector;
         /* Only these two exceptions save information in EXINFO. */
-        if (ei.info.vector == SGX_EXCEPTION_VECTOR_GP
-                || ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
+        if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
+                || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
             ctx.err = exinfo->error_code_val;
         }
-        if (ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
+        if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
             ctx.cr2 = exinfo->maddr;
             has_hw_fault_address = true;
         }
