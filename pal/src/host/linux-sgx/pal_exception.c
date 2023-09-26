@@ -233,52 +233,146 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
 }
 
 /* perform exception handling inside the enclave */
-void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
+void _PalExceptionHandler(uint32_t trusted_exit_info_,
+                          uint32_t untrusted_external_event, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo) {
     assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
 
-    union {
-        sgx_arch_exit_info_t info;
-        unsigned int intval;
-    } ei = {.intval = exit_info};
+    sgx_arch_exit_info_t trusted_exit_info;
+    static_assert(sizeof(trusted_exit_info) == sizeof(trusted_exit_info_), "invalid size");
+    memcpy(&trusted_exit_info, &trusted_exit_info_, sizeof(trusted_exit_info));
 
-    int event_num;
+    /*
+     * Intel SGX hardware exposes information on a HW exception in the EXITINFO struct.
+     * Host OS + Gramine's untrusted part of PAL deliver a SW signal. The SW signal can be a
+     * reaction to HW exception (synchronous signal) or a reaction to software events (asynchronous
+     * signal). For security, it is important to cross-check HW exception state vs SW signal state.
+     *
+     * The below table shows the cross checks. "yes" means allowed combination, "no" means
+     * prohibited combination (Gramine terminates). "yes*" means a special case of #PF, see comments
+     * below on #PF handling.
+     *
+     *   +-----------------------------+-----+-----+-----+-----+------------------+------------+
+     *   | HW exceptions (trusted) ->  |     | #DE |     |     |                  |            |
+     *   | --------------------------- |     | #MF |     | #GP | others           |   none     |
+     *   |  SW signals (untrusted) |   | #UD | #XM | #PF | #AC | (#BR,#DB,#BP,#CP)| (valid=0)  |
+     *   |                         v   |     |     |     |     |                  |            |
+     * --+-----------------------------+-----+-----+-----+-----+------------------+------------+
+     * s |                             |     |     |     |     |                  |            |
+     * y | PAL_EVENT_ILLEGAL           | yes | no  | no  | no  |                  |            |
+     * n |                             |     |     |     |     |                  |            |
+     * c +-----------------------------+-----+-----+-----+-----+        no        |    no      |
+     * h |                             |     |     |     |     |   (exceptions    | (malicious |
+     * r | PAL_EVENT_ARITHMETIC_ERROR  | no  | yes | no  | no  |    unsupported   |  host      |
+     * o |                             |     |     |     |     |    by Gramine)   |  injected  |
+     * n +-----------------------------+-----+-----+-----+-----+                  |  SW signal)|
+     * o |                             |     |     |     |     |                  |            |
+     * u | PAL_EVENT_MEMFAULT          | no  | no  |yes* | yes |                  |            |
+     * s |                             |     |     |     |     |                  |            |
+     * --+-----------------------------+-----+-----+-----+-----+------------------+------------+
+     *   |                             |                                          |            |
+     * a | PAL_EVENT_QUIT              |                                          |    yes     |
+     * s |                             |          no, except #PF case*            |            |
+     * y +-----------------------------+  (malicious host ignored HW exception)   +------------+
+     * n |                             |                                          |            |
+     * c | PAL_EVENT_INTERRUPTED       |                                          |    yes     |
+     *   |                             |                                          |            |
+     * --+-----------------------------+------------------------------------------+------------+
+     */
 
-    if (!ei.info.valid) {
-        event_num = exit_info;
-        if (event_num <= 0 || event_num >= PAL_EVENT_NUM_BOUND) {
-            log_error("Illegal exception reported by untrusted PAL: %d", event_num);
+    uint32_t event_num = 0; /* illegal event */
+
+    if (!trusted_exit_info.valid) {
+        /* corresponds to last column in the table above */
+        if (untrusted_external_event != PAL_EVENT_QUIT
+                && untrusted_external_event != PAL_EVENT_INTERRUPTED) {
+            log_error("Host injected malicious signal %u", untrusted_external_event);
             _PalProcessExit(1);
         }
+        event_num = untrusted_external_event;
     } else {
-        switch (ei.info.vector) {
-            case SGX_EXCEPTION_VECTOR_BR:
-                log_error("Handling #BR exceptions is currently unsupported by Gramine");
-                _PalProcessExit(1);
-                break;
+        /* corresponds to all but last columns in the table above */
+        const char* exception_name = NULL;
+        switch (trusted_exit_info.vector) {
             case SGX_EXCEPTION_VECTOR_UD:
+                if (untrusted_external_event != PAL_EVENT_ILLEGAL) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_ILLEGAL, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 if (handle_ud(uc)) {
                     restore_sgx_context(uc, xregs_state);
-                    /* NOTREACHED */
+                    /* UNREACHABLE */
                 }
                 event_num = PAL_EVENT_ILLEGAL;
                 break;
             case SGX_EXCEPTION_VECTOR_DE:
             case SGX_EXCEPTION_VECTOR_MF:
             case SGX_EXCEPTION_VECTOR_XM:
+                if (untrusted_external_event != PAL_EVENT_ARITHMETIC_ERROR) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_ARITHMETIC_ERROR, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 event_num = PAL_EVENT_ARITHMETIC_ERROR;
                 break;
-            case SGX_EXCEPTION_VECTOR_GP:
             case SGX_EXCEPTION_VECTOR_PF:
+                if (untrusted_external_event == PAL_EVENT_QUIT
+                        || untrusted_external_event == PAL_EVENT_INTERRUPTED) {
+                    /*
+                     * The host delivered an asynchronous signal, so the reported-by-SGX #PF must be
+                     * benign (resolved completely by the host kernel), otherwise the host would
+                     * deliver PAL_EVENT_MEMFAULT (to signify a #PF which should be acted upon by
+                     * Gramine).
+                     *
+                     * The SGX hardware always reports such benign #PFs though they can be
+                     * considered spurious and should be ignored. So the event must be a
+                     * host-induced external event, so in the following we handle this external
+                     * event and ignore the #PF info.
+                     *
+                     * Note that the host could modify a real memory fault (a valid #PF) to e.g. a
+                     * PAL_EVENT_INTERRUPTED signal. Then we end up in this special case and the app
+                     * will not handle a real memory fault but a dummy PAL_EVENT_INTERRUPTED. This
+                     * will lead to the app getting stuck on #PF. Since this is a DoS, and Intel SGX
+                     * and Gramine don't care about DoSes, this special case is benign.
+                     */
+                    memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
+                    event_num = untrusted_external_event;
+                    break;
+                }
+                /* fallthrough */
+            case SGX_EXCEPTION_VECTOR_GP:
             case SGX_EXCEPTION_VECTOR_AC:
+                if (untrusted_external_event != PAL_EVENT_MEMFAULT) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_MEMFAULT, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 event_num = PAL_EVENT_MEMFAULT;
                 break;
+            case SGX_EXCEPTION_VECTOR_BR:
+                exception_name = exception_name ? : "#BR";
+                /* fallthrough */
             case SGX_EXCEPTION_VECTOR_DB:
+                exception_name = exception_name ? : "#DB";
+                /* fallthrough */
             case SGX_EXCEPTION_VECTOR_BP:
+                exception_name = exception_name ? : "#BP";
+                /* fallthrough */
+            case SGX_EXCEPTION_VECTOR_CP:
+                exception_name = exception_name ? : "#CP";
+                /* fallthrough */
             default:
-                restore_sgx_context(uc, xregs_state);
-                /* NOTREACHED */
+                log_error("Handling %s exceptions is currently unsupported by Gramine",
+                          exception_name ? : "[unknown]");
+                _PalProcessExit(1);
+                /* UNREACHABLE */
         }
+    }
+
+    if (event_num == 0 || event_num >= PAL_EVENT_NUM_BOUND) {
+        log_error("Illegal exception reported: %d", event_num);
+        _PalProcessExit(1);
     }
 
     /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
@@ -289,12 +383,12 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         const char* event_name = pal_event_name(event_num);
         log_error("Unexpected %s occurred inside PAL (%s)", event_name, buf);
 
-        if (ei.info.valid) {
+        if (trusted_exit_info.valid) {
             /* EXITINFO field: vector = exception number, exit_type = 0x3 for HW / 0x6 for SW */
-            log_debug("(SGX HW reported AEX vector 0x%x with exit_type = 0x%x)", ei.info.vector,
-                      ei.info.exit_type);
+            log_debug("(SGX HW reported AEX vector 0x%x with exit_type = 0x%x)",
+                      trusted_exit_info.vector, trusted_exit_info.exit_type);
         } else {
-            log_debug("(untrusted PAL sent PAL event 0x%x)", ei.intval);
+            log_debug("(untrusted PAL sent PAL event 0x%x)", untrusted_external_event);
         }
 
         _PalProcessExit(1);
@@ -305,15 +399,13 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
     bool has_hw_fault_address = false;
 
-    if (ei.info.valid) {
-        ctx.trapno = ei.info.vector;
+    if (trusted_exit_info.valid) {
+        ctx.trapno = trusted_exit_info.vector;
         /* Only these two exceptions save information in EXINFO. */
-        if (ei.info.vector == SGX_EXCEPTION_VECTOR_GP
-                || ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
-            ctx.err = exinfo->error_code_val;
-        }
-        if (ei.info.vector == SGX_EXCEPTION_VECTOR_PF) {
-            ctx.cr2 = exinfo->maddr;
+        if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
+                || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
+            ctx.err = exinfo->error_code_val; /* bits: Present, Write/Read, User/Kernel, etc. */
+            ctx.cr2 = exinfo->maddr;          /* NOTE: on #GP, maddr = 0 */
             has_hw_fault_address = true;
         }
     }
