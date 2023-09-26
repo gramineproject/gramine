@@ -267,7 +267,7 @@ enclave_entry:
     # Instead if we're in such situation, we emulate it as if RIP reached to the safe point,
     # .Lcssa0_ocall_return_after_stack_restore. In other words, the stage-1 handler jumps to the
     # regular returning-from-OCALL flow (CSSA=0) with RSI=<external event> which forces that flow
-    # to call _PalHandleExternalEvent() before proceeding with normal enclave code.
+    # to call the _PalExceptionHandler() before proceeding with normal enclave code.
     #
     # Ocall sequence:
     #  1. call sgx_ocall()
@@ -278,7 +278,7 @@ enclave_entry:
     #  6. .Lcssa0_ocall_return:
     #  7. (RSP, SGX_STACK) = (SGX_STACK, 0): restore trusted stack
     #  8. .Lcssa0_ocall_return_after_stack_restore:
-    #  9. call _PalHandleExternalEvent() if interrupted
+    #  9. call _PalExceptionHandler() if interrupted
     # 10. return from sgx_ocall() to the caller
     #
     # It is also required that sgx_ocall() be atomic wrt async exception. When host async signal
@@ -321,7 +321,7 @@ enclave_entry:
     # CASE A. We are right-before EEXIT for ocall in between [.Lcssa0_ocall_eexit_prepare,
     #         .Lcssa0_ocall_eexit_done) -- skip EEXIT as if ocall returned EINTR.
     #
-    # If there is a registered signal handler for the current exception, _PalHandleExternalEvent()
+    # If there is a registered signal handler for the current exception, _PalExceptionHandler()
     # will be called (and thus we need to save RDI = <external event>) before returning from ocall.
 
     movq $-EINTR, SGX_GPR_RDI(%rbx)    # return value for .Lcssa0_ocall_return
@@ -340,7 +340,7 @@ enclave_entry:
     #
     # Set RSI = <external event> and move RIP to .Lcssa0_ocall_return_after_stack_restore, such
     # that regular returning-from-OCALL flow (CSSA=0) will notice the external event and will call
-    # _PalHandleExternalEvent() to handle the exception.
+    # _PalExceptionHandler() to handle the exception.
     #
     # Note that either we fell-through from Case A and RDI was already set to the -EINTR return
     # value, or we are indeed in Case C and RDI already contains the successful OCALL result.
@@ -755,7 +755,7 @@ sgx_ocall:
     jmp _restore_sgx_context
 
 2:
-    # there was some event, call _PalHandleExternalEvent(event, uc, xregs_state)
+    # there was some event, call _PalExceptionHandler(0, event, uc, xregs_state, NULL)
 
     # clear the Alignment Check flag to prevent #AC-fault side channel
     pushfq
@@ -766,10 +766,12 @@ sgx_ocall:
     leaq g_xsave_reset_state(%rip), %rdi
     callq restore_xregs
 
-    movq %rsi, %rdi                         # external event (1st arg)
-    movq %rsp, %rsi                         # SGX context    (2nd arg)
-    leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rdx   # xregs_state    (3rd arg)
-    callq _PalHandleExternalEvent
+    movq $0,   %rdi                         # trusted EXITINFO   (1st arg), not used
+    movq %rsi, %rsi                         # external event     (2nd arg), to be explicit
+    movq %rsp, %rdx                         # SGX context        (3rd arg)
+    leaq SGX_CPU_CONTEXT_SIZE(%rsp), %rcx   # xregs_state        (4th arg)
+    movq $0,   %r8                          # SGX EXINFO pointer (5th arg), not used
+    callq _PalExceptionHandler
     FAIL_LOOP                               # cannot be reached
 
 

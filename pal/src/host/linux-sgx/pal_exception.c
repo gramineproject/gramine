@@ -349,30 +349,3 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
 
     restore_pal_context(uc, &ctx);
 }
-
-/* TODO: remove this function (SGX signal handling needs to be revisited)
- * actually what is the point of this function?
- * Tracked in https://github.com/gramineproject/gramine/issues/84. */
-noreturn void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc,
-                                      PAL_XREGS_STATE* xregs_state) {
-    assert(IS_ALIGNED_PTR(xregs_state, PAL_XSTATE_ALIGN));
-    enum pal_event event = event_;
-
-    if (event != PAL_EVENT_QUIT && event != PAL_EVENT_INTERRUPTED) {
-        log_error("Illegal exception reported by untrusted PAL: %d", event);
-        _PalProcessExit(1);
-    }
-
-    PAL_CONTEXT ctx;
-    save_pal_context(&ctx, uc, xregs_state);
-
-    pal_event_handler_t upcall = _PalGetExceptionHandler(event);
-    if (upcall) {
-        (*upcall)(ADDR_IN_PAL(uc->rip), /*addr=*/0, &ctx);
-    }
-
-    /* modification to PAL_CONTEXT is discarded; it is assumed that LibOS won't change context
-     * (GPRs, FP registers) if RIP is in PAL.
-     */
-    restore_sgx_context(uc, xregs_state);
-}

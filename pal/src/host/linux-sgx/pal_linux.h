@@ -98,9 +98,6 @@ noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave
 void _PalExceptionHandler(uint32_t trusted_exit_info_,
                           uint32_t untrusted_external_event, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo);
-/* `event_` is actually of `enum pal_event` type, but we call it from assembly, so we need to know
- * its underlying type. */
-void _PalHandleExternalEvent(long event_, sgx_cpu_context_t* uc, PAL_XREGS_STATE* xregs_state);
 
 void init_tsc(void);
 
