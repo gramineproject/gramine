@@ -263,11 +263,17 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                 event_num = PAL_EVENT_ARITHMETIC_ERROR;
                 break;
             case SGX_EXCEPTION_VECTOR_PF:
-                if (!exinfo->errcd.p) {
-                    /* benign #PF (due to non-present page entry, resolved completely by the host
+                if (untrusted_external_event != PAL_EVENT_MEMFAULT && !exinfo->errcd.p) {
+                    /*
+                     * Benign #PF (due to non-present page entry, resolved completely by the host
                      * kernel), it is still reported by the SGX hardware but considered spurious;
                      * since we are in this exception handler, then it must have been a host-induced
-                     * external event (and `event_num` is already set), so handle that event */
+                     * external event (and `event_num` is already set), so handle that event.
+                     *
+                     * Note that if the untrusted external event also reports the memfault (the
+                     * #PF), then it cannot be a benign one (otherwise the untrusted PAL wouldn't
+                     * raise this memfault exception).
+                     */
                     memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
                     break;
                 }
