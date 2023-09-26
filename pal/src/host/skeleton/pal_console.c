@@ -2,8 +2,10 @@
 /* Copyright (C) 2023 Intel Labs */
 
 /*
- * Operations to handle the console (stdin/stdout/stderr). Note that some operations (like stat and
- * truncate) are resolved in LibOS and don't have a counterpart in PAL.
+ * Operations to handle the console device.
+ *
+ * Note that some operations (like stat and truncate) are resolved in LibOS and don't have a
+ * counterpart in PAL.
  */
 
 #include "api.h"

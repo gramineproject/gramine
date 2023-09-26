@@ -146,6 +146,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
             continue; /* for loop over FDs to poll */
         }
 
+        /* below code path adds the handle for PAL polling */
         PAL_HANDLE pal_handle;
         if (handle->type == TYPE_SOCK) {
             pal_handle = __atomic_load_n(&handle->info.sock.pal_handle, __ATOMIC_ACQUIRE);
