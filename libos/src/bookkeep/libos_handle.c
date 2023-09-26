@@ -523,7 +523,7 @@ void put_handle(struct libos_handle* hdl) {
         free(hdl->uri);
 
         if (hdl->pal_handle) {
-            PalObjectClose(hdl->pal_handle); // TODO: handle errors
+            PalObjectDestroy(hdl->pal_handle);
             hdl->pal_handle = NULL;
         }
 

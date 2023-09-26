@@ -179,7 +179,7 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
                                                                handle->info.sock.protocol,
                                                                is_nonblocking);
     if (!client_handle) {
-        PalObjectClose(client_pal_handle);
+        PalObjectDestroy(client_pal_handle);
         return -ENOMEM;
     }
 

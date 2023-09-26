@@ -37,7 +37,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamWaitForClient failed: %s", pal_strerror(ret));
-        PalObjectClose(write_handle);
+        PalObjectDestroy(write_handle);
         ret = pal_to_unix_errno(ret);
         goto out;
     }
@@ -50,10 +50,10 @@ int create_pollable_event(struct libos_pollable_event* event) {
 
 out:;
     int tmp_ret = pal_to_unix_errno(PalStreamDelete(srv_handle, PAL_DELETE_ALL));
-    PalObjectClose(srv_handle);
+    PalObjectDestroy(srv_handle);
     if (!ret && tmp_ret) {
-        PalObjectClose(read_handle);
-        PalObjectClose(write_handle);
+        PalObjectDestroy(read_handle);
+        PalObjectDestroy(write_handle);
         /* Clearing just for sanity. */
         event->read_handle = NULL;
         event->write_handle = NULL;
@@ -62,8 +62,8 @@ out:;
 }
 
 void destroy_pollable_event(struct libos_pollable_event* event) {
-    PalObjectClose(event->read_handle);
-    PalObjectClose(event->write_handle);
+    PalObjectDestroy(event->read_handle);
+    PalObjectDestroy(event->write_handle);
 }
 
 int set_pollable_event(struct libos_pollable_event* event) {

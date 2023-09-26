@@ -232,7 +232,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
         hdl->pos = 0;
         hdl->pal_handle = palhdl;
     } else {
-        PalObjectClose(palhdl);
+        PalObjectDestroy(palhdl);
     }
     ret = 0;
 
@@ -394,7 +394,7 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
 
 out:
     free(buf);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     return ret;
 }
 
@@ -410,7 +410,7 @@ int chroot_unlink(struct libos_dentry* dent) {
         return ret;
 
     ret = PalStreamDelete(palhdl, PAL_DELETE_ALL);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -434,7 +434,7 @@ static int chroot_rename(struct libos_dentry* old, struct libos_dentry* new) {
         goto out;
 
     ret = PalStreamChangeName(palhdl, new_uri);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -460,7 +460,7 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     ret = PalStreamAttributesSetByHandle(palhdl, &attr);
-    PalObjectClose(palhdl);
+    PalObjectDestroy(palhdl);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 

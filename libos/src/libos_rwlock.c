@@ -13,13 +13,13 @@ bool rwlock_create(struct libos_rwlock* l) {
         return false;
     }
     if (PalEventCreate(&l->writer_wait, /*init_signaled=*/false, /*auto_clear=*/true) < 0) {
-        PalObjectClose(l->readers_wait);
+        PalObjectDestroy(l->readers_wait);
         return false;
     }
     l->waiting_readers = 0;
     if (!create_lock(&l->writers_lock)) {
-        PalObjectClose(l->readers_wait);
-        PalObjectClose(l->writer_wait);
+        PalObjectDestroy(l->readers_wait);
+        PalObjectDestroy(l->writer_wait);
         return false;
     }
     return true;
@@ -30,8 +30,8 @@ void rwlock_destroy(struct libos_rwlock* l) {
     assert(l->departing_readers == 0);
     assert(l->waiting_readers == 0);
 
-    PalObjectClose(l->readers_wait);
-    PalObjectClose(l->writer_wait);
+    PalObjectDestroy(l->readers_wait);
+    PalObjectDestroy(l->writer_wait);
     destroy_lock(&l->writers_lock);
 }
 

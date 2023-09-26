@@ -37,7 +37,7 @@ PalProcessExit
 PalSystemTimeQuery
 PalRandomBitsRead
 PalCpuIdRetrieve
-PalObjectClose
+PalObjectDestroy
 PalSetExceptionHandler
 PalSegmentBaseGet
 PalSegmentBaseSet

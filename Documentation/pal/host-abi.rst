@@ -327,7 +327,7 @@ Objects
 .. doxygenfunction:: PalStreamsWaitEvents
    :project: pal
 
-.. doxygenfunction:: PalObjectClose
+.. doxygenfunction:: PalObjectDestroy
    :project: pal
 
 Miscellaneous

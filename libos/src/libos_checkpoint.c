@@ -659,7 +659,7 @@ out:
     }
 
     if (pal_process)
-        PalObjectClose(pal_process);
+        PalObjectDestroy(pal_process);
 
     if (ret < 0) {
         log_error("process creation failed");

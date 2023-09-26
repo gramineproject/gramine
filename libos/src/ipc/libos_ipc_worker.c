@@ -110,7 +110,7 @@ static void del_ipc_connection(struct libos_ipc_connection* conn) {
     LISTP_DEL(conn, &g_ipc_connections, list);
     g_ipc_connections_cnt--;
 
-    PalObjectClose(conn->handle);
+    PalObjectDestroy(conn->handle);
 
     free(conn);
 }
@@ -320,7 +320,7 @@ static noreturn void ipc_worker_main(void) {
             ret = read_exact(new_handle, &new_id, sizeof(new_id));
             if (ret < 0) {
                 log_error(LOG_PREFIX "receiving id failed: %s", unix_strerror(ret));
-                PalObjectClose(new_handle);
+                PalObjectDestroy(new_handle);
             } else {
                 ret = add_ipc_connection(new_handle, new_id);
                 if (ret < 0) {
@@ -417,6 +417,6 @@ void terminate_ipc_worker(void) {
 
     put_thread(g_worker_thread);
     g_worker_thread = NULL;
-    PalObjectClose(g_self_ipc_handle);
+    PalObjectDestroy(g_self_ipc_handle);
     g_self_ipc_handle = NULL;
 }

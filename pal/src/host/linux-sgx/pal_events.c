@@ -201,9 +201,9 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
     }
 }
 
-static int event_close(PAL_HANDLE handle) {
+static void event_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_EVENT);
     free_untrusted_futex_word(handle->event.signaled_untrusted);
-    return 0;
 }
 
 struct handle_ops g_event_ops = {

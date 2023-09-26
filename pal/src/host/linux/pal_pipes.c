@@ -262,15 +262,20 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const 
  * \brief Close pipe.
  *
  * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
- *
- * \returns 0 on success, negative PAL error code otherwise.
  */
-static int pipe_close(PAL_HANDLE handle) {
-    if (handle->pipe.fd != PAL_IDX_POISON) {
-        DO_SYSCALL(close, handle->pipe.fd);
-        handle->pipe.fd = PAL_IDX_POISON;
+static void pipe_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_PIPESRV || handle->hdr.type == PAL_TYPE_PIPECLI
+            || handle->hdr.type == PAL_TYPE_PIPE);
+
+    if (handle->pipe.fd == PAL_IDX_POISON)
+        return;
+
+    int ret = DO_SYSCALL(close, handle->pipe.fd);
+    if (ret < 0) {
+        log_error("closing pipe fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
     }
-    return 0;
+    handle->pipe.fd = PAL_IDX_POISON;
 }
 
 /*!

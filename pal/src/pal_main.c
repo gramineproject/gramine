@@ -351,10 +351,11 @@ static int load_cstring_array(const char* uri, const char*** res) {
                 *(argv_it++) = buf + i + 1;
     }
     *res = array;
-    return _PalObjectClose(hdl);
+    _PalObjectDestroy(hdl);
+    return 0;
 
 out_fail:
-    (void)_PalObjectClose(hdl);
+    (void)_PalObjectDestroy(hdl);
     free(buf);
     free(array);
     return ret;

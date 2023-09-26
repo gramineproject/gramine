@@ -45,8 +45,8 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
 }
 
 /* 'close' operation of pipe stream. */
-static int pipe_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void pipe_close(PAL_HANDLE handle) {
+    /* noop */
 }
 
 /* 'delete' operation of pipe stream. */

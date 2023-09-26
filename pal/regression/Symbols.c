@@ -47,7 +47,7 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalEventClear);
     PRINT_SYMBOL(PalEventWait);
 
-    PRINT_SYMBOL(PalObjectClose);
+    PRINT_SYMBOL(PalObjectDestroy);
 
     PRINT_SYMBOL(PalSystemTimeQuery);
     PRINT_SYMBOL(PalRandomBitsRead);

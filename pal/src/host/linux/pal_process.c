@@ -222,10 +222,10 @@ out:
     free(exec_data);
     free(proc_args);
     if (parent_handle)
-        _PalObjectClose(parent_handle);
+        _PalObjectDestroy(parent_handle);
     if (ret < 0) {
         if (child_handle)
-            _PalObjectClose(child_handle);
+            _PalObjectDestroy(child_handle);
     }
     if (reserved_mem_ranges_fd >= 0) {
         DO_SYSCALL(close, reserved_mem_ranges_fd);
@@ -324,13 +324,18 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return bytes;
 }
 
-static int proc_close(PAL_HANDLE handle) {
-    if (handle->process.stream != PAL_IDX_POISON) {
-        DO_SYSCALL(close, handle->process.stream);
-        handle->process.stream = PAL_IDX_POISON;
-    }
+static void proc_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_PROCESS);
 
-    return 0;
+    if (handle->process.stream == PAL_IDX_POISON)
+        return;
+
+    int ret = DO_SYSCALL(close, handle->process.stream);
+    if (ret < 0) {
+        log_error("closing process fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
+    handle->process.stream = PAL_IDX_POISON;
 }
 
 static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {

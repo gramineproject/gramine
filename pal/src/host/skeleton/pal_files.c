@@ -28,8 +28,8 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 }
 
 /* 'close' operation for file streams */
-static int file_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void file_close(PAL_HANDLE handle) {
+    /* noop */
 }
 
 /* 'delete' operation for file streams */
@@ -96,8 +96,8 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void
 }
 
 /* 'close' operation of directory streams */
-static int dir_close(PAL_HANDLE handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static void dir_close(PAL_HANDLE handle) {
+    /* noop */
 }
 
 /* 'delete' operation of directory streams */

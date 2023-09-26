@@ -823,9 +823,9 @@ int PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_
                          pal_wait_flags_t* ret_events, uint64_t* timeout_us);
 
 /*!
- * \brief Close (deallocate) a PAL handle.
+ * \brief Close and deallocate a PAL handle.
  */
-void PalObjectClose(PAL_HANDLE object_handle);
+void PalObjectDestroy(PAL_HANDLE handle);
 
 /*
  * MISC

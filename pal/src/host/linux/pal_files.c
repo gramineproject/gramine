@@ -114,14 +114,20 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 }
 
 /* 'close' operation for file streams */
-static int file_close(PAL_HANDLE handle) {
-    int fd = handle->file.fd;
+static void file_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_FILE);
 
-    int ret = DO_SYSCALL(close, fd);
+    if (handle->file.fd == PAL_IDX_POISON)
+        return;
+
+    int ret = DO_SYSCALL(close, handle->file.fd);
+    if (ret < 0) {
+        log_error("closing file fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
 
     free(handle->file.realpath);
-
-    return ret < 0 ? unix_to_pal_error(ret) : 0;
+    handle->file.fd = PAL_IDX_POISON;
 }
 
 /* 'delete' operation for file streams */
@@ -380,10 +386,17 @@ out:
 }
 
 /* 'close' operation of directory streams */
-static int dir_close(PAL_HANDLE handle) {
-    int fd = handle->dir.fd;
+static void dir_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DIR);
 
-    int ret = DO_SYSCALL(close, fd);
+    if (handle->dir.fd == PAL_IDX_POISON)
+        return;
+
+    int ret = DO_SYSCALL(close, handle->dir.fd);
+    if (ret < 0) {
+        log_error("closing dir fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
 
     if (handle->dir.buf) {
         free(handle->dir.buf);
@@ -391,11 +404,7 @@ static int dir_close(PAL_HANDLE handle) {
     }
 
     free(handle->dir.realpath);
-
-    if (ret < 0)
-        return -PAL_ERROR_BADHANDLE;
-
-    return 0;
+    handle->dir.fd = PAL_IDX_POISON;
 }
 
 /* 'delete' operation of directory streams */

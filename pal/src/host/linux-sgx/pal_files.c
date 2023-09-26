@@ -218,19 +218,25 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 }
 
 /* 'close' operation for file streams */
-static int file_close(PAL_HANDLE handle) {
-    int fd = handle->file.fd;
+static void file_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_FILE);
+
+    if (handle->file.fd == PAL_IDX_POISON)
+        return;
 
     if (handle->file.chunk_hashes && handle->file.total) {
         /* case of trusted file: the whole file was mmapped in untrusted memory */
         ocall_munmap_untrusted(handle->file.umem, handle->file.total);
     }
 
-    ocall_close(fd);
+    int ret = ocall_close(handle->file.fd);
+    if (ret < 0) {
+        log_error("closing file fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
 
     free(handle->file.realpath);
-
-    return 0;
+    handle->file.fd = PAL_IDX_POISON;
 }
 
 /* 'delete' operation for file streams */
@@ -632,10 +638,17 @@ out:
 }
 
 /* 'close' operation of directory streams */
-static int dir_close(PAL_HANDLE handle) {
-    int fd = handle->dir.fd;
+static void dir_close(PAL_HANDLE handle) {
+    assert(handle->hdr.type == PAL_TYPE_DIR);
 
-    ocall_close(fd);
+    if (handle->dir.fd == PAL_IDX_POISON)
+        return;
+
+    int ret = ocall_close(handle->dir.fd);
+    if (ret < 0) {
+        log_error("closing dir fd failed: %s", unix_strerror(ret));
+        /* We cannot do anything about it anyway... */
+    }
 
     if (handle->dir.buf) {
         free(handle->dir.buf);
@@ -643,8 +656,7 @@ static int dir_close(PAL_HANDLE handle) {
     }
 
     free(handle->dir.realpath);
-
-    return 0;
+    handle->dir.fd = PAL_IDX_POISON;
 }
 
 /* 'delete' operation of directory streams */
