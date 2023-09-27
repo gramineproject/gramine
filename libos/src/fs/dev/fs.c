@@ -102,12 +102,6 @@ static int dev_tty_flush(struct libos_handle* hdl) {
     return pal_to_unix_errno(ret);
 }
 
-/* this dummy function is implemented to support opening TTY (console) with O_TRUNC flag */
-static int dev_tty_truncate(struct libos_handle* hdl, uint64_t size) {
-    __UNUSED(hdl);
-    return size ? -EINVAL : 0;
-}
-
 /* this dummy function is required only to override the default behavior of pseudo_poll() -- this is
  * because we actually want to poll on the host tty/console; see also libos_poll.c */
 static int dev_tty_poll(struct libos_handle* hdl, int in_events, int* out_events) {
@@ -166,7 +160,6 @@ int init_devfs(void) {
     tty->dev.dev_ops.read = &dev_tty_read;
     tty->dev.dev_ops.write = &dev_tty_write;
     tty->dev.dev_ops.flush = &dev_tty_flush;
-    tty->dev.dev_ops.truncate = &dev_tty_truncate;
     tty->dev.dev_ops.poll = &dev_tty_poll;
 
     struct pseudo_node* stdin = pseudo_add_link(root, "stdin", NULL);

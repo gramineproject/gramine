@@ -436,7 +436,7 @@ static int pseudo_truncate(struct libos_handle* hdl, file_off_t size) {
 
         case PSEUDO_DEV:
             if (!node->dev.dev_ops.truncate)
-                return -EACCES;
+                return -EINVAL;
             return node->dev.dev_ops.truncate(hdl, size);
 
         default:
