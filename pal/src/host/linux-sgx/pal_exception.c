@@ -340,26 +340,21 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         assert(g_mem_bkeep_get_vma_info_upcall);
         assert(g_enclave_page_tracker);
 
-        int ret;
         pal_prot_flags_t prot_flags;
 
-        ret = g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags);
-        if (ret < 0) {
-            log_error("failed to get VMA info at 0x%lx: %s", addr, pal_strerror(ret));
-            _PalProcessExit(1);
-        }
-
-        if (prot_flags & PAL_PROT_LAZYALLOC) {
+        if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) &&
+                                                   (prot_flags & PAL_PROT_LAZYALLOC)) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
-            ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
-                                         prot_flags);
+            int ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
+                                             prot_flags);
             if (ret < 0) {
                 log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
                 _PalProcessExit(1);
             }
             goto out;
         } else if (ADDR_IN_PAL(uc->rip)) {
-            /* inside PAL, and we hit a memfault on a not lazily-allocated page */
+            /* inside PAL, and we failed to get the VMA info of the faulting address or we hit a
+             * memfault on a not lazily-allocated page */
             char buf[LOCATION_BUF_SIZE];
             pal_describe_location(uc->rip, buf, sizeof(buf));
 
