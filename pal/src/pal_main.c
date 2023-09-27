@@ -355,7 +355,7 @@ static int load_cstring_array(const char* uri, const char*** res) {
     return 0;
 
 out_fail:
-    (void)_PalObjectDestroy(hdl);
+    _PalObjectDestroy(hdl);
     free(buf);
     free(array);
     return ret;

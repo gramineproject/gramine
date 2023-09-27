@@ -34,7 +34,7 @@ static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) 
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static void eventfd_pal_close(PAL_HANDLE handle) {
+static void eventfd_pal_destroy(PAL_HANDLE handle) {
     /* noop */
 }
 
@@ -42,6 +42,6 @@ struct handle_ops g_eventfd_ops = {
     .open           = &eventfd_pal_open,
     .read           = &eventfd_pal_read,
     .write          = &eventfd_pal_write,
-    .close          = &eventfd_pal_close,
+    .destroy        = &eventfd_pal_destroy,
     .attrquerybyhdl = &eventfd_pal_attrquerybyhdl,
 };

@@ -52,9 +52,10 @@ struct handle_ops {
      * sockets it corresponds to shutting down a socket connection. */
     int (*delete)(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 
-    /* 'close' is used by PalObjectDestroy, to close all associated resources on the host (e.g.
-     * close the host FD). */
-    void (*close)(PAL_HANDLE handle);
+    /* 'destroy' is used by PalObjectDestroy: it closes all associated resources on the host (e.g.
+     * closes the host FD), frees all sub-objects of the PAL handle (e.g. a filename string) and
+     * finally frees the PAL handle object itself */
+    void (*destroy)(PAL_HANDLE handle);
 
     /*
      * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped

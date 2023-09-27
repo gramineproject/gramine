@@ -12,12 +12,13 @@
 void _PalObjectDestroy(PAL_HANDLE handle) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
-    /* close all associated resources on the host... */
-    if (ops && ops->close)
-        ops->close(handle);
-
-    /* ...and deallocate the handle */
-    free(handle);
+    if (ops && ops->destroy) {
+        /* handle-specific callback is required to close + free all resources */
+        ops->destroy(handle);
+    } else {
+        /* no handle-specific callback, just free this PAL handle */
+        free(handle);
+    }
 }
 
 void PalObjectDestroy(PAL_HANDLE handle) {

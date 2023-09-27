@@ -44,8 +44,7 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'close' operation of pipe stream. */
-static void pipe_close(PAL_HANDLE handle) {
+static void pipe_destroy(PAL_HANDLE handle) {
     /* noop */
 }
 
@@ -59,6 +58,6 @@ struct handle_ops g_pipe_ops = {
     .waitforclient = &pipe_waitforclient,
     .read          = &pipe_read,
     .write         = &pipe_write,
-    .close         = &pipe_close,
+    .destroy       = &pipe_destroy,
     .delete        = &pipe_delete,
 };

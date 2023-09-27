@@ -282,23 +282,21 @@ static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return bytes;
 }
 
-static void proc_close(PAL_HANDLE handle) {
+static void proc_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_PROCESS);
-
-    if (handle->process.stream == PAL_IDX_POISON)
-        return;
 
     int ret = ocall_close(handle->process.stream);
     if (ret < 0) {
-        log_error("closing process fd failed: %s", unix_strerror(ret));
+        log_error("closing process host fd %d failed: %s", handle->process.stream,
+                  unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
-    handle->process.stream = PAL_IDX_POISON;
 
     if (handle->process.ssl_ctx) {
         _PalStreamSecureFree((LIB_SSL_CONTEXT*)handle->process.ssl_ctx);
-        handle->process.ssl_ctx = NULL;
     }
+
+    free(handle);
 }
 
 static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
@@ -317,17 +315,12 @@ static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    if (handle->process.stream != PAL_IDX_POISON)
-        ocall_shutdown(handle->process.stream, shutdown);
-
+    ocall_shutdown(handle->process.stream, shutdown);
     return 0;
 }
 
 static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret;
-
-    if (handle->process.stream == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
 
     attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->process.nonblocking;
@@ -343,9 +336,6 @@ static int proc_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int proc_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->process.stream == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
     if (attr->nonblocking != handle->process.nonblocking) {
         int ret = ocall_fsetnonblock(handle->process.stream, handle->process.nonblocking);
         if (ret < 0)
@@ -360,7 +350,7 @@ static int proc_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 struct handle_ops g_proc_ops = {
     .read           = &proc_read,
     .write          = &proc_write,
-    .close          = &proc_close,
+    .destroy        = &proc_destroy,
     .delete         = &proc_delete,
     .attrquerybyhdl = &proc_attrquerybyhdl,
     .attrsetbyhdl   = &proc_attrsetbyhdl,

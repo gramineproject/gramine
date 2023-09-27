@@ -98,8 +98,6 @@ enum {
     PAL_HANDLE_TYPE_BOUND,
 };
 
-#define PAL_IDX_POISON         ((PAL_IDX)-1) /* PAL identifier poison value */
-
 /********** PAL APIs **********/
 
 struct pal_dns_host_conf_addr {

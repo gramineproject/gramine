@@ -96,9 +96,6 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     if (handle->hdr.type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
-    if (handle->pipe.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_DENIED;
-
     static_assert(O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
     int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
     int newfd = DO_SYSCALL(accept4, handle->pipe.fd, NULL, NULL, flags);
@@ -259,23 +256,21 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const 
 }
 
 /*!
- * \brief Close pipe.
+ * \brief Destroy pipe (close host FD and free all objects).
  *
  * \param handle  PAL handle of type `pipesrv`, `pipecli`, or `pipe`.
  */
-static void pipe_close(PAL_HANDLE handle) {
+static void pipe_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_PIPESRV || handle->hdr.type == PAL_TYPE_PIPECLI
             || handle->hdr.type == PAL_TYPE_PIPE);
 
-    if (handle->pipe.fd == PAL_IDX_POISON)
-        return;
-
     int ret = DO_SYSCALL(close, handle->pipe.fd);
     if (ret < 0) {
-        log_error("closing pipe fd failed: %s", unix_strerror(ret));
+        log_error("closing pipe host fd %d failed: %s", handle->pipe.fd, unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
-    handle->pipe.fd = PAL_IDX_POISON;
+
+    free(handle);
 }
 
 /*!
@@ -302,10 +297,7 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             return -PAL_ERROR_INVAL;
     }
 
-    if (handle->pipe.fd != PAL_IDX_POISON) {
-        DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
-    }
-
+    DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);
     return 0;
 }
 
@@ -319,9 +311,6 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
  */
 static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret;
-
-    if (handle->pipe.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
 
     attr->handle_type  = handle->hdr.type;
     attr->nonblocking  = handle->pipe.nonblocking;
@@ -351,9 +340,6 @@ static int pipe_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
  * Currently only `nonblocking` attribute can be set.
  */
 static int pipe_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    if (handle->pipe.fd == PAL_IDX_POISON)
-        return -PAL_ERROR_BADHANDLE;
-
     bool* nonblocking = &handle->pipe.nonblocking;
 
     if (attr->nonblocking != *nonblocking) {
@@ -372,7 +358,7 @@ struct handle_ops g_pipe_ops = {
     .waitforclient  = &pipe_waitforclient,
     .read           = &pipe_read,
     .write          = &pipe_write,
-    .close          = &pipe_close,
+    .destroy        = &pipe_destroy,
     .delete         = &pipe_delete,
     .attrquerybyhdl = &pipe_attrquerybyhdl,
     .attrsetbyhdl   = &pipe_attrsetbyhdl,

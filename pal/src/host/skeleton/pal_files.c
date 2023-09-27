@@ -27,8 +27,7 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'close' operation for file streams */
-static void file_close(PAL_HANDLE handle) {
+static void file_destroy(PAL_HANDLE handle) {
     /* noop */
 }
 
@@ -71,7 +70,7 @@ struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
     .write          = &file_write,
-    .close          = &file_close,
+    .destroy        = &file_destroy,
     .delete         = &file_delete,
     .map            = &file_map,
     .setlength      = &file_setlength,
@@ -95,8 +94,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* 'close' operation of directory streams */
-static void dir_close(PAL_HANDLE handle) {
+static void dir_destroy(PAL_HANDLE handle) {
     /* noop */
 }
 
@@ -117,7 +115,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 struct handle_ops g_dir_ops = {
     .open           = &dir_open,
     .read           = &dir_read,
-    .close          = &dir_close,
+    .destroy        = &dir_destroy,
     .delete         = &dir_delete,
     .attrquery      = &file_attrquery,
     .attrquerybyhdl = &dir_attrquerybyhdl,

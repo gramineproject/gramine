@@ -37,8 +37,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     for (size_t i = 0; i < count; i++) {
         PAL_HANDLE handle = handle_array[i];
         /* If `handle` does not have a host fd, just ignore it. */
-        if (handle && (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
-                && handle->generic.fd != PAL_IDX_POISON) {
+        if (handle && (handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))) {
             short fdevents = 0;
             if (events[i] & PAL_WAIT_READ) {
                 fdevents |= POLLIN;
@@ -77,8 +76,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
         ret_events[i] = 0;
 
         PAL_HANDLE handle = handle_array[i];
-        if (!handle || !(handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))
-                || handle->generic.fd == PAL_IDX_POISON) {
+        if (!handle || !(handle->flags & (PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE))) {
             /* We skipped this fd. */
             continue;
         }

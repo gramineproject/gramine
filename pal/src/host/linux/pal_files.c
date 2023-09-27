@@ -113,21 +113,17 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     return ret;
 }
 
-/* 'close' operation for file streams */
-static void file_close(PAL_HANDLE handle) {
+static void file_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_FILE);
-
-    if (handle->file.fd == PAL_IDX_POISON)
-        return;
 
     int ret = DO_SYSCALL(close, handle->file.fd);
     if (ret < 0) {
-        log_error("closing file fd failed: %s", unix_strerror(ret));
+        log_error("closing file host fd %d failed: %s", handle->file.fd, unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
 
     free(handle->file.realpath);
-    handle->file.fd = PAL_IDX_POISON;
+    free(handle);
 }
 
 /* 'delete' operation for file streams */
@@ -242,7 +238,7 @@ struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
     .write          = &file_write,
-    .close          = &file_close,
+    .destroy        = &file_destroy,
     .delete         = &file_delete,
     .map            = &file_map,
     .setlength      = &file_setlength,
@@ -385,26 +381,18 @@ out:
     return (int64_t)bytes_written;
 }
 
-/* 'close' operation of directory streams */
-static void dir_close(PAL_HANDLE handle) {
+static void dir_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_DIR);
-
-    if (handle->dir.fd == PAL_IDX_POISON)
-        return;
 
     int ret = DO_SYSCALL(close, handle->dir.fd);
     if (ret < 0) {
-        log_error("closing dir fd failed: %s", unix_strerror(ret));
+        log_error("closing dir host fd %d failed: %s", handle->dir.fd, unix_strerror(ret));
         /* We cannot do anything about it anyway... */
     }
 
-    if (handle->dir.buf) {
-        free(handle->dir.buf);
-        handle->dir.buf = handle->dir.ptr = handle->dir.end = NULL;
-    }
-
+    free(handle->dir.buf);
     free(handle->dir.realpath);
-    handle->dir.fd = PAL_IDX_POISON;
+    free(handle);
 }
 
 /* 'delete' operation of directory streams */
@@ -439,7 +427,7 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
 struct handle_ops g_dir_ops = {
     .open           = &dir_open,
     .read           = &dir_read,
-    .close          = &dir_close,
+    .destroy        = &dir_destroy,
     .delete         = &dir_delete,
     .attrquery      = &file_attrquery,
     .attrquerybyhdl = &file_attrquerybyhdl,
