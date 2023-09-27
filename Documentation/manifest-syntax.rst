@@ -675,15 +675,17 @@ Allowed files
       "[URI]",
     ]
 
-This syntax specifies the files that are allowed to be created or loaded into
-the enclave unconditionally. In other words, allowed files can be opened for
-reading/writing and can be created if they do not exist already. Allowed files
-are not cryptographically hashed and are thus not protected.
+This syntax specifies the files (with the ``file:`` prefix) or devices
+(with the ``dev:`` prefix) that are allowed to be created or loaded into the
+enclave unconditionally. In other words, allowed files or devices can be opened
+for reading/writing and allowed files can be created if they do not exist
+already. Allowed files are not cryptographically hashed and are thus not
+protected.
 
 .. warning::
-   It is insecure to allow files containing code or critical information;
-   developers must not allow files blindly! Instead, use trusted or encrypted
-   files.
+   It is insecure to allow files or devices containing code or critical
+   information; developers must not allow files blindly! Instead, use trusted
+   or encrypted files.
 
 Trusted files
 ^^^^^^^^^^^^^
@@ -830,11 +832,11 @@ data to the host.
        - Untrusted host can modify data in shared memory as it wishes, so
          applications could see or operate on maliciously modified data.
 
-   It is the responsibility of the app developer to correctly use shared memory, with
-   security implications in mind. In most cases, data in shared memory should be
-   preliminarily encrypted or integrity-protected by the user app with a key
-   pre-shared between all participating processes (and possibly devices that use
-   this shared memory).
+   It is the responsibility of the app developer to correctly use shared memory,
+   with security implications in mind. In most cases, data in shared memory
+   should be preliminarily encrypted or integrity-protected by the user app
+   with a key pre-shared between all participating processes (and possibly
+   devices that use this shared memory).
 
 File check policy
 ^^^^^^^^^^^^^^^^^
@@ -845,16 +847,17 @@ File check policy
     (Default: "strict")
 
 This syntax specifies the file check policy, determining the behavior of
-authentication when opening files. By default, only files explicitly listed as
-``trusted_files`` or ``allowed_files`` declared in the manifest are allowed for
-access.
+authentication when opening files or devices. By default, only files explicitly
+listed as ``trusted_files`` and files or devices explicitly listed as
+``allowed_files`` declared in the manifest are allowed for access.
 
-If the file check policy is ``allow_all_but_log``, all files other than trusted
-and allowed are allowed for access, and Gramine emits a warning message for
-every such file. Effectively, this policy operates on all unknown files as if
-they were listed as ``allowed_files``. (However, this policy still does not
-allow writing/creating files specified as trusted.) This policy is a convenient
-way to determine the set of files that the ported application uses.
+If the file check policy is ``allow_all_but_log``, all files and devices other
+than trusted and allowed are allowed for access, and Gramine emits a warning
+message for every such file/device. Effectively, this policy operates on all
+unknown files and devices as if they were listed as ``allowed_files``.
+(However, this policy still does not allow writing/creating files specified as
+trusted.) This policy is a convenient way to determine the set of files that
+the ported application uses.
 
 Allowed IOCTLs
 ^^^^^^^^^^^^^^

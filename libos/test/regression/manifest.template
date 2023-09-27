@@ -32,7 +32,7 @@ sgx.allowed_files = [
   "file:root",              # for getdents test
   "file:testfile",          # for mmap_file test
   "file:scripts/",          # for exec_script test
-  "file:/dev/shm/shm_test", # for shm test
+  "dev:/dev/shm/shm_test",  # for shm test
 ]
 
 sgx.trusted_files = [

@@ -175,8 +175,12 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
-    assert(addr >= g_pal_public_state.shared_address_start &&
-           (uintptr_t)addr + size <= (uintptr_t)g_pal_public_state.shared_address_end);
+    if (addr < g_pal_public_state.shared_address_start ||
+        (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
+        log_warning("Could not map a device outside of the shared memory range at %p-%p", addr,
+                    addr + size);
+        return -PAL_ERROR_DENIED;
+    }
 
     /* MAP_FIXED is intentional to override a previous mapping */
     void* mapped_addr = (void*)DO_SYSCALL(mmap, addr, size, PAL_PROT_TO_LINUX(prot),

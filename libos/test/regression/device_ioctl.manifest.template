@@ -11,6 +11,10 @@ fs.mounts = [
 
 sgx.debug = true
 
+sgx.allowed_files = [
+  "dev:/dev/gramine_test_dev",
+]
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",

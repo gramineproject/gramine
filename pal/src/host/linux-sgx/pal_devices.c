@@ -75,13 +75,15 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
             goto fail;
         }
 
-        if (!(options & PAL_OPTION_PASSTHROUGH)) {
-            struct trusted_file* tf = get_trusted_or_allowed_file(normpath);
-            if (!tf || !tf->allowed) {
-                log_error("Disallowing access to file '%s'; file is not allowed.", normpath);
+        struct trusted_file* tf = get_trusted_or_allowed_file(normpath);
+        if (!tf || !tf->allowed) {
+            if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
+                log_error("Disallowing access to device '%s'; device is not allowed.", normpath);
                 ret = -PAL_ERROR_DENIED;
                 goto fail;
             }
+            log_warning("Allowing access to unknown device '%s' due to file_check_policy settings.",
+                        normpath);
         }
 
         hdl->dev.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
@@ -259,7 +261,6 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
         return -PAL_ERROR_INVAL;
     }
 
-    /* can only map the file outside of enclave */
     if (addr < g_pal_public_state.shared_address_start
             || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
         log_warning("Could not map a device outside of the shared memory range at %p-%p", addr,

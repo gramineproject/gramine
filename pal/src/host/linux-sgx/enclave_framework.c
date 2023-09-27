@@ -769,12 +769,29 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 static int normalize_and_register_file(const char* uri, const char* hash_str) {
     int ret;
 
-    if (!strstartswith(uri, URI_PREFIX_FILE)) {
-        log_error("Invalid URI [%s]: Trusted/allowed files must start with 'file:'", uri);
-        return -PAL_ERROR_INVAL;
+    size_t uri_prefix_len = 0;
+    size_t norm_uri_size = 0;
+    if (hash_str) {
+        if (strstartswith(uri, URI_PREFIX_FILE)) {
+            uri_prefix_len = URI_PREFIX_FILE_LEN;
+            norm_uri_size  = strlen(uri) + 1;
+        } else {
+            log_error("Invalid URI [%s]: Trusted files must start with 'file:'", uri);
+            return -PAL_ERROR_INVAL;
+        }
+    } else {
+        if (strstartswith(uri, URI_PREFIX_FILE)) {
+            uri_prefix_len = URI_PREFIX_FILE_LEN;
+            norm_uri_size  = strlen(uri) + 1;
+        } else if (strstartswith(uri, URI_PREFIX_DEV)) {
+            uri_prefix_len = URI_PREFIX_DEV_LEN;
+            norm_uri_size  = strlen(uri) - URI_PREFIX_DEV_LEN + URI_PREFIX_FILE_LEN + 1;
+        } else {
+            log_error("Invalid URI [%s]: Allowed files must start with 'file:' or 'dev:'", uri);
+            return -PAL_ERROR_INVAL;
+        }
     }
 
-    const size_t norm_uri_size = strlen(uri) + 1;
     char* norm_uri = malloc(norm_uri_size);
     if (!norm_uri) {
         return -PAL_ERROR_NOMEM;
@@ -782,8 +799,7 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
 
     memcpy(norm_uri, URI_PREFIX_FILE, URI_PREFIX_FILE_LEN);
     size_t norm_path_size = norm_uri_size - URI_PREFIX_FILE_LEN;
-    if (!get_norm_path(uri + URI_PREFIX_FILE_LEN, norm_uri + URI_PREFIX_FILE_LEN,
-                       &norm_path_size)) {
+    if (!get_norm_path(uri + uri_prefix_len, norm_uri + URI_PREFIX_FILE_LEN, &norm_path_size)) {
         log_error("Path (%s) normalization failed", uri);
         ret = -PAL_ERROR_INVAL;
         goto out;

@@ -383,6 +383,7 @@ int buf_flush(struct print_buf* buf);
 #define URI_PREFIX_EVENTFD  URI_TYPE_EVENTFD URI_PREFIX_SEPARATOR
 #define URI_PREFIX_FILE     URI_TYPE_FILE URI_PREFIX_SEPARATOR
 
+#define URI_PREFIX_DEV_LEN  (static_strlen(URI_PREFIX_DEV))
 #define URI_PREFIX_FILE_LEN (static_strlen(URI_PREFIX_FILE))
 
 #define TIME_US_IN_S 1000000ul

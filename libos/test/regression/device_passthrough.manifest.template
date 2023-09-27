@@ -12,6 +12,10 @@ fs.mounts = [
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
+sgx.allowed_files = [
+  "dev:/dev/zero",
+]
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
