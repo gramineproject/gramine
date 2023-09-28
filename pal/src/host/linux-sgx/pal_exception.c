@@ -275,6 +275,12 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                      * considered spurious and should be ignored. So the event must be a
                      * host-induced external event (note that `event_num` is already set), so in the
                      * following we handle this external event and ignore the #PF info.
+                     *
+                     * SECURITY NOTE: Here we make a decision based on the input from the possibly
+                     * malicious host (`untrusted_external_event`). However, this is benign in SGX
+                     * threat model: if the host modified a real memory fault (valid #PF) to e.g. a
+                     * SIGCONT event, then the app will not handle a real memory fault and will get
+                     * stuck in the #PF exception (hang, i.e. a DoS attack).
                      */
                     memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
                     break;
