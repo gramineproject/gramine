@@ -49,8 +49,10 @@ void remove_r_debug(void* addr);
 void append_r_debug(const char* uri, void* addr);
 void clean_link_map_list(void);
 
-/* create unique files/pipes */
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name);
+/* For PALs that support encryption of pipes, `passthrough = true` means that the pipe will NOT be
+ * encrypted, i.e. pipe data will be passed through as-is to the host. */
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name,
+                bool passthrough);
 
 /* Asynchronous event support */
 int init_async_worker(void);

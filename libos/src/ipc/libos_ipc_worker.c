@@ -377,7 +377,7 @@ static int ipc_worker_wrapper(void* arg) {
 static int init_self_ipc_handle(void) {
     char uri[PIPE_URI_SIZE];
     return create_pipe(/*name=*/NULL, uri, sizeof(uri), &g_self_ipc_handle,
-                       /*use_vmid_for_name=*/true);
+                       /*use_vmid_for_name=*/true, /*passthrough=*/false);
 }
 
 static int create_ipc_worker(void) {

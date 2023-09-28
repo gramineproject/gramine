@@ -60,6 +60,7 @@ typedef struct {
             PAL_IDX fd;
             bool nonblocking;
             bool is_server;
+            bool passthrough;
             PAL_SESSION_KEY session_key;
             bool handshake_done;
             void* ssl_ctx;

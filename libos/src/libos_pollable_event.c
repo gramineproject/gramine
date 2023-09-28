@@ -13,8 +13,10 @@
 int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];
     PAL_HANDLE srv_handle;
+    /* We use `passthrough` pipes here for performance reasons (we save on secure initialization of
+     * pipes and on encryption of pipe data on PALs that support encrypted pipes). */
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
-                          /*use_vmid_for_name=*/false);
+                          /*use_vmid_for_name=*/false, /*passthrough=*/true);
     if (ret < 0) {
         log_error("create_pipe failed: %s", unix_strerror(ret));
         return ret;
@@ -23,7 +25,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     PAL_HANDLE write_handle;
     do {
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            PAL_OPTION_NONBLOCK, &write_handle);
+                            PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH, &write_handle);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamOpen failed: %s", pal_strerror(ret));
@@ -33,7 +35,8 @@ int create_pollable_event(struct libos_pollable_event* event) {
 
     PAL_HANDLE read_handle;
     do {
-        ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
+        ret = PalStreamWaitForClient(srv_handle, &read_handle,
+                                     PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamWaitForClient failed: %s", pal_strerror(ret));

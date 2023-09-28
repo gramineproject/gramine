@@ -51,7 +51,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
             /* session key is part of handle but need to serialize SSL context */
-            if (handle->pipe.ssl_ctx) {
+            if (!handle->pipe.passthrough && handle->pipe.ssl_ctx) {
                 free_field = true;
                 ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&field,
                                            &field_size);
@@ -148,20 +148,24 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
         }
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPECLI:
-            /* session key is part of handle but need to deserialize SSL context */
-            hdl->pipe.fd = host_fd; /* correct host FD must be passed to SSL context */
-            ret = _PalStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
-                                       (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
-                                       (const uint8_t*)data + hdl_size, size - hdl_size);
-            if (ret < 0) {
-                free(hdl);
-                return -PAL_ERROR_DENIED;
+            if (!hdl->pipe.passthrough) {
+                /* session key is part of handle but need to deserialize SSL context */
+                hdl->pipe.fd = host_fd; /* correct host FD must be passed to SSL context */
+                ret = _PalStreamSecureInit(hdl, hdl->pipe.is_server, &hdl->pipe.session_key,
+                                           (LIB_SSL_CONTEXT**)&hdl->pipe.ssl_ctx,
+                                           (const uint8_t*)data + hdl_size, size - hdl_size);
+                if (ret < 0) {
+                    free(hdl);
+                    return -PAL_ERROR_DENIED;
+                }
+                hdl->pipe.handshake_helper_thread_hdl = NULL;
             }
-            hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
         case PAL_TYPE_PIPESRV:
-            hdl->pipe.ssl_ctx = NULL;
-            hdl->pipe.handshake_helper_thread_hdl = NULL;
+            if (!hdl->pipe.passthrough) {
+                hdl->pipe.ssl_ctx = NULL;
+                hdl->pipe.handshake_helper_thread_hdl = NULL;
+            }
             break;
         case PAL_TYPE_CONSOLE:
             break;

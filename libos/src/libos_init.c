@@ -534,7 +534,8 @@ static int get_256b_random_hex_string(char* buf, size_t size) {
     return 0;
 }
 
-int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name) {
+int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vmid_for_name,
+                bool passthrough) {
     int ret;
     size_t len;
     char pipename[PIPE_URI_SIZE];
@@ -564,7 +565,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
             return -ERANGE;
 
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            /*options=*/0, &pipe);
+                            passthrough ? PAL_OPTION_PASSTHROUGH : 0, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */
