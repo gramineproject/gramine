@@ -17,6 +17,10 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 
+sgx.allowed_files = [
+  "dev:/dev/gramine_test_dev",
+]
+
 # Below IOCTL structs are intentionally modified to test IOCTL parsing (i.e. they don't really make
 # sense). Each IOCTL struct has a single error/limitation that should fail Gramine's IOCTL parser.
 

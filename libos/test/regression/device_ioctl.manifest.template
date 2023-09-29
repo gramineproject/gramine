@@ -17,6 +17,10 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 
+sgx.allowed_files = [
+  "dev:/dev/gramine_test_dev",
+]
+
 sys.ioctl_structs.gramine_test_dev_ioctl_write = [
     { size = 8, direction = "out", name = "buf_size" },    # buf_size
     { ptr = [ {size = "buf_size", direction = "out"} ] },  # buf

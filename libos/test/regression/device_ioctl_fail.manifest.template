@@ -19,6 +19,10 @@ sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 
+sgx.allowed_files = [
+  "dev:/dev/gramine_test_dev",
+]
+
 sys.allowed_ioctls = [
   # no allowed IOCTLs to force test failure
 ]
