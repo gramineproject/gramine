@@ -42,6 +42,22 @@ popular open source projects.
   keep it protected against a malicious host. See the :doc:`gsc-installation`
   article for more information.
 
+- **Scaffolding For Gramine**
+
+  Unlock the full potential of your application with
+  the Scaffolding for Gramine (SCAG) tool. SCAG meticulously transforms your
+  application into a Graminized Docker image, encapsulating both your
+  application and the Gramine Library OS. The primary objective of the
+  Scaffolding project is to expedite the process of safeguarding applications
+  against malicious hosts.
+
+  Setting itself apart from alternative solutions, ScAG doesn’t confine its
+  operations to the Docker level—it delves deeper, functioning at
+  the framework level. It offers seamless support for a variety of frameworks,
+  including but not limited to Flask and Express.js. For a more in-depth
+  exploration, visit :doc:`scag-installation`, or contribute to the
+  `GitHub project <https://github.com/intel/ScaffoldingForGramine>`.
+
 - **Ready-made SGX images**
 
   Users can create ready-made SGX Docker images with the help of the
