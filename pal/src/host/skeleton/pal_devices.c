@@ -28,6 +28,14 @@ static void dev_destroy(PAL_HANDLE handle) {
     /* noop */
 }
 
+static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
+static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
 static int dev_flush(PAL_HANDLE handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
@@ -45,6 +53,8 @@ struct handle_ops g_dev_ops = {
     .read           = &dev_read,
     .write          = &dev_write,
     .destroy        = &dev_destroy,
+    .delete         = &dev_delete,
+    .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,
     .attrquerybyhdl = &dev_attrquerybyhdl,

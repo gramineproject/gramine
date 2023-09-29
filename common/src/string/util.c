@@ -40,3 +40,11 @@ char* alloc_concat3(const char* a, size_t a_len, const char* b, size_t b_len,
     buf[a_len + b_len + c_len] = '\0';
     return buf;
 }
+
+void* alloc_and_copy(const void* src, size_t size) {
+    void* dst = malloc(size);
+    if (!dst)
+        return NULL;
+    memcpy(dst, src, size);
+    return dst;
+}

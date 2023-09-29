@@ -275,6 +275,7 @@ char* alloc_substr(const char* start, size_t len);
 char* alloc_concat(const char* a, size_t a_len, const char* b, size_t b_len);
 char* alloc_concat3(const char* a, size_t a_len, const char* b, size_t b_len,
                     const char* c, size_t c_len);
+void* alloc_and_copy(const void* src, size_t size);
 
 /* Libc memory allocation functions */
 void* malloc(size_t size);
@@ -385,6 +386,7 @@ int buf_flush(struct print_buf* buf);
 #define URI_PREFIX_EVENTFD  URI_TYPE_EVENTFD URI_PREFIX_SEPARATOR
 #define URI_PREFIX_FILE     URI_TYPE_FILE URI_PREFIX_SEPARATOR
 
+#define URI_PREFIX_DEV_LEN  (static_strlen(URI_PREFIX_DEV))
 #define URI_PREFIX_FILE_LEN (static_strlen(URI_PREFIX_FILE))
 
 #define TIME_US_IN_S 1000000ul

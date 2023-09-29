@@ -44,10 +44,6 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
     /* find a field to serialize (depends on the handle type); note that
      * no handle type has more than one such field, and some have none */
     switch (handle->hdr.type) {
-        case PAL_TYPE_FILE:
-            field = handle->file.realpath;
-            field_size = strlen(handle->file.realpath) + 1;
-            break;
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
         case PAL_TYPE_PIPECLI:
@@ -57,7 +53,12 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
             /* console (stdin/stdout/stderr) has no fields to serialize */
             break;
         case PAL_TYPE_DEV:
-            /* devices have no fields to serialize */
+            field = handle->dev.realpath;
+            field_size = strlen(handle->dev.realpath) + 1;
+            break;
+        case PAL_TYPE_FILE:
+            field = handle->file.realpath;
+            field_size = strlen(handle->file.realpath) + 1;
             break;
         case PAL_TYPE_DIR:
             field = handle->dir.realpath;
@@ -101,43 +102,36 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     memcpy(hdl, data, hdl_size);
 
     /* update handle fields to point to correct contents */
+    assert(hdl_size <= size);
     switch (hdl->hdr.type) {
-        case PAL_TYPE_FILE: {
-            assert(hdl_size < size);
-
-            size_t path_size = size - hdl_size;
-            char* path = malloc(path_size);
-            if (!path) {
-                free(hdl);
-                return -PAL_ERROR_NOMEM;
-            }
-
-            memcpy(path, (const char*)data + hdl_size, path_size);
-
-            hdl->file.realpath = path;
-            break;
-        }
         case PAL_TYPE_PIPE:
         case PAL_TYPE_PIPESRV:
         case PAL_TYPE_PIPECLI:
             break;
         case PAL_TYPE_CONSOLE:
             break;
-        case PAL_TYPE_DEV:
-            break;
-        case PAL_TYPE_DIR: {
-            assert(hdl_size < size);
-
-            size_t path_size = size - hdl_size;
-            char* path = malloc(path_size);
-            if (!path) {
+        case PAL_TYPE_DEV: {
+            hdl->dev.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
+            if (!hdl->dev.realpath) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
             }
-
-            memcpy(path, (const char*)data + hdl_size, path_size);
-
-            hdl->dir.realpath = path;
+            break;
+        }
+        case PAL_TYPE_FILE: {
+            hdl->file.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
+            if (!hdl->file.realpath) {
+                free(hdl);
+                return -PAL_ERROR_NOMEM;
+            }
+            break;
+        }
+        case PAL_TYPE_DIR: {
+            hdl->dir.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
+            if (!hdl->dir.realpath) {
+                free(hdl);
+                return -PAL_ERROR_NOMEM;
+            }
             hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
         }

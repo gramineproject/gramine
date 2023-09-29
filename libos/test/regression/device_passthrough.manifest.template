@@ -17,3 +17,7 @@ sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
+
+sgx.allowed_files = [
+  "dev:/dev/zero",
+]

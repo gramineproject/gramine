@@ -405,11 +405,25 @@ static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
 static spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;
 static int g_file_check_policy = FILE_CHECK_POLICY_STRICT;
 
+static void find_path_in_uri(const char* uri, size_t uri_len, const char** out_path,
+                             size_t* out_path_len) {
+    if (strstartswith(uri, URI_PREFIX_FILE)) {
+        *out_path = uri + URI_PREFIX_FILE_LEN;
+        *out_path_len = uri_len - URI_PREFIX_FILE_LEN;
+        return;
+    }
+
+    assert(strstartswith(uri, URI_PREFIX_DEV));
+    *out_path = uri + URI_PREFIX_DEV_LEN;
+    *out_path_len = uri_len - URI_PREFIX_DEV_LEN;
+}
+
 /* assumes `path` is normalized */
 static bool path_is_equal_or_subpath(const struct trusted_file* tf, const char* path,
                                      size_t path_len) {
-    const char* tf_path = tf->uri + URI_PREFIX_FILE_LEN;
-    size_t tf_path_len  = tf->uri_len - URI_PREFIX_FILE_LEN;
+    const char* tf_path;
+    size_t tf_path_len;
+    find_path_in_uri(tf->uri, tf->uri_len, &tf_path, &tf_path_len);
 
     if (tf_path_len > path_len || memcmp(tf_path, path, tf_path_len)) {
         /* tf path is not a prefix of `path` */
@@ -447,8 +461,9 @@ struct trusted_file* get_trusted_or_allowed_file(const char* path) {
             }
         } else {
             /* trusted files: must be exactly the same URI */
-            const char* tf_path = tmp->uri + URI_PREFIX_FILE_LEN;
-            size_t tf_path_len  = tmp->uri_len - URI_PREFIX_FILE_LEN;
+            const char* tf_path;
+            size_t tf_path_len;
+            find_path_in_uri(tmp->uri, tmp->uri_len, &tf_path, &tf_path_len);
             if (tf_path_len == path_len && !memcmp(tf_path, path, path_len + 1)) {
                 tf = tmp;
                 break;
@@ -769,9 +784,16 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 static int normalize_and_register_file(const char* uri, const char* hash_str) {
     int ret;
 
-    if (!strstartswith(uri, URI_PREFIX_FILE)) {
-        log_error("Invalid URI [%s]: Trusted/allowed files must start with 'file:'", uri);
-        return -PAL_ERROR_INVAL;
+    if (hash_str) {
+        if (!strstartswith(uri, URI_PREFIX_FILE)) {
+            log_error("Invalid URI [%s]: Trusted files must start with 'file:'", uri);
+            return -PAL_ERROR_INVAL;
+        }
+    } else {
+        if (!strstartswith(uri, URI_PREFIX_FILE) && !strstartswith(uri, URI_PREFIX_DEV)) {
+            log_error("Invalid URI [%s]: Allowed files must start with 'file:' or 'dev:'", uri);
+            return -PAL_ERROR_INVAL;
+        }
     }
 
     const size_t norm_uri_size = strlen(uri) + 1;
@@ -780,10 +802,20 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
         return -PAL_ERROR_NOMEM;
     }
 
-    memcpy(norm_uri, URI_PREFIX_FILE, URI_PREFIX_FILE_LEN);
-    size_t norm_path_size = norm_uri_size - URI_PREFIX_FILE_LEN;
-    if (!get_norm_path(uri + URI_PREFIX_FILE_LEN, norm_uri + URI_PREFIX_FILE_LEN,
-                       &norm_path_size)) {
+    const char* uri_prefix;
+    size_t uri_prefix_len;
+    if (strstartswith(uri, URI_PREFIX_FILE)) {
+        uri_prefix = URI_PREFIX_FILE;
+        uri_prefix_len = URI_PREFIX_FILE_LEN;
+    } else {
+        assert(strstartswith(uri, URI_PREFIX_DEV));
+        uri_prefix = URI_PREFIX_DEV;
+        uri_prefix_len = URI_PREFIX_DEV_LEN;
+    }
+
+    memcpy(norm_uri, uri_prefix, uri_prefix_len);
+    size_t norm_path_size = norm_uri_size - uri_prefix_len;
+    if (!get_norm_path(uri + uri_prefix_len, norm_uri + uri_prefix_len, &norm_path_size)) {
         log_error("Path (%s) normalization failed", uri);
         ret = -PAL_ERROR_INVAL;
         goto out;
