@@ -30,7 +30,7 @@ Protect your container
 ======================
 
 In this section, we describe how you can protect your Docker container using
-Gramine Shielded Containers (GSC), Scaffolding For Gramine (SCAG), and how you
+Gramine Shielded Containers (GSC), Scaffolding for Gramine (SCAG), and how you
 can use ready-made SGX images for popular open source projects.
 
 - **Gramine Shielded Containers**
@@ -42,9 +42,9 @@ can use ready-made SGX images for popular open source projects.
   keep it protected against a malicious host. See the :doc:`gsc-installation`
   article for more information.
 
-- **Scaffolding For Gramine**
+- **Scaffolding for Gramine**
 
-  The Scaffolding for Gramine (SCAG) tool is a diffrent approach for "graminizing"
+  The Scaffolding for Gramine (SCAG) tool is a different approach for "graminizing"
   your application. SCAG meticulously transforms your application into a
   Graminized Docker image, encapsulating both your application and the Gramine
   Library OS. The primary objective of the Scaffolding project is to expedite

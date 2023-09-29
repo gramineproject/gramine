@@ -1,4 +1,4 @@
-Scaffolding For Gramine
+Scaffolding for Gramine
 =======================
 
 The Scaffolding for Gramine (SCAG) tool meticulously transforms your
@@ -11,16 +11,21 @@ Setting itself apart from alternative solutions (like GSC), SCAG doesn't
 transform a Docker image, instead it generates a whole Docker image from
 the given projects. During the build process the required Dockerfile,
 manifest file, and other required configuration files are generated
-automatically for the user.
+automatically for the user. A list of currently supported frameworks
+can be found in
+`documentation <https://gramine-scaffolding.readthedocs.io/en/latest/manpages/scag-setup.html#cmdoption-scag-setup-framework>`
+.
 
 To speed up the process, SCAG offers a single command - ``scag-quickstart``.
 This tool also guides user interactively through the entire process of
-"graminizing" application, from setting up the project to building it, and
-finally running it.  For more advanced usage of SCAG, users are encouraged
+"graminizing" the application, from setting up the project to building it,
+and finally running it. For more advanced usage of SCAG, users are encouraged
 to refer to the documentation.
 
-All web-based frameworks, such as Express.js and Flask, are preconfigured
-to operate behind a web server (nginx), with SSL/TLS and the RA-TLS extension.
+SCAG wraps the application with additional security measures, such as adding
+SSL/TLS to overwise plaintext-networking apps. All web-based frameworks,
+such as Express.js and Flask, are preconfigured to operate behind
+a web server (nginx), with SSL/TLS and the RA-TLS extension.
 
 Note that the SCAG tool is split from core Gramine and is hosted here:
 
