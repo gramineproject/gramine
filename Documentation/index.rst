@@ -30,8 +30,8 @@ Protect your container
 ======================
 
 In this section, we describe how you can protect your Docker container using
-Gramine Shielded Containers (GSC) and how you can use ready-made SGX images for
-popular open source projects.
+Gramine Shielded Containers (GSC), Scaffolding For Gramine (SCAG), and how you
+can use ready-made SGX images for popular open source projects.
 
 - **Gramine Shielded Containers**
 
@@ -44,18 +44,17 @@ popular open source projects.
 
 - **Scaffolding For Gramine**
 
-  Unlock the full potential of your application with
-  the Scaffolding for Gramine (SCAG) tool. SCAG meticulously transforms your
-  application into a Graminized Docker image, encapsulating both your
-  application and the Gramine Library OS. The primary objective of the
-  Scaffolding project is to expedite the process of safeguarding applications
-  against malicious hosts.
+  The Scaffolding for Gramine (SCAG) tool is a diffrent approach for "graminizing"
+  your application. SCAG meticulously transforms your application into a
+  Graminized Docker image, encapsulating both your application and the Gramine
+  Library OS. The primary objective of the Scaffolding project is to expedite
+  the process of safeguarding applications against malicious hosts.
 
-  Setting itself apart from alternative solutions, ScAG doesn’t confine its
-  operations to the Docker level—it delves deeper, functioning at
-  the framework level. It offers seamless support for a variety of frameworks,
-  including but not limited to Flask and Express.js. For a more in-depth
-  exploration, visit :doc:`scag-installation`, or contribute to the
+  Setting itself apart from alternative solutions (like GSC), SCAG doesn't tranform
+  a Docker image, instead it generates a whole Docker image from the given projects.
+  It offers seamless support for a variety of frameworks, including but not limited
+  to Flask and Express.js. For a more in-depth exploration, see
+  :doc:`scag-installation`, or contribute to the
   `GitHub project <https://github.com/intel/ScaffoldingForGramine>`.
 
 - **Ready-made SGX images**
@@ -179,6 +178,7 @@ Indices and tables
    :maxdepth: 1
 
    gsc-installation
+   scag-installation
    curated-installation
 
 .. toctree::
