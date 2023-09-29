@@ -23,7 +23,7 @@ and finally running it. For more advanced usage of SCAG, users are encouraged
 to refer to the documentation.
 
 SCAG wraps the application with additional security measures, such as adding
-SSL/TLS to overwise plaintext-networking apps. All web-based frameworks,
+SSL/TLS to otherwise plaintext-networking apps. All web-based frameworks,
 such as Express.js and Flask, are preconfigured to operate behind
 a web server (nginx), with SSL/TLS and the RA-TLS extension.
 
