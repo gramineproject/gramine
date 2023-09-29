@@ -592,7 +592,7 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     help='optional passphrase to decrypt the key')
 def sign_with_file(ctx, key, passphrase):
     try:
-        private_key = load_private_key_from_pem_file(key, passphrase)
+        private_key = load_private_key_from_pem_file(key, passphrase.encode())
     except InvalidKeyError as e:
         ctx.fail(str(e))
 
@@ -674,7 +674,7 @@ def sign_with_private_key_from_pem_file(data, file, passphrase=None):
     Args:
         data (bytes): Data to calculate the signature over.
         file (file-like): File-like object, from which one can read RSA private key.
-        passphrase (str or None): Optional passphrase.
+        passphrase (bytes or None): Optional passphrase.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
@@ -700,7 +700,7 @@ def sign_with_private_key_from_pem_path(data, path, passphrase=None):
     Args:
         data (bytes): Data to calculate the signature over.
         path (path-like): Path to a file with RSA private key.
-        passphrase (str or None): Optional passphrase.
+        passphrase (bytes or None): Optional passphrase.
 
     Returns:
         (int, int, int): Tuple of exponent, modulus and signature respectively.
