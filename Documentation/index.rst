@@ -44,18 +44,19 @@ can use ready-made SGX images for popular open source projects.
 
 - **Scaffolding for Gramine**
 
-  The Scaffolding for Gramine (SCAG) tool is a different approach for "graminizing"
-  your application. SCAG meticulously transforms your application into a
-  Graminized Docker image, encapsulating both your application and the Gramine
-  Library OS. The primary objective of the Scaffolding project is to expedite
-  the process of safeguarding applications against malicious hosts.
+  The Scaffolding for Gramine (SCAG) tool is a different approach for
+  "graminizing" your application. SCAG transforms your application into
+  a graminized Docker image, encapsulating both your application and
+  the Gramine Library OS. The primary objective of the Scaffolding project
+  is to simplify the process of safeguarding applications against malicious
+  hosts.
 
-  Setting itself apart from alternative solutions (like GSC), SCAG doesn't tranform
-  a Docker image, instead it generates a whole Docker image from the given projects.
-  It offers seamless support for a variety of frameworks, including but not limited
-  to Flask and Express.js. For a more in-depth exploration, see
-  :doc:`scag-installation`, or contribute to the
-  `GitHub project <https://github.com/intel/ScaffoldingForGramine>`.
+  Setting itself apart from alternative solutions (like GSC), SCAG doesn't
+  tranform a Docker image, instead it generates a whole Docker image from
+  the given projects.  It offers seamless support for a variety of frameworks,
+  including but not limited to Flask and Express.js. For a more in-depth
+  exploration, see :doc:`scag-installation`, or contribute to the
+  `GitHub project <https://github.com/intel/ScaffoldingForGramine>`__.
 
 - **Ready-made SGX images**
 

@@ -1,11 +1,11 @@
 Scaffolding for Gramine
 =======================
 
-The Scaffolding for Gramine (SCAG) tool meticulously transforms your
-application into a Graminized Docker image, encapsulating both your
-application and the Gramine Library OS. The primary objective of the
-Scaffolding project is to expedite the process of safeguarding applications
-against malicious hosts.
+The Scaffolding for Gramine (SCAG) tool transforms your application
+into a graminized Docker image, encapsulating both your application and
+the Gramine Library OS. The primary objective of the Scaffolding project
+is to simplify the process of safeguarding applications against malicious
+hosts.
 
 Setting itself apart from alternative solutions (like GSC), SCAG doesn't
 transform a Docker image, instead it generates a whole Docker image from
@@ -13,7 +13,7 @@ the given projects. During the build process the required Dockerfile,
 manifest file, and other required configuration files are generated
 automatically for the user. A list of currently supported frameworks
 can be found in
-`documentation <https://gramine-scaffolding.readthedocs.io/en/latest/manpages/scag-setup.html#cmdoption-scag-setup-framework>`
+`documentation <https://gramine-scaffolding.readthedocs.io/en/latest/manpages/scag-setup.html#cmdoption-scag-setup-framework>`__
 .
 
 To speed up the process, SCAG offers a single command - ``scag-quickstart``.
