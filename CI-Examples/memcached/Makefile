@@ -1,12 +1,12 @@
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 SRCDIR = src
-MEMCACHED_SRC ?= memcached-1.5.21.tar.gz
+MEMCACHED_SRC ?= memcached-1.6.21.tar.gz
 MEMCACHED_MIRRORS ?= \
     https://memcached.org/files \
     https://packages.gramineproject.io/distfiles
 
-MEMCACHED_SHA256 ?= e3d10c06db755b220f43d26d3b68d15ebf737a69c7663529b504ab047efe92f4
+MEMCACHED_SHA256 ?= c788980efc417dd5d93c442b1c8b8769fb2018896c29de3887d22a2f143da2ee
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
