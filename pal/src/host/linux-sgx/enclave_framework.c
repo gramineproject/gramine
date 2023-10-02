@@ -405,8 +405,8 @@ static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
 static spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;
 static int g_file_check_policy = FILE_CHECK_POLICY_STRICT;
 
-static void path_from_uri(const char* uri, size_t uri_len, const char** out_path,
-                          size_t* out_path_len) {
+static void find_path_in_uri(const char* uri, size_t uri_len, const char** out_path,
+                             size_t* out_path_len) {
     if (strstartswith(uri, URI_PREFIX_FILE)) {
         *out_path = uri + URI_PREFIX_FILE_LEN;
         *out_path_len = uri_len - URI_PREFIX_FILE_LEN;
@@ -423,7 +423,7 @@ static bool path_is_equal_or_subpath(const struct trusted_file* tf, const char* 
                                      size_t path_len) {
     const char* tf_path;
     size_t tf_path_len;
-    path_from_uri(tf->uri, tf->uri_len, &tf_path, &tf_path_len);
+    find_path_in_uri(tf->uri, tf->uri_len, &tf_path, &tf_path_len);
 
     if (tf_path_len > path_len || memcmp(tf_path, path, tf_path_len)) {
         /* tf path is not a prefix of `path` */
@@ -463,7 +463,7 @@ struct trusted_file* get_trusted_or_allowed_file(const char* path) {
             /* trusted files: must be exactly the same URI */
             const char* tf_path;
             size_t tf_path_len;
-            path_from_uri(tmp->uri, tmp->uri_len, &tf_path, &tf_path_len);
+            find_path_in_uri(tmp->uri, tmp->uri_len, &tf_path, &tf_path_len);
             if (tf_path_len == path_len && !memcmp(tf_path, path, path_len + 1)) {
                 tf = tmp;
                 break;

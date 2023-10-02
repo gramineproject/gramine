@@ -59,7 +59,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
     size_t normpath_size = strlen(uri) + 1;
     normpath = malloc(normpath_size);
-    if (!normpath){
+    if (!normpath) {
         ret = -PAL_ERROR_NOMEM;
         goto fail;
     }

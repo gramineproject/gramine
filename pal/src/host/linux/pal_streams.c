@@ -93,14 +93,6 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
     return buffer_size;
 }
 
-static char* malloc_and_copy(size_t size, const char* src) {
-    char* dst = malloc(size);
-    if (!dst)
-        return NULL;
-    memcpy(dst, src, size);
-    return dst;
-}
-
 int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     size_t hdl_size = handle_size((PAL_HANDLE)data);
     PAL_HANDLE hdl = malloc(hdl_size);
@@ -119,7 +111,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
         case PAL_TYPE_CONSOLE:
             break;
         case PAL_TYPE_DEV: {
-            hdl->dev.realpath = malloc_and_copy(size - hdl_size, (const char*)data + hdl_size);
+            hdl->dev.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dev.realpath) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
@@ -127,7 +119,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             break;
         }
         case PAL_TYPE_FILE: {
-            hdl->file.realpath = malloc_and_copy(size - hdl_size, (const char*)data + hdl_size);
+            hdl->file.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->file.realpath) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
@@ -135,7 +127,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             break;
         }
         case PAL_TYPE_DIR: {
-            hdl->dir.realpath = malloc_and_copy(size - hdl_size, (const char*)data + hdl_size);
+            hdl->dir.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dir.realpath) {
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
