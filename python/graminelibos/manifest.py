@@ -39,40 +39,6 @@ def uri2path(uri):
         raise ManifestError(f'Unsupported URI type: {uri}')
     return pathlib.Path(uri[len('file:'):])
 
-def append_tf(trusted_files, path, hash_=None):
-    if path not in trusted_files:
-        trusted_files[path] = hash_ if hash_ is not None else hash_file_contents(path)
-
-def append_trusted_dir_or_file(trusted_files, val, expanded):
-    if isinstance(val, dict):
-        uri = val['uri']
-        if val.get('sha256'):
-            append_tf(trusted_files, uri2path(uri), val['sha256'])
-            return
-    elif isinstance(val, str):
-        uri = val
-    else:
-        raise ManifestError(f'Unknown trusted file format: {val!r}')
-
-    path = uri2path(uri)
-    if not path.exists():
-        raise ManifestError(f'Cannot resolve {path}')
-    if path.is_dir():
-        if not uri.endswith('/'):
-            raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
-
-        expanded.append(path)
-        for sub_path in sorted(path.rglob('*')):
-            expanded.append(sub_path)
-            if sub_path.is_file():
-                # Skip inaccessible files
-                if os.access(sub_path, os.R_OK):
-                    append_tf(trusted_files, sub_path)
-    else:
-        assert path.is_file()
-        append_tf(trusted_files, path)
-        expanded.append(path)
-
 class Manifest:
     """Just a representation of a manifest.
 
@@ -171,7 +137,7 @@ class Manifest:
     def dump(self, f):
         tomli_w.dump(self._manifest, f)
 
-    def expand_all_trusted_files(self):
+    def expand_all_trusted_files(self, chroot=None):
         """Expand all trusted files entries.
 
         Collects all trusted files entries, hashes each of them (skipping these which already had a
@@ -187,8 +153,60 @@ class Manifest:
         """
         trusted_files = {}
         expanded = []
+
+        def in_chroot(path):
+            if chroot is None:
+                return path
+            if not path.is_absolute():
+                raise ManifestError('only absolute paths can be measured in chroot')
+            return chroot / path.relative_to('/')
+
+        def out_chroot(path):
+            if chroot is None:
+                return path
+            if not path.is_absolute():
+                raise ManifestError('only absolute paths can be measured in chroot')
+            return '/' / path.relative_to(chroot)
+
+        def append_tf(chroot_path):
+            if path not in trusted_files:
+                trusted_files[out_chroot(chroot_path)] = hash_file_contents(chroot_path)
+
         for tf in self['sgx']['trusted_files']:
-            append_trusted_dir_or_file(trusted_files, tf, expanded)
+            if isinstance(tf, dict):
+                uri = tf['uri']
+
+                path = uri2path(uri)
+                if tf.get('sha256') and path not in trusted_files:
+                    trusted_files[path] = tf['sha256']
+                    continue
+
+            elif isinstance(tf, str):
+                uri = tf
+
+            else:
+                raise ManifestError(f'Unknown trusted file format: {tf!r}')
+
+            path = uri2path(uri)
+            chroot_path = in_chroot(path)
+
+            if not chroot_path.exists():
+                raise ManifestError(f'Cannot resolve {path}')
+            if chroot_path.is_dir():
+                if not uri.endswith('/'):
+                    raise ManifestError(f'Directory URI ({uri}) does not end with "/"')
+
+                expanded.append(path)
+                for sub_path in sorted(chroot_path.rglob('*')):
+                    expanded.append(out_chroot(sub_path))
+                    if sub_path.is_file():
+                        # Skip inaccessible files
+                        if os.access(sub_path, os.R_OK):
+                            append_tf(sub_path)
+            else:
+                assert chroot_path.is_file()
+                append_tf(chroot_path)
+                expanded.append(path)
 
         self['sgx']['trusted_files'] = [
             {'uri': f'file:{k}', 'sha256': v} for k, v in trusted_files.items()
