@@ -82,6 +82,9 @@ class BCDDateParamType(click.ParamType):
 @click.option('--date', '-d',
     type=BCDDateParamType(), default='today',
     help='Set DATE field in SIGSTRUCT to this value (YYYY-MM-DD or "today")')
+@click.option('--chroot',
+    type=click.Path(exists=True, dir_okay=True, file_okay=False),
+    help='Measure a chroot directory, not the host filesystem')
 @click.option('--sigfile', '-s',
     help='Output .sig file')
 @click.option('--depfile',
@@ -94,7 +97,8 @@ class BCDDateParamType(click.ParamType):
     nargs=-1,
     type=click.UNPROCESSED)
 @click.pass_context
-def main(ctx, with_, output, libpal, manifest_file, date, sigfile, depfile, verbose, plugin_args):
+def main(ctx, with_, output, libpal, manifest_file, date, sigfile, depfile, verbose, plugin_args,
+         chroot):
     # pylint: disable=too-many-arguments, too-many-locals
 
     ret = get_sgx_sign_plugin(with_)(args=plugin_args, standalone_mode=False)
@@ -125,7 +129,7 @@ def main(ctx, with_, output, libpal, manifest_file, date, sigfile, depfile, verb
 
     manifest = Manifest.load(manifest_file)
 
-    expanded = manifest.expand_all_trusted_files()
+    expanded = manifest.expand_all_trusted_files(chroot=chroot)
 
     with open(output, 'wb') as f:
         manifest.dump(f)
