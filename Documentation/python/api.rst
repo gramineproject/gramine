@@ -57,6 +57,8 @@ API Reference
 .. autoclass:: graminelibos.Manifest
    :members:
 
+.. autoclass:: graminelibos.manifest.TrustedFile
+   :members:
 ..
   TODO: enable this once we build Gramine on readthedocs
   .. autoclass:: graminelibos.Sigstruct
