@@ -18,7 +18,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y gramine \
     libsgx-aesm-quote-ex-plugin \
     libsgx-aesm-ecdsa-plugin \
     libsgx-dcap-quote-verify \
-    psmisc
+    psmisc && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /var/run/aesmd/
 
