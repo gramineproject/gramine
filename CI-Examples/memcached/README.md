@@ -1,7 +1,7 @@
 # Memcached
 
 This directory contains the Makefile and the template manifest for the most
-recent version of Memcached as of this writing (v1.5.21).
+recent version of Memcached as of this writing (v1.6.21).
 
 # Prerequisites
 

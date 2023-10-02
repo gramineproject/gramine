@@ -15,6 +15,7 @@ loader.env.LD_LIBRARY_PATH = "/lib:/usr/{{ arch_libdir }}"
 loader.uid = 1000
 loader.gid = 1000
 
+sys.insecure__allow_eventfd = true
 sys.enable_sigterm_injection = true
 
 fs.mounts = [
