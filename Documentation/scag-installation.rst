@@ -25,7 +25,7 @@ to refer to the documentation.
 SCAG wraps the application with additional security measures, such as adding
 SSL/TLS to otherwise plaintext-networking apps. All web-based frameworks,
 such as Express.js and Flask, are preconfigured to operate behind
-a web server (nginx), with SSL/TLS and the RA-TLS extension.
+a web server (Nginx), with SSL/TLS and the RA-TLS extension.
 
 Note that the SCAG tool is split from core Gramine and is hosted here:
 
