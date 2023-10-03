@@ -56,6 +56,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 int init_async_worker(void);
 int64_t install_async_event(PAL_HANDLE object, unsigned long time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg);
+int maybe_uninstall_async_event(struct libos_handle* hdl);
 struct libos_thread* terminate_async_worker(void);
 
 extern const toml_table_t* g_manifest_root;

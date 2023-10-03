@@ -706,7 +706,8 @@ static int walk_handle_map_writable(int (*callback)(struct libos_fd_handle*,
 
 static int detach_fd(struct libos_fd_handle* fd_hdl, struct libos_handle_map* map) {
     struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, map);
-    put_handle(hdl);
+    if (!maybe_uninstall_async_event(hdl))
+        put_handle(hdl);
     return 0;
 }
 
