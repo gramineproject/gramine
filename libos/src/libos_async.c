@@ -25,6 +25,7 @@ struct async_event {
     void* arg;
     PAL_HANDLE object;    /* handle (async IO) to wait on */
     uint64_t expire_time; /* alarm/timer to wait on */
+    struct libos_handle* hdl_to_put; /* put this handle and remove event */
 };
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
@@ -78,6 +79,7 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
     event->caller      = get_cur_tid();
     event->object      = object;
     event->expire_time = time ? now + time : 0;
+    event->hdl_to_put  = NULL;
 
     lock(&async_worker_lock);
 
@@ -122,6 +124,43 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
     log_debug("Installed async event at %lu", now);
     set_pollable_event(&install_new_event);
     return max_prev_expire_time - now;
+}
+
+/* Determine whether a async event is associated with this libos_handle's pal_handle.
+ * If this is the case then have the async thread do the put_handle on the libos_handle
+ * and return 1, 0 otherwise.
+ */
+int maybe_uninstall_async_event(struct libos_handle* hdl) {
+    int ret = 0;
+
+    lock(&async_worker_lock);
+    if (async_worker_state == WORKER_NOTALIVE)
+        goto exit;
+
+    struct async_event* tmp;
+    LISTP_FOR_EACH_ENTRY(tmp, &async_list, list) {
+        if (tmp->object == hdl->pal_handle) {
+            ret = 1;
+            tmp->hdl_to_put = hdl;
+            break;
+        }
+    }
+
+exit:
+    unlock(&async_worker_lock);
+
+    return ret;
+}
+
+static void clean_async_list(void) {
+    struct async_event* tmp, *n;
+    LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
+        if (tmp->hdl_to_put) {
+            put_handle(tmp->hdl_to_put);
+            LISTP_DEL(tmp, &async_list, list);
+            free(tmp);
+        }
+    }
 }
 
 int init_async_worker(void) {
@@ -194,6 +233,9 @@ static int libos_async_worker(void* arg) {
         }
 
         lock(&async_worker_lock);
+
+        clean_async_list();
+
         if (async_worker_state != WORKER_ALIVE) {
             async_worker_thread = NULL;
             unlock(&async_worker_lock);
