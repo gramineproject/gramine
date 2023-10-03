@@ -1000,6 +1000,11 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['itimer'])
         self.assertIn("TEST OK", stdout)
 
+    def test_160_async_task_shutdown(self):
+        for i in range(0, 200):
+            _, stderr = self.run_binary(['async_task_shutdown'])
+            self.assertNotIn('assert failed', stderr)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])

@@ -3,6 +3,7 @@ fs = import('fs')
 tests = {
     'abort': {},
     'abort_multithread': {},
+    'async_task_shutdown': {},
     'bootstrap': {},
     'bootstrap_pie': {
         'pie': true,
