@@ -65,6 +65,8 @@ static ipc_callback ipc_callbacks[] = {
     [IPC_MSG_FILE_LOCK_CLEAR_PID] = ipc_file_lock_clear_pid_callback,
 };
 
+static PAL_HANDLE leader_notifier;
+
 static void ipc_leader_died_callback(void) {
     /* This might happen legitimately e.g. if IPC leader is also our parent and does `wait` + `exit`
      * If this is an erroneous disconnect it will be noticed when trying to communicate with
@@ -106,13 +108,17 @@ static int add_ipc_connection(PAL_HANDLE handle, IDTYPE id) {
     return 0;
 }
 
-static void del_ipc_connection(struct libos_ipc_connection* conn) {
+static void del_ipc_connection(struct libos_ipc_connection* conn,
+                               PAL_HANDLE* notifier) {
     LISTP_DEL(conn, &g_ipc_connections, list);
     g_ipc_connections_cnt--;
 
     PalObjectDestroy(conn->handle);
 
     free(conn);
+
+    if (notifier && g_ipc_connections_cnt == 0)
+        PalEventSet(*notifier);
 }
 
 /*
@@ -213,7 +219,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
     return 0;
 }
 
-static noreturn void ipc_worker_main(void) {
+static noreturn void ipc_worker_main(PAL_HANDLE* notifier) {
     /* TODO: If we had a global array of connections (instead of a list) we wouldn't have to gather
      * them all here in every loop iteration, but then deletion would be slower (but deletion should
      * be rare). */
@@ -337,7 +343,7 @@ static noreturn void ipc_worker_main(void) {
                 if (ret == 1) {
                     /* Connection closed. */
                     disconnect_callbacks(conn);
-                    del_ipc_connection(conn);
+                    del_ipc_connection(conn, notifier);
                     continue;
                 }
                 if (ret < 0) {
@@ -351,12 +357,18 @@ static noreturn void ipc_worker_main(void) {
              * more time - in case there are messages left to be read. */
             if (ret_events[i] == PAL_WAIT_ERROR) {
                 disconnect_callbacks(conn);
-                del_ipc_connection(conn);
+                del_ipc_connection(conn, notifier);
             }
         }
     }
 
 out_die:
+
+    if (notifier) {
+        g_ipc_connections_cnt = 0;
+        PalEventSet(*notifier);
+    }
+
     PalProcessExit(1);
 }
 
@@ -370,7 +382,12 @@ static int ipc_worker_wrapper(void* arg) {
     log_setprefix(libos_get_tcb());
 
     log_debug("IPC worker started");
-    ipc_worker_main();
+
+    PAL_HANDLE* notifier = NULL;
+    if (g_process_ipc_ids.self_vmid == STARTING_VMID)
+        notifier = &leader_notifier;
+
+    ipc_worker_main(notifier);
     /* Unreachable. */
 }
 
@@ -384,6 +401,14 @@ static int create_ipc_worker(void) {
     int ret = init_self_ipc_handle();
     if (ret < 0) {
         return ret;
+    }
+
+    if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
+        /* IPC leader gets a notifier used in terminate_ipc_leader */
+        if (PalEventCreate(&leader_notifier, false, false) < 0) {
+            log_error("PalEventCreate failed");
+            return -ENOMEM;
+        }
     }
 
     g_worker_thread = get_new_internal_thread();
@@ -409,6 +434,14 @@ int init_ipc_worker(void) {
 }
 
 void terminate_ipc_worker(void) {
+    if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
+        uint64_t timeout_us = 100 * TIME_US_IN_MS;
+
+        PalEventClear(leader_notifier);
+        while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0) {
+            PalEventWait(leader_notifier, &timeout_us);
+        }
+    }
     set_pollable_event(&g_worker_thread->pollable_event);
 
     while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_ACQUIRE)) {
