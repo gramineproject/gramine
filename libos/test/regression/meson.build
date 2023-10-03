@@ -29,6 +29,7 @@ tests = {
     'exec_victim': {},
     'exit': {},
     'exit_group': {},
+    'fail_with_rt_sigreturn': {},
     'fcntl_lock': {},
     'fcntl_lock_child_only': {},
     'fdleak': {},
