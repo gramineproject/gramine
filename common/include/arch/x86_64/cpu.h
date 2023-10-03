@@ -67,6 +67,12 @@ static inline uint64_t get_tsc(void) {
     return lo | ((uint64_t)hi << 32);
 }
 
+static inline uint64_t xgetbv(uint32_t xcr_number) {
+    unsigned long lo, hi;
+    __asm__ volatile("xgetbv" : "=a" (lo), "=d" (hi) : "c" (xcr_number));
+    return lo | ((uint64_t)hi << 32);
+}
+
 /*!
  * \brief Low-level wrapper around RDRAND instruction (get hardware-generated random value).
  */
