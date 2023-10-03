@@ -3,6 +3,7 @@ binary_dir = "@GRAMINE_PKGLIBDIR@/tests/libos/regression"
 manifests = [
   "argv_from_file",
   "argv_from_manifest",
+  "async_task_shutdown",
   "abort",
   "abort_multithread",
   "bootstrap",
