@@ -126,7 +126,7 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
                     /* both CPU and OS support, can set in XFRM */
                     *out_xfrm |= xfrm_flags[i].bits;
                 } else {
-                    /* CPU supports but OS doesn't, this is a weird config */
+                    /* CPU supports it but OS doesn't, this is a weird config */
                     log_warning("CPU supports the %s feature but the OS doesn't (XCR0=0x%lx)",
                                 xfrm_flags[i].name, xcr0);
                 }
