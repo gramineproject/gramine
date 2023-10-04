@@ -313,8 +313,21 @@ static noreturn void internal_fault(const char* errstr, uintptr_t addr, PAL_CONT
     char buf[LOCATION_BUF_SIZE];
     libos_describe_location(ip, buf, sizeof(buf));
 
-    log_error("%s at 0x%08lx (%s, VMID = %u, TID = %u)", errstr, addr, buf,
-              g_process_ipc_ids.self_vmid, tid);
+    if (context_is_libos(context) && !is_internal(get_cur_thread())) {
+        log_debug("process in kernel: %s at 0x%08lx (%s, VMID = %u, TID = %u)", errstr, addr, buf,
+                  g_process_ipc_ids.self_vmid, tid);
+        siginfo_t info = {
+            .si_signo = SIGSEGV,
+            .si_code = SI_KERNEL,
+            .si_addr = (void*)addr,
+        };
+        force_signal(&info);
+        handle_signal(context);
+        __builtin_unreachable();
+    } else {
+        log_error("%s at 0x%08lx (%s, VMID = %u, TID = %u)", errstr, addr, buf,
+                  g_process_ipc_ids.self_vmid, tid);
+    }
 
     DEBUG_BREAK_ON_FAILURE();
     PalProcessExit(1);
@@ -721,9 +734,6 @@ bool handle_signal(PAL_CONTEXT* context) {
     struct libos_thread* current = get_cur_thread();
     assert(current);
     assert(!is_internal(current));
-    assert(!context_is_libos(context)
-           || pal_context_get_ip(context) == (uint64_t)&libos_syscall_entry);
-
     if (__atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE)) {
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
@@ -734,6 +744,14 @@ bool handle_signal(PAL_CONTEXT* context) {
     } else {
         pop_unblocked_signal(/*mask=*/NULL, &signal);
     }
+
+    if (signal.siginfo.si_code == SI_KERNEL) {
+        assert(context_is_libos(context));
+    } else {
+        assert(!context_is_libos(context)
+               || pal_context_get_ip(context) == (uint64_t)&libos_syscall_entry);
+    }
+
 
     int sig = signal.siginfo.si_signo;
     if (!sig) {

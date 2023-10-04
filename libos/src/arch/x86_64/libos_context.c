@@ -110,7 +110,6 @@ void libos_xstate_save(void* xstate_extended) {
 #endif
 
 __attribute__((used)) static int is_xstate_extended(const struct libos_xstate* xstate) {
-    assert(IS_ALIGNED_PTR(xstate, LIBOS_XSTATE_ALIGN));
 
     if (!g_libos_xsave_enabled) {
         return 0;
