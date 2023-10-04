@@ -432,7 +432,7 @@ int init_ipc_worker(void) {
 
 void terminate_ipc_worker(void) {
     if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
-        uint64_t timeout_us = 100*1000;
+        uint64_t timeout_us = 100 * TIME_US_IN_MS;
 
         PalEventClear(leader_notifier);
         while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0) {
