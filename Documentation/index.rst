@@ -53,7 +53,7 @@ can use ready-made SGX images for popular open source projects.
 
   Setting itself apart from alternative solutions (like GSC), SCAG doesn't
   tranform a Docker image, instead it generates a whole Docker image from
-  the given projects.  It offers seamless support for a variety of frameworks,
+  the given projects. It offers seamless support for a variety of frameworks,
   including but not limited to Flask and Express.js. For a more in-depth
   exploration, see :doc:`scag-installation`, or contribute to the
   `GitHub project <https://github.com/intel/ScaffoldingForGramine>`__.

@@ -23,11 +23,12 @@ and finally running it. For more advanced usage of SCAG, users are encouraged
 to refer to the documentation.
 
 SCAG wraps the application with additional security measures, such as adding
-SSL/TLS to otherwise plaintext-networking apps. All web-based frameworks,
-such as Express.js and Flask, are preconfigured to operate behind
+SSL/TLS to plaintext-networking apps. All web-based frameworks, such as
+Express.js and Flask, are preconfigured to operate behind
 a web server (Nginx), with SSL/TLS and the RA-TLS extension.
 
-Note that the SCAG tool is split from core Gramine and is hosted here:
+Note that the SCAG tool is standalone and not part of core Gramine, and is
+hosted here:
 
 - https://github.com/intel/ScaffoldingForGramine -- GitHub repository,
 - https://gramine-scaffolding.readthedocs.io/en/latest/ -- documentation.
