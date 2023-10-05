@@ -131,6 +131,18 @@ out:
     return ret;
 }
 
+long libos_syscall_getresuid(uid_t* ruid, uid_t* euid, uid_t* suid) {
+
+    if (!is_user_memory_writable(ruid, sizeof(uid_t)) ||
+        !is_user_memory_writable(euid, sizeof(uid_t)) ||
+        !is_user_memory_writable(suid, sizeof(uid_t)))
+        return -EFAULT;
+
+    getresuid(ruid, euid, suid);
+
+    return 0;
+}
+
 #define NGROUPS_MAX 65536 /* # of supplemental group IDs; has to be same as host OS */
 
 long libos_syscall_setgroups(int gidsetsize, gid_t* grouplist) {
