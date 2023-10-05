@@ -11,35 +11,51 @@
 #include "libos_thread.h"
 #include "libos_types.h"
 
-long libos_syscall_getuid(void) {
+static void getresuid(uid_t* ruid, uid_t* euid, uid_t* suid) {
     struct libos_thread* current = get_cur_thread();
     lock(&current->lock);
-    uid_t uid = current->uid;
+    if (ruid)
+        *ruid = current->uid;
+    if (euid)
+        *euid = current->euid;
+    if (suid)
+        *suid = current->suid;
     unlock(&current->lock);
+}
+
+static void getresgid(gid_t* rgid, gid_t* egid, gid_t* sgid) {
+    struct libos_thread* current = get_cur_thread();
+    lock(&current->lock);
+    if (rgid)
+        *rgid = current->gid;
+    if (egid)
+        *egid = current->egid;
+    if (sgid)
+        *sgid = current->sgid;
+    unlock(&current->lock);
+}
+
+long libos_syscall_getuid(void) {
+    uid_t uid;
+    getresuid(&uid, NULL, NULL);
     return uid;
 }
 
 long libos_syscall_getgid(void) {
-    struct libos_thread* current = get_cur_thread();
-    lock(&current->lock);
-    gid_t gid = current->gid;
-    unlock(&current->lock);
+    gid_t gid;
+    getresgid(&gid, NULL, NULL);
     return gid;
 }
 
 long libos_syscall_geteuid(void) {
-    struct libos_thread* current = get_cur_thread();
-    lock(&current->lock);
-    uid_t euid = current->euid;
-    unlock(&current->lock);
+    uid_t euid;
+    getresuid(NULL, &euid, NULL);
     return euid;
 }
 
 long libos_syscall_getegid(void) {
-    struct libos_thread* current = get_cur_thread();
-    lock(&current->lock);
-    gid_t egid = current->egid;
-    unlock(&current->lock);
+    gid_t egid;
+    getresgid(NULL, &egid, NULL);
     return egid;
 }
 
