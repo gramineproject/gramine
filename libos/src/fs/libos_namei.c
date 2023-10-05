@@ -25,8 +25,18 @@ int check_permissions(struct libos_dentry* dent, mode_t mask) {
     if (mask == F_OK)
         return 0;
 
-    /* Check the "user" part of mode against mask */
-    if (((dent->inode->perm >> 6) & mask) == mask)
+    unsigned int shift = 6;
+
+    struct libos_thread* current = get_cur_thread();
+    lock(&current->lock);
+    if (dent->inode->uid != current->euid) {
+        /* fall back to 'other' */
+        shift = 0;
+    }
+    unlock(&current->lock);
+
+    /* Check the "user" or "other" part of mode against mask */
+    if (((dent->inode->perm >> shift) & mask) == mask)
         return 0;
 
     return -EACCES;
