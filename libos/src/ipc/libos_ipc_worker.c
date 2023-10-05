@@ -109,7 +109,7 @@ static int add_ipc_connection(PAL_HANDLE handle, IDTYPE id) {
 }
 
 static void del_ipc_connection(struct libos_ipc_connection* conn,
-                               PAL_HANDLE *notifier) {
+                               PAL_HANDLE* notifier) {
     LISTP_DEL(conn, &g_ipc_connections, list);
     g_ipc_connections_cnt--;
 
@@ -219,7 +219,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
     return 0;
 }
 
-static noreturn void ipc_worker_main(PAL_HANDLE *notifier) {
+static noreturn void ipc_worker_main(PAL_HANDLE* notifier) {
     /* TODO: If we had a global array of connections (instead of a list) we wouldn't have to gather
      * them all here in every loop iteration, but then deletion would be slower (but deletion should
      * be rare). */
@@ -383,7 +383,7 @@ static int ipc_worker_wrapper(void* arg) {
 
     log_debug("IPC worker started");
 
-    PAL_HANDLE *notifier = NULL;
+    PAL_HANDLE* notifier = NULL;
     if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
         notifier = &leader_notifier;
         /* IPC leader gets a notifier used in terminate_ipc_leader */
