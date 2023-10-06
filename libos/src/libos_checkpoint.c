@@ -24,6 +24,12 @@
 #define CP_MAP_ENTRY_NUM 64
 #define CP_HASH_SIZE     256
 
+struct libos_rwlock checkpoint_lock;
+#ifdef DEBUG_CHECKPOINT_LOCK
+int checkpoint_lock_ctr = 0;
+#endif
+
+
 DEFINE_LIST(cp_map_entry);
 struct cp_map_entry {
     LIST_TYPE(cp_map_entry) hlist;
@@ -548,6 +554,9 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         goto out;
     }
 
+    CHECKPOINT_RUNLOCK;
+    CHECKPOINT_WLOCK;
+
     struct libos_ipc_ids process_ipc_ids = {
         .self_vmid = child_process->vmid,
         .parent_vmid = g_process_ipc_ids.self_vmid,
@@ -557,6 +566,10 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     va_start(ap, thread_description);
     ret = (*migrate_func)(&cpstore, process_description, thread_description, &process_ipc_ids, ap);
     va_end(ap);
+
+    CHECKPOINT_WUNLOCK;
+    CHECKPOINT_RLOCK;
+
     if (ret < 0) {
         log_error("failed creating checkpoint: %s", unix_strerror(ret));
         goto out;

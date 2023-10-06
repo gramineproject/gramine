@@ -469,6 +469,11 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
         log_error("event_wait_with_retry failed with: %s", unix_strerror(ret));
         PalProcessExit(1);
     }
+
+    // openmp testcase needs this but others don't
+    // openmp threads die via libos_exit_on_syscall_emu
+    // CHECKPOINT_RLOCK;
+
     /* Wait for the new thread to finish initialization. We need to make sure that it's done using
      * `new_args`, as we did not pass ownership (nor made a copy) of it. */
     while (!__atomic_load_n(&new_args.is_thread_initialized, __ATOMIC_ACQUIRE)) {

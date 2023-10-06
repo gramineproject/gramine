@@ -5,6 +5,7 @@
  * Implementation of system call "execve".
  */
 
+#include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_process.h"
@@ -76,6 +77,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
     put_handle(exec);
 
     log_debug("execve: start execution");
+    CHECKPOINT_RUNLOCK;
     execute_elf_object(exec_map, new_argp, new_auxv);
     /* NOTREACHED */
 
