@@ -4,6 +4,7 @@
  */
 
 #include "asan.h"
+#include "libos_checkpoint.h"
 #include "libos_defs.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
@@ -23,6 +24,8 @@ typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscal
  */
 noreturn void libos_emulate_syscall(PAL_CONTEXT* context) {
     LIBOS_TCB_SET(context.regs, context);
+
+    CHECKPOINT_RLOCK;
 
     unsigned long sysnr = pal_context_get_syscall(context);
     arch_syscall_arg_t ret = 0;
@@ -71,6 +74,8 @@ out:
 
     LIBOS_TCB_SET(context.syscall_nr, -1);
     LIBOS_TCB_SET(context.regs, NULL);
+
+    CHECKPOINT_RUNLOCK;
 
     return_from_syscall(context);
 }

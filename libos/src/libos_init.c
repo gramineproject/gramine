@@ -371,6 +371,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
+    rwlock_create(&checkpoint_lock);
+
     g_log_level = g_pal_public_state->log_level;
 
     /* create the initial TCB, libos can not be run without a tcb */

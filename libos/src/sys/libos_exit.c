@@ -6,6 +6,7 @@
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  */
 
+#include "libos_checkpoint.h"
 #include "libos_fs_lock.h"
 #include "libos_handle.h"
 #include "libos_ipc.h"
@@ -16,6 +17,13 @@
 #include "libos_thread.h"
 #include "libos_utils.h"
 #include "pal.h"
+
+static noreturn void libos_exit_on_syscall_emu(bool thread, unsigned long exit_param) {
+    CHECKPOINT_RUNLOCK;
+    if (thread)
+        PalThreadExit((int *)exit_param);
+    PalProcessExit(exit_param);
+}
 
 static noreturn void libos_clean_and_exit(int exit_code) {
     /*
@@ -59,7 +67,8 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     /* TODO: We exit whole libos, but there are some objects that might need cleanup - we should do
      * a proper cleanup of everything. */
-    PalProcessExit(exit_code);
+    CHECKPOINT_LOCK_END;
+    libos_exit_on_syscall_emu(false, exit_code);
 }
 
 noreturn void thread_exit(int error_code, int term_signal) {
@@ -98,6 +107,7 @@ noreturn void thread_exit(int error_code, int term_signal) {
              * TODO: "Rewire" the identity of the non-main thread inside Gramine, similarly to how
              *       Linux does it.
              */
+            CHECKPOINT_RUNLOCK;
             thread_prepare_wait();
             while (true)
                 thread_wait(/*timeout_us=*/NULL, /*ignore_pending_signals=*/true);
@@ -123,11 +133,11 @@ noreturn void thread_exit(int error_code, int term_signal) {
             /* `cleanup_thread` did not get this reference, clean it. We have to be careful, as
              * this is most likely the last reference and will free this `cur_thread`. */
             put_thread(cur_thread);
-            PalThreadExit(NULL);
+            libos_exit_on_syscall_emu(true, (unsigned long)NULL);
             /* UNREACHABLE */
         }
 
-        PalThreadExit(&cur_thread->clear_child_tid_pal);
+        libos_exit_on_syscall_emu(true, (unsigned long)&cur_thread->clear_child_tid_pal);
         /* UNREACHABLE */
     }
 
@@ -160,6 +170,7 @@ static int mark_thread_to_die(struct libos_thread* thread, void* arg) {
     /* Now let's kick `thread`, so that it notices (in `handle_signal`) the flag `time_to_die`
      * set above (but only if we really set that flag). */
     if (need_wakeup) {
+        CHECKPOINT_RLOCK;
         thread_wakeup(thread);
         (void)PalThreadResume(thread->pal_handle); // There is nothing we can do on errors.
     }
