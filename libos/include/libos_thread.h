@@ -234,7 +234,7 @@ static inline int thread_wait(uint64_t* timeout_us, bool ignore_pending_signals)
         return -EINTR;
     }
 
-    int ret = PalEventWait(cur_thread->scheduler_event, timeout_us, NULL);
+    int ret = PalEventWait(cur_thread->scheduler_event, timeout_us, get_pct());
     return ret == -PAL_ERROR_TRYAGAIN ? -ETIMEDOUT : pal_to_unix_errno(ret);
 }
 

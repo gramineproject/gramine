@@ -725,6 +725,9 @@ bool handle_signal(PAL_CONTEXT* context) {
            || pal_context_get_ip(context) == (uint64_t)&libos_syscall_entry);
 
     if (__atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE)) {
+        if (get_pct()) {
+            CHECKPOINT_RUNLOCK;
+        }
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
 

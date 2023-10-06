@@ -4,6 +4,7 @@
  */
 
 #include "asan.h"
+#include "libos_checkpoint.h"
 #include "libos_defs.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
@@ -23,6 +24,8 @@ typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscal
  */
 noreturn void libos_emulate_syscall(PAL_CONTEXT* context) {
     LIBOS_TCB_SET(context.regs, context);
+
+    CHECKPOINT_RLOCK;
 
     struct libos_thread* current = get_cur_thread();
     current->state |= THR_STATE_IN_SYSCALL;
@@ -74,13 +77,16 @@ out:
     LIBOS_TCB_SET(context.syscall_nr, -1);
     LIBOS_TCB_SET(context.regs, NULL);
 
-    current->state &= ~THR_STATE_IN_SYSCALL;
-
     return_from_syscall(context);
 }
 
 __attribute_no_sanitize_address
 noreturn void return_from_syscall(PAL_CONTEXT* context) {
+    struct libos_thread* current = get_cur_thread();
+    current->state &= ~THR_STATE_IN_SYSCALL;
+
+    CHECKPOINT_RUNLOCK;
+
 #ifdef ASAN
     uintptr_t libos_stack_bottom = (uintptr_t)LIBOS_TCB_GET(libos_stack_bottom);
     asan_unpoison_region(libos_stack_bottom - LIBOS_THREAD_LIBOS_STACK_SIZE,

@@ -43,6 +43,9 @@ static int clone_implementation_wrapper(void* arg_) {
     libos_tcb_init();
     set_cur_thread(my_thread);
 
+    CHECKPOINT_RLOCK; /* matches return_from_syscall */
+    my_thread->state = THR_STATE_IN_SYSCALL;
+
     /* only now we can call LibOS/PAL functions because they require a set-up TCB;
      * do not move the below functions before libos_tcb_init/set_cur_thread()! */
     int ret = event_wait_with_retry(arg->create_event);

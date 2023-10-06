@@ -33,7 +33,8 @@ int create_pollable_event(struct libos_pollable_event* event) {
 
     PAL_HANDLE read_handle;
     do {
-        ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK, NULL);
+        ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK,
+                                     get_pct());
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamWaitForClient failed: %s", pal_strerror(ret));
@@ -74,7 +75,7 @@ int set_pollable_event(struct libos_pollable_event* event) {
     do {
         char c = 0;
         size_t size = sizeof(c);
-        ret = PalStreamWrite(event->write_handle, /*offset=*/0, &size, &c, NULL);
+        ret = PalStreamWrite(event->write_handle, /*offset=*/0, &size, &c, get_pct());
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;
@@ -97,7 +98,7 @@ int clear_pollable_event(struct libos_pollable_event* event) {
     do {
         char buf[0x100];
         size_t size = sizeof(buf);
-        int ret = PalStreamRead(event->read_handle, /*offset=*/0, &size, buf, NULL);
+        int ret = PalStreamRead(event->read_handle, /*offset=*/0, &size, buf, get_pct());
         ret = pal_to_unix_errno(ret);
         if (ret == 0 && size == 0) {
             ret = -EINVAL;

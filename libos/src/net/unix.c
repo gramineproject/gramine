@@ -361,7 +361,7 @@ static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_
     }
 
 again:
-    ret = func(pal_handle, /*offset=*/0, size, buf, NULL);
+    ret = func(pal_handle, /*offset=*/0, size, buf, get_pct());
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
         if (ret == -EAGAIN && !force_nonblocking) {

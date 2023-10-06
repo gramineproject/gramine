@@ -5,6 +5,7 @@
  * Implementation of system call "execve".
  */
 
+#include "libos_checkpoint.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
 #include "libos_process.h"
@@ -76,6 +77,7 @@ noreturn static void __libos_syscall_execve_rtld(void* new_argp, elf_auxv_t* new
     put_handle(exec);
 
     log_debug("execve: start execution");
+    CHECKPOINT_RUNLOCK;
     execute_elf_object(exec_map, new_argp, new_auxv);
     /* NOTREACHED */
 
@@ -178,6 +180,10 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
     static unsigned int first = 0;
     if (__atomic_exchange_n(&first, 1, __ATOMIC_RELAXED) != 0) {
         /* Just exit current thread. */
+        struct libos_thread* current = get_cur_thread();
+        if (__atomic_load_n(&current->time_to_die, __ATOMIC_ACQUIRE)) {
+            CHECKPOINT_RUNLOCK;
+        }
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
     (void)kill_other_threads();

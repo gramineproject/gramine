@@ -10,6 +10,7 @@
 #include <stdalign.h>
 #include <stdnoreturn.h>
 
+#include "libos_checkpoint.h"
 #include "libos_context.h"
 #include "libos_entry.h"
 #include "libos_internal.h"

@@ -21,6 +21,90 @@
 extern char __migratable[];
 extern char __migratable_end;
 
+#define DEBUG_CHECKPOINT_LOCK 2
+
+extern struct libos_rwlock checkpoint_lock;
+#ifdef DEBUG_CHECKPOINT_LOCK
+extern int checkpoint_lock_ctr;
+#endif
+
+static inline void checkpoint_rlock(const char* caller, unsigned int line)
+{
+    __UNUSED(caller);
+    __UNUSED(line);
+
+    rwlock_read_lock(&checkpoint_lock);
+#ifdef DEBUG_CHECKPOINT_LOCK
+    int n = __atomic_add_fetch(&checkpoint_lock_ctr, 1, __ATOMIC_RELEASE);
+    if (n < 1) {
+        log_error("%s @ %u: Invalid lock ctr value: %d", caller, line, n);
+        assert(false);
+    }
+    if (DEBUG_CHECKPOINT_LOCK >= 2)
+        log_debug("%s @ %u: after RLOCK: %d", caller, line, n);
+#endif
+}
+
+static inline void checkpoint_runlock(const char* caller, unsigned int line)
+{
+    __UNUSED(caller);
+    __UNUSED(line);
+
+    rwlock_read_unlock(&checkpoint_lock);
+#ifdef DEBUG_CHECKPOINT_LOCK
+    int n = __atomic_sub_fetch(&checkpoint_lock_ctr, 1, __ATOMIC_RELEASE);
+    if (n < 0) {
+        log_error("%s @ %u: Invalid lock ctr value: %d", caller, line, n);
+        assert(false);
+    }
+    if (DEBUG_CHECKPOINT_LOCK >= 2)
+        log_debug("%s @ %u: after RUNLOCK: %d", caller, line, n);
+#endif
+}
+
+static inline void checkpoint_wlock(const char* caller, unsigned int line)
+{
+    __UNUSED(caller);
+    __UNUSED(line);
+
+    rwlock_write_lock(&checkpoint_lock);
+#ifdef DEBUG_CHECKPOINT_LOCK
+    if (DEBUG_CHECKPOINT_LOCK >= 2)
+        log_debug("%s @ %u: at WLOCK: %d", caller, line, __atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE));
+#endif
+}
+
+static inline void checkpoint_wunlock(const char* caller, unsigned int line)
+{
+    __UNUSED(caller);
+    __UNUSED(line);
+
+    rwlock_write_unlock(&checkpoint_lock);
+#ifdef DEBUG_CHECKPOINT_LOCK
+    if (DEBUG_CHECKPOINT_LOCK >= 2)
+        log_debug("%s @ %u: at WUNLOCK: %d", caller, line, __atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE));
+#endif
+}
+
+#define CHECKPOINT_RLOCK    checkpoint_rlock(__func__, __LINE__)
+#define CHECKPOINT_RUNLOCK  checkpoint_runlock(__func__, __LINE__)
+#define CHECKPOINT_WLOCK    checkpoint_wlock(__func__, __LINE__)
+#define CHECKPOINT_WUNLOCK  checkpoint_wunlock(__func__, __LINE__)
+#ifdef DEBUG_CHECKPOINT_LOCK
+#define CHECKPOINT_LOCK_END							\
+    if (__atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE) != 1) {		\
+        log_error(">>>> checkpoint lock: %d  [will wait for 1]",		\
+                  __atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE));	\
+        while (__atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE) != 1);	\
+    };										\
+    if (DEBUG_CHECKPOINT_LOCK >= 2)						\
+        log_error(">>>> checkpoint lock now: %d",				\
+                  __atomic_load_n(&checkpoint_lock_ctr, __ATOMIC_ACQUIRE))
+
+#else
+#define CHECKPOINT_LOCK_END
+#endif
+
 /*
  * Marks whether we have bookkeeped all user memory that is received during checkpointing. If there
  * is no parent process it's always `true`.

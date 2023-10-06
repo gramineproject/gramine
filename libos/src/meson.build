@@ -60,6 +60,7 @@ libos_sources = files(
     'libos_init.c',
     'libos_malloc.c',
     'libos_object.c',
+    'libos_pal.c',
     'libos_parser.c',
     'libos_pollable_event.c',
     'libos_rtld.c',

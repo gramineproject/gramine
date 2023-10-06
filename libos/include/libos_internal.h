@@ -262,3 +262,13 @@ int init_stack(const char* const* argv, const char* const* envp, char*** out_arg
  * The implementation of this function depends on the used architecture.
  */
 noreturn void call_elf_entry(elf_addr_t entry, void* argp);
+
+/*!
+ * \brief Callback function invoked by PAL
+ */
+void libos_pal_callback(enum pal_callback_type pct);
+
+/*!
+ * \brief Get the PAL callback function depending on currently active thread
+ */
+pal_callback_t get_pct(void);

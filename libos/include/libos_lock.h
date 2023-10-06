@@ -35,7 +35,7 @@ static inline void destroy_lock(struct libos_lock* l) {
 static inline void lock(struct libos_lock* l) {
     assert(l->lock);
 
-    while (PalEventWait(l->lock, /*timeout=*/NULL, NULL) < 0)
+    while (PalEventWait(l->lock, /*timeout=*/NULL, get_pct()) < 0)
         /* nop */;
 
     l->owner = get_cur_tid();
