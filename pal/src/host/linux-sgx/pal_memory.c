@@ -67,8 +67,17 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
              */
         }
     } else {
-        /* possible to have untrusted mapping, simply unmap memory outside the enclave */
-        ocall_munmap_untrusted(addr, size);
+        /*
+         * Possible to have untrusted mapping, simply unmap memory outside the enclave. But only
+         * unmap if this is not a shared-untrusted-memory region, as this whole region was mmapped
+         * at startup with `MAP_NORESERVE` to prevent random allocations landing in there.
+         * (Otherwise, if it would unmap some shared memory, then there would be a hole in this
+         * region and unrelated allocations could land here.)
+         */
+        if (addr < g_pal_public_state.shared_address_start
+                || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
+            ocall_munmap_untrusted(addr, size);
+        }
     }
 
     return 0;
