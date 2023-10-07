@@ -26,13 +26,15 @@ int main(void) {
         int status = 0;
         while (waitpid(-1, &status, __WALL) != pid) {
         }
-        if (status == 139) {
+        int exp_status = SI_KERNEL + SIGSEGV; /* 139 */
+        if (status == exp_status) {
             printf("TEST OK\n");
         } else {
-            printf("Got status %d but expected 130\n", status);
+            printf("Got status %d but expected %d\n", status, exp_status);
         }
         return WEXITSTATUS(status);
     } else {
-        syscall(__NR_rt_sigreturn, NULL);
+        syscall(__NR_rt_sigreturn);
+        /* unreachable */
     }
 }
