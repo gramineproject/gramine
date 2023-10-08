@@ -74,6 +74,10 @@ static void ipc_leader_died_callback(void) {
     log_debug("IPC leader disconnected");
 }
 
+static inline int is_ipc_leader(void) {
+    return g_process_ipc_ids.self_vmid == STARTING_VMID;
+}
+
 static void disconnect_callbacks(struct libos_ipc_connection* conn) {
     if (g_process_ipc_ids.leader_vmid == conn->vmid) {
         ipc_leader_died_callback();
@@ -363,7 +367,6 @@ static noreturn void ipc_worker_main(PAL_HANDLE* notifier) {
     }
 
 out_die:
-
     if (notifier) {
         g_ipc_connections_cnt = 0;
         PalEventSet(*notifier);
@@ -383,10 +386,7 @@ static int ipc_worker_wrapper(void* arg) {
 
     log_debug("IPC worker started");
 
-    PAL_HANDLE* notifier = NULL;
-    if (g_process_ipc_ids.self_vmid == STARTING_VMID)
-        notifier = &leader_notifier;
-
+    PAL_HANDLE* notifier = is_ipc_leader() ? &leader_notifier : NULL;
     ipc_worker_main(notifier);
     /* Unreachable. */
 }
@@ -403,12 +403,11 @@ static int create_ipc_worker(void) {
         return ret;
     }
 
-    if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
-        /* IPC leader gets a notifier used in terminate_ipc_leader */
-        if (PalEventCreate(&leader_notifier, false, false) < 0) {
-            log_error("PalEventCreate failed");
-            return -ENOMEM;
-        }
+    /* IPC leader gets a notifier used in terminate_ipc_leader */
+    if (is_ipc_leader() &&
+        PalEventCreate(&leader_notifier, false, false) < 0) {
+        log_error("IPC leader: PalEventCreate() failed");
+        return -ENOMEM;
     }
 
     g_worker_thread = get_new_internal_thread();
@@ -434,13 +433,10 @@ int init_ipc_worker(void) {
 }
 
 void terminate_ipc_worker(void) {
-    if (g_process_ipc_ids.self_vmid == STARTING_VMID) {
-        uint64_t timeout_us = 100 * TIME_US_IN_MS;
-
+    if (is_ipc_leader()) {
         PalEventClear(leader_notifier);
-        while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0) {
-            PalEventWait(leader_notifier, &timeout_us);
-        }
+        while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0 &&
+               PalEventWait(leader_notifier, NULL) < 0);
     }
     set_pollable_event(&g_worker_thread->pollable_event);
 
