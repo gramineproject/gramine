@@ -36,6 +36,14 @@ Command line arguments
 
     Input manifest file.
 
+.. option:: --date <YYYY-MM-DD>|today
+
+    Set specific date to be put into SIGSTRUCT. If not given, or the value is
+    literal ``today``, that current day according to system calendar is used.
+    Otherwise expects ``<YYYY>-<MM>-<DD>``. The date needs not to be a |~| valid
+    day, it will happily accept ``--date 0000-00-00``, e.g. for reproducible
+    builds.
+
 .. option:: --libpal libpal_path, -l libpal_path
 
     Path to libpal file (main Gramine binary).
