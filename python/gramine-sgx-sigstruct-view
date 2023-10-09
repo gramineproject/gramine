@@ -34,7 +34,7 @@ def main(sigfile, verbose, output_format, output):
         'attribute_flags_mask': hex(sig['attribute_flags_mask']),
         'attribute_xfrm_mask': hex(sig['attribute_xfrm_mask']),
         'misc_mask': hex(sig['misc_mask']),
-        'date': '%d-%02d-%02d' % (sig['date_year'], sig['date_month'], sig['date_day']),
+        'date': f"{sig['date_year']:04}-{sig['date_month']:02}-{sig['date_day']:02}",
         'debug_enclave': bool(sig['attribute_flags'] & 0b10),
     }
 

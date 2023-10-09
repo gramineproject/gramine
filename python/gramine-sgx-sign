@@ -2,10 +2,14 @@
 # SPDX-License-Identifier: LGPL-3.0-or-later
 # Copyright (C) 2021 Intel Corporation
 #                    Borys Popławski <borysp@invisiblethingslab.com>
+# Copyright (C) 2023 Intel Corporation
+#                    Wojtek Porczyk <woju@invisiblethingslab.com>
 
 import datetime
+import re
 import sys
 import textwrap
+import typing
 
 import click
 
@@ -32,6 +36,29 @@ def get_sgx_sign_plugin(name):
             return ep.load()
     raise KeyError(name)
 
+class BCDDate(typing.NamedTuple):
+    """Date-compatible object that supports invalid dates (like 0000-00-00)
+    """
+    year: int
+    month: int
+    day: int
+
+class BCDDateParamType(click.ParamType):
+    """Parse "today" or a date-like string YYYY-MM-DD, accepting invalid dates.
+
+    This is needed to support dates like 0000-00-00, which are invalid days, but valid things to put
+    into SIGSTRUCT. Arbitrary values that have hex digits A-F are not currently supported.
+    """
+    name = 'date'
+    _regexp = re.compile(r'(?P<year>\d{4})-(?P<month>\d{2})-(?P<day>\d{2})')
+    def convert(self, value, param, ctx):
+        if value.casefold() == 'today':
+            value = datetime.date.today().strftime('%Y-%m-%d')
+        match = self._regexp.fullmatch(value)
+        if not match:
+            self.fail('expecting "today" or YYYY-MM-DD')
+        return BCDDate(**{k: int(v) for k, v in match.groupdict().items()})
+
 @click.command(
     context_settings={'ignore_unknown_options': True},
     epilog=textwrap.dedent(f'''
@@ -53,6 +80,9 @@ def get_sgx_sign_plugin(name):
 @click.option('--manifest', '-m', 'manifest_file',
     type=click.File('r', encoding='utf-8'),
     help='Input .manifest file')
+@click.option('--date', '-d',
+    type=BCDDateParamType(), default='today',
+    help='Set DATE field in SIGSTRUCT to this value (YYYY-MM-DD or "today")')
 @click.option('--sigfile', '-s',
     help='Output .sig file')
 @click.option('--depfile',
@@ -65,7 +95,7 @@ def get_sgx_sign_plugin(name):
     nargs=-1,
     type=click.UNPROCESSED)
 @click.pass_context
-def main(ctx, with_, output, libpal, manifest_file, sigfile, depfile, verbose, plugin_args):
+def main(ctx, with_, output, libpal, manifest_file, date, sigfile, depfile, verbose, plugin_args):
     # pylint: disable=too-many-arguments, too-many-locals
 
     ret = get_sgx_sign_plugin(with_)(args=plugin_args, standalone_mode=False)
@@ -108,8 +138,7 @@ def main(ctx, with_, output, libpal, manifest_file, sigfile, depfile, verbose, p
             sigfile = manifest_file.name
         sigfile += '.sig'
 
-    today = datetime.date.today()
-    sigstruct = get_tbssigstruct(output, today, libpal, verbose=verbose)
+    sigstruct = get_tbssigstruct(output, date, libpal, verbose=verbose)
     sigstruct.sign(sign_func)
 
     with open(sigfile, 'wb') as f:
