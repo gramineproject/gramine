@@ -1,9 +1,9 @@
 .. program:: gramine-sgx-sign
 .. _gramine-sgx-sign:
 
-==========================================================
-:program:`gramine-sgx-sign` -- Gramine SIGSTRUCT generator
-==========================================================
+==============================================================
+:program:`gramine-sgx-sign` -- Gramine ``SIGSTRUCT`` generator
+==============================================================
 
 Synopsis
 ========
@@ -36,22 +36,30 @@ Command line arguments
 
     Input manifest file.
 
+.. option:: --date <YYYY-MM-DD>|today
+
+    Set specific date to be put into ``SIGSTRUCT``. If not given, or the value
+    is literal ``today``, then current day according to system calendar is used.
+    Otherwise expects ``<YYYY>-<MM>-<DD>``. The date needs not to be a |~| valid
+    day, it will happily accept ``--date 0000-00-00``, e.g. for reproducible
+    builds.
+
 .. option:: --libpal libpal_path, -l libpal_path
 
     Path to libpal file (main Gramine binary).
 
 .. option:: --sigfile sigfile, -s sigfile
 
-    Path to the output file containing SIGSTRUCT. If not provided,
+    Path to the output file containing ``SIGSTRUCT``. If not provided,
     `manifest_file` will be used with ".manifest" (if present) removed from
     the end and with ".sig" appended.
 
 .. option:: --depfile depfile
 
     Generate a file that describes the dependencies for the output manifest and
-    SIGSTRUCT, i.e. files that should trigger rebuilding if they're modified.
-    The dependency file is in Makefile format, and is suitable for using in
-    build systems (Make, Ninja).
+    ``SIGSTRUCT``, i.e. files that should trigger rebuilding if they're
+    modified. The dependency file is in Makefile format, and is suitable for
+    using in build systems (Make, Ninja).
 
 .. option:: --verbose, -v
 
@@ -64,7 +72,7 @@ Command line arguments
 .. option:: --with <plugin>
 
     Use plugin to perform actual signing. The default plugin is ``file``, which
-    signs the SIGSTRUCT using PEM-encoded local file. The list of available
+    signs the ``SIGSTRUCT`` using PEM-encoded local file. The list of available
     plugins is at the end of :option:`--help` output.
 
     Each plugin may add its own set of options (usually in the form of
