@@ -275,7 +275,7 @@ char* alloc_substr(const char* start, size_t len);
 char* alloc_concat(const char* a, size_t a_len, const char* b, size_t b_len);
 char* alloc_concat3(const char* a, size_t a_len, const char* b, size_t b_len,
                     const char* c, size_t c_len);
-char* alloc_and_copy(const char* src, size_t size);
+void* alloc_and_copy(const void* src, size_t size);
 
 /* Libc memory allocation functions */
 void* malloc(size_t size);

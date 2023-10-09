@@ -41,8 +41,8 @@ char* alloc_concat3(const char* a, size_t a_len, const char* b, size_t b_len,
     return buf;
 }
 
-char* alloc_and_copy(const char* src, size_t size) {
-    char* dst = malloc(size);
+void* alloc_and_copy(const void* src, size_t size) {
+    void* dst = malloc(size);
     if (!dst)
         return NULL;
     memcpy(dst, src, size);
