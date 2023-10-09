@@ -4,7 +4,7 @@
 int event_wait_with_retry(PAL_HANDLE handle) {
     int ret;
     do {
-        ret = PalEventWait(handle, /*timeout=*/NULL);
+        ret = PalEventWait(handle, /*timeout=*/NULL, NULL);
     } while (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN);
 
     if (ret < 0) {

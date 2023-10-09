@@ -69,7 +69,7 @@ int main(void) {
     // 1 s should be enough even on a very busy system to start a thread and
     // then exit it again including all cleanup.
     uint64_t timeout = 1000000;
-    ret = PalEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout, NULL);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
@@ -87,7 +87,7 @@ int main(void) {
     }
 
     timeout = 1000000;
-    ret = PalEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout, NULL);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
@@ -105,7 +105,7 @@ int main(void) {
     }
 
     timeout = 1000000;
-    ret = PalEventWait(sleep_handle, &timeout);
+    ret = PalEventWait(sleep_handle, &timeout, NULL);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;

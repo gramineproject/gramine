@@ -55,7 +55,7 @@ void _PalEventClear(PAL_HANDLE handle) {
     spinlock_unlock(&handle->event.lock);
 }
 
-int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
+int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us, pal_callback_t pc) {
     int ret;
     struct timespec timeout = { 0 };
     if (timeout_us) {
@@ -80,8 +80,12 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
 
         spinlock_unlock(&handle->event.lock);
         /* Using `FUTEX_WAIT_BITSET` to have an absolute timeout. */
+        if (pc)
+            pc(PAL_CALLBACK_BEFORE_SYSCALL);
         ret = DO_SYSCALL(futex, &handle->event.signaled, FUTEX_WAIT_BITSET, 0,
                          timeout_us ? &timeout : NULL, NULL, FUTEX_BITSET_MATCH_ANY);
+        if (pc)
+            pc(PAL_CALLBACK_AFTER_SYSCALL);
         spinlock_lock(&handle->event.lock);
 
         if (ret < 0 && ret != -EAGAIN) {

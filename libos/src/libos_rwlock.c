@@ -36,7 +36,7 @@ void rwlock_destroy(struct libos_rwlock* l) {
 }
 
 void rwlock_read_lock_slow_path(struct libos_rwlock* l) {
-    while (PalEventWait(l->readers_wait, /*timeout=*/NULL) < 0)
+    while (PalEventWait(l->readers_wait, /*timeout=*/NULL, NULL) < 0)
         /* nop */;
     size_t waiting_readers = __atomic_sub_fetch(&l->waiting_readers, 1, __ATOMIC_RELAXED);
     if (waiting_readers == 0) {
@@ -62,7 +62,7 @@ void rwlock_write_lock(struct libos_rwlock* l) {
         int64_t departing = __atomic_add_fetch(&l->departing_readers, state, __ATOMIC_RELAXED);
         if (departing != 0) {
             assert(departing > 0);
-            while (PalEventWait(l->writer_wait, /*timeout=*/NULL) < 0)
+            while (PalEventWait(l->writer_wait, /*timeout=*/NULL, NULL) < 0)
                 /* nop */;
         }
         /* This prevents code hoisting. */
@@ -81,7 +81,7 @@ void rwlock_write_unlock(struct libos_rwlock* l) {
         PalEventSet(l->readers_wait);
 
         /* Wait for all waiting readers to actually wake up... */
-        while (PalEventWait(l->writer_wait, /*timeout=*/NULL) < 0)
+        while (PalEventWait(l->writer_wait, /*timeout=*/NULL, NULL) < 0)
             /* nop */;
 
         /* ...and unset the event. */

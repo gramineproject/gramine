@@ -54,6 +54,13 @@ enum pal_socket_type {
     PAL_SOCKET_UDP,
 };
 
+enum pal_callback_type {
+    PAL_CALLBACK_BEFORE_SYSCALL,
+    PAL_CALLBACK_AFTER_SYSCALL,
+};
+
+typedef void (*pal_callback_t)(enum pal_callback_type pct);
+
 #ifdef IN_PAL
 
 typedef struct {
@@ -797,7 +804,7 @@ void PalEventClear(PAL_HANDLE handle);
  *
  * This function has acquire semantics and synchronizes with #PalEventSet.
  */
-int PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
+int PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us, pal_callback_t pc);
 
 typedef uint32_t pal_wait_flags_t; /* bitfield */
 #define PAL_WAIT_READ     1

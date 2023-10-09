@@ -28,7 +28,7 @@ static noreturn int thread_func(void* arg) {
     wait_for(&g_ready, 2);
 
     uint64_t timeout = TIME_US_IN_S;
-    int ret = PalEventWait(sleep_handle, &timeout);
+    int ret = PalEventWait(sleep_handle, &timeout, NULL);
     if (ret != -PAL_ERROR_TRYAGAIN || timeout != 0) {
         pal_printf("Error: unexpected short sleep, remaining time: %lu\n", timeout);
         PalProcessExit(1);
@@ -44,13 +44,13 @@ int main(void) {
     CHECK(PalEventCreate(&event, /*init_signaled=*/true, /*auto_clear=*/true));
 
     /* Event is already set, should not sleep. */
-    CHECK(PalEventWait(event, /*timeout=*/NULL));
+    CHECK(PalEventWait(event, /*timeout=*/NULL, NULL));
 
     uint64_t start = 0;
     CHECK(PalSystemTimeQuery(&start));
     /* Sleep for one second. */
     uint64_t timeout = TIME_US_IN_S;
-    int ret = PalEventWait(event, &timeout);
+    int ret = PalEventWait(event, &timeout, NULL);
     if (ret != -PAL_ERROR_TRYAGAIN) {
         CHECK(-1);
     }
@@ -74,7 +74,7 @@ int main(void) {
     set(&g_ready, 2);
 
     CHECK(PalSystemTimeQuery(&start));
-    CHECK(PalEventWait(event, /*timeout=*/NULL));
+    CHECK(PalEventWait(event, /*timeout=*/NULL, NULL));
     CHECK(PalSystemTimeQuery(&end));
 
     if (end < start) {

@@ -211,7 +211,7 @@ int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t 
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear);
 void _PalEventSet(PAL_HANDLE handle);
 void _PalEventClear(PAL_HANDLE handle);
-int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us);
+int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us, pal_callback_t pc);
 
 /* PalVirtualMemory calls */
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot);

@@ -258,7 +258,7 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
 
     int ret = 0;
     do {
-        ret = PalEventWait(waiter->event, /*timeout=*/NULL);
+        ret = PalEventWait(waiter->event, /*timeout=*/NULL, NULL);
     } while (ret == -PAL_ERROR_INTERRUPTED);
 
     log_debug("Waiting finished: %s", pal_strerror(ret));
