@@ -1,7 +1,0 @@
-[wrap-file]
-directory = curl-7.84.0
-source_url = https://github.com/curl/curl/releases/download/curl-7_84_0/curl-7.84.0.tar.gz
-source_fallback_url = https://packages.gramineproject.io/distfiles/curl-7.84.0.tar.gz
-source_filename = curl-7.84.0.tar.gz
-source_hash = 3c6893d38d054d4e378267166858698899e9d87258e8ff1419d020c395384535
-patch_directory = curl-7.84.0

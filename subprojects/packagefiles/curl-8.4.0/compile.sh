@@ -27,7 +27,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
     log "running configure..."
     # The list of configure options is selected based on:
-    # https://github.com/curl/curl/blob/curl-7_84_0/docs/INSTALL.md#reducing-size
+    # https://github.com/curl/curl/blob/curl-8_4_0/docs/INSTALL.md#reducing-size
     ./configure                                     \
         --disable-alt-svc                           \
         --disable-ares                              \
