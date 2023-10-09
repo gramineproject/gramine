@@ -26,10 +26,10 @@ There are two deployment options for Gramine: protect your container and protect
 your application. Each option has a dedicated section in the menu, and an
 introduction is provided below.
 
-Protect your container
-======================
+Protect your application
+========================
 
-In this section, we describe how you can protect your Docker container using
+In this section, we describe how you can protect your application using
 Gramine Shielded Containers (GSC), Scaffolding for Gramine (SCAG), and how you
 can use ready-made SGX images for popular open source projects.
 
