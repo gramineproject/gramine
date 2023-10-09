@@ -229,7 +229,7 @@ mbedtls_proj = subproject('mbedtls-mbedtls-3.4.0')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
-curl_proj = subproject('curl-7.84.0')
+curl_proj = subproject('curl-8.4.0')
 cjson_proj = subproject('cJSON-1.7.12')
 
 if sgx
