@@ -548,6 +548,9 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
         goto out;
     }
 
+    struct libos_thread* self = get_cur_thread();
+    self->state |= THR_STATE_MIGRATING;
+
     struct libos_ipc_ids process_ipc_ids = {
         .self_vmid = child_process->vmid,
         .parent_vmid = g_process_ipc_ids.self_vmid,
@@ -557,6 +560,9 @@ int create_process_and_send_checkpoint(migrate_func_t migrate_func,
     va_start(ap, thread_description);
     ret = (*migrate_func)(&cpstore, process_description, thread_description, &process_ipc_ids, ap);
     va_end(ap);
+
+    self->state &= ~THR_STATE_MIGRATING;
+
     if (ret < 0) {
         log_error("failed creating checkpoint: %s", unix_strerror(ret));
         goto out;

@@ -24,6 +24,9 @@ typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscal
 noreturn void libos_emulate_syscall(PAL_CONTEXT* context) {
     LIBOS_TCB_SET(context.regs, context);
 
+    struct libos_thread* current = get_cur_thread();
+    current->state |= THR_STATE_IN_SYSCALL;
+
     unsigned long sysnr = pal_context_get_syscall(context);
     arch_syscall_arg_t ret = 0;
 
@@ -61,7 +64,6 @@ out:
         }
     }
 
-    struct libos_thread* current = get_cur_thread();
     if (current->has_saved_sigmask) {
         lock(&current->lock);
         set_sig_mask(current, &current->saved_sigmask);
@@ -71,6 +73,8 @@ out:
 
     LIBOS_TCB_SET(context.syscall_nr, -1);
     LIBOS_TCB_SET(context.regs, NULL);
+
+    current->state &= ~THR_STATE_IN_SYSCALL;
 
     return_from_syscall(context);
 }

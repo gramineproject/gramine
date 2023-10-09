@@ -136,6 +136,10 @@ struct libos_thread {
 
     refcount_t ref_count;
     struct libos_lock lock;
+
+    unsigned int state;
+#define THR_STATE_IN_SYSCALL   (1 << 0)
+#define THR_STATE_MIGRATING    (1 << 1)
 };
 
 struct libos_thread_queue {
