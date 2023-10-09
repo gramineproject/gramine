@@ -30,8 +30,8 @@ Protect your container
 ======================
 
 In this section, we describe how you can protect your Docker container using
-Gramine Shielded Containers (GSC), Scaffolding for Gramine (SCAG), and how you
-can use ready-made SGX images for popular open source projects.
+Gramine Shielded Containers (GSC) and how you can use ready-made SGX images for
+popular open source projects.
 
 - **Gramine Shielded Containers**
 
@@ -41,22 +41,6 @@ can use ready-made SGX images for popular open source projects.
   configuration. It enables you to run an application in a Docker container and
   keep it protected against a malicious host. See the :doc:`gsc-installation`
   article for more information.
-
-- **Scaffolding for Gramine**
-
-  The Scaffolding for Gramine (SCAG) tool is a different approach for
-  "graminizing" your application. SCAG transforms your application into
-  a graminized Docker image, encapsulating both your application and
-  the Gramine Library OS. The primary objective of the Scaffolding project
-  is to simplify the process of safeguarding applications against malicious
-  hosts.
-
-  Setting itself apart from alternative solutions (like GSC), SCAG doesn't
-  tranform a Docker image, instead it generates a whole Docker image from
-  the given projects. It offers seamless support for a variety of frameworks,
-  including but not limited to Flask and Express.js. For a more in-depth
-  exploration, see :doc:`scag-installation`, or contribute to the
-  `GitHub project <https://github.com/intel/ScaffoldingForGramine>`__.
 
 - **Ready-made SGX images**
 
@@ -80,6 +64,15 @@ The following steps can be performed to protect your application with Gramine:
   application to ensure your environment is configured correctly.
 
 You can also check :doc:`Gramine tutorials<tutorials-index>`.
+
+As an simplified way of protecting your application you can use a Scaffolding
+for Gramine (SCAG). It is a tool which transforms your application into
+a graminized Docker image, encapsulating both your application and
+the Gramine Library OS. The primary objective of the Scaffolding project is
+to simplify the process of safeguarding applications against malicious hosts.
+It offers seamless support for a variety of frameworks, including but not
+limited to Flask and Express.js. For a more in-depth exploration,
+see :doc:`scag-installation`.
 
 Configure Gramine
 -----------------
@@ -179,7 +172,6 @@ Indices and tables
    :maxdepth: 1
 
    gsc-installation
-   scag-installation
    curated-installation
 
 .. toctree::
@@ -190,6 +182,7 @@ Indices and tables
    installation
    run-sample-application
    tutorials-index
+   scag-installation
 
 .. toctree::
    :hidden:
