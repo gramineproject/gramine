@@ -410,7 +410,8 @@ out:
 
 long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) {
     long ret;
-    char* buf = NULL;
+    /* Statically declared buffer allocated such that it is reused on every sendfile syscall */
+    static char buf[BUF_SIZE];
 
     size_t read_from_in  = 0;
     size_t copied_to_out = 0;
@@ -442,12 +443,6 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
     /* FIXME: This sendfile() emulation is very simple and not particularly efficient: it reads from
      *        input FD in BUF_SIZE chunks and writes into output FD. Mmap-based emulation may be
      *        more efficient but adds complexity (not all handle types provide mmap callback). */
-    buf = malloc(BUF_SIZE);
-    if (!buf) {
-        ret = -ENOMEM;
-        goto out;
-    }
-
     if (!count) {
         ret = 0;
         goto out;
@@ -533,7 +528,6 @@ out_update:
     }
 
 out:
-    free(buf);
     put_handle(in_hdl);
     put_handle(out_hdl);
     return copied_to_out ? (long)copied_to_out : ret;
