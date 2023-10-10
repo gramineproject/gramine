@@ -43,7 +43,7 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
     }
 
     do {
-        ret = PalStreamWaitForClient(hdl0, &hdl1, /*options=*/0);
+        ret = PalStreamWaitForClient(hdl0, &hdl1, /*options=*/0, NULL);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);

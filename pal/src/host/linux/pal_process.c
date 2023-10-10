@@ -286,11 +286,16 @@ noreturn void _PalProcessExit(int exitcode) {
     die_or_inf_loop();
 }
 
-static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
+static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer,
+                         pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(read, handle->process.stream, buffer, count);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
 
     if (bytes < 0)
         switch (bytes) {
@@ -305,11 +310,16 @@ static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
     return bytes;
 }
 
-static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
+static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer,
+                          pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(write, handle->process.stream, buffer, count);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
 
     if (bytes < 0)
         switch (bytes) {

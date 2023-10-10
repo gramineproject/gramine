@@ -46,7 +46,8 @@ static int console_open(PAL_HANDLE* handle, const char* type, const char* uri,
     return 0;
 }
 
-static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
+static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer,
+                            pal_callback_t pct) {
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     if (offset)
@@ -55,11 +56,16 @@ static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, v
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(read, handle->console.fd, buffer, size);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
-static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
+static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer,
+                             pal_callback_t pct) {
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     if (offset)
@@ -68,7 +74,11 @@ static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(write, handle->console.fd, buffer, size);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 

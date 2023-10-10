@@ -180,7 +180,7 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     /* Since this socket is listening, it must have a PAL handle. */
     assert(pal_handle);
     PAL_HANDLE client_pal_handle;
-    int ret = PalStreamWaitForClient(pal_handle, &client_pal_handle, options);
+    int ret = PalStreamWaitForClient(pal_handle, &client_pal_handle, options, NULL);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -313,7 +313,8 @@ static int getsockopt(struct libos_handle* handle, int level, int optname, void*
 
 static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_handle* handle,
                                            PAL_HANDLE pal_handle,
-                                           int (*func)(PAL_HANDLE, uint64_t, size_t*, void*),
+                                           int (*func)(PAL_HANDLE, uint64_t, size_t*, void*,
+                                                       pal_callback_t),
                                            void* buf, size_t* size) {
     /*
      * There are 3 kinds of operations that can race here:
@@ -360,7 +361,7 @@ static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_
     }
 
 again:
-    ret = func(pal_handle, /*offset=*/0, size, buf);
+    ret = func(pal_handle, /*offset=*/0, size, buf, NULL);
     if (ret < 0) {
         ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
         if (ret == -EAGAIN && !force_nonblocking) {

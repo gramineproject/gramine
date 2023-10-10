@@ -325,7 +325,7 @@ static int load_cstring_array(const char* uri, const char*** res) {
         ret = -PAL_ERROR_NOMEM;
         goto out_fail;
     }
-    ret = _PalStreamRead(hdl, 0, file_size, buf);
+    ret = _PalStreamRead(hdl, 0, file_size, buf, NULL);
     if (ret < 0)
         goto out_fail;
     if (file_size > 0 && buf[file_size - 1] != '\0') {

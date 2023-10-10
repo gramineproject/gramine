@@ -368,7 +368,8 @@ int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t sha
  *
  * This API is only available for handles that are opened with `pipe.srv:...`.
  */
-int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options);
+int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options,
+                           pal_callback_t pct);
 
 /*!
  * \brief Read data from an open stream.
@@ -385,7 +386,8 @@ int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_opt
  * If \p handle is a directory, PalStreamRead fills the buffer with the null-terminated names of the
  * directory entries.
  */
-int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer);
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                  pal_callback_t pct);
 
 /*!
  * \brief Write data to an open stream.
@@ -399,7 +401,8 @@ int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffe
  *
  * \returns 0 on success, negative error code on failure.
  */
-int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer);
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                   pal_callback_t pct);
 
 enum pal_delete_mode {
     PAL_DELETE_ALL,  /*!< delete the whole resource / shut down both directions */
@@ -442,7 +445,7 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
  *
  * \returns 0 on success, negative error code on failure.
  */
-int PalStreamFlush(PAL_HANDLE handle);
+int PalStreamFlush(PAL_HANDLE handle, pal_callback_t pct);
 
 /*!
  * \brief Send a PAL handle to a process.

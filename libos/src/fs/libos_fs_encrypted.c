@@ -28,7 +28,8 @@ static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, si
 
     while (remaining > 0) {
         size_t count = remaining;
-        int ret = PalStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset);
+        int ret = PalStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset,
+                                NULL);
         if (ret == -PAL_ERROR_INTERRUPTED)
             continue;
 
@@ -58,7 +59,7 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
     while (remaining > 0) {
         size_t count = remaining;
         int ret = PalStreamWrite(pal_handle, offset + buffer_offset, &count,
-                                 (void*)(buffer + buffer_offset));
+                                 (void*)(buffer + buffer_offset), NULL);
         if (ret == -PAL_ERROR_INTERRUPTED)
             continue;
 

@@ -55,7 +55,7 @@ static int create_eventfd(PAL_HANDLE* efd, uint64_t initial_count, int flags) {
 
     /* set the initial count */
     size_t write_size = sizeof(initial_count);
-    ret = PalStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count);
+    ret = PalStreamWrite(hdl, /*offset=*/0, &write_size, &initial_count, NULL);
     if (ret < 0) {
         log_error("eventfd: failed to set initial count");
         return pal_to_unix_errno(ret);

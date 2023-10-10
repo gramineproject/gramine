@@ -80,15 +80,20 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 }
 
 /* 'read' operation for file streams. */
-static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
+static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer,
+                         pal_callback_t pct) {
     int fd = handle->file.fd;
     int64_t ret;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     if (handle->file.seekable) {
         ret = DO_SYSCALL(pread64, fd, buffer, count, offset);
     } else {
         ret = DO_SYSCALL(read, fd, buffer, count);
     }
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
 
     if (ret < 0)
         return unix_to_pal_error(ret);
@@ -97,15 +102,20 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
 }
 
 /* 'write' operation for file streams. */
-static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
+static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer,
+                          pal_callback_t pct) {
     int fd = handle->file.fd;
     int64_t ret;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     if (handle->file.seekable) {
         ret = DO_SYSCALL(pwrite64, fd, buffer, count, offset);
     } else {
         ret = DO_SYSCALL(write, fd, buffer, count);
     }
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
 
     if (ret < 0)
         return unix_to_pal_error(ret);
@@ -306,9 +316,11 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
 /* 'read' operation for directory stream. Directory stream will not
    need a 'write' operation. */
-static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* _buf) {
+static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* _buf,
+                        pal_callback_t pct) {
     size_t bytes_written = 0;
     char* buf = (char*)_buf;
+    (void)pct;
 
     if (offset) {
         return -PAL_ERROR_INVAL;

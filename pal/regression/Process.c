@@ -18,15 +18,15 @@ int main(int argc, char** argv, char** envp) {
         }
 
         size = sizeof(buffer1);
-        PalStreamWrite(PalGetPalPublicState()->parent_process, 0, &size, buffer1);
+        PalStreamWrite(PalGetPalPublicState()->parent_process, 0, &size, buffer1, NULL);
 
         size = sizeof(buffer1);
-        ret = PalStreamWrite(PalGetPalPublicState()->parent_process, 0, &size, buffer1);
+        ret = PalStreamWrite(PalGetPalPublicState()->parent_process, 0, &size, buffer1, NULL);
         if (ret == 0 && size > 0)
             pal_printf("Process Write 1 OK\n");
 
         size = sizeof(buffer4);
-        ret = PalStreamRead(PalGetPalPublicState()->parent_process, 0, &size, buffer4);
+        ret = PalStreamRead(PalGetPalPublicState()->parent_process, 0, &size, buffer4, NULL);
         if (ret == 0 && size > 0)
             pal_printf("Process Read 2: %s\n", buffer4);
 
@@ -42,19 +42,19 @@ int main(int argc, char** argv, char** envp) {
             if (ret == 0 && children[i]) {
                 pal_printf("Process created %d\n", i + 1);
                 size = sizeof(buffer4);
-                PalStreamRead(children[i], 0, &size, buffer4);
+                PalStreamRead(children[i], 0, &size, buffer4, NULL);
             }
         }
 
         for (int i = 0; i < 3; i++)
             if (children[i]) {
                 size = sizeof(buffer3);
-                ret = PalStreamRead(children[i], 0, &size, buffer3);
+                ret = PalStreamRead(children[i], 0, &size, buffer3, NULL);
                 if (ret == 0 && size > 0)
                     pal_printf("Process Read 1: %s\n", buffer3);
 
                 size = sizeof(buffer2);
-                ret = PalStreamWrite(children[i], 0, &size, buffer2);
+                ret = PalStreamWrite(children[i], 0, &size, buffer2, NULL);
                 if (ret == 0 && size > 0)
                     pal_printf("Process Write 2 OK\n");
             }

@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
         PalObjectDestroy(proc);
 
         PAL_HANDLE pipe = NULL;
-        ret = PalStreamWaitForClient(pipe_srv, &pipe, /*options=*/0);
+        ret = PalStreamWaitForClient(pipe_srv, &pipe, /*options=*/0, NULL);
         if (ret < 0) {
             pal_printf("PalStreamWaitForClient failed: %d\n", ret);
         }

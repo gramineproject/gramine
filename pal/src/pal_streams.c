@@ -146,7 +146,7 @@ int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t sha
 }
 
 static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
-                                   pal_stream_options_t options) {
+                                   pal_stream_options_t options, pal_callback_t pct) {
     if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
         return -PAL_ERROR_BADHANDLE;
 
@@ -157,12 +157,13 @@ static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
     if (!ops->waitforclient)
         return -PAL_ERROR_NOTSERVER;
 
-    return ops->waitforclient(handle, client, options);
+    return ops->waitforclient(handle, client, options, pct);
 }
 
-int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
+int PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options,
+                           pal_callback_t pct) {
     *client = NULL;
-    return _PalStreamWaitForClient(handle, client, options);
+    return _PalStreamWaitForClient(handle, client, options, pct);
 }
 
 int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
@@ -183,7 +184,9 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return _PalStreamDelete(handle, delete_mode);
 }
 
-int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf) {
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf,
+                       pal_callback_t pct) {
+    (void)pct;
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -192,15 +195,16 @@ int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void*
     if (!ops->read)
         return -PAL_ERROR_NOTSUPPORT;
 
-    return ops->read(handle, offset, count, buf);
+    return ops->read(handle, offset, count, buf, pct);
 }
 
-int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
+int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                  pal_callback_t pct) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _PalStreamRead(handle, offset, *count, buffer);
+    int64_t ret = _PalStreamRead(handle, offset, *count, buffer, pct);
 
     if (ret < 0) {
         return ret;
@@ -210,7 +214,8 @@ int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffe
     return 0;
 }
 
-int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf) {
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
+                        pal_callback_t pct) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -219,15 +224,16 @@ int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, cons
     if (!ops->write)
         return -PAL_ERROR_NOTSUPPORT;
 
-    return ops->write(handle, offset, count, buf);
+    return ops->write(handle, offset, count, buf, pct);
 }
 
-int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
+int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer,
+                   pal_callback_t pct) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    int64_t ret = _PalStreamWrite(handle, offset, *count, buffer);
+    int64_t ret = _PalStreamWrite(handle, offset, *count, buffer, pct);
 
     if (ret < 0) {
         return ret;
@@ -387,7 +393,8 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
 
 /* _PalStreamFlush for internal use. This function sync up the handle with devices. Some streams may
  *  not support this operations. */
-int _PalStreamFlush(PAL_HANDLE handle) {
+int _PalStreamFlush(PAL_HANDLE handle, pal_callback_t pct) {
+    (void)pct;
     if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
         return -PAL_ERROR_BADHANDLE;
 
@@ -402,12 +409,12 @@ int _PalStreamFlush(PAL_HANDLE handle) {
     return ops->flush(handle);
 }
 
-int PalStreamFlush(PAL_HANDLE handle) {
+int PalStreamFlush(PAL_HANDLE handle, pal_callback_t pct) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
 
-    return _PalStreamFlush(handle);
+    return _PalStreamFlush(handle, pct);
 }
 
 int PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {

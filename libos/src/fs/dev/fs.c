@@ -79,7 +79,7 @@ static int dev_tty_open(struct libos_handle* hdl, struct libos_dentry* dent, int
 
 static ssize_t dev_tty_read(struct libos_handle* hdl, void* buf, size_t count) {
     size_t actual_count = count;
-    int ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &actual_count, buf);
+    int ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &actual_count, buf, NULL);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -89,7 +89,7 @@ static ssize_t dev_tty_read(struct libos_handle* hdl, void* buf, size_t count) {
 
 static ssize_t dev_tty_write(struct libos_handle* hdl, const void* buf, size_t count) {
     size_t actual_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &actual_count, (void*)buf);
+    int ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &actual_count, (void*)buf, NULL);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
@@ -98,7 +98,7 @@ static ssize_t dev_tty_write(struct libos_handle* hdl, const void* buf, size_t c
 }
 
 static int dev_tty_flush(struct libos_handle* hdl) {
-    int ret = PalStreamFlush(hdl->pal_handle);
+    int ret = PalStreamFlush(hdl->pal_handle, NULL);
     return pal_to_unix_errno(ret);
 }
 

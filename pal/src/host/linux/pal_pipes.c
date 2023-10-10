@@ -92,13 +92,18 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * corresponding underlying socket and is returned in `client`. This `pipecli` PAL handle denotes
  * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
  */
-static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
+static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options,
+                              pal_callback_t pct) {
     if (handle->hdr.type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
     static_assert(O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
     int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int newfd = DO_SYSCALL(accept4, handle->pipe.fd, NULL, NULL, flags);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     if (newfd < 0)
         return unix_to_pal_error(newfd);
 
@@ -217,14 +222,19 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
  *
  * \returns Number of bytes read on success, negative PAL error code otherwise.
  */
-static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
+static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer,
+                         pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     ssize_t bytes = DO_SYSCALL(read, handle->pipe.fd, buffer, len);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     if (bytes < 0)
         return unix_to_pal_error(bytes);
 
@@ -241,14 +251,19 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
  *
  * \returns Number of bytes written on success, negative PAL error code otherwise.
  */
-static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const void* buffer) {
+static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const void* buffer,
+                          pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
         return -PAL_ERROR_NOTCONNECTION;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     ssize_t bytes = DO_SYSCALL(write, handle->pipe.fd, buffer, len);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     if (bytes < 0)
         return unix_to_pal_error(bytes);
 

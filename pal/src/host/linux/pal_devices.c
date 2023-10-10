@@ -66,7 +66,8 @@ fail:
     return ret;
 }
 
-static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {
+static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer,
+                        pal_callback_t pct) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     if (offset)
@@ -75,11 +76,16 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
         return -PAL_ERROR_DENIED;
 
+    if (pct)
+         pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(read, handle->dev.fd, buffer, size);
+    if (pct)
+         pct(PAL_CALLBACK_AFTER_SYSCALL);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
-static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer) {
+static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, const void* buffer,
+                         pal_callback_t pct) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     if (offset)
@@ -88,7 +94,11 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
         return -PAL_ERROR_DENIED;
 
+    if (pct)
+         pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(write, handle->dev.fd, buffer, size);
+    if (pct)
+         pct(PAL_CALLBACK_AFTER_SYSCALL);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
 }
 
@@ -104,10 +114,14 @@ static void dev_destroy(PAL_HANDLE handle) {
     free(handle);
 }
 
-static int dev_flush(PAL_HANDLE handle) {
+static int dev_flush(PAL_HANDLE handle, pal_callback_t pct) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
+    if (pct)
+         pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int ret = DO_SYSCALL(fsync, handle->dev.fd);
+    if (pct)
+         pct(PAL_CALLBACK_AFTER_SYSCALL);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 

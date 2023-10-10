@@ -45,8 +45,10 @@ struct handle_ops {
 
     /* 'read' and 'write' is used by PalStreamRead and PalStreamWrite, so they have exactly same
      * prototype as them. */
-    int64_t (*read)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer);
-    int64_t (*write)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer);
+    int64_t (*read)(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer,
+                    pal_callback_t pct);
+    int64_t (*write)(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer,
+                     pal_callback_t pct);
 
     /* 'delete' is used by PalStreamDelete: for files and dirs it corresponds to unlinking, for
      * sockets it corresponds to shutting down a socket connection. */
@@ -74,7 +76,8 @@ struct handle_ops {
     int (*flush)(PAL_HANDLE handle);
 
     /* 'waitforclient' is used by PalStreamWaitforClient. It accepts an connection */
-    int (*waitforclient)(PAL_HANDLE server, PAL_HANDLE* client, pal_stream_options_t options);
+    int (*waitforclient)(PAL_HANDLE server, PAL_HANDLE* client, pal_stream_options_t options,
+                         pal_callback_t pct);
 
     /* 'attrquery' is used by PalStreamAttributesQuery. It queries the attributes of a stream */
     int (*attrquery)(const char* type, const char* uri, PAL_STREAM_ATTR* attr);
@@ -171,14 +174,16 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
                    pal_stream_options_t options);
 int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
-int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf);
-int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);
+int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf,
+                       pal_callback_t pct);
+int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf,
+                        pal_callback_t pct);
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
 int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size);
 int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
-int _PalStreamFlush(PAL_HANDLE handle);
+int _PalStreamFlush(PAL_HANDLE handle, pal_callback_t pct);
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 

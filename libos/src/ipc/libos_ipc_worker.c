@@ -136,7 +136,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
         /* Receive at least the message header. */
         while (size < sizeof(buf.msg_header)) {
             size_t tmp_size = sizeof(buf) - size;
-            int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size);
+            int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size, NULL);
             if (ret < 0) {
                 if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
                     continue;
@@ -309,7 +309,7 @@ static noreturn void ipc_worker_main(void) {
             do {
                 /* Although IPC worker thread does not handle any signals (hence it should never be
                  * interrupted), lets handle it for uniformity with the rest of the code. */
-                ret = PalStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
+                ret = PalStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0, NULL);
             } while (ret == -PAL_ERROR_INTERRUPTED);
             if (ret < 0) {
                 log_error(LOG_PREFIX "PalStreamWaitForClient failed: %s", pal_strerror(ret));

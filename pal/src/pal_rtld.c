@@ -648,7 +648,7 @@ int load_entrypoint(const char* uri) {
     if (ret < 0)
         return ret;
 
-    ret = _PalStreamRead(handle, 0, sizeof(buf), buf);
+    ret = _PalStreamRead(handle, 0, sizeof(buf), buf, NULL);
     if (ret < 0) {
         log_error("Reading ELF file failed");
         goto out;

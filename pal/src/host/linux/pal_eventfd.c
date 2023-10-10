@@ -65,7 +65,8 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     return 0;
 }
 
-static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
+static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer,
+                                pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -75,7 +76,11 @@ static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len
     if (len < sizeof(uint64_t))
         return -PAL_ERROR_INVAL;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(read, handle->eventfd.fd, buffer, len);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
 
     if (bytes < 0)
         return unix_to_pal_error(bytes);
@@ -84,7 +89,7 @@ static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len
 }
 
 static int64_t eventfd_pal_write(PAL_HANDLE handle, uint64_t offset, uint64_t len,
-                                 const void* buffer) {
+                                 const void* buffer, pal_callback_t pct) {
     if (offset)
         return -PAL_ERROR_INVAL;
 
@@ -94,7 +99,11 @@ static int64_t eventfd_pal_write(PAL_HANDLE handle, uint64_t offset, uint64_t le
     if (len < sizeof(uint64_t))
         return -PAL_ERROR_INVAL;
 
+    if (pct)
+        pct(PAL_CALLBACK_BEFORE_SYSCALL);
     int64_t bytes = DO_SYSCALL(write, handle->eventfd.fd, buffer, len);
+    if (pct)
+        pct(PAL_CALLBACK_AFTER_SYSCALL);
     if (bytes < 0)
         return unix_to_pal_error(bytes);
 
