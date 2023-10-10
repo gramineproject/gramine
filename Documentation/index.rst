@@ -65,7 +65,7 @@ The following steps can be performed to protect your application with Gramine:
 
 You can also check :doc:`Gramine tutorials<tutorials-index>`.
 
-As an simplified way of protecting your application you can use a Scaffolding
+As an simplified way of protecting your application you can use Scaffolding
 for Gramine (SCAG). It is a tool which transforms your application into
 a graminized Docker image, encapsulating both your application and
 the Gramine Library OS. The primary objective of the Scaffolding project is
