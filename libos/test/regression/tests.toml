@@ -41,6 +41,7 @@ manifests = [
   "fopen_cornercases",
   "fork_and_close",
   "fork_and_exec",
+  "fork_and_munmap",
   "fork_disallowed",
   "fp_multithread",
   "fstat_cwd",
