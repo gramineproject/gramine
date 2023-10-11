@@ -311,7 +311,12 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         }
     }
 
+    rwlock_read_lock(&checkpoint_lock);
+
     ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
+
+    rwlock_read_unlock(&checkpoint_lock);
+
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
