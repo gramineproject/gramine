@@ -1008,6 +1008,11 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['fork_and_munmap'])
         self.assertIn("TEST OK", stdout)
 
+    def test_162_fork_and_mprotect(self):
+        for _ in range(0, 10):
+            stdout, _ = self.run_binary(['fork_and_mprotect'])
+            self.assertIn("TEST OK", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
