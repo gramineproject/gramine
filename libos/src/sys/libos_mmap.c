@@ -9,6 +9,7 @@
  * Implementation of system calls "mmap", "munmap" and "mprotect".
  */
 
+#include "libos_checkpoint.h"
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
@@ -360,14 +361,19 @@ long libos_syscall_munmap(void* _addr, size_t length) {
             BUG();
         }
 
+        rwlock_read_lock(&checkpoint_lock);
+
         if (PalVirtualMemoryFree((void*)begin, end - begin) < 0) {
             BUG();
         }
+
+        rwlock_read_unlock(&checkpoint_lock);
 
         bkeep_remove_tmp_vma(tmp_vma);
     }
 
     free_vma_info_array(vmas, vmas_length);
+
     return 0;
 }
 
