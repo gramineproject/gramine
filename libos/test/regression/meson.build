@@ -36,6 +36,7 @@ tests = {
     'file_size': {},
     'flock_lock': {},
     'fopen_cornercases': {},
+    'fork_and_close': {},
     'fork_and_exec': {},
     'fp_multithread': {
         'c_args': '-fno-builtin',  # see comment in the test's source
