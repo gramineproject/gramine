@@ -21,6 +21,8 @@
 extern char __migratable[];
 extern char __migratable_end;
 
+extern struct libos_rwlock checkpoint_lock;
+
 /*
  * Marks whether we have bookkeeped all user memory that is received during checkpointing. If there
  * is no parent process it's always `true`.

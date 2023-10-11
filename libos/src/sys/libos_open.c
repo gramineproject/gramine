@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <stdalign.h>
 
+#include "libos_checkpoint.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_internal.h"
@@ -170,7 +171,12 @@ long libos_syscall_close(int fd) {
     if (!handle)
         return -EBADF;
 
+    rwlock_read_lock(&checkpoint_lock);
+
     put_handle(handle);
+
+    rwlock_read_unlock(&checkpoint_lock);
+
     return 0;
 }
 
