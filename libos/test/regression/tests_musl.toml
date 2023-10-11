@@ -41,6 +41,7 @@ manifests = [
   "file_size",
   "flock_lock",
   "fopen_cornercases",
+  "fork_and_close",
   "fork_and_exec",
   "fork_disallowed",
   "fp_multithread",
