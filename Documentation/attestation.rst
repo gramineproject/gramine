@@ -40,11 +40,13 @@ build their attestation flows. Each next level builds on the previous one and
 exposes a simpler API to the application (but also is more restricted in its
 functionality).
 
-In addition to these three Gramine-native flows, there is also an option to use
-third-party attestation & secret provisioning solutions. This option may be
-better suited for complex deployments, for example, deploying chained
-micro-services in the public cloud. Please refer to :ref:`third_party_solutions`
-for specific examples.
+In addition to these three Gramine-native flows, there are two additional
+options: (1) to use vendor-specific plugins to RA-TLS and Secret Provisioning
+libraries, or (2) to use third-party attestation & secret provisioning
+solutions. These options may be better suited for complex deployments, for
+example, deploying chained micro-services in the public cloud from a specific
+vendor. Please refer to :ref:`vendor_specific_plugins` and
+:ref:`third_party_solutions` sections for specific examples.
 
 
 Remote Attestation flows for EPID and DCAP
@@ -523,6 +525,43 @@ The library uses the same SGX-specific environment variables as
 ``secret_prov_verify_epid.so`` and ignores the EPID-specific environment
 variables. The library expects all the DCAP infrastructure to be installed and
 working correctly on the host.
+
+
+.. _vendor_specific_plugins:
+
+Vendor-specific plugins
+-----------------------
+
+The RA-TLS and Secret Provisioning interfaces described above work only with
+default Intel-provided attestation infrastructures (IAS for the EPID flows and
+Intel PCCS/PCS flows). There are several other attestation infrastructures built
+by vendors other than Intel. For these cases, Gramine provides plugins to RA-TLS
+and Secret Provisioning, which currently can be found in the companion `contrib
+<https://github.com/gramineproject/contrib>`__ repository.
+
+Microsoft Azure Attestation (MAA)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. note ::
+   The MAA plugin is not an official part of the Gramine project yet and wasn't
+   thoroughly reviewed in terms of security.
+
+Microsoft Azure Attestation (MAA) is the attestation protocol (attestation
+scheme) developed by Microsoft and available in the Microsoft Azure public
+cloud. Similarly to the Intel-developed EPID protocol, the remote verifier based
+on the MAA protocol needs to contact the MAA attestation provider each time it
+wishes to attest an enclave. An enclave sends a DCAP-formatted SGX quote to the
+client/verifier who will forward it to the MAA attestation provider to check the
+enclave's validity and receive back the attestation response embedding the JSON
+Web Token (JWT) that contains a set of claims about the SGX enclave.
+
+We provide an MAA plugin for RA-TLS and Secret Provisioning. This plugin
+installs MAA-specific versions of the RA-TLS and SecretProv libraries alongside
+default RA-TLS and SecretProv libraries, and the applications may choose these
+MAA-specific versions if running inside the Microsoft Azure cloud.
+
+For more information, refer to the `MAA plugin README
+<https://github.com/gramineproject/contrib/tree/master/Integrations/azure/ra_tls_maa>`__.
 
 
 .. _third_party_solutions:
