@@ -67,6 +67,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                          unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
+    bool unlock = false;
 
     ret = check_prot(prot);
     if (ret < 0)
@@ -152,6 +153,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     if ((flags & (MAP_32BIT | MAP_FIXED)) == (MAP_32BIT | MAP_FIXED))
         flags &= ~MAP_32BIT;
 #endif
+
+    rwlock_read_lock(&checkpoint_lock);
+    unlock = true;
 
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
@@ -254,6 +258,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     }
 
 out_handle:
+    if (unlock)
+        rwlock_read_unlock(&checkpoint_lock);
+
     if (hdl) {
         put_handle(hdl);
     }
