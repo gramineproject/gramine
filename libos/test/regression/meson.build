@@ -40,6 +40,7 @@ tests = {
     'fork_and_exec': {},
     'fork_and_mprotect': {},
     'fork_and_munmap': {},
+    'fork_and_pthread_create': {},
     'fp_multithread': {
         'c_args': '-fno-builtin',  # see comment in the test's source
         'link_args': '-lm',
