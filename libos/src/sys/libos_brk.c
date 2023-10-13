@@ -148,6 +148,8 @@ void* libos_syscall_brk(void* _brk) {
 
     char* brk_current = ALLOC_ALIGN_UP_PTR(brk_region.brk_current);
 
+    rwlock_read_lock(&checkpoint_lock);
+
     if (brk < brk_region.brk_start) {
         goto out;
     } else if (brk <= brk_current) {
@@ -199,6 +201,7 @@ void* libos_syscall_brk(void* _brk) {
     brk_region.brk_current = brk;
 
 out:
+    rwlock_read_unlock(&checkpoint_lock);
     brk = brk_region.brk_current;
     unlock(&brk_lock);
     return brk;
