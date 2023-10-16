@@ -45,6 +45,10 @@ static int dev_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* att
 }
 
 static int dev_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
+}
+
+static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+                   uint64_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -54,6 +58,7 @@ struct handle_ops g_dev_ops = {
     .write          = &dev_write,
     .destroy        = &dev_destroy,
     .delete         = &dev_delete,
+    .map            = &dev_map,
     .setlength      = &dev_setlength,
     .flush          = &dev_flush,
     .attrquery      = &dev_attrquery,

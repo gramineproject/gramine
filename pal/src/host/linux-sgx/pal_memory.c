@@ -66,7 +66,7 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
              * unmapped.
              */
         }
-    } else {
+    } else if (sgx_is_valid_untrusted_ptr(addr, size, /*alignment=*/1)) {
         /*
          * Possible to have untrusted mapping, simply unmap memory outside the enclave. But only
          * unmap if this is not a shared-untrusted-memory region, as this whole region was mmapped
@@ -78,6 +78,8 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
                 || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
             ocall_munmap_untrusted(addr, size);
         }
+    } else {
+        BUG();
     }
 
     return 0;
