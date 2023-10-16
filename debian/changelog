@@ -1,8 +1,8 @@
-gramine (1.5post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.6~rc5) unstable-bookworm unstable-bullseye unstable-jammy unstable-focal; urgency=medium
 
   *
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 6 Jul 2023 13:30:01 +0200
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 13 Dec 2023 15:00:00 +0100
 
 gramine (1.5) bookworm bullseye jammy focal; urgency=medium
 
