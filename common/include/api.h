@@ -386,8 +386,21 @@ int buf_flush(struct print_buf* buf);
 #define URI_PREFIX_EVENTFD  URI_TYPE_EVENTFD URI_PREFIX_SEPARATOR
 #define URI_PREFIX_FILE     URI_TYPE_FILE URI_PREFIX_SEPARATOR
 
-#define URI_PREFIX_DEV_LEN  (static_strlen(URI_PREFIX_DEV))
-#define URI_PREFIX_FILE_LEN (static_strlen(URI_PREFIX_FILE))
+#define URI_PREFIX_DIR_LEN      (static_strlen(URI_PREFIX_DIR))
+#define URI_PREFIX_PIPE_LEN     (static_strlen(URI_PREFIX_PIPE))
+#define URI_PREFIX_PIPE_SRV_LEN (static_strlen(URI_PREFIX_PIPE_SRV))
+#define URI_PREFIX_CONSOLE_LEN  (static_strlen(URI_PREFIX_CONSOLE))
+#define URI_PREFIX_DEV_LEN      (static_strlen(URI_PREFIX_DEV))
+#define URI_PREFIX_EVENTFD_LEN  (static_strlen(URI_PREFIX_EVENTFD))
+#define URI_PREFIX_FILE_LEN     (static_strlen(URI_PREFIX_FILE))
+
+#define URI_PREFIX_MAX_LEN (MAX(URI_PREFIX_DIR_LEN,                           \
+                                MAX(URI_PREFIX_PIPE_LEN,                      \
+                                    MAX(URI_PREFIX_PIPE_SRV_LEN,              \
+                                        MAX(URI_PREFIX_CONSOLE_LEN,           \
+                                            MAX(URI_PREFIX_DEV_LEN,           \
+                                                MAX(URI_PREFIX_EVENTFD_LEN,   \
+                                                    URI_PREFIX_FILE_LEN)))))))
 
 #define TIME_US_IN_S 1000000ul
 #define TIME_US_IN_MS 1000ul

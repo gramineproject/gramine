@@ -329,7 +329,7 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
 /*!
  * \brief Open/create a stream resource specified by `uri`.
  *
- * \param uri          The URI of the stream to be opened/created.
+ * \param typed_uri    The URI of the stream to be opened/created, prefixed with the type.
  * \param access       See #pal_access.
  * \param share_flags  A combination of the `PAL_SHARE_*` flags.
  * \param create       See #pal_create_mode.
@@ -349,7 +349,7 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
  */
-int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share_flags,
+int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share_flags,
                   enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
 
 /*!
@@ -491,7 +491,7 @@ typedef struct _PAL_STREAM_ATTR {
  *
  * This API only applies for URIs such as `%file:...`, `dir:...`, and `dev:...`.
  */
-int PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
+int PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr);
 
 /*!
  * \brief Query the attributes of an open stream.
@@ -511,7 +511,7 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
 /*!
  * \brief This API changes the name of an open stream.
  */
-int PalStreamChangeName(PAL_HANDLE handle, const char* uri);
+int PalStreamChangeName(PAL_HANDLE handle, const char* typed_uri);
 
 struct pal_socket_addr {
     enum pal_socket_domain domain;

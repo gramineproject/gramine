@@ -36,113 +36,73 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
     [PAL_TYPE_EVENTFD] = &g_eventfd_ops,
 };
 
-/* parse_stream_uri scan the uri, seperate prefix and search for
-   stream handler which will open or access the stream */
-static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops** ops) {
-    const char* p;
-    const char* u = *uri;
-
-    for (p = u; (*p) && (*p) != ':'; p++)
-        ;
-
-    if ((*p) != ':')
-        return -PAL_ERROR_INVAL;
-
-    ++p;
-
-    struct handle_ops* hops = NULL;
-
-    switch (p - u) {
-        case 4: ;
-            static_assert(static_strlen(URI_PREFIX_DIR) == 4, "URI_PREFIX_DIR has unexpected length");
-            static_assert(static_strlen(URI_PREFIX_DEV) == 4, "URI_PREFIX_DEV has unexpected length");
-
-            if (strstartswith(u, URI_PREFIX_DIR))
-                hops = &g_dir_ops;
-            else if (strstartswith(u, URI_PREFIX_DEV))
-                hops = &g_dev_ops;
-            break;
-
-        case 5: ;
-            static_assert(static_strlen(URI_PREFIX_FILE) == 5, "URI_PREFIX_FILE has unexpected length");
-            static_assert(static_strlen(URI_PREFIX_PIPE) == 5, "URI_PREFIX_PIPE has unexpected length");
-
-            if (strstartswith(u, URI_PREFIX_FILE))
-                hops = &g_file_ops;
-            else if (strstartswith(u, URI_PREFIX_PIPE))
-                hops = &g_pipe_ops;
-            break;
-
-        case 8: ;
-            static_assert(static_strlen(URI_PREFIX_EVENTFD) == 8, "URI_PREFIX_EVENTFD has unexpected length");
-            static_assert(static_strlen(URI_PREFIX_CONSOLE) == 8, "URI_PREFIX_CONSOLE has unexpected length");
-
-            if (strstartswith(u, URI_PREFIX_EVENTFD))
-                hops = &g_eventfd_ops;
-            else if (strstartswith(u, URI_PREFIX_CONSOLE))
-                hops = &g_console_ops;
-            break;
-
-        case 9: ;
-            static_assert(static_strlen(URI_PREFIX_PIPE_SRV) == 9, "URI_PREFIX_PIPE_SRV has unexpected length");
-
-            if (strstartswith(u, URI_PREFIX_PIPE_SRV))
-                hops = &g_pipe_ops;
-            break;
-
-        default:
-            break;
-    }
-
-    if (!hops)
+/* `out_type` is provided by the caller; `out_uri` is the pointer inside `typed_uri` */
+static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const char** out_uri,
+                                  struct handle_ops** out_ops) {
+    if (strstartswith(typed_uri, URI_PREFIX_DIR)) {
+        memcpy(out_type, URI_TYPE_DIR, sizeof(URI_TYPE_DIR));
+        *out_ops = &g_dir_ops;
+        *out_uri = typed_uri + URI_PREFIX_DIR_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_DEV)) {
+        memcpy(out_type, URI_TYPE_DEV, sizeof(URI_TYPE_DEV));
+        *out_ops = &g_dev_ops;
+        *out_uri = typed_uri + URI_PREFIX_DEV_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_FILE)) {
+        memcpy(out_type, URI_TYPE_FILE, sizeof(URI_TYPE_FILE));
+        *out_ops = &g_file_ops;
+        *out_uri = typed_uri + URI_PREFIX_FILE_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_PIPE)) {
+        memcpy(out_type, URI_TYPE_PIPE, sizeof(URI_TYPE_PIPE));
+        *out_ops = &g_pipe_ops;
+        *out_uri = typed_uri + URI_PREFIX_PIPE_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_EVENTFD)) {
+        memcpy(out_type, URI_TYPE_EVENTFD, sizeof(URI_TYPE_EVENTFD));
+        *out_ops = &g_eventfd_ops;
+        *out_uri = typed_uri + URI_PREFIX_EVENTFD_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_CONSOLE)) {
+        memcpy(out_type, URI_TYPE_CONSOLE, sizeof(URI_TYPE_CONSOLE));
+        *out_ops = &g_console_ops;
+        *out_uri = typed_uri + URI_PREFIX_CONSOLE_LEN;
+    } else if (strstartswith(typed_uri, URI_PREFIX_PIPE_SRV)) {
+        memcpy(out_type, URI_TYPE_PIPE_SRV, sizeof(URI_TYPE_PIPE_SRV));
+        *out_ops = &g_pipe_ops;
+        *out_uri = typed_uri + URI_PREFIX_PIPE_SRV_LEN;
+    } else {
+        /* unknown handle type */
         return -PAL_ERROR_NOTSUPPORT;
-
-    *uri = p;
-
-    if (prefix) {
-        *prefix = alloc_and_copy(u, p - u);
-        if (!*prefix)
-            return -PAL_ERROR_NOMEM;
-        /* We don't want ':' in prefix, replacing that with nullbyte which also ends the string. */
-        (*prefix)[p - 1 - u] = '\0';
     }
-
-    if (ops)
-        *ops = hops;
-
     return 0;
 }
 
-int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
+int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
                    pal_stream_options_t options) {
-    struct handle_ops* ops = NULL;
-    char* type = NULL;
-
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
-    int ret = parse_stream_uri(&uri, &type, &ops);
+    char type[URI_PREFIX_MAX_LEN + 1];
+    const char* uri;
+    struct handle_ops* ops;
+
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
     if (ret < 0)
         return ret;
 
     assert(ops && ops->open);
-    ret = ops->open(handle, type, uri, access, share, create, options);
-    free(type);
-    return ret;
+    return ops->open(handle, type, uri, access, share, create, options);
 }
 
-/* PAL call PalStreamOpen: Open stream based on uri, as given access/share/
- * create/options flags. PalStreamOpen return a PAL_HANDLE to access the
- * stream in `handle` argument.
+/*
+ * Open stream based on uri (prefixed with type), with given access, share, create and options
+ * flags. Returns a PAL handle to the opened stream.
  *
  * FIXME: Currently `share` must match 1-1 to Linux open() `mode` argument. This isn't really
  * portable and will cause problems when implementing other PALs.
  */
-int PalStreamOpen(const char* uri, enum pal_access access, pal_share_flags_t share,
+int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share,
                   enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _PalStreamOpen(handle, uri, access, share, create, options);
+    return _PalStreamOpen(handle, typed_uri, access, share, create, options);
 }
 
 static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
@@ -237,35 +197,29 @@ int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buff
     return 0;
 }
 
-/* _PalStreamAttributesQuery of internal use. The function query attribute of streams by their
- *  URI */
-int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
-    struct handle_ops* ops = NULL;
-    char* type = NULL;
+int _PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
+    char type[URI_PREFIX_MAX_LEN + 1];
+    const char* uri;
+    struct handle_ops* ops;
 
-    int ret = parse_stream_uri(&uri, &type, &ops);
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
     if (ret < 0)
         return ret;
 
-    if (!ops->attrquery) {
-        ret = -PAL_ERROR_NOTSUPPORT;
-        goto out;
-    }
+    if (!ops->attrquery)
+        return -PAL_ERROR_NOTSUPPORT;
 
-    ret = ops->attrquery(type, uri, attr);
-out:
-    free(type);
-    return ret;
+    return ops->attrquery(type, uri, attr);
 }
 
-int PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr) {
-    if (!uri || !attr) {
+int PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
+    if (!typed_uri || !attr) {
         return -PAL_ERROR_INVAL;
     }
 
     PAL_STREAM_ATTR attr_buf;
 
-    int ret = _PalStreamAttributesQuery(uri, &attr_buf);
+    int ret = _PalStreamAttributesQuery(typed_uri, &attr_buf);
 
     if (ret < 0) {
         return ret;
@@ -427,29 +381,20 @@ int PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     return _PalReceiveHandle(source_process, out_cargo);
 }
 
-int PalStreamChangeName(PAL_HANDLE hdl, const char* uri) {
-    struct handle_ops* ops = NULL;
-    char* type = NULL;
-    int ret;
+int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
+    char type[URI_PREFIX_MAX_LEN + 1];
+    const char* uri;
+    struct handle_ops* ops;
 
-    if (uri) {
-        ret = parse_stream_uri(&uri, &type, &ops);
-        if (ret < 0) {
-            return ret;
-        }
-    }
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
+    if (ret < 0)
+        return ret;
 
     const struct handle_ops* hops = HANDLE_OPS(hdl);
+    if (!hops || !hops->rename || hops != ops)
+        return -PAL_ERROR_NOTSUPPORT;
 
-    if (!hops || !hops->rename || (ops && hops != ops)) {
-        ret = -PAL_ERROR_NOTSUPPORT;
-        goto out;
-    }
-
-    ret = hops->rename(hdl, type, uri);
-out:
-    free(type);
-    return ret;
+    return hops->rename(hdl, type, uri);
 }
 
 int PalDebugLog(const void* buffer, size_t size) {
