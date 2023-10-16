@@ -131,7 +131,10 @@ If you want your application to use commandline arguments, you must choose one
 of the three mutually exclusive options:
 
 - set ``loader.insecure__use_cmdline_argv`` (insecure in almost all cases),
-- put commandline arguments into ``loader.argv`` array,
+- put commandline arguments into ``loader.argv`` array (note that the first
+  argument is typically the program name and the actual arguments start with
+  the second array item; see `this link
+  <https://unix.stackexchange.com/questions/315812>`__ for an explanation),
 - point ``loader.argv_src_file`` to a file
   containing output of :ref:`gramine-argv-serializer<gramine-argv-serializer>`.
 
