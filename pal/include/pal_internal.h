@@ -288,7 +288,6 @@ void pal_disable_early_memory_bookkeeping(void);
 
 void init_slab_mgr(void);
 void* malloc(size_t size);
-void* malloc_copy(const void* mem, size_t size);
 void* calloc(size_t num, size_t size);
 void free(void* mem);
 

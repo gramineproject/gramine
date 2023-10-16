@@ -135,14 +135,6 @@ void* realloc(void* ptr, size_t new_size) {
 }
 #endif
 
-// Copies data from `mem` to a newly allocated buffer of a specified size.
-void* malloc_copy(const void* mem, size_t size) {
-    void* buff = malloc(size);
-    if (buff)
-        memcpy(buff, mem, size);
-    return buff;
-}
-
 void free(void* mem) {
     if (memory_migrated(mem)) {
         return;

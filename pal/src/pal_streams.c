@@ -100,7 +100,7 @@ static int parse_stream_uri(const char** uri, char** prefix, struct handle_ops**
     *uri = p;
 
     if (prefix) {
-        *prefix = malloc_copy(u, p - u);
+        *prefix = alloc_and_copy(u, p - u);
         if (!*prefix)
             return -PAL_ERROR_NOMEM;
         /* We don't want ':' in prefix, replacing that with nullbyte which also ends the string. */
