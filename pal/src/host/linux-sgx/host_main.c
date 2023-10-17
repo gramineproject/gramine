@@ -242,44 +242,6 @@ static int get_enclave_token(sgx_arch_token_t* enclave_token, sgx_sigstruct_t* e
     #error This config should be unreachable.
 #endif
 
-int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
-    if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
-        return 0;
-
-    /* set TCS.FLAGS.DBGOPTIN in enclave threads to enable perf counters, Intel PT, etc */
-    int ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
-    if (ret < 0) {
-        log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-        return ret;
-    }
-    int enclave_mem = ret;
-
-    for (size_t i = 0; i < count; i++) {
-        uint64_t tcs_flags;
-        uint64_t* tcs_flags_ptr = tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
-
-        ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                            (off_t)tcs_flags_ptr);
-        if (ret < 0) {
-            log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            goto out;
-        }
-
-        tcs_flags |= TCS_FLAGS_DBGOPTIN;
-
-        ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
-                            (off_t)tcs_flags_ptr);
-        if (ret < 0) {
-            log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
-            goto out;
-        }
-    }
-    ret = 0;
-out:
-    DO_SYSCALL(close, enclave_mem);
-    return ret;
-}
-
 static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure) {
     int ret = 0;
     int enclave_image = -1;

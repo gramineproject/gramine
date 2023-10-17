@@ -28,9 +28,11 @@ static size_t g_enclave_thread_num = 0;
 static size_t g_enclave_thread_map_size_in_bytes = 0;
 
 bool g_sgx_enable_stats = false;
+extern bool g_vtune_profile_enabled;
 
-/* this function is called only on thread/process exit (never in the middle of thread exec) */
-void update_and_print_stats(bool process_wide) {
+    /* this function is called only on thread/process exit (never in the middle of thread exec) */
+    void
+    update_and_print_stats(bool process_wide) {
     static atomic_ulong g_eenter_cnt       = 0;
     static atomic_ulong g_eexit_cnt        = 0;
     static atomic_ulong g_aex_cnt          = 0;
@@ -405,4 +407,41 @@ int get_tid_from_tcs(void* tcs) {
     }
     spinlock_unlock(&g_enclave_thread_map_lock);
     return tid ? tid : -EINVAL;
+}
+
+int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
+    if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
+        return 0;
+
+    /* set TCS.FLAGS.DBGOPTIN in enclave threads to enable perf counters, Intel PT, etc */
+    int ret = DO_SYSCALL(open, "/proc/self/mem", O_RDWR | O_LARGEFILE | O_CLOEXEC, 0);
+    if (ret < 0) {
+        log_error("Setting TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+        return ret;
+    }
+    int enclave_mem = ret;
+
+    for (size_t i = 0; i < count; i++) {
+        uint64_t tcs_flags;
+        uint64_t* tcs_flags_ptr = tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
+
+        ret = DO_SYSCALL(pread64, enclave_mem, &tcs_flags, sizeof(tcs_flags), (off_t)tcs_flags_ptr);
+        if (ret < 0) {
+            log_error("Reading TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        tcs_flags |= TCS_FLAGS_DBGOPTIN;
+
+        ret = DO_SYSCALL(pwrite64, enclave_mem, &tcs_flags, sizeof(tcs_flags),
+                         (off_t)tcs_flags_ptr);
+        if (ret < 0) {
+            log_error("Writing TCS.FLAGS.DBGOPTIN failed: %s", unix_strerror(ret));
+            goto out;
+        }
+    }
+    ret = 0;
+out:
+    DO_SYSCALL(close, enclave_mem);
+    return ret;
 }

@@ -24,7 +24,7 @@ fs.mounts = [
   { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
 ]
 
-sgx.max_threads = 16
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

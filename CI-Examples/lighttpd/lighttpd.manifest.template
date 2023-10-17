@@ -22,7 +22,7 @@ fs.mounts = [
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enclave_size = "256M"
-sgx.max_threads = 3
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '3' }}
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

@@ -239,12 +239,6 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
         goto out_err;
     }
 
-    if (dynamic_tcs) {
-        spinlock_lock(&g_enclave_thread_map_lock);
-        g_available_enclave_thread_num++;
-        spinlock_unlock(&g_enclave_thread_map_lock);
-    }
-
     /* There can be subtle race between the parent and child so hold the parent until child updates
      * its tcs. */
     while (!__atomic_load_n(&new_thread->thread.tcs, __ATOMIC_ACQUIRE))

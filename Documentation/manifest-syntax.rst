@@ -751,6 +751,9 @@ Given these internal threads, ``sgx.max_threads`` should be set to at least
 ``4`` even for single-threaded applications (to accommodate for the main thread,
 the IPC thread, the Async thread and one TLS-handshake thread).
 
+.. note::
+   This option will be renamed after non-:term:`EDMM` platform support is
+   dropped.
 
 Number of RPC threads (Exitless feature)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
