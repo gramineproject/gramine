@@ -8,7 +8,7 @@ fs.mounts = [
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
-sgx.max_threads = 4
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 

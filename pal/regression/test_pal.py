@@ -428,10 +428,14 @@ class TC_20_SingleProcess(RegressionTestCase):
                 self.run_binary(['Thread2_edmm'])
                 self.fail('expected to return nonzero')
             except subprocess.CalledProcessError as e:
-                # fail with signal SIGSEGV
+                # test failed with SIGSEGV
                 self.assertEqual(e.returncode, -11)
                 stderr = e.stderr.decode()
-                self.assertIn("error: There are no available TCS pages left for a new thread!", stderr)
+                self.assertIn(
+                    "error: There are no available TCS pages left for a new thread. "
+                    "Please try to increase sgx.max_threads in the manifest. "
+                    "The current value is 1",
+                    stderr)
 
     def test_900_misc(self):
         _, stderr = self.run_binary(['Misc'])
