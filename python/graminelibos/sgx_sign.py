@@ -591,8 +591,10 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
 @click.option('--passphrase', '--password', '-p', 'passphrase', metavar='PASSPHRASE',
     help='optional passphrase to decrypt the key')
 def sign_with_file(ctx, key, passphrase):
+    if passphrase is not None:
+        passphrase = passphrase.encode()
     try:
-        private_key = load_private_key_from_pem_file(key, passphrase and passphrase.encode())
+        private_key = load_private_key_from_pem_file(key, passphrase)
     except InvalidKeyError as e:
         ctx.fail(str(e))
 
