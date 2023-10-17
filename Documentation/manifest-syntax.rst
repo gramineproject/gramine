@@ -1027,14 +1027,14 @@ OS, other host processes, devices connected to the host). In Gramine, untrusted
 shared memory applies to files which must be mapped into application address
 space with the ``MAP_SHARED`` flag.
 
-URI can be a file or a directory. If a directory is mounted, all files under
-this directory are treated as shared memory objects (but sub-directories are
-inaccessible for security reasons). New files created in a shared memory mount
-are also automatically treated as shared memory objects. Creating
-sub-directories in a shared memory mount is not allowed, for security reasons.
-Files in a shared memory mount (or the mounted directory itself) need to be
-explicitly listed as ``allowed_files`` to be accessed. See :ref:`allowed_files`
-for more information.
+URI can be a file or a directory (with a ``dev:`` prefix). If a directory is
+mounted, all files under this directory are treated as shared memory objects
+(but sub-directories are inaccessible for security reasons). New files created
+in a shared memory mount are also automatically treated as shared memory
+objects. Creating sub-directories in a shared memory mount is not allowed, for
+security reasons. Files in a shared memory mount (or the mounted directory
+itself) need to be explicitly listed as ``allowed_files`` to be accessed. See
+:ref:`allowed_files` for more information.
 
 Typically, you should mount the directory ``/dev/shm/`` (it is used for sharing
 data between processes and devices) and allow specific files in it. When this

@@ -27,9 +27,9 @@ static int shm_mount(struct libos_mount_params* params, void** mount_data) {
         log_error("Missing shared memory URI");
         return -EINVAL;
     }
-    if (!strstartswith(params->uri, URI_PREFIX_FILE)
-            && !strstartswith(params->uri, URI_PREFIX_DEV)) {
-        log_error("'%s' is invalid shared memory URI", params->uri);
+    if (!strstartswith(params->uri, URI_PREFIX_DEV)) {
+        log_error("'%s' is invalid shared memory URI (expected prefix %s)", params->uri,
+                  URI_PREFIX_DEV);
         return -EINVAL;
     }
 
