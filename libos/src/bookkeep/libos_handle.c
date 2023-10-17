@@ -484,7 +484,11 @@ static void destroy_handle(struct libos_handle* hdl) {
     destroy_lock(&hdl->lock);
     destroy_lock(&hdl->pos_lock);
 
+    rwlock_read_lock(&checkpoint_lock);
+
     free_mem_obj_to_mgr(handle_mgr, hdl);
+
+    rwlock_read_unlock(&checkpoint_lock);
 }
 
 static int clear_flock_locks(struct libos_handle* hdl) {

@@ -171,11 +171,7 @@ long libos_syscall_close(int fd) {
     if (!handle)
         return -EBADF;
 
-    rwlock_read_lock(&checkpoint_lock);
-
     put_handle(handle);
-
-    rwlock_read_unlock(&checkpoint_lock);
 
     return 0;
 }
