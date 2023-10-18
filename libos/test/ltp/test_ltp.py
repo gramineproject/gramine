@@ -212,8 +212,9 @@ def test_ltp(cmd, section):
 
 def test_lint():
     cmd = ['./contrib/conf_lint.py', '--scenario', LTP_SCENARIO, *LTP_CONFIG]
-    p = subprocess.run(cmd)
-    if p.returncode:
+    try:
+        subprocess.run(cmd, check=True)
+    except subprocess.CalledProcessError:
         pytest.fail('conf_lint.py failed, see stdout for details')
 
 
