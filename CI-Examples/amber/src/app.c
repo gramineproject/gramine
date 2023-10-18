@@ -123,6 +123,7 @@ int read_to_buffer(const char* fn, char buf[], size_t bufsz) {
         return -1;
     }
 
+    bufsz -= 1;
     ssize_t bytes_read = 0;
     while (1) {
         cnt = read(fd, buf + bytes_read, bufsz - bytes_read);
