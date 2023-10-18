@@ -689,7 +689,7 @@ def sign_with_private_key_from_pem_file(data, file, passphrase=None):
             This function also signs *data*, but the key argument is path to a file, not a file-like
             object.
     """
-    return sign_with_private_key(data, load_pem_private_key_from_file(file, passphrase))
+    return sign_with_private_key(data, load_private_key_from_pem_file(file, passphrase))
 
 
 def sign_with_private_key_from_pem_path(data, path, passphrase=None):
@@ -716,7 +716,7 @@ def sign_with_private_key_from_pem_path(data, path, passphrase=None):
             opened file.
     """
 
-    with open(key, 'rb') as file:
+    with open(path, 'rb') as file:
         return sign_with_private_key_from_pem_file(data, file, passphrase)
 
 
