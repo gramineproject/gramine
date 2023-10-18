@@ -50,7 +50,7 @@ def p64(x):
 def connect_aesmd(mrenclave, modulus, flags, xfrms):
     '''Connect with AESMD.'''
 
-    from . import aesm_pb2 # pylint: disable=import-error,no-name-in-module
+    from . import aesm_pb2 # pylint: disable=import-error,no-name-in-module,import-outside-toplevel
 
     req_msg = aesm_pb2.GetTokenReq()
     req_msg.req.signature = mrenclave
