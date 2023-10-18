@@ -68,7 +68,7 @@ You can also check :doc:`Gramine tutorials<tutorials-index>`.
 As a simplified way of protecting your application against malicious hosts you
 can use Scaffolding for Gramine (SCAG). It is a tool which transforms your
 application into a graminized Docker image, encapsulating both your application
-and the Gramine Library OS.  It offers seamless support for a variety of
+and the Gramine Library OS. It offers seamless support for a variety of
 frameworks, including but not limited to Flask and Express.js. For a more
 in-depth exploration, see :doc:`scag-installation`.
 
