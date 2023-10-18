@@ -1,10 +1,7 @@
 stage('lint') {
     sh '''
         ./scripts/gitignore-check-files
-        if .ci/isdistro bionic
-        then
-            ./.ci/run-pylint -f text
-        fi
+        ./.ci/run-pylint -f text
         ./.ci/run-shellcheck
     '''
 }
