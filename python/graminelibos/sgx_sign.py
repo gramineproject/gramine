@@ -714,7 +714,7 @@ def sign_with_private_key_from_pem_path(data, path, passphrase=None):
             opened file.
     """
 
-    with open(key, 'rb') as file:
+    with open(path, 'rb') as file:
         return sign_with_private_key_from_pem_file(data, file, passphrase)
 
 
