@@ -36,8 +36,7 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
     [PAL_TYPE_EVENTFD] = &g_eventfd_ops,
 };
 
-/* `out_type` should be stack-allocated by the caller; `out_uri` is the pointer inside `typed_uri`;
- * this func (and its callers) don't allocate these args on heap for performance reasons */
+/* `out_type` is provided by the caller; `out_uri` is the pointer inside `typed_uri` */
 static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const char** out_uri,
                                   struct handle_ops** out_ops) {
     if (strstartswith(typed_uri, URI_PREFIX_DIR)) {
@@ -85,7 +84,7 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access ac
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, (char*)&type, &uri, &ops);
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
     if (ret < 0)
         return ret;
 
@@ -203,7 +202,7 @@ int _PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, (char*)&type, &uri, &ops);
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
     if (ret < 0)
         return ret;
 
@@ -387,7 +386,7 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, (char*)&type, &uri, &ops);
+    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
     if (ret < 0)
         return ret;
 
