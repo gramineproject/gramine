@@ -2,14 +2,11 @@ loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
-loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
-  { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
-  # for untrusted shared memory test (`shm.c`)
   { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
@@ -18,13 +15,11 @@ sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
-  "dev:/dev/shm/shm_test",  # for shm test
+  "dev:/dev/shm/shm_test",
 ]
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
-  "file:{{ arch_libdir }}/libgcc_s.so.1",
-  "file:/usr{{ arch_libdir }}/libstdc++.so.6",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
