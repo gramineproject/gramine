@@ -6,15 +6,14 @@
 
 /*
  * This file contains code for implementation of 'shm' filesystem.
- * If enabled in manifest, files of this type are shared with the host OS, when mapped.
+ * If mounted in manifest, files of this type are shared with the host OS when mapped.
  */
-
-#include <asm/errno.h>
 
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
 #include "libos_lock.h"
+#include "linux_abi/errors.h"
 #include "perm.h"
 #include "stat.h"
 
