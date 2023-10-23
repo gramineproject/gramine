@@ -17,7 +17,17 @@
 #include "perm.h"
 #include "stat.h"
 
-#define BUF_SIZE (64 * 1024) /* read/write in 64KB chunks for sendfile() */
+/*
+ * Read/write in 64KB chunks in the sendfile() syscall. This syscall also has an optimization of
+ * using a statically allocated buffer instead of allocating on the heap (as our internal malloc()
+ * has a heavy mutex that guards all memory-allocation operations). To prevent data races of
+ * multiple threads executing sendfile() at the same time and thus potentially corrupting a single
+ * static buffer, we optimize for a common case: only the first thread uses the static buffer
+ * whereas other threads fall back to a slower heap allocation.
+ */
+#define BUF_SIZE (64 * 1024)
+static char g_sendfile_buf[BUF_SIZE];
+static bool g_sendfile_buf_in_use = false;
 
 /* The kernel would look up the parent directory, and remove the child from the inode. But we are
  * working with the PAL, so we open the file, truncate and close it. */
@@ -442,10 +452,17 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
     /* FIXME: This sendfile() emulation is very simple and not particularly efficient: it reads from
      *        input FD in BUF_SIZE chunks and writes into output FD. Mmap-based emulation may be
      *        more efficient but adds complexity (not all handle types provide mmap callback). */
-    buf = malloc(BUF_SIZE);
-    if (!buf) {
-        ret = -ENOMEM;
-        goto out;
+
+    bool buf_in_use = false;
+    if (__atomic_compare_exchange_n(&g_sendfile_buf_in_use, &buf_in_use, /*desired=*/true,
+                                    /*weak=*/true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+        buf = g_sendfile_buf;
+    } else {
+        buf = malloc(BUF_SIZE);
+        if (!buf) {
+            ret = -ENOMEM;
+            goto out;
+        }
     }
 
     if (!count) {
@@ -533,7 +550,10 @@ out_update:
     }
 
 out:
-    free(buf);
+    if (buf == g_sendfile_buf)
+        __atomic_store_n(&g_sendfile_buf_in_use, 0, __ATOMIC_RELEASE);
+    else
+        free(buf);
     put_handle(in_hdl);
     put_handle(out_hdl);
     return copied_to_out ? (long)copied_to_out : ret;
