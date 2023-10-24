@@ -45,5 +45,5 @@ static_assert(SSA_XSAVE_SIZE_MAX + /* GPRs size in SSA */176 <= SSA_FRAME_SIZE -
  * The address should be in untrusted memory (outside of enclave), and should not overlap with the
  * ASan shadow memory area (see `asan.h`) or DBGINFO_ADDR (see `sgx_gdb.h`).
  */
-#define SHARED_ADDR_MIN 0x400000000000ULL /* 128TB */
+#define SHARED_ADDR_MIN 0x400000000000ULL /* 64TB */
 #define SHARED_MEM_SIZE 0x10000000000ULL  /* 1TB */

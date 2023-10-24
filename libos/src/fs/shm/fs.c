@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Corporation
+/* Copyright (C) 2023 Intel Corporation
  *                    Li Xun <xun.li@intel.com>
- *                    Paweł Marczewski <pawel@invisiblethingslab.com>
  */
 
 /*
@@ -77,7 +76,6 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
     uri = NULL;
 
     hdl->type = TYPE_SHM;
-    hdl->pos = 0;
     hdl->pal_handle = palhdl;
     ret = 0;
 
@@ -169,10 +167,8 @@ struct libos_fs_ops shm_fs_ops = {
     .mount      = shm_mount,
     /* .read and .write are intentionally not supported according to POSIX shared memory API. */
     .mmap       = shm_mmap,
-    .seek       = generic_inode_seek,
     .hstat      = generic_inode_hstat,
     .truncate   = generic_truncate,
-    .poll       = generic_inode_poll,
 };
 
 struct libos_d_ops shm_d_ops = {

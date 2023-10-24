@@ -28,6 +28,7 @@ static void write_shm(void) {
     memcpy(addr, g_shared_text, sizeof(g_shared_text));
 
     CHECK(munmap(addr, FILE_SIZE));
+    CHECK(close(fd));
 }
 
 static void read_shm(void) {
@@ -42,6 +43,7 @@ static void read_shm(void) {
         errx(1, "memcmp failed");
     }
     CHECK(munmap(addr, FILE_SIZE));
+    CHECK(close(fd));
     CHECK(shm_unlink(SHMNAME));
 }
 

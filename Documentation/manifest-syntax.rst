@@ -424,8 +424,8 @@ Gramine currently supports the following types of mount points:
 * ``encrypted``: Host-backed encrypted files. See :ref:`encrypted-files` for
   more information.
 
-* ``untrusted_shm``: Untrusted shared memory files. See :ref:`untrusted-shared-memory`
-  for more information.
+* ``untrusted_shm``: Untrusted shared memory files. See
+  :ref:`untrusted-shared-memory` for more information.
 
 * ``tmpfs``: Temporary in-memory-only files. These files are *not* backed by
   host-level files. The tmpfs files are created under ``[PATH]`` (this path is
