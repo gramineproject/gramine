@@ -20,10 +20,10 @@
 /*
  * Read/write in 64KB chunks in the sendfile() syscall. This syscall also has an optimization of
  * using a statically allocated buffer instead of allocating on the heap (as our internal malloc()
- * has a heavy mutex that guards all memory-allocation operations). To prevent data races of
- * multiple threads executing sendfile() at the same time and thus potentially corrupting a single
- * static buffer, we optimize for a common case: only the first thread uses the static buffer
- * whereas other threads fall back to a slower heap allocation.
+ * has subpar performance). To prevent data races of multiple threads executing sendfile() at the
+ * same time and thus potentially corrupting a single static buffer, we optimize for a common case:
+ * only the first thread uses the static buffer whereas other threads fall back to a slower heap
+ * allocation.
  */
 #define BUF_SIZE (64 * 1024)
 static char g_sendfile_buf[BUF_SIZE];
@@ -453,9 +453,9 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
      *        input FD in BUF_SIZE chunks and writes into output FD. Mmap-based emulation may be
      *        more efficient but adds complexity (not all handle types provide mmap callback). */
 
-    bool buf_in_use = false;
-    if (__atomic_compare_exchange_n(&g_sendfile_buf_in_use, &buf_in_use, /*desired=*/true,
-                                    /*weak=*/true, __ATOMIC_RELEASE, __ATOMIC_ACQUIRE)) {
+    bool buf_in_use = __atomic_exchange_n(&g_sendfile_buf_in_use, true, __ATOMIC_ACQUIRE);
+    if (!buf_in_use) {
+        /* no other thread was using the static buffer */
         buf = g_sendfile_buf;
     } else {
         buf = malloc(BUF_SIZE);
