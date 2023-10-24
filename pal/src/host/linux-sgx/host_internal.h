@@ -15,6 +15,7 @@
 
 extern const size_t g_page_size;
 extern pid_t g_host_pid;
+extern bool g_vtune_profile_enabled;
 
 #undef IS_ALLOC_ALIGNED
 #undef IS_ALLOC_ALIGNED_PTR

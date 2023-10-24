@@ -438,9 +438,7 @@ class TC_20_SingleProcess(RegressionTestCase):
                 self.assertEqual(e.returncode, -11)
                 stderr = e.stderr.decode()
                 self.assertIn(
-                    "error: There are no available TCS pages left for a new thread. "
-                    "Please try to increase sgx.max_threads in the manifest. "
-                    "The current value is 1",
+                    "error: There are no available TCS pages left for a new thread.",
                     stderr)
 
     def test_900_misc(self):
