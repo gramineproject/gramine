@@ -28,8 +28,6 @@
 
 #define DEFAULT_BACKLOG 2048
 
-extern bool g_vtune_profile_enabled;
-
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
 static long sgx_ocall_exit(void* args) {

@@ -81,6 +81,10 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 # that SGX v1 requires to specify the maximum number of simultaneous threads at
 # enclave creation time.
 #
+# Note that when EDMM is enabled, there is no need to specify a particular
+# number of threads, as Gramine will automatically adjust to the application
+# demands.
+#
 # Note that internally Gramine may spawn two additional threads, one for IPC
 # and one for asynchronous events/alarms. Redis is technically single-threaded
 # but spawns couple additional threads to do background bookkeeping. Therefore,

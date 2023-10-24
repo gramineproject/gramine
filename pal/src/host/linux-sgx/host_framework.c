@@ -469,7 +469,7 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
     }
 
     if (type == SGX_PAGE_TYPE_TCS) {
-        /* TCS pages must have RW protections (other pages were reserved with RWX) */
+        /* TCS pages must have RW protection (other pages were reserved with RWX) */
         ret = DO_SYSCALL(mprotect, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE);
         if (ret < 0) {
             log_error("Changing protections of TCS pages failed: %s", unix_strerror(ret));

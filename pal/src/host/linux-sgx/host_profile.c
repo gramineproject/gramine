@@ -30,8 +30,6 @@
 #include "ittnotify.h" // for __itt_module_load(...) which is defined as a macro
 #endif
 
-extern bool g_vtune_profile_enabled;
-
 // FIXME: this is glibc realpath, declared here because the headers will conflict with PAL
 char* realpath(const char* path, char* resolved_path);
 

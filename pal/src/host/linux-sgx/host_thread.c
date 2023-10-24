@@ -28,11 +28,9 @@ static size_t g_enclave_thread_num = 0;
 static size_t g_enclave_thread_map_size_in_bytes = 0;
 
 bool g_sgx_enable_stats = false;
-extern bool g_vtune_profile_enabled;
 
-    /* this function is called only on thread/process exit (never in the middle of thread exec) */
-    void
-    update_and_print_stats(bool process_wide) {
+/* this function is called only on thread/process exit (never in the middle of thread exec) */
+void update_and_print_stats(bool process_wide) {
     static atomic_ulong g_eenter_cnt       = 0;
     static atomic_ulong g_eexit_cnt        = 0;
     static atomic_ulong g_aex_cnt          = 0;
