@@ -1,0 +1,65 @@
+#!/usr/bin/python3 -O
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2023 Intel Corporation
+#                    Wojtek Porczyk <woju@invisiblethingslab.com>
+
+
+import functools
+import sys
+
+import click
+
+from graminelibos import ratls_client
+
+# TODO after python >= 3.9 (deprecate Ubuntu 20.04 and RHEL8) remove this
+if sys.version_info >= (3, 9):
+    str_removeprefix = str.removeprefix
+else:
+    def str_removeprefix(s, prefix):
+        return s[len(prefix):] if s.startswith(prefix) else s
+
+
+def _validate_define(_ctx, _param, values):
+    ret = {}
+    for value in values:
+        try:
+            k, v = value.split('=', 1)
+        except ValueError:
+            k, v = value, True
+        ret[str_removeprefix(k.lower(), 'ra_tls_')] = v
+    return ret
+
+# TODO entrypoints
+_verify_cb = {
+    'dcap': ratls_client.verify_dcap,
+    'epid': ratls_client.verify_epid,
+    'maa':  ratls_client.verify_maa,
+}
+
+@click.command()
+@click.option('--request', '-X', 'method', metavar='METHOD', default='GET',
+    help='use another request HTTP method (instead of GET, the default)')
+@click.option('--verify',
+    type=click.Choice(tuple(_verify_cb), case_sensitive=False),
+    default='dcap',
+    help='load RA-TLS library for this method')
+@click.option('--define', '-D', '--env', multiple=True, callback=_validate_define,
+    help='set environment variable (to configure RA-TLS library)')
+@click.option('--output', '-o', metavar='PATH', type=click.File('wb'), default='-',
+    help='output to a file (by default or on "-" writes to standard output)')
+@click.argument('url')
+@click.pass_context
+def main(ctx, method, url, verify, define, output):
+    verify_cb = functools.partial(_verify_cb[verify], **define)
+    try:
+        resp = ratls_client.request(method, url, verify_cb=verify_cb)
+    except ratls_client.AttestationError:
+        ctx.fail('attestation failed')
+    except TypeError:
+        ctx.fail('problem with -D arguments')
+
+    for chunk in iter(functools.partial(resp.read, 4096), b''):
+        output.write(chunk)
+
+if __name__ == '__main__':
+    main()

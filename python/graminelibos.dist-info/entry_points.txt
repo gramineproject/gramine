@@ -1,2 +1,6 @@
 [gramine.sgx_sign]
 file = graminelibos.sgx_sign:sign_with_file
+
+[gramine.ratls_verify]
+dcap = graminelibos.ratls_client.verify_dcap
+epid = graminelibos.ratls_client.verify_epid
