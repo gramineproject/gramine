@@ -92,8 +92,8 @@ def add_globals_misc(env):
 
 def make_env():
 
-    #Jinja's autoescape feature escapes HTML sequences but we're rendering TOML, hence making
-    # autoescape as false here
+    #Jinja's autoescape feature escapes HTML sequences but we're rendering TOML, hence explicitly
+    # setting autoescape to False
     env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True,
                              autoescape = False)
     add_globals_from_gramine(env)
