@@ -376,7 +376,7 @@ out:
 
 long libos_syscall_select(int nfds, struct linux_fd_set* read_set, struct linux_fd_set* write_set,
                           struct linux_fd_set* except_set, struct __kernel_timeval* tv) {
-    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
 
     /* Each of `read_set`, `write_set` and `except_set` is an array of linux_fd_set items; each
@@ -427,7 +427,7 @@ struct sigset_argpack {
 long libos_syscall_pselect6(int nfds, struct linux_fd_set* read_set, struct linux_fd_set* write_set,
                             struct linux_fd_set* except_set, struct __kernel_timespec* tsp,
                             void* _sigmask_argpack) {
-    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE) || nfds > INT_MAX)
+    if (nfds < 0 || (uint64_t)nfds > get_rlimit_cur(RLIMIT_NOFILE))
         return -EINVAL;
 
     /* for explanation on calculations below, see libos_syscall_select() */

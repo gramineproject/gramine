@@ -91,7 +91,11 @@ def add_globals_misc(env):
     env.globals['ldd'] = ldd
 
 def make_env():
-    env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True)
+
+    #Jinja's autoescape feature escapes HTML sequences but we're rendering TOML, hence making
+    # autoescape as false here
+    env = jinja2.Environment(undefined=jinja2.StrictUndefined, keep_trailing_newline=True,
+                             autoescape = False)
     add_globals_from_gramine(env)
     add_globals_from_python(env)
     add_globals_misc(env)

@@ -232,8 +232,8 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
                     goto out;
                 }
 
-                file_mht_node = data_node->parent;
 #ifdef DEBUG
+                file_mht_node = data_node->parent;
                 // this loop should do nothing, add it here just to be safe
                 while (file_mht_node->node_number != 0) {
                     assert(file_mht_node->need_writing == true);
