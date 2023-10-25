@@ -74,11 +74,11 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
          * (Otherwise, if it would unmap some shared memory, then there would be a hole in this
          * region and unrelated allocations could land here.)
          */
-        if ((uintptr_t)addr + size < (uintptr_t)g_pal_public_state.shared_address_start ||
-            addr > g_pal_public_state.shared_address_end) {
+        if ((uintptr_t)addr + size <= (uintptr_t)g_pal_public_state.shared_address_start
+                || addr >= g_pal_public_state.shared_address_end) {
             ocall_munmap_untrusted(addr, size);
-        } else if (!(addr >= g_pal_public_state.shared_address_start &&
-                     (uintptr_t)addr + size <= (uintptr_t)g_pal_public_state.shared_address_end)) {
+        } else if ((uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end
+                       || addr < g_pal_public_state.shared_address_start) {
             BUG();
         }
     } else {
