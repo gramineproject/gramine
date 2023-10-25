@@ -30,12 +30,12 @@ extern endianness_t g_endianness;
 #define DBG(fmt, ...)                                 \
     do {                                              \
         if (g_verbose)                                \
-            dprintf(g_stdout_fd, fmt, ##__VA_ARGS__); \
+            dprintf(g_stderr_fd, fmt, ##__VA_ARGS__); \
     } while (0)
 
 #define INFO(fmt, ...)                            \
     do {                                          \
-        dprintf(g_stdout_fd, fmt, ##__VA_ARGS__); \
+        dprintf(g_stderr_fd, fmt, ##__VA_ARGS__); \
     } while (0)
 
 #define ERROR(fmt, ...)                                                \

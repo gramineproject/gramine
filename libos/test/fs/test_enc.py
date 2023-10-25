@@ -67,8 +67,8 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         # test random key generation
         key_path = os.path.join(self.TEST_DIR, 'tmpkey')
         args = ['gen-key', '-w', key_path]
-        stdout, _ = self.__pf_crypt(args)
-        self.assertIn('Wrap key saved to: ' + key_path, stdout)
+        _, stderr = self.__pf_crypt(args)
+        self.assertIn('Wrap key saved to: ' + key_path, stderr)
         self.assertEqual(os.path.getsize(key_path), 16)
         os.remove(key_path)
 
