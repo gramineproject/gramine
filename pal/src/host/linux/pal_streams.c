@@ -206,10 +206,6 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     message_hdr.msg_iovlen = 1;
 
     ret = DO_SYSCALL(sendmsg, fd, &message_hdr, 0);
-    if (ret < 0) {
-        free(hdl_data);
-        return unix_to_pal_error(ret);
-    }
 
     free(hdl_data);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
