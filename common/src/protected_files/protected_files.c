@@ -203,7 +203,6 @@ static void ipf_init_root_mht(file_node_t* mht) {
 static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     bool ret = false;
     file_node_t** mht_array = NULL;
-    file_node_t* file_mht_node;
     pf_status_t status;
     void* data = lruc_get_first(pf->cache);
 
@@ -233,7 +232,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
                 }
 
 #ifdef DEBUG
-                file_mht_node = data_node->parent;
+                file_node_t* file_mht_node = data_node->parent;
                 // this loop should do nothing, add it here just to be safe
                 while (file_mht_node->node_number != 0) {
                     assert(file_mht_node->need_writing == true);
@@ -266,6 +265,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
     data = lruc_get_first(pf->cache);
     uint64_t dirty_idx = 0;
+    file_node_t* file_mht_node;
     while (data != NULL) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
             file_mht_node = (file_node_t*)data;
