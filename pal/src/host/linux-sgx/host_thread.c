@@ -142,7 +142,7 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
         /* Current map is full. */
         if (g_enclave_thread_num >= MAX_DBG_THREADS) {
             log_error("Number of simultaneous enclave threads exceeds %u, not supported",
-                      UINT32_MAX);
+                      MAX_DBG_THREADS);
             ret = -EOVERFLOW;
             goto out;
         }

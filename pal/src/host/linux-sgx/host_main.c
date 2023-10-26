@@ -1029,8 +1029,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* initialize TCB at the top of the alternative stack */
     PAL_HOST_TCB* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_HOST_TCB);
-    pal_host_tcb_init(tcb, /*tcs=*/NULL, /*stack=*/NULL,
-                      alt_stack); /* main thread uses the stack provided by Linux */
+    /* main thread uses the stack provided by Linux and doesn't provide dynamic TCS */
+    pal_host_tcb_init(tcb, /*tcs=*/NULL, /*stack=*/NULL, alt_stack);
     ret = pal_thread_init(tcb);
     if (ret < 0)
         return ret;
