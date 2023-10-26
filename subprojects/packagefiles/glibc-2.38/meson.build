@@ -73,6 +73,29 @@ glibc = custom_target('glibc',
         'glibc-2.38/configure',
         'gramine-syscall.patch',
         'hp-timing.patch',
+        # backporting the fix for CVE-2023-4527; drop when we update to glibc 2.39;
+        # see the following:
+        #  - https://nvd.nist.gov/vuln/detail/CVE-2023-4527
+        #  - https://sourceware.org/bugzilla/show_bug.cgi?id=30842
+        #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=b25508dd774b617f99419bdc3cf2ace4560cd2d6
+        'fix-CVE-2023-4527.patch',
+        # backporting the fix for CVE-2023-4806; drop when we update to glibc 2.39;
+        # see the following:
+        #  - https://nvd.nist.gov/vuln/detail/CVE-2023-4806
+        #  - https://sourceware.org/bugzilla/show_bug.cgi?id=30843
+        #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=00ae4f10b504bc4564e9f22f00907093f1ab9338
+        'fix-CVE-2023-4806.patch',
+        # backporting the fix for CVE-2023-4911; drop when we update to glibc 2.39;
+        # see the following:
+        #  - https://nvd.nist.gov/vuln/detail/CVE-2023-4911
+        #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=750a45a783906a19591fb8ff6b7841470f1f5701
+        'fix-CVE-2023-4911.patch',
+        # backporting the fix for CVE-2023-5156; drop when we update to glibc 2.39;
+        # see the following:
+        #  - https://nvd.nist.gov/vuln/detail/CVE-2023-5156
+        #  - https://sourceware.org/bugzilla/show_bug.cgi?id=30884
+        #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=5ee59ca371b99984232d7584fe2b1a758b4421d3
+        'fix-CVE-2023-5156.patch',
     ],
 
     output: glibc_output,
