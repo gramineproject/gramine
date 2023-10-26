@@ -265,10 +265,9 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
     data = lruc_get_first(pf->cache);
     uint64_t dirty_idx = 0;
-    file_node_t* file_mht_node;
     while (data != NULL) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
-            file_mht_node = (file_node_t*)data;
+            file_node_t* file_mht_node = (file_node_t*)data;
 
             if (file_mht_node->need_writing)
                 mht_array[dirty_idx++] = file_mht_node;
@@ -282,7 +281,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
     // update the gmacs in the parents from last node to first (bottom layers first)
     for (dirty_idx = dirty_count; dirty_idx > 0; dirty_idx--) {
-        file_mht_node = mht_array[dirty_idx - 1];
+        file_node_t* file_mht_node = mht_array[dirty_idx - 1];
 
         gcm_crypto_data_t* gcm_crypto_data =
             &file_mht_node->parent->decrypted.mht
