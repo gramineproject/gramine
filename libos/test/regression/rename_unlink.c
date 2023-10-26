@@ -103,6 +103,21 @@ static void create_file_and_close(const char* path, const char* str, size_t len)
         err(1, "close %s", path);
 }
 
+static void test_rename_same_file(const char* path) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path, message1, message1_len);
+
+    if (rename(path, path) == -1)
+        err(1, "rename");
+
+    if (close(fd) == -1)
+        err(1, "close %s", path);
+
+    if (unlink(path) == -1)
+        err(1, "unlink %s", path);
+}
+
 static void test_simple_rename(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
@@ -253,6 +268,7 @@ int main(int argc, char* argv[]) {
     const char* path1 = argv[1];
     const char* path2 = argv[2];
 
+    test_rename_same_file(path1);
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
     test_rename_open_file(path1, path2);
