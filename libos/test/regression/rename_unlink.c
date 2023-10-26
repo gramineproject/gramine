@@ -52,7 +52,7 @@ static void check_statbuf(const char* desc, struct stat* statbuf, size_t size) {
 static void should_exist(const char* path, size_t size) {
     struct stat statbuf;
 
-    if (stat(path, &statbuf) == -1)
+    if (stat(path, &statbuf) != 0)
         err(1, "stat %s", path);
 
     check_statbuf(path, &statbuf, size);
@@ -64,11 +64,11 @@ static void should_contain(const char* desc, int fd, const char* str, size_t len
         err(1, "malloc");
 
     struct stat statbuf;
-    if (fstat(fd, &statbuf) == -1)
+    if (fstat(fd, &statbuf) != 0)
         err(1, "%s: fstat", desc);
     check_statbuf(desc, &statbuf, len);
 
-    if (lseek(fd, 0, SEEK_SET) == -1)
+    if (lseek(fd, 0, SEEK_SET) != 0)
         err(1, "%s: lseek", desc);
 
     ssize_t n = posix_fd_read(fd, buffer, len);
@@ -85,7 +85,7 @@ static void should_contain(const char* desc, int fd, const char* str, size_t len
 
 static int create_file(const char* path, const char* str, size_t len) {
     int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0600);
-    if (fd == -1)
+    if (fd < 0)
         err(1, "open %s", path);
 
     ssize_t n = posix_fd_write(fd, str, len);
@@ -99,8 +99,23 @@ static int create_file(const char* path, const char* str, size_t len) {
 
 static void create_file_and_close(const char* path, const char* str, size_t len) {
     int fd = create_file(path, str, len);
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close %s", path);
+}
+
+static void test_rename_same_file(const char* path) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path, message1, message1_len);
+
+    if (rename(path, path) != 0)
+        err(1, "rename");
+
+    if (close(fd) != 0)
+        err(1, "close %s", path);
+
+    if (unlink(path) != 0)
+        err(1, "unlink %s", path);
 }
 
 static void test_simple_rename(const char* path1, const char* path2) {
@@ -108,22 +123,22 @@ static void test_simple_rename(const char* path1, const char* path2) {
 
     create_file_and_close(path1, message1, message1_len);
 
-    if (rename(path1, path2) == -1)
+    if (rename(path1, path2) != 0)
         err(1, "rename");
 
     should_not_exist(path1);
     should_exist(path2, message1_len);
 
     int fd = open(path2, O_RDONLY, 0);
-    if (fd == -1)
+    if (fd < 0)
         err(1, "open %s", path2);
 
     should_contain("file opened after it's renamed", fd, message1, message1_len);
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close %s", path2);
 
-    if (unlink(path2) == -1)
+    if (unlink(path2) != 0)
         err(1, "unlink %s", path2);
 }
 
@@ -134,10 +149,10 @@ static void test_rename_replace(const char* path1, const char* path2) {
 
     int fd = create_file(path2, message2, message2_len);
 
-    if (fd == -1)
+    if (fd < 0)
         err(1, "open %s", path2);
 
-    if (rename(path1, path2) == -1)
+    if (rename(path1, path2) != 0)
         err(1, "rename");
 
     should_not_exist(path1);
@@ -146,19 +161,19 @@ static void test_rename_replace(const char* path1, const char* path2) {
     /* We expect `fd` to still point to old data, even though we replaced the file under its path */
     should_contain("file opened before it's replaced", fd, message2, message2_len);
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close %s", path2);
 
     fd = open(path2, O_RDONLY, 0);
-    if (fd == -1)
+    if (fd < 0)
         err(1, "open %s", path2);
 
     should_contain("file opened after it's replaced", fd, message1, message1_len);
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close %s", path2);
 
-    if (unlink(path2) == -1)
+    if (unlink(path2) != 0)
         err(1, "unlink %s", path2);
 }
 
@@ -167,15 +182,15 @@ static void test_rename_open_file(const char* path1, const char* path2) {
 
     int fd = create_file(path1, message1, message1_len);
 
-    if (rename(path1, path2) == -1)
+    if (rename(path1, path2) != 0)
         err(1, "rename");
 
     should_contain("file opened before it's renamed", fd, message1, message1_len);
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close %s", path2);
 
-    if (unlink(path2) == -1)
+    if (unlink(path2) != 0)
         err(1, "unlink %s", path2);
 }
 
@@ -184,7 +199,7 @@ static void test_unlink_and_recreate(const char* path) {
 
     int fd1 = create_file(path, message1, message1_len);
 
-    if (unlink(path) == -1)
+    if (unlink(path) != 0)
         err(1, "unlink");
 
     should_not_exist(path);
@@ -195,11 +210,11 @@ static void test_unlink_and_recreate(const char* path) {
     should_contain("file opened before deleting", fd1, message1, message1_len);
     should_contain("file opened after the old one is deleted", fd2, message2, message2_len);
 
-    if (close(fd1) == -1)
+    if (close(fd1) != 0)
         err(1, "close old %s", path);
-    if (close(fd2) == -1)
+    if (close(fd2) != 0)
         err(1, "close new %s", path);
-    if (unlink(path) == -1)
+    if (unlink(path) != 0)
         err(1, "unlink %s", path);
 }
 
@@ -208,7 +223,7 @@ static void test_unlink_and_write(const char* path) {
 
     int fd = create_file(path, /*message=*/NULL, /*len=*/0);
 
-    if (unlink(path) == -1)
+    if (unlink(path) != 0)
         err(1, "unlink");
 
     should_not_exist(path);
@@ -222,7 +237,7 @@ static void test_unlink_and_write(const char* path) {
     should_contain("unlinked file", fd, message1, message1_len);
     should_not_exist(path);
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close unlinked %s", path);
 }
 
@@ -231,15 +246,15 @@ static void test_unlink_fchmod(const char* path) {
 
     int fd = create_file(path, /*message=*/NULL, /*len=*/0);
 
-    if (unlink(path) == -1)
+    if (unlink(path) != 0)
         err(1, "unlink");
 
     should_not_exist(path);
 
-    if (fchmod(fd, (mode_t)0644) == -1)
+    if (fchmod(fd, (mode_t)0644) != 0)
         err(1, "fchmod");
 
-    if (close(fd) == -1)
+    if (close(fd) != 0)
         err(1, "close unlinked %s", path);
 }
 
@@ -253,6 +268,7 @@ int main(int argc, char* argv[]) {
     const char* path1 = argv[1];
     const char* path2 = argv[2];
 
+    test_rename_same_file(path1);
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
     test_rename_open_file(path1, path2);

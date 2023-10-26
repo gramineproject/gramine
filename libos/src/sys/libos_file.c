@@ -377,6 +377,10 @@ long libos_syscall_renameat(int olddirfd, const char* oldpath, int newdirfd, con
 
     lock(&g_dcache_lock);
 
+    if (strcmp(oldpath, newpath) == 0) {
+        goto out;
+    }
+
     if (*oldpath != '/' && (ret = get_dirfd_dentry(olddirfd, &old_dir_dent)) < 0) {
         goto out;
     }
