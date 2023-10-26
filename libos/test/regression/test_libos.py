@@ -1248,6 +1248,8 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn("TEST OK", stdout)
 
     def test_070_shm(self):
+        if os.path.exists('/dev/shm/shm_test'):
+            os.remove('/dev/shm/shm_test')
         stdout, _ = self.run_binary(['shm'])
         self.assertIn("TEST OK", stdout)
 

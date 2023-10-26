@@ -70,7 +70,7 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
         /*
          * Possible to have untrusted mapping, simply unmap memory outside the enclave. But only
          * unmap if this is not a shared-untrusted-memory region, as this whole region was mmapped
-         * at startup with `MAP_NORESERVE` to prevent random allocations landing in there.
+         * at startup with `MAP_FIXED_NOREPLACE` to prevent random allocations landing in there.
          * (Otherwise, if it would unmap some shared memory, then there would be a hole in this
          * region and unrelated allocations could land here.)
          */

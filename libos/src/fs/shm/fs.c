@@ -54,6 +54,7 @@ static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot,
 /* Open a PAL handle, and associate it with a LibOS handle. */
 static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode_t type,
                        int flags, mode_t perm) {
+    assert(hdl);
     assert(locked(&g_dcache_lock));
 
     char* uri;
@@ -126,6 +127,8 @@ static int shm_lookup(struct libos_dentry* dent) {
         case PAL_TYPE_DIR:
             /* Subdirectories (e.g. /dev/shm/subdir/) are not allowed in shm file system. */
             if (dent != dent->mount->root) {
+                log_warning("trying to access '%s' which is a subdirectory of shared memory mount",
+                            uri);
                 ret = -EACCES;
                 goto out;
             }
