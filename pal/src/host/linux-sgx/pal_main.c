@@ -38,6 +38,12 @@ PAL_SESSION_KEY g_master_key = {0};
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
+static struct invalid_dns_host_conf {
+    char* dn_search[PAL_MAX_DN_SEARCH];
+    size_t dn_search_count;
+    char* hostname;
+} g_invalid_dns_host_conf = { 0 };
+
 static bool verify_and_init_rpc_queue(void* untrusted_rpc_queue) {
     if (!untrusted_rpc_queue) {
         /* user app didn't request RPC queue (i.e., the app didn't request exitless syscalls) */
@@ -367,7 +373,9 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
     for (size_t i = 0; i < untrusted_dns.dn_search_count; i++) {
         untrusted_dns.dn_search[i][PAL_HOSTNAME_MAX - 1] = 0x00;
         if (!is_hostname_valid(untrusted_dns.dn_search[i])) {
-            log_warning("The search domain name %s is invalid, skipping it", untrusted_dns.dn_search[i]);
+            g_invalid_dns_host_conf.dn_search[g_invalid_dns_host_conf.dn_search_count] =
+                strdup(untrusted_dns.dn_search[i]);
+            g_invalid_dns_host_conf.dn_search_count++;
             continue;
         }
 
@@ -388,8 +396,7 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
 
     untrusted_dns.hostname[sizeof(untrusted_dns.hostname) - 1] = 0x00;
     if (!is_hostname_valid(untrusted_dns.hostname)) {
-        log_warning("The hostname on the host seems to be invalid. "
-                    "The Gramine hostname will be set to \"localhost\".");
+        g_invalid_dns_host_conf.hostname = strdup(untrusted_dns.hostname);
     } else {
         memcpy(pub_dns->hostname, untrusted_dns.hostname, sizeof(pub_dns->hostname));
     }
@@ -547,6 +554,21 @@ static void print_warning_on_invariant_tsc(PAL_HANDLE parent_process) {
     }
 }
 
+static void print_warnings_on_invalid_dns_host_conf(PAL_HANDLE parent_process) {
+    if (!parent_process) {
+        /* Warn only in the first process. */
+        for (size_t i = 0; i < g_invalid_dns_host_conf.dn_search_count; i++) {
+            log_warning("The search domain name %s is invalid, skipping it.",
+                        g_invalid_dns_host_conf.dn_search[i]);
+        }
+        if (g_invalid_dns_host_conf.hostname != NULL) {
+            log_warning("The hostname on the host \"%s\" seems to be invalid. "
+                        "The Gramine hostname will be set to \"localhost\".",
+                        g_invalid_dns_host_conf.hostname);
+        }
+    }
+}
+
 static void post_callback(void) {
     if (print_warnings_on_insecure_configs(g_pal_common_state.parent_process) < 0) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
@@ -554,6 +576,8 @@ static void post_callback(void) {
     }
 
     print_warning_on_invariant_tsc(g_pal_common_state.parent_process);
+
+    print_warnings_on_invalid_dns_host_conf(g_pal_common_state.parent_process);
 }
 
 __attribute_no_sanitize_address
