@@ -715,9 +715,9 @@ slots). The application cannot have more threads than this limit *at a time*
 (however, it is possible to create new threads after old threads are destroyed).
 
 If :term:`EDMM` is enabled (``sgx.edmm_enable = true``), then this syntax
-specifies the number of pre-allocated thread slots. However, the maximum number
-of threads can exceed this limit during enclave execution, by dynamically
-allocating new thread slots.
+specifies the number of pre-allocated thread slots (must be at least ``1``).
+However, the maximum number of threads can exceed this limit during enclave
+execution, by dynamically allocating new thread slots.
 
 Note that Gramine uses several helper threads internally:
 
