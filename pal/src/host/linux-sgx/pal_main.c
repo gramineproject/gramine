@@ -558,9 +558,8 @@ static void print_warnings_on_invalid_dns_host_conf(PAL_HANDLE parent_process) {
                         g_invalid_dns_host_conf.dn_search[i]);
         }
         if (g_invalid_dns_host_conf.hostname != NULL) {
-            log_warning("The hostname on the host: %s seems to be invalid. "
-                        "The Gramine hostname will be set to \"localhost\".",
-                        g_invalid_dns_host_conf.hostname);
+            log_warning("The hostname on the host seems to be invalid. "
+                        "The Gramine hostname will be set to \"localhost\".");
         }
     }
 }
