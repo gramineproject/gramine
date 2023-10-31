@@ -3,6 +3,7 @@ foreach script : [
     'gen-pal-map.py',
     'get-python-platlib.py',
     'meson-clang-format.sh',
+    'meson-render-script.py',
 ]
     set_variable('@0@_prog'.format(script.split('.')[0].underscorify()),
         find_program(script))
