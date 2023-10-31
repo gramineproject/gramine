@@ -27,6 +27,8 @@
 #include "perm.h"
 #include "util.h"
 
+#define TEMP_FILE_NAME "/tmp/gramine-pf-crypt-XXXXXX"
+
 /* High-level protected files helper functions. */
 
 /* PF callbacks usable in a standard Linux environment.
@@ -268,6 +270,7 @@ out:
 int pf_encrypt_file(const char* input_path, const char* output_path, const pf_key_t* wrap_key) {
     int ret = -1;
     int input = -1;
+    int temp = -1;
     int output = -1;
     pf_context_t* pf = NULL;
     char* norm_output_path = NULL;
@@ -297,23 +300,23 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
         goto out;
     }
 
-    output = open(norm_output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
-    if (output < 0) {
-        ERROR("Failed to create output file '%s': %s\n", norm_output_path, strerror(errno));
+    char temp_file_name[32] = TEMP_FILE_NAME; /* required by mkstemp(), see its man page */
+    temp = mkstemp(temp_file_name);
+    if (temp < 0) {
+        ERROR("Failed to open temporary file: %s\n", strerror(errno));
+        goto out;
+    }
+
+    /* immediately unlink so that when temp is closed, the temporary file is deleted */
+    int unlink_ret = unlink(temp_file_name);
+    if (unlink_ret < 0) {
+        ERROR("Failed to remove temporary file: %s\n", strerror(errno));
         goto out;
     }
 
     INFO("Encrypting: %s -> %s\n", input_path, norm_output_path);
     INFO("            (Gramine's encrypted files must contain this exact path: \"%s\")\n",
                       norm_output_path);
-
-    pf_handle_t handle = (pf_handle_t)&output;
-    pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, PF_FILE_MODE_WRITE,
-                              /*create=*/true, wrap_key, &pf);
-    if (PF_FAILURE(pfs)) {
-        ERROR("Failed to open output PF: %s\n", pf_strerror(pfs));
-        goto out;
-    }
 
     /* Process file contents */
     uint64_t input_size = get_file_size(input);
@@ -322,8 +325,9 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
         goto out;
     }
 
+    /* First read from input file into temporary file, then write from it to the output file;
+     * this is to allow in-place file encryption (filename123 -> filename123) */
     uint64_t input_offset = 0;
-
     while (true) {
         ssize_t chunk_size = read(input, chunk, PF_NODE_SIZE);
         if (chunk_size == 0) // EOF
@@ -334,6 +338,55 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
                 continue;
 
             ERROR("Failed to read file '%s': %s\n", input_path, strerror(errno));
+            goto out;
+        }
+
+        ssize_t written = write(temp, chunk, chunk_size);
+        if (written < 0) {
+            if (errno == -EINTR)
+                continue;
+
+            ERROR("Failed to write into temporary file: %s\n", strerror(errno));
+            goto out;
+        }
+
+        input_offset += chunk_size;
+    }
+
+    close(input);
+    input = -1;
+
+    int lseek_ret = lseek(temp, 0, SEEK_SET);
+    if (lseek_ret < 0) {
+        ERROR("Failed to rewind temporary file: %s\n", strerror(errno));
+        goto out;
+    }
+
+    output = open(norm_output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
+    if (output < 0) {
+        ERROR("Failed to create output file '%s': %s\n", norm_output_path, strerror(errno));
+        goto out;
+    }
+
+    pf_handle_t handle = (pf_handle_t)&output;
+    pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, PF_FILE_MODE_WRITE,
+                              /*create=*/true, wrap_key, &pf);
+    if (PF_FAILURE(pfs)) {
+        ERROR("Failed to open output PF: %s\n", pf_strerror(pfs));
+        goto out;
+    }
+
+    input_offset = 0;
+    while (true) {
+        ssize_t chunk_size = read(temp, chunk, PF_NODE_SIZE);
+        if (chunk_size == 0) // EOF
+            break;
+
+        if (chunk_size < 0) {
+            if (errno == -EINTR)
+                continue;
+
+            ERROR("Failed to read from temporary file: %s\n", strerror(errno));
             goto out;
         }
 
@@ -360,6 +413,8 @@ out:
     free(norm_output_path);
     if (input >= 0)
         close(input);
+    if (temp >= 0)
+        close(temp);
     if (output >= 0)
         close(output);
     return ret;
@@ -370,6 +425,7 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
                     const pf_key_t* wrap_key) {
     int ret = -1;
     int input = -1;
+    int temp = -1;
     int output = -1;
     pf_context_t* pf = NULL;
     char* norm_input_path = NULL;
@@ -386,9 +442,17 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
         goto out;
     }
 
-    output = open(output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
-    if (output < 0) {
-        ERROR("Failed to create output file '%s': %s\n", output_path, strerror(errno));
+    char temp_file_name[32] = TEMP_FILE_NAME; /* required by mkstemp(), see its man page */
+    temp = mkstemp(temp_file_name);
+    if (temp < 0) {
+        ERROR("Failed to open temporary file: %s\n", strerror(errno));
+        goto out;
+    }
+
+    /* immediately unlink so that when temp is closed, the temporary file is deleted */
+    int unlink_ret = unlink(temp_file_name);
+    if (unlink_ret < 0) {
+        ERROR("Failed to remove temporary file: %s\n", strerror(errno));
         goto out;
     }
 
@@ -431,13 +495,7 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
         goto out;
     }
 
-    if (ftruncate64(output, data_size) < 0) {
-        ERROR("ftruncate64 output file '%s' failed: %s\n", output_path, strerror(errno));
-        goto out;
-    }
-
     uint64_t input_offset = 0;
-
     while (true) {
         assert(input_offset <= data_size);
         uint64_t chunk_size = MIN(data_size - input_offset, PF_NODE_SIZE);
@@ -455,8 +513,55 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
             goto out;
         }
 
-        ssize_t written = write(output, chunk, chunk_size);
+        ssize_t written = write(temp, chunk, chunk_size);
+        if (written < 0) {
+            if (errno == -EINTR)
+                continue;
 
+            ERROR("Failed to write into temporary file: %s\n", strerror(errno));
+            goto out;
+        }
+
+        input_offset += written;
+    }
+
+    pf_close(pf);
+    pf = NULL;
+    close(input);
+    input = -1;
+
+    int lseek_ret = lseek(temp, 0, SEEK_SET);
+    if (lseek_ret < 0) {
+        ERROR("Failed to rewind temporary file: %s\n", strerror(errno));
+        goto out;
+    }
+
+    output = open(output_path, O_RDWR | O_CREAT, PERM_rw_rw_r__);
+    if (output < 0) {
+        ERROR("Failed to create output file '%s': %s\n", output_path, strerror(errno));
+        goto out;
+    }
+
+    if (ftruncate64(output, data_size) < 0) {
+        ERROR("ftruncate64 output file '%s' failed: %s\n", output_path, strerror(errno));
+        goto out;
+    }
+
+    input_offset = 0;
+    while (true) {
+        ssize_t chunk_size = read(temp, chunk, PF_NODE_SIZE);
+        if (chunk_size == 0) // EOF
+            break;
+
+        if (chunk_size < 0) {
+            if (errno == -EINTR)
+                continue;
+
+            ERROR("Failed to read from temporary file: %s\n", strerror(errno));
+            goto out;
+        }
+
+        ssize_t written = write(output, chunk, chunk_size);
         if (written < 0) {
             if (errno == -EINTR)
                 continue;
@@ -477,6 +582,8 @@ out:
         pf_close(pf);
     if (input >= 0)
         close(input);
+    if (temp >= 0)
+        close(temp);
     if (output >= 0)
         close(output);
     return ret;

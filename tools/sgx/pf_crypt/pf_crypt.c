@@ -58,8 +58,13 @@ int main(int argc, char* argv[]) {
     char* mode = NULL;
     bool verify = false;
 
+    if (argc == 1) {
+        usage(argv[0]);
+        exit(1);
+    }
+
     while (true) {
-        this_option = getopt_long(argc, argv, "i:o:p:w:Vvh", g_options, NULL);
+        this_option = getopt_long(argc, argv, "i:o:w:Vvh", g_options, NULL);
         if (this_option == -1)
             break;
 
@@ -83,14 +88,14 @@ int main(int argc, char* argv[]) {
                 usage(argv[0]);
                 exit(0);
             default:
-                ERROR("Unknown option: %c\n", this_option);
-                usage(argv[0]);
+                /* note that getopt_long() already prints the error `invalid option ...` */
+                ERROR("Use '%s --help' to see possible options.\n", argv[0]);
+                goto out;
         }
     }
 
     if (optind >= argc) {
         ERROR("Mode not specified\n");
-        usage(argv[0]);
         goto out;
     }
 
