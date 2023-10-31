@@ -37,6 +37,11 @@ if [ "$PERF" == "1" ]; then
     PREFIX=(perf stat)
 fi
 
+if [ "$1" == "--version" ]; then
+    echo "Gramine @VERSION@ (@VCS_TAG@)"
+    exit 0
+fi
+
 while [ "$1" != "" ];
 do
     if [ "$APPLICATION" == "" ]; then
