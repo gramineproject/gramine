@@ -174,6 +174,25 @@ long libos_syscall_close(int fd) {
     return 0;
 }
 
+long libos_syscall_close_range(unsigned int first, unsigned int last, int flags) {
+    if (first > last || flags & ~(CLOSE_RANGE_CLOEXEC | CLOSE_RANGE_UNSHARE)) {
+        return -EINVAL;
+    }
+    if (flags & CLOSE_RANGE_UNSHARE) {
+        struct libos_thread* thread      = get_cur_thread();
+        struct libos_handle_map* new_map = NULL;
+
+        int err = dup_handle_map(&new_map, thread->handle_map);
+        if (err) {
+            return err;
+        }
+        set_handle_map(thread, new_map);
+        put_handle_map(new_map);
+    }
+    close_handle_range(first, last, !!(flags & CLOSE_RANGE_CLOEXEC));
+    return 0;
+}
+
 /* See also `do_getdents`. */
 static file_off_t do_lseek_dir(struct libos_handle* hdl, off_t offset, int origin) {
     assert(hdl->is_dir);

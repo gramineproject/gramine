@@ -308,6 +308,9 @@ class TC_00_FileSystem(RegressionTestCase):
                                          timeout=30)
         self.verify_copy(stdout, stderr, '/mounted/input', executable)
 
+    def test_300_close_range(self):
+        self.run_binary(['close_range'])
+
 
 class TC_01_Sync(RegressionTestCase):
     TEST_DIR = 'tmp'

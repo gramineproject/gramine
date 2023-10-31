@@ -11,6 +11,7 @@
 #include <asm/fcntl.h>
 #include <asm/stat.h>
 #include <asm/statfs.h>
+#include <linux/close_range.h>
 #include <linux/fadvise.h>
 #include <linux/fcntl.h>
 #include <stdint.h>
