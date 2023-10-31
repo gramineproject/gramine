@@ -1291,6 +1291,10 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['shm'])
         self.assertIn("TEST OK", stdout)
 
+    def test_080_close_range(self):
+        stdout, _ = self.run_binary(['close_range'])
+        self.assertIn('TEST OK', stdout)
+
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
         if not self.has_debug():
