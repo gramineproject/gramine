@@ -752,6 +752,33 @@ void close_cloexec_handles(struct libos_handle_map* map) {
     rwlock_write_unlock(&map->lock);
 }
 
+void close_handle_range(uint32_t first, uint32_t last, bool cloexec) {
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    rwlock_write_lock(&handle_map->lock);
+
+    for (uint32_t i = first; handle_map->fd_top != FD_NULL && i <= handle_map->fd_top && i <= last;
+         i++) {
+        struct libos_fd_handle* fd_hdl = handle_map->map[i];
+
+        if (!HANDLE_ALLOCATED(fd_hdl))
+            continue;
+
+        if (cloexec) {
+            fd_hdl->flags |= FD_CLOEXEC;
+        } else {
+            struct libos_handle* hdl = __detach_fd_handle(fd_hdl, NULL, handle_map);
+
+            rwlock_write_unlock(&handle_map->lock);
+            (void)clear_posix_locks(hdl);
+
+            put_handle(hdl);
+            rwlock_write_lock(&handle_map->lock);
+        }
+    }
+
+    rwlock_write_unlock(&handle_map->lock);
+}
+
 BEGIN_CP_FUNC(handle) {
     __UNUSED(size);
     assert(size == sizeof(struct libos_handle));

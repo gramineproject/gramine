@@ -1238,8 +1238,8 @@ The below list is generated from the [syscall table of Linux
   <sup>[1](#processes)</sup>
   <sup>[2](#threads)</sup>
 
-- ☒ `close_range()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `close_range()`
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `openat2()`
   <sup>[9a](#file-system-operations)</sup>
@@ -2130,6 +2130,7 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ▣ `open()`: implemented, with limitations
 - ▣ `openat()`: implemented, with limitations
 - ☑ `close()`
+- ☑ `close_range()`
 - ☑ `creat()`
 - ☑ `mkdir()`
 - ☑ `mkdirat()`
@@ -3116,7 +3117,7 @@ codebase of Gramine minimal.
 - Misc: `vhangup()`, `modify_ldt()`, `kexec_load()`, `kexec_file_load()`, `reboot()`, `iopl()`,
   `ioperm()`, `uselib()`, `_sysctl()`, `quotactl()`, `quotactl_fd()`, `nfsservctl()`, `getpmsg()`,
   `putpmsg()`, `afs_syscall()`, `tuxcall()`, `security()`, `lookup_dcookie()`, `restart_syscall()`,
-  `vserver()`, `io_pgetevents()`, `rseq()`, `open_tree()`, `close_range()`
+  `vserver()`, `io_pgetevents()`, `rseq()`, `open_tree()`
 
 <details><summary>Related system calls</summary>
 
