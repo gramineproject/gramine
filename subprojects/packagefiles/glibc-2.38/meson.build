@@ -76,6 +76,7 @@ glibc = custom_target('glibc',
         # backporting the fix for `posix_memalign()` perf regression; drop when we update to glibc 2.39;
         # see the following:
         #  - https://sourceware.org/bugzilla/show_bug.cgi?id=30723
+        #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=542b1105852568c3ebc712225ae78b8c8ba31a78
         #  - https://sourceware.org/git/gitweb.cgi?p=glibc.git;a=commitdiff;h=0dc7fc1cf094406a138e4d1bcf9553e59edcf89d
         'fix-bug-30723.patch',
         # backporting the fix for CVE-2023-4527; drop when we update to glibc 2.39;
