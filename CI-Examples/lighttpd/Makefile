@@ -11,8 +11,8 @@ LIGHTTPD_MIRRORS ?= \
     https://download.lighttpd.net/lighttpd/releases-1.4.x \
     https://packages.gramineproject.io/distfiles
 
-HOST ?= 10.6.0.6
-PORT ?= 8030
+HOST ?= 127.0.0.1
+PORT ?= 8003
 
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
