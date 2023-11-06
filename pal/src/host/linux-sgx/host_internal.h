@@ -124,7 +124,7 @@ void thread_exit(int status);
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
 
-int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count);
+int set_tcs_debug_flag(void* tcs_addrs[], size_t count);
 
 #ifdef DEBUG
 /* SGX profiling (sgx_profile.c) */
