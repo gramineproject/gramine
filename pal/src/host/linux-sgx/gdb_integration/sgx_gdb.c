@@ -215,13 +215,12 @@ static int update_thread_tids(struct enclave_dbginfo* ei, pid_t tid) {
     return 0;
 }
 
-static int set_tcs_debug_flag(int memdev, pid_t tid, void* ei_tcs_addrs[], unsigned long count,
+static int set_tcs_debug_flag(int memdev, pid_t tid, void* ei_tcs_addrs[], size_t count,
                               int* out_fd) {
-    char memdev_path[40];
-    uint64_t flags;
     int ret;
     bool must_close_memdev = false;
     if (memdev < 0) {
+        char memdev_path[40];
         snprintf(memdev_path, sizeof(memdev_path), "/proc/%d/mem", tid);
         memdev = open(memdev_path, O_RDWR | O_CLOEXEC);
         if (memdev < 0) {
@@ -235,6 +234,7 @@ static int set_tcs_debug_flag(int memdev, pid_t tid, void* ei_tcs_addrs[], unsig
         if (ei_tcs_addrs[i] == NULL)
             continue;
 
+        uint64_t flags;
         void* flags_addr = ei_tcs_addrs[i] + offsetof(sgx_arch_tcs_t, flags);
 
         ssize_t bytes_read = pread(memdev, &flags, sizeof(flags), (off_t)flags_addr);

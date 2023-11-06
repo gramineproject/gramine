@@ -126,8 +126,7 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
     for (i = 0; i < g_enclave_thread_num; i++) {
         if (g_enclave_thread_map[i].tcs == tcs) {
             log_error("Dynamic TCS page %p was already added to the list of enclave threads", tcs);
-            ret = -EPERM;
-            goto out;
+            BUG();
         }
         if (!g_enclave_thread_map[i].tcs) {
             g_enclave_thread_map[i].tcs = tcs;
@@ -168,8 +167,8 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
             log_error("Cannot unmap g_enclave_thread_map: %s", unix_strerror(ret));
             goto out;
         }
-        g_enclave_thread_num               = new_enclave_thread_num;
-        g_enclave_thread_map               = new_enclave_thread_map;
+        g_enclave_thread_num = new_enclave_thread_num;
+        g_enclave_thread_map = new_enclave_thread_map;
 
         g_enclave_thread_map[i].tcs = tcs;
         dbginfo->tcs_addrs[i]       = tcs;
@@ -404,7 +403,7 @@ int get_tid_from_tcs(void* tcs) {
     return tid ? tid : -EINVAL;
 }
 
-int set_tcs_debug_flag(void* tcs_addrs[], unsigned long count) {
+int set_tcs_debug_flag(void* tcs_addrs[], size_t count) {
     if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
         return 0;
 
