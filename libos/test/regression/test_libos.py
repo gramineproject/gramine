@@ -1247,6 +1247,11 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['synthetic'])
         self.assertIn("TEST OK", stdout)
 
+    def test_070_shm(self):
+        if os.path.exists('/dev/shm/shm_test'):
+            os.remove('/dev/shm/shm_test')
+        stdout, _ = self.run_binary(['shm'])
+        self.assertIn("TEST OK", stdout)
 
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
