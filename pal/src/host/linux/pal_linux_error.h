@@ -21,7 +21,6 @@ static int unix_to_pal_error_positive(int unix_errno) {
             return PAL_ERROR_BADHANDLE;
         case ETIMEDOUT:
         case EAGAIN:
-        case EINPROGRESS:
             return PAL_ERROR_TRYAGAIN;
         case ENOMEM:
             return PAL_ERROR_NOMEM;
@@ -45,6 +44,8 @@ static int unix_to_pal_error_positive(int unix_errno) {
         case ECONNRESET:
         case ECONNREFUSED:
             return PAL_ERROR_CONNFAILED;
+        case EINPROGRESS:
+            return PAL_ERROR_INPROGRESS;
         case EPIPE:
             return PAL_ERROR_CONNFAILED_PIPE;
         case EAFNOSUPPORT:

@@ -1411,6 +1411,13 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['tcp_ancillary'])
         self.assertIn('TEST OK', stdout)
 
+    def test_302_socket_tcp_einprogress(self):
+        # To really test EINPROGRESS, must emulate an unresponsive peer. This is not possible to
+        # achieve in a simple automated manner. It is recommended to run this test manually, with
+        # peer emulation as described in https://github.com/gramineproject/gramine/issues/1641.
+        stdout, _ = self.run_binary(['tcp_einprogress'])
+        self.assertIn('TEST OK', stdout)
+
     def test_310_socket_tcp_ipv6_v6only(self):
         stdout, _ = self.run_binary(['tcp_ipv6_v6only'], timeout=50)
         self.assertIn('test completed successfully', stdout)
