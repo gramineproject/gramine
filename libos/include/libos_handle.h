@@ -56,6 +56,7 @@ struct libos_pipe_handle {
 enum libos_sock_state {
     SOCK_NEW,
     SOCK_BOUND,
+    SOCK_CONNECTING,
     SOCK_CONNECTED,
     SOCK_LISTENING,
 };

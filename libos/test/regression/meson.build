@@ -141,6 +141,7 @@ tests = {
     'syscall_restart': {},
     'sysfs_common': {},
     'tcp_ancillary': {},
+    'tcp_einprogress': {},
     'tcp_ipv6_v6only': {},
     'tcp_msg_peek': {},
     'udp': {},
