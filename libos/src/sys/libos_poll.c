@@ -212,6 +212,41 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
         if (ret_events[i] & PAL_WAIT_WRITE)
             fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
 
+        if (ret_events[i] & PAL_WAIT_WRITE && libos_handles[i]->type == TYPE_SOCK) {
+            /*
+             * Special case of a non-blocking socket that is INPROGRESS (connecting): must check if
+             * error or success of connecting. If error, then set SO_ERROR (last_error). If success,
+             * then move to SOCK_CONNECTED state and clear SO_ERROR.
+             *
+             * This is only relevant if POLLOUT event was requested.
+             *
+             * We first fetch the state atomically instead of a proper lock on the handle to speed
+             * up the common case of an already-connected socket doing recv/send.
+             *
+             * See similar case in libos_epoll.c:do_epoll_wait().
+             */
+            enum libos_sock_state state = __atomic_load_n(&libos_handles[i]->info.sock.state,
+                                                          __ATOMIC_ACQUIRE);
+            if (state == SOCK_CONNECTING) {
+                struct libos_sock_handle* sock = &libos_handles[i]->info.sock;
+                lock(&sock->lock);
+                if (sock->state != SOCK_CONNECTING) {
+                    /* theoretically, another thread could be doing another select/poll on this
+                     * socket and modify the state; we don't support this unlikely case */
+                    BUG();
+                }
+                if (ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
+                    sock->last_error = ECONNREFUSED;
+                } else {
+                    sock->last_error = 0;
+                    sock->state = SOCK_CONNECTED;
+                    sock->can_be_read = true;
+                    sock->can_be_written = true;
+                }
+                unlock(&sock->lock);
+            }
+        }
+
         if (fds[i].revents)
             ret_events_count++;
     }
