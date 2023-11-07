@@ -118,8 +118,9 @@ static void do_parent(void) {
     CHECK(PalSendHandle(child_process, handle));
     PalObjectDestroy(handle);
 
+    bool connect_inprogress_unused;
     CHECK(PalSocketCreate(PAL_IPV4, PAL_SOCKET_TCP, /*options=*/0, &handle));
-    CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL));
+    CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL, &connect_inprogress_unused));
     recv_and_check(handle, PAL_TYPE_SOCKET);
     PalObjectDestroy(handle);
 
@@ -138,7 +139,7 @@ static void do_parent(void) {
     PalObjectDestroy(handle);
 
     CHECK(PalSocketCreate(PAL_IPV6, PAL_SOCKET_UDP, /*options=*/0, &handle));
-    CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL));
+    CHECK(PalSocketConnect(handle, &addr, /*local_addr=*/NULL, &connect_inprogress_unused));
     write_msg(handle, PAL_TYPE_SOCKET);
     PalObjectDestroy(handle);
 

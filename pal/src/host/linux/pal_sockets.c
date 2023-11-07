@@ -263,7 +263,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 }
 
 static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                   struct pal_socket_addr* out_local_addr) {
+                   struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
         return -PAL_ERROR_INVAL;
@@ -275,40 +275,25 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     assert(linux_addrlen <= INT_MAX);
 
     int ret = DO_SYSCALL(connect, handle->sock.fd, &sa_storage, (int)linux_addrlen);
-    if (ret < 0) {
-        /* XXX: Non blocking socket. Currently there is no way of notifying LibOS of successful or
-         * failed connection, so we have to block and wait. */
-        if (ret != -EINPROGRESS) {
-            return unix_to_pal_error(ret);
-        }
-        struct pollfd pfd = {
-            .fd = handle->sock.fd,
-            .events = POLLOUT,
-        };
-        ret = DO_SYSCALL(poll, &pfd, 1, /*timeout=*/-1);
-        if (ret != 1 || pfd.revents == 0) {
-            return ret < 0 ? unix_to_pal_error(ret) : -PAL_ERROR_INVAL;
-        }
-        int val = 0;
-        unsigned int len = sizeof(val);
-        ret = DO_SYSCALL(getsockopt, handle->sock.fd, SOL_SOCKET, SO_ERROR, &val, &len);
-        if (ret < 0 || val < 0) {
-            return ret < 0 ? unix_to_pal_error(ret) : -PAL_ERROR_INVAL;
-        }
-        if (val) {
-            return unix_to_pal_error(-val);
-        }
-        /* Connect succeeded. */
+    if (ret < 0 && ret != -EINPROGRESS) {
+        return unix_to_pal_error(ret);
     }
 
+    /* Connect succeeded or in progress (EINPROGRESS); in both cases retrieve local name -- host
+     * Linux binds the socket to address even in case of EINPROGRESS */
     if (out_local_addr) {
-        ret = do_getsockname(handle->sock.fd, &sa_storage);
-        if (ret < 0) {
+        int getsockname_ret = do_getsockname(handle->sock.fd, &sa_storage);
+        if (getsockname_ret < 0) {
             /* This should never happen, but we have to handle it somehow. */
-            return ret;
+            return getsockname_ret;
         }
         linux_to_pal_sockaddr(&sa_storage, out_local_addr);
     }
+
+    /* POSIX/Linux have an unusual semantics for EINPROGRESS: the connect operation is considered
+     * successful, but the return value is -EINPROGRESS error code. We don't want to replicate this
+     * oddness in Gramine, so we return `0` and set a special variable. */
+    *out_inprogress = (ret == -EINPROGRESS);
     return 0;
 }
 
@@ -721,11 +706,11 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
 }
 
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                      struct pal_socket_addr* out_local_addr) {
+                      struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     if (!handle->sock.ops->connect) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->connect(handle, addr, out_local_addr);
+    return handle->sock.ops->connect(handle, addr, out_local_addr, out_inprogress);
 }
 
 int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,

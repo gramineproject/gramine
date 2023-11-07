@@ -25,7 +25,7 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
 }
 
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                      struct pal_socket_addr* local_addr) {
+                      struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

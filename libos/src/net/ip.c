@@ -208,7 +208,7 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     return 0;
 }
 
-static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
+static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool* out_inprogress) {
     struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
@@ -221,9 +221,8 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
     linux_to_pal_sockaddr(addr, &pal_remote_addr);
     struct pal_socket_addr pal_local_addr;
 
-    /* XXX: this connect is always blocking (regardless of actual setting of nonblockingness on
-     * `sock->pal_handle`. See also the comment in tcp connect implementation in Linux PAL. */
-    ret = PalSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr);
+    bool inprogress;
+    ret = PalSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr, &inprogress);
     if (ret < 0) {
         return ret == -PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
     }
@@ -235,6 +234,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
         assert(!sock->was_bound);
         pal_to_linux_sockaddr(&pal_local_addr, &sock->local_addr, &sock->local_addrlen);
     }
+    *out_inprogress = inprogress;
     return 0;
 }
 
@@ -245,7 +245,9 @@ static int disconnect(struct libos_handle* handle) {
     struct pal_socket_addr pal_ip_addr = {
         .domain = PAL_DISCONNECT,
     };
-    int ret = PalSocketConnect(sock->pal_handle, &pal_ip_addr, /*local_addr=*/NULL);
+    bool inprogress_unused;
+    int ret = PalSocketConnect(sock->pal_handle, &pal_ip_addr, /*local_addr=*/NULL,
+                               &inprogress_unused);
     return pal_to_unix_errno(ret);
 }
 

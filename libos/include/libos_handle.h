@@ -56,6 +56,7 @@ struct libos_pipe_handle {
 enum libos_sock_state {
     SOCK_NEW,
     SOCK_BOUND,
+    SOCK_CONNECTING,
     SOCK_CONNECTED,
     SOCK_LISTENING,
 };
@@ -69,7 +70,7 @@ enum libos_sock_state {
  * stream reads (see the comment in `do_recvmsg` in "libos/src/sys/libos_socket.c").
  * Access to `force_nonblocking_users_count` is protected by the lock of the handle wrapping this
  * struct.
- * `pal_handle` should be accessed using atomic operations.
+ * `pal_handle` and `connecting_in_progress` should be accessed using atomic operations.
  * If you need to take both `recv_lock` and `lock`, take the former first.
  */
 struct libos_sock_handle {
@@ -98,6 +99,8 @@ struct libos_sock_handle {
     uint64_t sendtimeout_us;
     uint64_t receivetimeout_us;
     unsigned int last_error;
+    /* This field is an atomically-accessed version of the SOCK_CONNECTING state (for perf). */
+    bool connecting_in_progress;
     /* This field denotes whether the socket was ever bound. */
     bool was_bound;
     /* This field indicates if the socket is ready for read-like operations (`recv`/`read` or

@@ -28,6 +28,7 @@
 #include "libos_pollable_event.h"
 #include "libos_refcount.h"
 #include "libos_signal.h"
+#include "libos_socket.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
@@ -671,6 +672,12 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
             }
             if (pal_ret_events[i] & PAL_WAIT_WRITE) {
                 this_item_events |= items[i]->events & (EPOLLOUT | EPOLLWRNORM);
+            }
+
+            if (items[i]->handle->type == TYPE_SOCK &&
+                    (pal_ret_events[i] & (PAL_WAIT_READ | PAL_WAIT_WRITE))) {
+                bool error_event = !!(pal_ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP));
+                check_connect_inprogress_on_poll(items[i]->handle, error_event);
             }
 
             if (!this_item_events) {

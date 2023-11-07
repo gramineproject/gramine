@@ -15,7 +15,7 @@
 #include "linux_abi/errors.h"
 
 /*
- * Sockets can be in 4 states: NEW, BOUND, LISTENING and CONNECTED.
+ * Sockets can be in 5 states: NEW, BOUND, LISTENING, CONNECTING and CONNECTED.
  *
  *                                                        +------------------+
  *                                                        |                  |
@@ -24,17 +24,19 @@
  *  +--> NEW --------------------> BOUND -------------> LISTEN --------------+
  *  |     |                        |   ^                                     new socket
  *  |     |                        |   |                                     |
- *  |     |                        |   |                                     |
- *  |     |              connect() |   |   disconnect()                      |
- *  |     |                        |   | (if it was bound)                   |
- *  |     | connect()              |   |                                     |
- *  |     |                        |   |                                     |
- *  |     |                        V   |                                     |
- *  |     +---------------------> CONNECTED <--------------------------------+
- *  |                              |
- *  |          disconnect()        |
- *  |      (if it was not bound)   |
- *  +------------------------------+
+ *  |     |                        |   +------------------------+            |
+ *  |     |              connect() |           disconnect()     |            |
+ *  |     |                        |         (if it was bound)  |            |
+ *  |     | connect()              |                            |            |
+ *  |     |                        |         select()/poll()/   |            |
+ *  |     |                        V            epoll()         |            |
+ *  |     +---------------------> CONNECTING ---------------> CONNECTED <----+
+ *  |                             (only for                     |
+ *  |                        non-blocking sockets)              |
+ *  |                                                           |
+ *  |                                         disconnect()      |
+ *  |                                     (if it was not bound) |
+ *  +-----------------------------------------------------------+
  *
  */
 
@@ -82,6 +84,44 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     }
 
     return handle;
+}
+
+void check_connect_inprogress_on_poll(struct libos_handle* handle, bool error_event) {
+    /*
+     * Special case of a non-blocking socket that is INPROGRESS (connecting): must check if error or
+     * success of connecting. If error, then set SO_ERROR (last_error). If success, then move to
+     * SOCK_CONNECTED state and clear SO_ERROR. See `man 2 connect`, EINPROGRESS case.
+     *
+     * We first fetch `connecting_in_progress` instead of a proper lock on the handle to speed up
+     * the common case of an already-connected socket doing recv/send.
+     */
+    assert(handle->type == TYPE_SOCK);
+
+    bool inprog = __atomic_load_n(&handle->info.sock.connecting_in_progress, __ATOMIC_ACQUIRE);
+    if (!inprog)
+        return;
+
+    struct libos_sock_handle* sock = &handle->info.sock;
+    lock(&sock->lock);
+
+    if (sock->state != SOCK_CONNECTING) {
+        /* data race: another thread could have done another select/poll on this socket and
+         * modified the state; there's nothing left to be done */
+        goto out;
+    }
+
+    if (error_event) {
+        sock->last_error = ECONNREFUSED;
+        goto out;
+    }
+
+    sock->last_error = 0;
+    sock->can_be_read = true;
+    sock->can_be_written = true;
+    __atomic_store_n(&sock->connecting_in_progress, false, __ATOMIC_RELEASE);
+    sock->state = SOCK_CONNECTED;
+out:
+    unlock(&sock->lock);
 }
 
 long libos_syscall_socket(int family, int type, int protocol) {
@@ -212,7 +252,8 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         unlock(&sock2->lock);
         goto out;
     }
-    ret = sock2->ops->connect(handle2, &addr, sizeof(addr));
+    bool inprogress_unused;
+    ret = sock2->ops->connect(handle2, &addr, sizeof(addr), &inprogress_unused);
     if (ret < 0) {
         unlock(&sock2->lock);
         goto out;
@@ -491,11 +532,18 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     switch (sock->state) {
         case SOCK_NEW:
         case SOCK_BOUND:
+        case SOCK_CONNECTING:
         case SOCK_CONNECTED:
             break;
         default:
             ret = -EINVAL;
             goto out;
+    }
+
+    if (sock->state == SOCK_CONNECTING) {
+        assert(handle->flags & O_NONBLOCK);
+        ret = -EALREADY;
+        goto out;
     }
 
     if (sock->state == SOCK_CONNECTED) {
@@ -539,16 +587,24 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
         goto out;
     }
 
-    ret = sock->ops->connect(handle, addr, addrlen);
+    bool inprogress;
+    ret = sock->ops->connect(handle, addr, addrlen, &inprogress);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, /*was_partial=*/false);
     if (ret < 0) {
         goto out;
     }
 
-    sock->state = SOCK_CONNECTED;
-    sock->can_be_read = true;
-    sock->can_be_written = true;
-    ret = 0;
+    if (inprogress) {
+        sock->state = SOCK_CONNECTING;
+        __atomic_store_n(&sock->connecting_in_progress, true, __ATOMIC_RELEASE);
+        sock->last_error = EINPROGRESS;
+        ret = -((int)sock->last_error);
+    } else {
+        sock->state = SOCK_CONNECTED;
+        sock->can_be_read = true;
+        sock->can_be_written = true;
+        ret = 0;
+    }
 
 out:
     if (ret == -EINTR) {
@@ -636,9 +692,14 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     lock(&sock->lock);
+    if (sock->state == SOCK_CONNECTING) {
+        unlock(&sock->lock);
+        return -EAGAIN;
+    }
+
     bool has_sendtimeout_set = !!sock->sendtimeout_us;
 
-    ret = -sock->last_error;
+    ret = -((ssize_t)sock->last_error);
     sock->last_error = 0;
 
     if (!ret && !sock->can_be_written) {
@@ -800,8 +861,14 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
+    if (sock->state == SOCK_CONNECTING) {
+        unlock(&sock->lock);
+        return -EAGAIN;
+    }
+
     bool has_recvtimeout_set = !!sock->receivetimeout_us;
-    ret = -sock->last_error;
+
+    ret = -((ssize_t)sock->last_error);
     sock->last_error = 0;
     unlock(&sock->lock);
 
