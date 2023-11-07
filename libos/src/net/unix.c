@@ -213,7 +213,7 @@ static int accept(struct libos_handle* handle, bool is_nonblocking,
     return 0;
 }
 
-static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
+static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool* out_inprogress) {
     struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
@@ -260,6 +260,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen) {
     }
 
     interrupt_epolls(handle);
+    *out_inprogress = false;
     return 0;
 }
 
