@@ -189,12 +189,16 @@ int pal_thread_init(void* tcbptr) {
         return 0;
     }
 
+    __atomic_store_n(tcb->start_status_ptr, 0, __ATOMIC_RELAXED);
+
     /* not-first (child) thread, start it */
     ecall_thread_start();
 
     unmap_tcs();
     ret = 0;
 out:
+    if (ret != 0)
+        __atomic_store_n(tcb->start_status_ptr, ret, __ATOMIC_RELAXED);
     return ret;
 }
 
@@ -271,8 +275,9 @@ int clone_thread(void) {
     /* align child_stack to 16 */
     child_stack_top = ALIGN_DOWN_PTR(child_stack_top, 16);
 
-    // TODO: pal_thread_init() may fail during initialization (e.g. on TCS exhaustion), we should
-    // check its result (but this happens asynchronously, so it's not trivial to do).
+    int start_status  = 1;
+    tcb->start_status_ptr = &start_status;
+
     ret = clone(pal_thread_init, child_stack_top,
                 CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM | CLONE_THREAD | CLONE_SIGHAND,
                 tcb, /*parent_tid=*/NULL, /*tls=*/NULL, /*child_tid=*/NULL, thread_exit);
@@ -281,7 +286,11 @@ int clone_thread(void) {
         DO_SYSCALL(munmap, stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
         return ret;
     }
-    return 0;
+
+    while ((ret = __atomic_load_n(&start_status, __ATOMIC_RELAXED)) == 1)
+        CPU_RELAX();
+
+    return ret;
 }
 
 int get_tid_from_tcs(void* tcs) {
