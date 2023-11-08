@@ -21,17 +21,19 @@
  *                                                        |                  |
  *                                                        |                  |
  *               bind()                     listen()      V       accept()   old socket
- *  +--> NEW +-------------------> BOUND +------------> LISTEN +-------------+
- *  |     +                        +   ^                                     new socket
- *  |     |                        |   |                                     +
+ *  +--> NEW --------------------> BOUND -------------> LISTEN --------------+
+ *  |     |                        |   ^                                     new socket
+ *  |     |                        |   |                                     |
  *  |     |                        |   +------------------------+            |
  *  |     |              connect() |           disconnect()     |            |
  *  |     |                        |         (if it was bound)  |            |
  *  |     | connect()              |                            |            |
- *  |     |                        +         select()/poll()/   |            |
- *  |     |                        V            epoll()         +            |
- *  |     +---------------------> CONNECTING ---------------- CONNECTED <----+
- *  |                                                           +
+ *  |     |                        |         select()/poll()/   |            |
+ *  |     |                        V            epoll()         |            |
+ *  |     +---------------------> CONNECTING ---------------> CONNECTED <----+
+ *  |                             (only for                     |
+ *  |                        non-blocking sockets)              |
+ *  |                                                           |
  *  |                                         disconnect()      |
  *  |                                     (if it was not bound) |
  *  +-----------------------------------------------------------+
@@ -551,6 +553,7 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     if (ret < 0) {
         if (ret == -EINPROGRESS) {
             sock->state = SOCK_CONNECTING;
+            __atomic_store_n(&sock->connection_in_progress, true, __ATOMIC_RELEASE);
             sock->last_error = -ret;
         }
         goto out;

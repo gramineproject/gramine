@@ -1411,9 +1411,9 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['tcp_ancillary'])
         self.assertIn('TEST OK', stdout)
 
+    # Two tests for a responsive peer: first connect() returns EINPROGRESS, then poll/epoll
+    # immediately returns because the connection is quickly established
     def test_305_socket_tcp_einprogress_responsive_poll(self):
-        # Test responsive peer: first connect() returns EINPROGRESS, then poll/epoll immediately
-        # returns because the connection is quickly established
         stdout, _ = self.run_binary(['tcp_einprogress', '127.0.0.1', 'poll'])
         self.assertIn('TEST OK (connection refused after initial EINPROGRESS)', stdout)
 
@@ -1421,15 +1421,13 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['tcp_einprogress', '127.0.0.1', 'epoll'])
         self.assertIn('TEST OK (connection refused after initial EINPROGRESS)', stdout)
 
+    # Two tests for an unresponsive peer: first connect() returns EINPROGRESS, then poll/epoll
+    # times out because the connection cannot be established
     def test_307_socket_tcp_einprogress_unresponsive_poll(self):
-        # Test unresponsive peer: first connect() returns EINPROGRESS, then poll/epoll times out
-        # because the connection cannot be established
         stdout, _ = self.run_binary(['tcp_einprogress', '10.255.255.255', 'poll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
 
     def test_308_socket_tcp_einprogress_unresponsive_epoll(self):
-        # Test unresponsive peer: first connect() returns EINPROGRESS, then poll/epoll times out
-        # because the connection cannot be established
         stdout, _ = self.run_binary(['tcp_einprogress', '10.255.255.255', 'epoll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
 

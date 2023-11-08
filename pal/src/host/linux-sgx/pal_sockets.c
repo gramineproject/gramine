@@ -272,7 +272,7 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     }
 
     /* Connect succeeded or in progress (EINPROGRESS); in both cases local name of the socket was
-     * retrieved, must verify it */
+     * retrieved, must verify it. */
     if (out_local_addr) {
         int verify_ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
         if (verify_ret < 0) {

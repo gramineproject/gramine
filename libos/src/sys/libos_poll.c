@@ -220,14 +220,14 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
              *
              * This is only relevant if POLLOUT event was requested.
              *
-             * We first fetch the state atomically instead of a proper lock on the handle to speed
-             * up the common case of an already-connected socket doing recv/send.
+             * We first fetch `connection_in_progress` instead of a proper lock on the handle to
+             * speed up the common case of an already-connected socket doing recv/send.
              *
              * See similar case in libos_epoll.c:do_epoll_wait().
              */
-            enum libos_sock_state state = __atomic_load_n(&libos_handles[i]->info.sock.state,
-                                                          __ATOMIC_ACQUIRE);
-            if (state == SOCK_CONNECTING) {
+            bool inprog = __atomic_load_n(&libos_handles[i]->info.sock.connection_in_progress,
+                                          __ATOMIC_ACQUIRE);
+            if (inprog) {
                 struct libos_sock_handle* sock = &libos_handles[i]->info.sock;
                 lock(&sock->lock);
                 if (sock->state != SOCK_CONNECTING) {
@@ -239,6 +239,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
                     sock->last_error = ECONNREFUSED;
                 } else {
                     sock->last_error = 0;
+                    __atomic_store_n(&sock->connection_in_progress, false, __ATOMIC_RELEASE);
                     sock->state = SOCK_CONNECTED;
                     sock->can_be_read = true;
                     sock->can_be_written = true;

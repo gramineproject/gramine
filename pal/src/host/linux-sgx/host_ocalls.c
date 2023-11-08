@@ -511,7 +511,7 @@ static long sgx_ocall_connect_simple(void* args) {
     }
 
     /* Connect succeeded or in progress (EINPROGRESS); in both cases retrieve local name -- host
-     * Linux binds the socket to address even in case of EINPROGRESS */
+     * Linux binds the socket to address even in case of EINPROGRESS. */
     int addrlen = sizeof(*ocall_connect_args->addr);
     int getsockname_ret = DO_SYSCALL(getsockname, ocall_connect_args->fd, ocall_connect_args->addr,
                                      &addrlen);

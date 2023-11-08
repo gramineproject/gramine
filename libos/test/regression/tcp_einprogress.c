@@ -21,15 +21,25 @@
 #define TIMEOUT_MS 1000  /* 1s; increase to e.g. 10s for manual tests */
 #define PORT       12345 /* nothing must be bound to this port! */
 
+static void usage(const char* prog_name) {
+    fprintf(stderr, "usage: %s <IP address> poll|epoll\n", prog_name);
+    fprintf(stderr, "(use 127.0.0.1 for responsive peer and 10.255.255.255 for unresponsive "
+                    "peer)\n");
+}
+
 int main(int argc, const char** argv) {
     int ret;
 
-    if (argc != 3)
-        ERR("Usage: %s <IP address> poll|epoll\n(use 127.0.0.1 for responsive peer, 10.255.255.255"
-            " for unresponsive peer)", argv[0]);
+    if (argc != 3) {
+        usage(argv[0]);
+        return 1;
+    }
 
-    if (strcmp(argv[2], "poll") && strcmp(argv[2], "epoll"))
-        ERR("Usage: %s <IP address> poll|epoll\nerror: only poll/epoll allowed", argv[0]);
+    if (strcmp(argv[2], "poll") && strcmp(argv[2], "epoll")) {
+        usage(argv[0]);
+        fprintf(stderr, "error: second argument not recognized (only 'poll'/'epoll' allowed)\n");
+        return 1;
+    }
 
     int s = CHECK(socket(AF_INET, SOCK_STREAM, 0));
 
@@ -44,18 +54,16 @@ int main(int argc, const char** argv) {
         ERR("inet_aton failed");
 
     ret = connect(s, (void*)&sa, sizeof(sa));
-    if (!ret)
-        ERR("connect unexpectedly succeeded (expected EINPROGRESS or ECONNREFUSED)");
+    if (ret != -1 || (errno != EINPROGRESS && errno != ECONNREFUSED))
+        ERR("connect didn't fail with EINPROGRESS or ECONNREFUSED but with %s", strerror(errno));
 
-    if (ret < 0 && errno != EINPROGRESS) {
-        if (errno != ECONNREFUSED)
-            ERR("expected connect to fail with ECONNREFUSED but failed with %s", strerror(errno));
-
+    if (errno == ECONNREFUSED) {
         /* boring case without EINPROGRESS (aka blocking connect) */
         puts("TEST OK (no EINPROGRESS)");
         CHECK(close(s));
         return 0;
     }
+    assert(errno == EINPROGRESS);
 
     struct sockaddr_in sa_local;
     socklen_t addrlen_local = sizeof(sa_local);
@@ -66,60 +74,70 @@ int main(int argc, const char** argv) {
     fflush(stdout);
 
     ret = connect(s, (void*)&sa, sizeof(sa));
-    if (ret != -1 || errno != EALREADY) {
-        if (errno == ECONNREFUSED) {
-            /* boring case with EINPROGRESS but a quick response */
-            puts("TEST OK (quick response)");
-            CHECK(close(s));
-            return 0;
-        }
-        ERR("[after EINPROGRESS] expected second connect to fail with EALREADY but failed with %s",
-            strerror(errno));
+    if (ret != -1 || (errno != EALREADY && errno != ECONNREFUSED)) {
+        ERR("[after EINPROGRESS] second connect didn't fail with EALREADY or ECONNREFUSED but with"
+            " %s", strerror(errno));
     }
+
+    if (errno == ECONNREFUSED) {
+        /* another boring case with EINPROGRESS but a quick response */
+        puts("TEST OK (quick response)");
+        CHECK(close(s));
+        return 0;
+    }
+    assert(errno == EALREADY);
 
     struct sockaddr_in sa_peer;
     socklen_t addrlen_peer = sizeof(sa_peer);
     ret = getpeername(s, (struct sockaddr*)&sa_peer, &addrlen_peer);
-    if (ret != -1 || errno != ENOTCONN)
+    if (ret != -1 || errno != ENOTCONN) {
         ERR("[after EINPROGRESS] expected getpeername to fail with ENOTCONN but failed with %s",
             strerror(errno));
+    }
 
-    char buf[3] = "Hi";
-    ssize_t bytes = send(s, buf, sizeof(buf), /*flags=*/0);
-    if (bytes != -1 || errno != EAGAIN)
-        ERR("send after EINPROGRESS didn't fail with EAGAIN but with %s", strerror(errno));
+    char dummy_buf[3] = "hi";
+    ssize_t bytes = send(s, dummy_buf, sizeof(dummy_buf), /*flags=*/0);
+    if (bytes != -1 || errno != EAGAIN) {
+        ERR("[after EINPROGRESS] expected send to fail with EAGAIN but failed with %s",
+            strerror(errno));
+    }
 
-    bytes = recv(s, buf, sizeof(buf), /*flags=*/0);
-    if (bytes != -1 || errno != EAGAIN)
-        ERR("recv after EINPROGRESS didn't fail with EAGAIN but with %s", strerror(errno));
+    bytes = recv(s, dummy_buf, sizeof(dummy_buf), /*flags=*/0);
+    if (bytes != -1 || errno != EAGAIN) {
+        ERR("[after EINPROGRESS] expected recv to fail with EAGAIN but failed with %s",
+            strerror(errno));
+    }
 
+    bool timedout = false;
     bool pollout = false;
     if (strcmp(argv[2], "poll") == 0) {
         struct pollfd infds[] = {
             {.fd = s, .events = POLLOUT},
         };
         ret = CHECK(poll(infds, 1, TIMEOUT_MS));
-        if (ret == 0) {
-            /* one interesting case -- remote peer is completely unresponsive */
-            puts("TEST OK (connection timed out)");
-            CHECK(close(s));
-            return 0;
-        }
-        pollout = !!(infds[0].revents & POLLOUT);
+        if (ret == 0)
+            timedout = true;
+        else
+            pollout = !!(infds[0].revents & POLLOUT);
+
     } else {
         int epfd = CHECK(epoll_create(/*size=*/1));
         struct epoll_event event = { .events = EPOLLOUT };
         CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, s, &event));
         struct epoll_event out_event = { 0 };
         ret = CHECK(epoll_wait(epfd, &out_event, /*max_events=*/1, TIMEOUT_MS));
-        if (ret == 0) {
-            /* one interesting case -- remote peer is completely unresponsive */
-            puts("TEST OK (connection timed out)");
-            CHECK(close(s));
-            return 0;
-        }
         CHECK(close(epfd));
-        pollout = !!(out_event.events & EPOLLOUT);
+        if (ret == 0)
+            timedout = true;
+        else
+            pollout = !!(out_event.events & EPOLLOUT);
+    }
+
+    /* one interesting case -- remote peer is completely unresponsive */
+    if (timedout) {
+        puts("TEST OK (connection timed out)");
+        CHECK(close(s));
+        return 0;
     }
 
     /* the most interesting case -- remote peer not unresponsive but very slow */

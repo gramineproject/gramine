@@ -1457,9 +1457,8 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
     if (ret < 0 && ret != -EINPROGRESS) {
         if (ret != -EACCES && ret != -EPERM && ret != -EADDRINUSE && ret != -EADDRNOTAVAIL
                 && ret != -EAFNOSUPPORT && ret != -EAGAIN && ret != -EALREADY && ret != -EBADF
-                && ret != -ECONNREFUSED && ret != -EINPROGRESS && ret != -EISCONN
-                && ret != -ENETUNREACH && ret != -ENOTSOCK && ret != -EPROTOTYPE
-                && ret != -ETIMEDOUT) {
+                && ret != -ECONNREFUSED && ret != -EISCONN && ret != -ENETUNREACH
+                && ret != -ENOTSOCK && ret != -EPROTOTYPE && ret != -ETIMEDOUT) {
             ret = -EPERM;
         }
         goto out;
