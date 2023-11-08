@@ -195,10 +195,6 @@ int pal_thread_init(void* tcbptr) {
     unmap_tcs();
     ret = 0;
 out:
-#ifdef ASAN
-    asan_unpoison_region((uintptr_t)tcb->stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
-#endif
-    DO_SYSCALL(munmap, tcb->stack, THREAD_STACK_SIZE + ALT_STACK_SIZE);
     return ret;
 }
 
