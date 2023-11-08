@@ -104,6 +104,7 @@ typedef struct pal_host_tcb {
     atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
+    int* start_status_ptr;         /* pointer to return value of clone_thread */
 } PAL_HOST_TCB;
 
 extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
