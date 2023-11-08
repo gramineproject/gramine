@@ -15,7 +15,7 @@
 #include "linux_abi/errors.h"
 
 /*
- * Sockets can be in 4 states: NEW, BOUND, LISTENING and CONNECTED.
+ * Sockets can be in 5 states: NEW, BOUND, LISTENING, CONNECTING and CONNECTED.
  *
  *                                                        +------------------+
  *                                                        |                  |
@@ -24,17 +24,19 @@
  *  +--> NEW --------------------> BOUND -------------> LISTEN --------------+
  *  |     |                        |   ^                                     new socket
  *  |     |                        |   |                                     |
- *  |     |                        |   |                                     |
- *  |     |              connect() |   |   disconnect()                      |
- *  |     |                        |   | (if it was bound)                   |
- *  |     | connect()              |   |                                     |
- *  |     |                        |   |                                     |
- *  |     |                        V   |                                     |
- *  |     +---------------------> CONNECTED <--------------------------------+
- *  |                              |
- *  |          disconnect()        |
- *  |      (if it was not bound)   |
- *  +------------------------------+
+ *  |     |                        |   +------------------------+            |
+ *  |     |              connect() |           disconnect()     |            |
+ *  |     |                        |         (if it was bound)  |            |
+ *  |     | connect()              |                            |            |
+ *  |     |                        |         select()/poll()/   |            |
+ *  |     |                        V            epoll()         |            |
+ *  |     +---------------------> CONNECTING ---------------> CONNECTED <----+
+ *  |                             (only for                     |
+ *  |                        non-blocking sockets)              |
+ *  |                                                           |
+ *  |                                         disconnect()      |
+ *  |                                     (if it was not bound) |
+ *  +-----------------------------------------------------------+
  *
  */
 
@@ -491,11 +493,18 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     switch (sock->state) {
         case SOCK_NEW:
         case SOCK_BOUND:
+        case SOCK_CONNECTING:
         case SOCK_CONNECTED:
             break;
         default:
             ret = -EINVAL;
             goto out;
+    }
+
+    if (sock->state == SOCK_CONNECTING) {
+        assert(handle->flags & O_NONBLOCK);
+        ret = -EALREADY;
+        goto out;
     }
 
     if (sock->state == SOCK_CONNECTED) {
@@ -542,6 +551,11 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     ret = sock->ops->connect(handle, addr, addrlen);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, /*was_partial=*/false);
     if (ret < 0) {
+        if (ret == -EINPROGRESS) {
+            sock->state = SOCK_CONNECTING;
+            __atomic_store_n(&sock->connection_in_progress, true, __ATOMIC_RELEASE);
+            sock->last_error = -ret;
+        }
         goto out;
     }
 
@@ -636,9 +650,14 @@ ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     }
 
     lock(&sock->lock);
+    if (sock->state == SOCK_CONNECTING) {
+        unlock(&sock->lock);
+        return -EAGAIN;
+    }
+
     bool has_sendtimeout_set = !!sock->sendtimeout_us;
 
-    ret = -sock->last_error;
+    ret = -((ssize_t)sock->last_error);
     sock->last_error = 0;
 
     if (!ret && !sock->can_be_written) {
@@ -800,8 +819,14 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
     struct libos_sock_handle* sock = &handle->info.sock;
 
     lock(&sock->lock);
+    if (sock->state == SOCK_CONNECTING) {
+        unlock(&sock->lock);
+        return -EAGAIN;
+    }
+
     bool has_recvtimeout_set = !!sock->receivetimeout_us;
-    ret = -sock->last_error;
+
+    ret = -((ssize_t)sock->last_error);
     sock->last_error = 0;
     unlock(&sock->lock);
 

@@ -1453,12 +1453,11 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
         ret = sgx_exitless_ocall(OCALL_CONNECT_SIMPLE, ocall_connect_args);
     } while (ret == -EINTR);
 
-    if (ret < 0) {
+    if (ret < 0 && ret != -EINPROGRESS) {
         if (ret != -EACCES && ret != -EPERM && ret != -EADDRINUSE && ret != -EADDRNOTAVAIL
                 && ret != -EAFNOSUPPORT && ret != -EAGAIN && ret != -EALREADY && ret != -EBADF
-                && ret != -ECONNREFUSED && ret != -EINPROGRESS && ret != -EISCONN
-                && ret != -ENETUNREACH && ret != -ENOTSOCK && ret != -EPROTOTYPE
-                && ret != -ETIMEDOUT) {
+                && ret != -ECONNREFUSED && ret != -EISCONN && ret != -ENETUNREACH
+                && ret != -ENOTSOCK && ret != -EPROTOTYPE && ret != -ETIMEDOUT) {
             ret = -EPERM;
         }
         goto out;
@@ -1475,8 +1474,8 @@ int ocall_connect_simple(int fd, struct sockaddr_storage* addr, size_t* addrlen)
         goto out;
     }
     *addrlen = new_addrlen;
-    ret = 0;
 
+    assert(ret == 0 || ret == -EINPROGRESS);
 out:
     sgx_reset_ustack(old_ustack);
     return ret;

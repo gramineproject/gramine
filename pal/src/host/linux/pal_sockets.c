@@ -272,41 +272,23 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     assert(linux_addrlen <= INT_MAX);
 
     int ret = DO_SYSCALL(connect, handle->sock.fd, &sa_storage, (int)linux_addrlen);
-    if (ret < 0) {
-        /* XXX: Non blocking socket. Currently there is no way of notifying LibOS of successful or
-         * failed connection, so we have to block and wait. */
-        if (ret != -EINPROGRESS) {
-            return unix_to_pal_error(ret);
-        }
-        struct pollfd pfd = {
-            .fd = handle->sock.fd,
-            .events = POLLOUT,
-        };
-        ret = DO_SYSCALL(poll, &pfd, 1, /*timeout=*/-1);
-        if (ret != 1 || pfd.revents == 0) {
-            return ret < 0 ? unix_to_pal_error(ret) : -PAL_ERROR_INVAL;
-        }
-        int val = 0;
-        unsigned int len = sizeof(val);
-        ret = DO_SYSCALL(getsockopt, handle->sock.fd, SOL_SOCKET, SO_ERROR, &val, &len);
-        if (ret < 0 || val < 0) {
-            return ret < 0 ? unix_to_pal_error(ret) : -PAL_ERROR_INVAL;
-        }
-        if (val) {
-            return unix_to_pal_error(-val);
-        }
-        /* Connect succeeded. */
+    if (ret < 0 && ret != -EINPROGRESS) {
+        return unix_to_pal_error(ret);
     }
 
+    /* Connect succeeded or in progress (EINPROGRESS); in both cases retrieve local name -- host
+     * Linux binds the socket to address even in case of EINPROGRESS */
     if (out_local_addr) {
-        ret = do_getsockname(handle->sock.fd, &sa_storage);
-        if (ret < 0) {
+        int getsockname_ret = do_getsockname(handle->sock.fd, &sa_storage);
+        if (getsockname_ret < 0) {
             /* This should never happen, but we have to handle it somehow. */
-            return ret;
+            return getsockname_ret;
         }
         linux_to_pal_sockaddr(&sa_storage, out_local_addr);
     }
-    return 0;
+
+    assert(ret == 0 || ret == -EINPROGRESS);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
