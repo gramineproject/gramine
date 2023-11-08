@@ -56,9 +56,15 @@ stage('test') {
 
     timeout(time: 15, unit: 'MINUTES') {
         try {
-            sh '''
-                python3 -m pytest -v --junit-xml tests.xml tests/
-            '''
+            if (env.SGX != '1') {
+                sh '''
+                    python3 -m pytest -m "not sgx" -v --junit-xml tests.xml tests/
+                '''
+            } else {
+                sh '''
+                    python3 -m pytest -v --junit-xml tests.xml tests/
+                '''
+            }
         } finally {
             junit 'tests.xml'
             sh 'rm -rf tests.xml'
