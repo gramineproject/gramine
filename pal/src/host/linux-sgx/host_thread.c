@@ -130,7 +130,7 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
         }
         if (!g_enclave_thread_map[i].tcs) {
             g_enclave_thread_map[i].tcs = tcs;
-            dbginfo->tcs_addrs[i]       = tcs;
+            dbginfo->tcs_addrs[i] = tcs;
             break;
         }
     }
