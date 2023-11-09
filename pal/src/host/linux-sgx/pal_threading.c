@@ -106,7 +106,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     if (g_available_enclave_thread_num) {
         g_available_enclave_thread_num--;
         *out_tcs = NULL;
-        ret      = 0;
+        ret = 0;
         goto out;
     }
 
