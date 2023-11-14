@@ -305,6 +305,8 @@ in Gramine:
    all IPC is transparently encrypted/decrypted using the TLS-PSK with AES-GCM
    crypto.
 
+.. _choice_of_sgx_machine:
+
 Choice of SGX machine
 ---------------------
 
@@ -398,6 +400,44 @@ that each process spawns its own enclave, so in a multi-process application,
 the actual memory consumption will be a multiple of this setting. If the memory
 consumption is not a problem for your usecase, you might observe better
 performance with this approach than when limiting ``MALLOC_ARENA_MAX``.
+
+GNU libgomp performance bottleneck
+----------------------------------
+
+Many applications use the `libgomp library
+<https://gcc.gnu.org/onlinedocs/libgomp/>`__, the GNU Offloading and Multi
+Processing Runtime Library (previously known as GNU OpenMP Runtime Library).
+Notably PyTorch and TensorFlow use this library.
+
+Unfortunately, the libgomp library uses raw SYSCALL instructions in several
+places -- in particular, to call the ``futex()`` system call -- instead of the
+corresponding Glibc wrappers. This is detrimental to Gramine SGX performance,
+see :ref:`choice_of_sgx_machine`.
+
+Gramine optionally provides a patched libgomp library that runs faster
+inside SGX enclaves. This patched libgomp library is **not** included in the
+default distribution of Gramine, so you need to build Gramine from sources and
+add ``-Dlibgomp=enabled`` when configuring the build (for details see
+:doc:`devel/building`). Successful build places the patched libgomp library
+together with other Gramine libraries. Please note that the build can take a
+long time: unfortunately, the only supported way of building libgomp is as part
+of a complete GCC build.
+
+After building Gramine with patched libgomp, there is typically no need to
+modify your Gramine manifest (as the library is placed into the Gramine
+runtime-libraries directory, which is typically already a part of the manifest).
+However, sometimes using the patched libgomp requires specifying the
+``LD_PRELOAD`` environment variable. See `our PyTorch example
+<https://github.com/gramineproject/examples/tree/master/pytorch>`__ for one such
+case.
+
+The patched libgomp library can provide a significant boost: for example,
+PyTorch's SGX performance overhead decreases on some workloads from 25% to 8%.
+
+To the best of our knowledge, an alternative implementation of OpenMP -- the
+*libiomp* library -- does **not** have performance bottlenecks under Gramine
+SGX. We recommend to switch to this library whenever possible, instead of
+building and using the patched libgomp.
 
 Other considerations
 --------------------
