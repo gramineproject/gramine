@@ -10,15 +10,15 @@ import pytest
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
-
 @pytest.fixture
 def tmp_rsa_key(tmp_path):
-    from graminelibos.sgx_sign import SGX_RSA_PUBLIC_EXPONENT
-    def gen_rsa_key(passphrase=None, key_size=3072):
+    from graminelibos.sgx_sign import (SGX_RSA_KEY_SIZE, SGX_RSA_PUBLIC_EXPONENT,
+        _cryptography_backend)
+    def gen_rsa_key(passphrase=None, key_size=SGX_RSA_KEY_SIZE):
         key_path = tmp_path / 'key.pem'
         with open(key_path, 'wb') as pfile:
             key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
-                key_size=key_size)
+                key_size=key_size, backend=_cryptography_backend)
 
             encryption_algorithm = serialization.NoEncryption()
             if passphrase is not None:
