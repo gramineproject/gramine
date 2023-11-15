@@ -426,7 +426,7 @@ of a complete GCC build.
 After building Gramine with patched libgomp, there is typically no need to
 modify your Gramine manifest (as the library is placed into the Gramine
 runtime-libraries directory, which is typically already a part of the manifest).
-However, sometimes using the patched libgomp requires to specify the
+However, sometimes using the patched libgomp requires specifying the
 ``LD_PRELOAD`` environment variable. See `our PyTorch example
 <https://github.com/gramineproject/examples/tree/master/pytorch>`__ for one such
 case.
@@ -434,10 +434,10 @@ case.
 The patched libgomp library can provide a significant boost: for example,
 PyTorch's SGX performance overhead decreases on some workloads from 25% to 8%.
 
-We would like to note that an alternative implementation of OpenMP -- the
-``libiomp`` library -- does **not** have any performance bottlenecks under
-Gramine SGX. We recommend to switch to this library whenever possible, instead
-of building and using the patched libgomp.
+To the best of our knowledge, an alternative implementation of OpenMP -- the
+*libiomp* library -- does **not** have performance bottlenecks under Gramine
+SGX.  We recommend to switch to this library whenever possible, instead of
+building and using the patched libgomp.
 
 Other considerations
 --------------------
