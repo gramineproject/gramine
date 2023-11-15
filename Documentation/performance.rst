@@ -436,7 +436,7 @@ PyTorch's SGX performance overhead decreases on some workloads from 25% to 8%.
 
 To the best of our knowledge, an alternative implementation of OpenMP -- the
 *libiomp* library -- does **not** have performance bottlenecks under Gramine
-SGX.  We recommend to switch to this library whenever possible, instead of
+SGX. We recommend to switch to this library whenever possible, instead of
 building and using the patched libgomp.
 
 Other considerations
