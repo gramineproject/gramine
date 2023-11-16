@@ -509,6 +509,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         if (areas[i].data_src == TLS) {
             for (uint32_t t = 0; t < enclave->thread_num; t++) {
                 struct pal_enclave_tcb* gs = data + g_page_size * t;
+                memset(gs, 0, g_page_size);
                 assert(sizeof(*gs) <= g_page_size);
                 gs->common.self = (PAL_TCB*)(tls_area->addr + g_page_size * t);
                 gs->common.stack_protector_canary = STACK_PROTECTOR_CANARY_DEFAULT;
