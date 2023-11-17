@@ -119,8 +119,8 @@ struct libos_sock_ops {
                 bool force_nonblocking);
 };
 
-struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
-                                           bool is_nonblocking);
+struct libos_handle* get_new_socket_handle(int family, int type, int protocol, bool is_nonblocking);
+void check_connect_inprogress_on_poll(struct libos_handle* handle, pal_wait_flags_t pal_ret_events);
 
 extern struct libos_sock_ops sock_unix_ops;
 extern struct libos_sock_ops sock_ip_ops;

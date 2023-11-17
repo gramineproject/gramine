@@ -28,6 +28,7 @@
 #include "libos_pollable_event.h"
 #include "libos_refcount.h"
 #include "libos_signal.h"
+#include "libos_socket.h"
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_types.h"
@@ -673,40 +674,8 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
                 this_item_events |= items[i]->events & (EPOLLOUT | EPOLLWRNORM);
             }
 
-            if (pal_ret_events[i] & PAL_WAIT_WRITE && items[i]->handle->type == TYPE_SOCK) {
-                /*
-                 * Special case of a non-blocking socket that is INPROGRESS (connecting): must check
-                 * if error or success of connecting. If error, then set SO_ERROR (last_error). If
-                 * success, then move to SOCK_CONNECTED state and clear SO_ERROR.
-                 *
-                 * This is only relevant if EPOLLOUT event was requested.
-                 *
-                 * We first fetch `connection_in_progress` instead of a proper lock on the handle to
-                 * speed up the common case of an already-connected socket doing recv/send.
-                 *
-                 * See similar case in libos_poll.c:do_poll().
-                 */
-                bool inprog = __atomic_load_n(&items[i]->handle->info.sock.connection_in_progress,
-                                              __ATOMIC_ACQUIRE);
-                if (inprog) {
-                    struct libos_sock_handle* sock = &items[i]->handle->info.sock;
-                    lock(&sock->lock);
-                    if (sock->state != SOCK_CONNECTING) {
-                        /* theoretically, another thread could be doing another epoll on this socket
-                         * and modify the state; we don't support this unlikely case */
-                        BUG();
-                    }
-                    if (pal_ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
-                        sock->last_error = ECONNREFUSED;
-                    } else {
-                        sock->last_error = 0;
-                        __atomic_store_n(&sock->connection_in_progress, false, __ATOMIC_RELEASE);
-                        sock->state = SOCK_CONNECTED;
-                        sock->can_be_read = true;
-                        sock->can_be_written = true;
-                    }
-                    unlock(&sock->lock);
-                }
+            if (items[i]->handle->type == TYPE_SOCK) {
+                check_connect_inprogress_on_poll(items[i]->handle, pal_ret_events[i]);
             }
 
             if (!this_item_events) {

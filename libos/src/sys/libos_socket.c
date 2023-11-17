@@ -86,6 +86,46 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     return handle;
 }
 
+void check_connect_inprogress_on_poll(struct libos_handle* handle,
+                                      pal_wait_flags_t pal_ret_events) {
+    /*
+     * Special case of a non-blocking socket that is INPROGRESS (connecting): must check if error or
+     * success of connecting. If error, then set SO_ERROR (last_error). If success, then move to
+     * SOCK_CONNECTED state and clear SO_ERROR.
+     *
+     * This is only relevant if POLLOUT event was requested. See `man 2 connect`, EINPROGRESS case.
+     *
+     * We first fetch `connecting_in_progress` instead of a proper lock on the handle to speed up
+     * the common case of an already-connected socket doing recv/send.
+     */
+     assert(handle->type == TYPE_SOCK);
+
+    if (!(pal_ret_events & PAL_WAIT_WRITE))
+        return;
+
+    bool inprog = __atomic_load_n(&handle->info.sock.connecting_in_progress, __ATOMIC_ACQUIRE);
+    if (!inprog)
+        return;
+
+    struct libos_sock_handle* sock = &handle->info.sock;
+    lock(&sock->lock);
+    if (sock->state != SOCK_CONNECTING) {
+        /* theoretically, another thread could be doing another select/poll on this socket and
+         * modify the state; we don't support this unlikely case */
+        BUG();
+    }
+    if (pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
+        sock->last_error = ECONNREFUSED;
+    } else {
+        sock->last_error = 0;
+        __atomic_store_n(&sock->connecting_in_progress, false, __ATOMIC_RELEASE);
+        sock->state = SOCK_CONNECTED;
+        sock->can_be_read = true;
+        sock->can_be_written = true;
+    }
+    unlock(&sock->lock);
+}
+
 long libos_syscall_socket(int family, int type, int protocol) {
     switch (family) {
         case AF_UNIX:
@@ -553,7 +593,7 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
     if (ret < 0) {
         if (ret == -EINPROGRESS) {
             sock->state = SOCK_CONNECTING;
-            __atomic_store_n(&sock->connection_in_progress, true, __ATOMIC_RELEASE);
+            __atomic_store_n(&sock->connecting_in_progress, true, __ATOMIC_RELEASE);
             sock->last_error = -ret;
         }
         goto out;

@@ -54,7 +54,9 @@ int main(int argc, const char** argv) {
         ERR("inet_aton failed");
 
     ret = connect(s, (void*)&sa, sizeof(sa));
-    if (ret != -1 || (errno != EINPROGRESS && errno != ECONNREFUSED))
+    if (ret != -1)
+        ERR("connect unexpectedly succeeded");
+    if (errno != EINPROGRESS && errno != ECONNREFUSED)
         ERR("connect didn't fail with EINPROGRESS or ECONNREFUSED but with %s", strerror(errno));
 
     if (errno == ECONNREFUSED) {
@@ -74,7 +76,10 @@ int main(int argc, const char** argv) {
     fflush(stdout);
 
     ret = connect(s, (void*)&sa, sizeof(sa));
-    if (ret != -1 || (errno != EALREADY && errno != ECONNREFUSED)) {
+    if (ret != -1) {
+        ERR("[after EINPROGRESS] second connect unexpectedly succeeded");
+    }
+    if (errno != EALREADY && errno != ECONNREFUSED) {
         ERR("[after EINPROGRESS] second connect didn't fail with EALREADY or ECONNREFUSED but with"
             " %s", strerror(errno));
     }
@@ -90,20 +95,29 @@ int main(int argc, const char** argv) {
     struct sockaddr_in sa_peer;
     socklen_t addrlen_peer = sizeof(sa_peer);
     ret = getpeername(s, (struct sockaddr*)&sa_peer, &addrlen_peer);
-    if (ret != -1 || errno != ENOTCONN) {
+    if (ret != -1) {
+        ERR("[after EINPROGRESS] expected getpeername to fail but it succeeded");
+    }
+    if (errno != ENOTCONN) {
         ERR("[after EINPROGRESS] expected getpeername to fail with ENOTCONN but failed with %s",
             strerror(errno));
     }
 
     char dummy_buf[3] = "hi";
     ssize_t bytes = send(s, dummy_buf, sizeof(dummy_buf), /*flags=*/0);
-    if (bytes != -1 || errno != EAGAIN) {
+    if (bytes != -1) {
+        ERR("[after EINPROGRESS] expected send to fail but it succeeded");
+    }
+    if (errno != EAGAIN) {
         ERR("[after EINPROGRESS] expected send to fail with EAGAIN but failed with %s",
             strerror(errno));
     }
 
     bytes = recv(s, dummy_buf, sizeof(dummy_buf), /*flags=*/0);
-    if (bytes != -1 || errno != EAGAIN) {
+    if (bytes != -1) {
+        ERR("[after EINPROGRESS] expected recv to fail but it succeeded");
+    }
+    if (errno != EAGAIN) {
         ERR("[after EINPROGRESS] expected recv to fail with EAGAIN but failed with %s",
             strerror(errno));
     }

@@ -1412,7 +1412,7 @@ class TC_80_Socket(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     # Two tests for a responsive peer: first connect() returns EINPROGRESS, then poll/epoll
-    # immediately returns because the connection is quickly established
+    # immediately returns because the connection is quickly refused
     def test_305_socket_tcp_einprogress_responsive_poll(self):
         stdout, _ = self.run_binary(['tcp_einprogress', '127.0.0.1', 'poll'])
         self.assertIn('TEST OK (connection refused after initial EINPROGRESS)', stdout)
