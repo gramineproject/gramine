@@ -1408,20 +1408,22 @@ static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct li
 
         size_t size = read_end - read_begin;
         size_t read = 0;
+        file_off_t pos = (file_off_t)vma_info->file_offset;
         while (read < size) {
             size_t to_read = size - read;
-            ret = file->fs->fs_ops->read(file, (void*)(read_begin + read), to_read,
-                                         (file_off_t*)&vma_info->file_offset);
-            if (ret < 0) {
-                if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
+            ssize_t count = file->fs->fs_ops->read(file, (void*)(read_begin + read), to_read, &pos);
+            if (count < 0) {
+                if (count == -EINTR || count == -EAGAIN) {
                     continue;
                 }
+                ret = count;
                 goto out;
-            } else if (ret == 0) {
+            } else if (count == 0) {
                 ret = -ENODATA;
                 goto out;
             }
-            read += ret;
+            assert((size_t)count <= to_read);
+            read += count;
         }
     }
 

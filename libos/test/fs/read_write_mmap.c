@@ -61,12 +61,7 @@ static void read_write_mmap_different_fds(const char* file_path) {
     }
 
     int fd2 = open_output_fd(file_path, /*rdwr=*/true);
-    printf("open(%s) RW fd2 (mmap) OK\n", file_path);
-
-    if (ftruncate(fd2, size) == -1) {
-        close(fd2);
-        fatal_error("ftruncate fd2\n");
-    }
+    printf("open(%s) RW fd2 OK\n", file_path);
 
     void* m = mmap_fd(file_path, fd1, PROT_READ, 0, size);
     printf("mmap_fd(%zu) fd1 OK\n", size);
@@ -74,7 +69,7 @@ static void read_write_mmap_different_fds(const char* file_path) {
     void* buf_write = alloc_buffer(size);
     fill_random(buf_write, size);
     write_fd(file_path, fd2, buf_write, size);
-    printf("write(%s) RW fd2 (mmap) OK\n", file_path);
+    printf("write(%s) RW fd2 OK\n", file_path);
 
     if (memcmp(m, buf_write, size) != 0)
         fatal_error("Read data from the mapping is different from what was written via write() by "
@@ -85,7 +80,7 @@ static void read_write_mmap_different_fds(const char* file_path) {
     close_fd(file_path, fd1);
     printf("close(%s) RW fd1 (mmap) OK\n", file_path);
     close_fd(file_path, fd2);
-    printf("close(%s) RW fd2 (mmap) OK\n", file_path);
+    printf("close(%s) RW fd2 OK\n", file_path);
     free(buf_write);
 }
 
