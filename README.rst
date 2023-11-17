@@ -90,4 +90,5 @@ If you prefer emails, please send them to users@gramineproject.io
 Reporting security issues
 =========================
 
-Please report security issues to security@gramineproject.io.
+Please report security issues to security@gramineproject.io. See also our
+`security policy <SECURITY.md>`__.
