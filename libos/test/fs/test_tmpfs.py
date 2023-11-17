@@ -52,6 +52,7 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
         stdout, stderr = self.run_binary(['read_write_mmap', file_path])
         size = '1048576'
         self.assertNotIn('ERROR: ', stderr)
+
         self.assertIn('open(' + file_path + ') RW (mmap) OK', stdout)
         self.assertIn('mmap_fd(' + size + ') OK', stdout)
         self.assertIn('read(' + file_path + ') 1 RW (mmap) OK', stdout)
@@ -62,6 +63,14 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
         self.assertIn('compare(' + file_path + ') RW (mmap) OK', stdout)
         self.assertIn('munmap_fd(' + size + ') OK', stdout)
         self.assertIn('close(' + file_path + ') RW (mmap) OK', stdout)
+
+        self.assertIn('open(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('open(' + file_path + ') RW fd2 (mmap) OK', stdout)
+        self.assertIn('mmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('write(' + file_path + ') RW fd2 (mmap) OK', stdout)
+        self.assertIn('munmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd2 (mmap) OK', stdout)
 
     @unittest.skip("impossible to do setup on tmpfs with python only")
     def test_115_seek_tell(self):

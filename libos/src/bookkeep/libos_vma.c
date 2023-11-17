@@ -513,7 +513,7 @@ out:
 static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
         put_handle(vma->file);
-        (void)__atomic_sub_fetch(&vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
+        (void)__atomic_sub_fetch(&vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
     }
 
     if (add_to_thread_vma_cache(vma)) {
@@ -801,7 +801,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
-        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
+        (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1049,7 +1049,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     new_vma->file  = file;
     if (new_vma->file) {
         get_handle(new_vma->file);
-        (void)__atomic_add_fetch(&new_vma->file->num_mmapped, 1, __ATOMIC_RELAXED);
+        (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
     }
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
@@ -1370,7 +1370,7 @@ static bool vma_filter_needs_read(struct libos_vma* vma, void* arg) {
 
     assert(vma->file);
 
-    if (hdl && vma->file != hdl)
+    if (hdl && hdl->inode && vma->file->inode && vma->file->inode != hdl->inode)
         return false;
 
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->read)
@@ -1406,10 +1406,23 @@ static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct li
         assert(IS_ALLOC_ALIGNED(read_begin));
         assert(IS_ALLOC_ALIGNED(read_end));
 
-        ret = file->fs->fs_ops->read(file, (void*)read_begin, read_end - read_begin,
-                                     (file_off_t*)&vma_info->file_offset);
-        if (ret < 0)
-            goto out;
+        size_t size = read_end - read_begin;
+        size_t read = 0;
+        while (read < size) {
+            size_t to_read = size - read;
+            ret = file->fs->fs_ops->read(file, (void*)(read_begin + read), to_read,
+                                         (file_off_t*)&vma_info->file_offset);
+            if (ret < 0) {
+                if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
+                    continue;
+                }
+                goto out;
+            } else if (ret == 0) {
+                ret = -ENODATA;
+                goto out;
+            }
+            read += ret;
+        }
     }
 
     ret = 0;

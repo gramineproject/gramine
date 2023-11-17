@@ -268,8 +268,11 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     unlock(&inode->lock);
 
     /* If there are any MAP_SHARED mappings for the file, this will read data from `hdl`. */
-    if (__atomic_load_n(&hdl->num_mmapped, __ATOMIC_ACQUIRE) != 0)
-        (void)reload_mmaped_from_file_handle(hdl);
+    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
+        int reload_ret = reload_mmaped_from_file_handle(hdl);
+        if (reload_ret < 0)
+            log_warning("reload mmapped regions of file failed: %d", reload_ret);
+    }
 
     return ret;
 }

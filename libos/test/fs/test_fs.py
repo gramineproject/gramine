@@ -106,6 +106,7 @@ class TC_00_FileSystem(RegressionTestCase):
         size = '1048576'
         self.assertNotIn('ERROR: ', stderr)
         self.assertTrue(os.path.isfile(file_path))
+
         self.assertIn('open(' + file_path + ') RW (mmap) OK', stdout)
         self.assertIn('mmap_fd(' + size + ') OK', stdout)
         self.assertIn('read(' + file_path + ') 1 RW (mmap) OK', stdout)
@@ -116,6 +117,14 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('compare(' + file_path + ') RW (mmap) OK', stdout)
         self.assertIn('munmap_fd(' + size + ') OK', stdout)
         self.assertIn('close(' + file_path + ') RW (mmap) OK', stdout)
+
+        self.assertIn('open(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('open(' + file_path + ') RW fd2 (mmap) OK', stdout)
+        self.assertIn('mmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('write(' + file_path + ') RW fd2 (mmap) OK', stdout)
+        self.assertIn('munmap_fd(' + size + ') fd1 OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd1 (mmap) OK', stdout)
+        self.assertIn('close(' + file_path + ') RW fd2 (mmap) OK', stdout)
 
     # pylint: disable=too-many-arguments
     def verify_seek_tell(self, stdout, output_path_1, output_path_2, size):
