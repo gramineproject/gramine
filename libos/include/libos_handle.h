@@ -169,9 +169,6 @@ struct libos_handle {
     /* Offset in file. Protected by `pos_lock`. */
     file_off_t pos;
 
-    /* Number of VMAs the file is mmapped to; should be accessed using atomic operations. */
-    uint64_t num_mmapped;
-
     /* This list contains `libos_epoll_item` objects this handle is part of. All accesses should be
      * protected by `handle->lock`. */
     LISTP_TYPE(libos_epoll_item) epoll_items;
