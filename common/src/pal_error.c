@@ -27,7 +27,6 @@ static const char* g_pal_error_list[] = {
     [PAL_ERROR_NOTSERVER] = "Not a server (PAL_ERROR_NOTSERVER)",
     [PAL_ERROR_NOTCONNECTION] = "Not a connection (PAL_ERROR_NOTCONNECTION)",
     [PAL_ERROR_CONNFAILED] = "Connection failed (PAL_ERROR_CONNFAILED)",
-    [PAL_ERROR_INPROGRESS] = "Operation now in progress (PAL_ERROR_INPROGRESS)",
     [PAL_ERROR_ADDRNOTEXIST] = "Resource address does not exist (PAL_ERROR_ADDRNOTEXIST)",
     [PAL_ERROR_AFNOSUPPORT] = "Address family not supported by protocol (PAL_ERROR_AFNOSUPPORT)",
     [PAL_ERROR_CONNFAILED_PIPE] = "Broken pipe (PAL_ERROR_CONNFAILED_PIPE)",

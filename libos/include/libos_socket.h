@@ -49,7 +49,7 @@ struct libos_sock_ops {
      *
      * Must be called with `handle->info.sock.lock` taken.
      */
-    int (*connect)(struct libos_handle* handle, void* addr, size_t addrlen);
+    int (*connect)(struct libos_handle* handle, void* addr, size_t addrlen, bool* out_inprogress);
 
     /*!
      * \brief Disconnect a previously connected handle.

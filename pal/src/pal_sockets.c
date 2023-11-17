@@ -29,9 +29,9 @@ int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE*
 }
 
 int PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                     struct pal_socket_addr* local_addr) {
+                     struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
-    return _PalSocketConnect(handle, addr, local_addr);
+    return _PalSocketConnect(handle, addr, out_local_addr, out_inprogress);
 }
 
 int PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,

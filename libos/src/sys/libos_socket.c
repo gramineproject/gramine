@@ -254,7 +254,9 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         unlock(&sock2->lock);
         goto out;
     }
-    ret = sock2->ops->connect(handle2, &addr, sizeof(addr));
+    bool inprogress;
+    ret = sock2->ops->connect(handle2, &addr, sizeof(addr), &inprogress);
+    assert(inprogress == false);
     if (ret < 0) {
         unlock(&sock2->lock);
         goto out;
@@ -588,21 +590,24 @@ long libos_syscall_connect(int fd, void* addr, int _addrlen) {
         goto out;
     }
 
-    ret = sock->ops->connect(handle, addr, addrlen);
+    bool inprogress;
+    ret = sock->ops->connect(handle, addr, addrlen, &inprogress);
     maybe_epoll_et_trigger(handle, ret, /*in=*/false, /*was_partial=*/false);
     if (ret < 0) {
-        if (ret == -EINPROGRESS) {
-            sock->state = SOCK_CONNECTING;
-            __atomic_store_n(&sock->connecting_in_progress, true, __ATOMIC_RELEASE);
-            sock->last_error = -ret;
-        }
         goto out;
     }
 
-    sock->state = SOCK_CONNECTED;
-    sock->can_be_read = true;
-    sock->can_be_written = true;
-    ret = 0;
+    if (inprogress) {
+        sock->state = SOCK_CONNECTING;
+        __atomic_store_n(&sock->connecting_in_progress, true, __ATOMIC_RELEASE);
+        sock->last_error = EINPROGRESS;
+        ret = -((int)sock->last_error);
+    } else {
+        sock->state = SOCK_CONNECTED;
+        sock->can_be_read = true;
+        sock->can_be_written = true;
+        ret = 0;
+    }
 
 out:
     if (ret == -EINTR) {

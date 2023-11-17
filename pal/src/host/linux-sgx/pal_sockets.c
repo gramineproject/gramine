@@ -255,7 +255,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
 }
 
 static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                   struct pal_socket_addr* out_local_addr) {
+                   struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
         return -PAL_ERROR_INVAL;
@@ -266,13 +266,13 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
     pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
     assert(linux_addrlen <= INT_MAX);
 
-    int ret = ocall_connect_simple(handle->sock.fd, &sa_storage, &linux_addrlen);
-    if (ret < 0 && ret != -EINPROGRESS) {
+    bool inprogress;
+    int ret = ocall_connect_simple(handle->sock.fd, handle->sock.is_nonblocking, &sa_storage,
+                                   &linux_addrlen, &inprogress);
+    if (ret < 0) {
         return unix_to_pal_error(ret);
     }
 
-    /* Connect succeeded or in progress (EINPROGRESS); in both cases local name of the socket was
-     * retrieved, must verify it. */
     if (out_local_addr) {
         int verify_ret = verify_ip_addr(handle->sock.domain, &sa_storage, linux_addrlen);
         if (verify_ret < 0) {
@@ -280,9 +280,8 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
         }
         linux_to_pal_sockaddr(&sa_storage, out_local_addr);
     }
-
-    assert(ret == 0 || ret == -EINPROGRESS);
-    return ret < 0 ? unix_to_pal_error(ret) : 0;
+    *out_inprogress = inprogress;
+    return 0;
 }
 
 static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
@@ -672,11 +671,11 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
 }
 
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
-                      struct pal_socket_addr* out_local_addr) {
+                      struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     if (!handle->sock.ops->connect) {
         return -PAL_ERROR_NOTSUPPORT;
     }
-    return handle->sock.ops->connect(handle, addr, out_local_addr);
+    return handle->sock.ops->connect(handle, addr, out_local_addr, out_inprogress);
 }
 
 int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
