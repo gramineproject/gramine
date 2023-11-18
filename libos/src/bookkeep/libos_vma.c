@@ -1393,7 +1393,7 @@ static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct li
     if (ret < 0)
         return ret;
 
-    for (size_t i = 0; i < count; i++) {
+    for (size_t i = 0; i < count && !ret; i++) {
         struct libos_vma_info* vma_info = &vma_infos[i];
 
         struct libos_handle* file = vma_info->file;
@@ -1409,6 +1409,18 @@ static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct li
         size_t size = read_end - read_begin;
         size_t read = 0;
         file_off_t pos = (file_off_t)vma_info->file_offset;
+        pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma_info->prot, vma_info->flags);
+        pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
+
+        if (pal_prot != pal_prot_writable) {
+            /* make the area writable so that it can be reloaded */
+            ret = PalVirtualMemoryProtect((void*)read_begin, size, pal_prot_writable);
+            if (ret < 0) {
+                ret = pal_to_unix_errno(ret);
+                break;
+            }
+        }
+
         while (read < size) {
             size_t to_read = size - read;
             ssize_t count = file->fs->fs_ops->read(file, (void*)(read_begin + read), to_read, &pos);
@@ -1417,18 +1429,24 @@ static int reload_mmaped_from_file_all(uintptr_t begin, uintptr_t end, struct li
                     continue;
                 }
                 ret = count;
-                goto out;
+                break;
             } else if (count == 0) {
-                ret = -ENODATA;
-                goto out;
+                break;
             }
             assert((size_t)count <= to_read);
             read += count;
         }
+
+        if (pal_prot != pal_prot_writable) {
+            /* the area was made writable above; restore the original permissions */
+            int protect_ret = PalVirtualMemoryProtect((void*)read_begin, size, pal_prot);
+            if (protect_ret < 0) {
+                log_error("restore original permissions failed: %s", pal_strerror(protect_ret));
+                BUG();
+            }
+        }
     }
 
-    ret = 0;
-out:
     free_vma_info_array(vma_infos, count);
     return ret;
 }
