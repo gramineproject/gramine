@@ -210,6 +210,8 @@ static void split_vma(struct libos_vma* old_vma, struct libos_vma* new_vma, uint
     copy_vma(old_vma, new_vma);
     new_vma->begin = addr;
     if (new_vma->file) {
+        if (new_vma->file->inode)
+            (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
         new_vma->offset += new_vma->begin - old_vma->begin;
     }
 
@@ -513,10 +515,10 @@ out:
 static void free_vma(struct libos_vma* vma) {
     if (vma->file) {
         if (vma->file->inode) {
-            uint64_t num_mmapped = __atomic_sub_fetch(&vma->file->inode->num_mmapped, 1,
-                                                      __ATOMIC_RELAXED);
-            assert(num_mmapped < UINT64_MAX);
-            (void)num_mmapped;
+            uint64_t old_num_mmapped = __atomic_fetch_sub(&vma->file->inode->num_mmapped, 1,
+                                                          __ATOMIC_RELAXED);
+            assert(old_num_mmapped > 0);
+            (void)old_num_mmapped;
         }
         put_handle(vma->file);
     }
