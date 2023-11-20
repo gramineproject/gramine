@@ -13,7 +13,7 @@ Gramine uses the following third-party components:
   performance.
 - mbedTLS: used for all crypto- and TLS-operations in Gramine and its tools:
 
-  - crypto (``libmbedcrypto.a``) is used in Gramine core, for e.g. AES-GCM on
+  - crypto (``libmbedcrypto.a``) is used in Gramine core, e.g. AES-GCM on
     Encrypted Files and SHA256 on Trusted Files.
   - TLS (``libmbedtls.a`` and ``libmbedx509.a``) is used in RA-TLS/SecretProv
     libraries, to establish TLS connections and to create/verify X.509
