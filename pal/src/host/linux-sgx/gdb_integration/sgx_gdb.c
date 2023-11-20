@@ -281,10 +281,12 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
     for (int i = 0; i < MAX_DBG_THREADS; i++)
         if (ei->thread_tids[i] == tid) {
             if (!ei->tcs_addrs[i]) {
-                /* no TCS for this enclave thread yet, this should be a dynamically allocated
-                 * thread: need to consult the enclave to learn the TCS */
+                /* GDB's copy of ei.tcs_addrs only contains all static TCS when initialized.
+                 * No TCS for this enclave thread yet, this should be a dynamically allocated
+                 * thread: need to consult the enclave to learn the TCS. */
                 void* src = (void*)DBGINFO_ADDR + offsetof(struct enclave_dbginfo, tcs_addrs) +
                             i * sizeof(void*);
+                errno = 0;
                 long int res = host_ptrace(PTRACE_PEEKDATA, tid, src, NULL);
                 if (res < 0 && errno != 0) {
                     DEBUG_LOG("Failed getting TCS address: TID %d\n", tid);

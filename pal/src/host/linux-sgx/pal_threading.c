@@ -51,17 +51,17 @@ static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
  *
  * Layout of the enclave thread:
  *
- *                  +-------------------+
- *                  |  stack            | ENCLAVE_STACK_SIZE
- *       stack +--> +-------------------+
- *                  |  sig_stack        | ENCLAVE_SIG_STACK_SIZE
- *   sig_stack +--> +-------------------+
- *                  |  TCB              | PAGE_SIZE
- *         TCB +--> +-------------------+
- *                  |  SSA              | SSA_FRAME_NUM * SSA_FRAME_SIZE
- *         SSA +--> +-------------------+
- *                  |  TCS              | PAGE_SIZE
  *         TCS +--> +-------------------+
+ *                  |  TCS              | PAGE_SIZE
+ *         SSA +--> +-------------------+
+ *                  |  SSA              | SSA_FRAME_NUM * SSA_FRAME_SIZE
+ *         TCB +--> +-------------------+
+ *                  |  TCB              | PAGE_SIZE
+ *   sig_stack +--> +-------------------+
+ *                  |  sig_stack        | ENCLAVE_SIG_STACK_SIZE
+ *       stack +--> +-------------------+
+ *                  |  stack            | ENCLAVE_STACK_SIZE
+ *                  +-------------------+
  *
  */
 #define THREAD_DATA_SIZE                                                           \
@@ -112,7 +112,9 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
 
     if (g_enclave_thread_num == g_enclave_thread_map_size) {
         /* realloc g_enclave_thread_map to accommodate more objects (includes very first time) */
-        size_t new_enclave_thread_map_size = g_enclave_thread_map_size + 8;
+        size_t new_enclave_thread_map_size = g_enclave_thread_map_size
+                                             ? g_enclave_thread_map_size * 2
+                                             : 8;
         struct enclave_thread_map* new_enclave_thread_map =
             calloc(new_enclave_thread_map_size, sizeof(*new_enclave_thread_map));
         if (!new_enclave_thread_map) {

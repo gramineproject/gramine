@@ -22,7 +22,8 @@ static struct enclave_thread_map* g_enclave_thread_map = NULL;
 
 /* initial number of items in g_enclave_thread_map */
 static size_t g_enclave_thread_num_at_startup = 0;
-/* total numbers of items in g_enclave_thread_map */
+/* total numbers of items in g_enclave_thread_map
+ * lock `g_enclave_thread_map_lock` before access it */
 static size_t g_enclave_thread_num = 0;
 
 bool g_sgx_enable_stats = false;
@@ -73,7 +74,7 @@ void update_and_print_stats(bool process_wide) {
 
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* tcs, void* stack, void* alt_stack) {
     tcb->self = tcb;
-    tcb->tcs = tcs;
+    tcb->tcs = tcs; /* will be updated by child thread */
     tcb->stack = stack;
     tcb->alt_stack = alt_stack;
 
@@ -97,8 +98,8 @@ int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
     g_enclave_thread_num_at_startup = thread_num;
 
     g_enclave_thread_map = (struct enclave_thread_map*)malloc(enclave_thread_map_size_in_bytes);
-    if (IS_PTR_ERR(g_enclave_thread_map)) {
-        return PTR_TO_ERR(g_enclave_thread_map);
+    if (!g_enclave_thread_map) {
+        return -PAL_ERROR_NOMEM;
     }
 
     for (uint32_t i = 0; i < thread_num; i++) {
@@ -113,7 +114,7 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
     int ret;
     struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
 
-    ret = set_tcs_debug_flag((void**)&tcs, /*count=*/1);
+    ret = set_tcs_debug_flag_if_debugging((void**)&tcs, /*count=*/1);
     if (ret < 0) {
         return ret;
     }
@@ -144,18 +145,15 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
         size_t new_enclave_thread_num = MIN(g_enclave_thread_num * 2, (size_t)MAX_DBG_THREADS);
         size_t new_enclave_thread_map_size_in_bytes =
             sizeof(struct enclave_thread_map) * new_enclave_thread_num;
-        struct enclave_thread_map* new_enclave_thread_map =
-            (struct enclave_thread_map*)malloc(new_enclave_thread_map_size_in_bytes);
-        if (IS_PTR_ERR(new_enclave_thread_map)) {
-            ret = PTR_TO_ERR(new_enclave_thread_map);
-            log_error("Cannot malloc g_enclave_thread_map: %s", unix_strerror(ret));
+        struct enclave_thread_map* new_enclave_thread_map = (struct enclave_thread_map*)realloc(
+            g_enclave_thread_map, new_enclave_thread_map_size_in_bytes);
+        if (!new_enclave_thread_map) {
+            ret = -PAL_ERROR_NOMEM;
             goto out;
         }
 
-        memset(new_enclave_thread_map, 0, new_enclave_thread_map_size_in_bytes);
-        memcpy(new_enclave_thread_map, g_enclave_thread_map,
-               sizeof(struct enclave_thread_map) * g_enclave_thread_num);
-        free(g_enclave_thread_map);
+        memset(new_enclave_thread_map + g_enclave_thread_num, 0,
+               sizeof(struct enclave_thread_map) * (new_enclave_thread_num - g_enclave_thread_num));
 
         g_enclave_thread_num = new_enclave_thread_num;
         g_enclave_thread_map = new_enclave_thread_map;
@@ -398,7 +396,7 @@ int get_tid_from_tcs(void* tcs) {
     return tid ? tid : -EINVAL;
 }
 
-int set_tcs_debug_flag(void* tcs_addrs[], size_t count) {
+int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count) {
     if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
         return 0;
 

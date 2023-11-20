@@ -255,8 +255,10 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     size_t areas_size = 0;
     struct mem_area* areas = NULL;
 
-    /* this array may overflow the stack, so we allocate it in BSS */
-    static void* tcs_addrs[MAX_DBG_THREADS];
+    void** tcs_addrs = (void**)malloc(sizeof(void*) * enclave->thread_num);
+    if (!tcs_addrs) {
+        return -ENOMEM;
+    }
 
     enclave_image = DO_SYSCALL(open, enclave->libpal_uri + URI_PREFIX_FILE_LEN,
                                O_RDONLY | O_CLOEXEC, 0);
@@ -590,11 +592,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         dbg->aep            = async_exit_pointer;
         dbg->eresume        = eresume_pointer;
         dbg->thread_tids[0] = dbg->pid;
-        for (unsigned int i = 0; i < enclave->thread_num; i++)
-            dbg->tcs_addrs[i] = tcs_addrs[i];
+        for (uint32_t t = 0; t < enclave->thread_num; t++)
+            dbg->tcs_addrs[t] = tcs_addrs[t];
     }
 
-    ret = set_tcs_debug_flag(tcs_addrs, enclave->thread_num);
+    ret = set_tcs_debug_flag_if_debugging(tcs_addrs, enclave->thread_num);
     if (ret < 0) {
         goto out;
     }
@@ -621,6 +623,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     ret = 0;
 
 out:
+    free(tcs_addrs);
     if (enclave_image >= 0)
         DO_SYSCALL(close, enclave_image);
     if (sigfile_fd >= 0)

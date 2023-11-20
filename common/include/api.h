@@ -281,6 +281,7 @@ void* alloc_and_copy(const void* src, size_t size);
 void* malloc(size_t size);
 void free(void* ptr);
 void* calloc(size_t nmemb, size_t size);
+void* realloc(void* ptr, size_t size);
 
 /* copy static string and return the address of the NUL byte (NULL if the dest
  * is not large enough).*/
