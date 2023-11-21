@@ -15,6 +15,7 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "spinlock.h"
+#include "toml_utils.h"
 
 static spinlock_t g_thread_list_lock = INIT_SPINLOCK_UNLOCKED;
 DEFINE_LISTP(pal_handle_thread);
@@ -27,20 +28,10 @@ struct thread_param {
 
 extern uintptr_t g_enclave_base;
 
-struct enclave_thread_map {
-    void* tcs;
-};
-
-static struct enclave_thread_map* g_enclave_thread_map = NULL;
-
 /* number of unused items with TCS page */
 static size_t g_available_enclave_thread_num = 0;
-/* number of items with TCS page */
-static size_t g_enclave_thread_num = 0;
-/* total number of items in g_enclave_thread_map */
-static size_t g_enclave_thread_map_size = 0;
 
-static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
+static spinlock_t g_available_enclave_thread_num_lock = INIT_SPINLOCK_UNLOCKED;
 
 /*
  * This function initializes the TCB, SSA, TCS, etc. of a new enclave thread (dynamically
@@ -102,30 +93,23 @@ static void init_dynamic_thread(void* addr) {
 
 static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     int ret;
-    spinlock_lock(&g_enclave_thread_map_lock);
+    spinlock_lock(&g_available_enclave_thread_num_lock);
+    if (FIRST_TIME()) {
+        int64_t thread_num_int64;
+        ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.max_threads",
+                          /*defaultval=*/-1, &thread_num_int64);
+        if (ret < 0 || thread_num_int64 <= 0)
+            BUG();
+        g_available_enclave_thread_num = thread_num_int64 - 1;
+    }
+
     if (g_available_enclave_thread_num) {
         g_available_enclave_thread_num--;
         *out_tcs = NULL;
         ret = 0;
         goto out;
     }
-
-    if (g_enclave_thread_num == g_enclave_thread_map_size) {
-        /* realloc g_enclave_thread_map to accommodate more objects (includes very first time) */
-        size_t new_enclave_thread_map_size = MAX(g_enclave_thread_map_size * 2, 8UL);
-        struct enclave_thread_map* new_enclave_thread_map =
-            calloc(new_enclave_thread_map_size, sizeof(*new_enclave_thread_map));
-        if (!new_enclave_thread_map) {
-            ret = -PAL_ERROR_NOMEM;
-            goto out;
-        }
-
-        memcpy(new_enclave_thread_map, g_enclave_thread_map,
-               g_enclave_thread_num * sizeof(*new_enclave_thread_map));
-        free(g_enclave_thread_map);
-        g_enclave_thread_map_size = new_enclave_thread_map_size;
-        g_enclave_thread_map      = new_enclave_thread_map;
-    }
+    spinlock_unlock(&g_available_enclave_thread_num_lock);
 
     void* addr;
     /* This memory is page aligned and never freed but only re-used by new enclave threads */
@@ -133,12 +117,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     if (ret)
         goto out;
 
-    g_enclave_thread_map[g_enclave_thread_num].tcs = addr;
-    g_enclave_thread_num++;
-
     init_dynamic_thread(addr);
-
-    spinlock_unlock(&g_enclave_thread_map_lock);
 
     ret = sgx_edmm_convert_pages_to_tcs((uint64_t)addr, /*count=*/1);
     if (ret < 0)
@@ -147,7 +126,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     return 0;
 
 out:
-    spinlock_unlock(&g_enclave_thread_map_lock);
+    spinlock_unlock(&g_available_enclave_thread_num_lock);
     return ret;
 }
 
@@ -274,16 +253,9 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
         spinlock_unlock(&g_thread_list_lock);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
-            void* tcs = exiting_thread->tcs;
-            assert(tcs);
-            spinlock_lock(&g_enclave_thread_map_lock);
-            for (size_t i = 0; i < g_enclave_thread_num; i++) {
-                if (g_enclave_thread_map[i].tcs == tcs) {
-                    g_available_enclave_thread_num++;
-                    break;
-                }
-            }
-            spinlock_unlock(&g_enclave_thread_map_lock);
+            spinlock_lock(&g_available_enclave_thread_num_lock);
+            g_available_enclave_thread_num++;
+            spinlock_unlock(&g_available_enclave_thread_num_lock);
         }
     }
 
