@@ -20,7 +20,7 @@ struct enclave_thread_map {
 
 static struct enclave_thread_map* g_enclave_thread_map = NULL;
 
-/* total numbers of items in g_enclave_thread_map; protected by g_enclave_thread_map_lock */
+/* total number of items in g_enclave_thread_map; protected by g_enclave_thread_map_lock */
 static size_t g_enclave_thread_num = 0;
 
 bool g_sgx_enable_stats = false;

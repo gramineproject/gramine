@@ -100,14 +100,15 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
                           /*defaultval=*/-1, &thread_num_int64);
         if (ret < 0 || thread_num_int64 <= 0)
             BUG();
+        /* `- 1` is because we have the main thread that already uses one TCS */
         g_available_enclave_thread_num = thread_num_int64 - 1;
     }
 
     if (g_available_enclave_thread_num) {
         g_available_enclave_thread_num--;
         *out_tcs = NULL;
-        ret = 0;
-        goto out;
+        spinlock_unlock(&g_available_enclave_thread_num_lock);
+        return 0;
     }
     spinlock_unlock(&g_available_enclave_thread_num_lock);
 
@@ -115,7 +116,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     /* This memory is page aligned and never freed but only re-used by new enclave threads */
     ret = pal_internal_memory_alloc(THREAD_DATA_SIZE, &addr);
     if (ret)
-        goto out;
+        return ret;
 
     init_dynamic_thread(addr);
 
@@ -124,10 +125,6 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
         BUG(); /* cannot recover anyway */
     *out_tcs = addr;
     return 0;
-
-out:
-    spinlock_unlock(&g_available_enclave_thread_num_lock);
-    return ret;
 }
 
 /* Initialization wrapper of a newly-created thread. This function finds a newly-created thread in
@@ -186,7 +183,6 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     init_handle_hdr(new_thread, PAL_TYPE_THREAD);
 
     new_thread->thread.tcs = NULL;
-
     INIT_LIST_HEAD(&new_thread->thread, list);
     struct thread_param* thread_param = malloc(sizeof(struct thread_param));
     if (!thread_param) {

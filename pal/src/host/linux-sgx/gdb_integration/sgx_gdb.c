@@ -285,7 +285,7 @@ static void* get_ssa_addr(int memdev, pid_t tid, struct enclave_dbginfo* ei) {
                  * No TCS for this enclave thread yet, this should be a dynamically allocated
                  * thread: need to consult the enclave to learn this thread's dynamic TCS. Recall
                  * that GDB caches TCS addresses (to not issue an access into the Gramine process
-                 * memory).  The GDB's `ei` cache is initialized only with static TCS addresses at
+                 * memory). The GDB's `ei` cache is initialized only with static TCS addresses at
                  * startup.
                  */
                 void* src = (void*)DBGINFO_ADDR + offsetof(struct enclave_dbginfo, tcs_addrs) +
