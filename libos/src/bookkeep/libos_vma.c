@@ -1458,9 +1458,11 @@ int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
     for (size_t i = 0; i < count; i++) {
         ret = reload_vma(&vma_infos[i]);
         if (ret < 0)
-            break;
+            goto out;
     }
 
+    ret = 0;
+out:
     free_vma_info_array(vma_infos, count);
     return ret;
 }
