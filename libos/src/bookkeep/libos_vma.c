@@ -1426,7 +1426,8 @@ static int reload_vma(struct libos_vma_info* vma_info) {
             ret = count;
             goto out;
         } else if (count == 0) {
-            goto out;
+            /* it's possible that the underlying file contents do not cover the whole VMA region */
+            break;
         }
         assert((size_t)count <= to_read);
         read += count;
@@ -1446,6 +1447,12 @@ out:
     return ret;
 }
 
+/* This helper function is to reload the VMA contents of a given file handle on `write`.
+ *
+ * NOTE: the `write` callback can be invoked from multiple paths (syscalls like `munmap()`,
+ * `mmap(MAP_FIXED_NOREPLACE)` and `msync()`) via the `msync` callback, so blindly reloading the VMA
+ * contents on e.g. `munmap()` can be inefficient (but unmapping file-backed memory regions
+ * shouldn't be a frequent operation). */
 int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
     struct libos_vma_info* vma_infos;
     size_t count;
