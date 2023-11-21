@@ -418,7 +418,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     struct mem_area* tls_area = &areas[area_num++];
 
     struct mem_area* stack_areas = &areas[area_num]; /* memorize for later use */
-    for (uint32_t t = 0; t < enclave->thread_num; t++) {
+    for (size_t t = 0; t < enclave->thread_num; t++) {
         areas[area_num] = (struct mem_area){.desc         = "stack",
                                             .skip_eextend = false,
                                             .data_src     = ZERO,
@@ -430,7 +430,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     }
 
     struct mem_area* sig_stack_areas = &areas[area_num]; /* memorize for later use */
-    for (uint32_t t = 0; t < enclave->thread_num; t++) {
+    for (size_t t = 0; t < enclave->thread_num; t++) {
         areas[area_num] = (struct mem_area){.desc         = "sig_stack",
                                             .skip_eextend = false,
                                             .data_src     = ZERO,
@@ -508,7 +508,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         }
 
         if (areas[i].data_src == TLS) {
-            for (uint32_t t = 0; t < enclave->thread_num; t++) {
+            for (size_t t = 0; t < enclave->thread_num; t++) {
                 struct pal_enclave_tcb* gs = data + g_page_size * t;
                 memset(gs, 0, g_page_size);
                 assert(sizeof(*gs) <= g_page_size);
@@ -527,7 +527,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 gs->thread = NULL;
             }
         } else if (areas[i].data_src == TCS) {
-            for (uint32_t t = 0; t < enclave->thread_num; t++) {
+            for (size_t t = 0; t < enclave->thread_num; t++) {
                 sgx_arch_tcs_t* tcs = data + g_page_size * t;
                 memset(tcs, 0, g_page_size);
                 // .ossa, .oentry, .ofs_base and .ogs_base are offsets from enclave base, not VAs.
@@ -592,7 +592,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         dbg->aep            = async_exit_pointer;
         dbg->eresume        = eresume_pointer;
         dbg->thread_tids[0] = dbg->pid;
-        for (uint32_t t = 0; t < enclave->thread_num; t++)
+        for (size_t t = 0; t < enclave->thread_num; t++)
             dbg->tcs_addrs[t] = tcs_addrs[t];
     }
 
@@ -1032,8 +1032,8 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 
     /* initialize TCB at the top of the alternative stack */
     PAL_HOST_TCB* tcb = alt_stack + ALT_STACK_SIZE - sizeof(PAL_HOST_TCB);
-    /* main thread uses the stack provided by Linux and doesn't provide dynamic TCS */
-    pal_host_tcb_init(tcb, /*tcs=*/NULL, /*stack=*/NULL, alt_stack);
+    /* main thread uses the stack provided by Linux */
+    pal_host_tcb_init(tcb, /*stack=*/NULL, alt_stack);
     ret = pal_thread_init(tcb);
     if (ret < 0)
         return ret;

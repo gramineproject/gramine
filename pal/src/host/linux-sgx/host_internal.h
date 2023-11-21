@@ -58,6 +58,8 @@ struct pal_enclave {
 
 extern struct pal_enclave g_pal_enclave;
 
+void* realloc(void* ptr, size_t new_size);
+
 int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
 

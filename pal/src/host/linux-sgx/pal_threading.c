@@ -112,9 +112,7 @@ static int create_dynamic_tcs_if_none_available(void** out_tcs) {
 
     if (g_enclave_thread_num == g_enclave_thread_map_size) {
         /* realloc g_enclave_thread_map to accommodate more objects (includes very first time) */
-        size_t new_enclave_thread_map_size = g_enclave_thread_map_size
-                                             ? g_enclave_thread_map_size * 2
-                                             : 8;
+        size_t new_enclave_thread_map_size = MAX(g_enclave_thread_map_size * 2, 8UL);
         struct enclave_thread_map* new_enclave_thread_map =
             calloc(new_enclave_thread_map_size, sizeof(*new_enclave_thread_map));
         if (!new_enclave_thread_map) {
