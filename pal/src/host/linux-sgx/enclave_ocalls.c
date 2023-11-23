@@ -1426,7 +1426,7 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
     return retval;
 }
 
-int ocall_connect_simple(int fd, int nonblocking, struct sockaddr_storage* addr, size_t* addrlen,
+int ocall_connect_simple(int fd, bool nonblocking, struct sockaddr_storage* addr, size_t* addrlen,
                          bool* out_inprogress) {
     int ret;
     void* old_ustack = sgx_prepare_ustack();

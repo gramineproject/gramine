@@ -122,8 +122,10 @@ int main(int argc, const char** argv) {
             strerror(errno));
     }
 
+    /* test can be run with "poll" or "epoll" cmdline arg: we test POLLOUT for the poll case and
+     * EPOLLIN for the epoll case (no reason other than to test both write and read events) */
     bool timedout = false;
-    bool pollout = false;
+    bool poll_event_happened = false;
     if (strcmp(argv[2], "poll") == 0) {
         struct pollfd infds[] = {
             {.fd = s, .events = POLLOUT},
@@ -132,11 +134,11 @@ int main(int argc, const char** argv) {
         if (ret == 0)
             timedout = true;
         else
-            pollout = !!(infds[0].revents & POLLOUT);
+            poll_event_happened = !!(infds[0].revents & POLLOUT);
 
     } else {
         int epfd = CHECK(epoll_create(/*size=*/1));
-        struct epoll_event event = { .events = EPOLLOUT };
+        struct epoll_event event = { .events = EPOLLIN };
         CHECK(epoll_ctl(epfd, EPOLL_CTL_ADD, s, &event));
         struct epoll_event out_event = { 0 };
         ret = CHECK(epoll_wait(epfd, &out_event, /*max_events=*/1, TIMEOUT_MS));
@@ -144,7 +146,7 @@ int main(int argc, const char** argv) {
         if (ret == 0)
             timedout = true;
         else
-            pollout = !!(out_event.events & EPOLLOUT);
+            poll_event_happened = !!(out_event.events & EPOLLIN);
     }
 
     /* one interesting case -- remote peer is completely unresponsive */
@@ -155,8 +157,9 @@ int main(int argc, const char** argv) {
     }
 
     /* the most interesting case -- remote peer not unresponsive but very slow */
-    if (!pollout) {
-        ERR("polling didn't return POLLOUT on connecting socket");
+    if (!poll_event_happened) {
+        ERR("[after EINPROGRESS] polling didn't return %s on connecting socket",
+            strcmp(argv[2], "poll") == 0 ? "POLLOUT" : "EPOLLIN");
     }
 
     int so_error;

@@ -248,7 +248,6 @@ static int disconnect(struct libos_handle* handle) {
     bool inprogress_unused;
     int ret = PalSocketConnect(sock->pal_handle, &pal_ip_addr, /*local_addr=*/NULL,
                                &inprogress_unused);
-    assert(inprogress_unused == false);
     return pal_to_unix_errno(ret);
 }
 

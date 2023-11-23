@@ -86,22 +86,16 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
     return handle;
 }
 
-void check_connect_inprogress_on_poll(struct libos_handle* handle,
-                                      pal_wait_flags_t pal_ret_events) {
+void check_connect_inprogress_on_poll(struct libos_handle* handle, bool error_event) {
     /*
      * Special case of a non-blocking socket that is INPROGRESS (connecting): must check if error or
      * success of connecting. If error, then set SO_ERROR (last_error). If success, then move to
-     * SOCK_CONNECTED state and clear SO_ERROR.
-     *
-     * This is only relevant if POLLOUT event was requested. See `man 2 connect`, EINPROGRESS case.
+     * SOCK_CONNECTED state and clear SO_ERROR. See `man 2 connect`, EINPROGRESS case.
      *
      * We first fetch `connecting_in_progress` instead of a proper lock on the handle to speed up
      * the common case of an already-connected socket doing recv/send.
      */
      assert(handle->type == TYPE_SOCK);
-
-    if (!(pal_ret_events & PAL_WAIT_WRITE))
-        return;
 
     bool inprog = __atomic_load_n(&handle->info.sock.connecting_in_progress, __ATOMIC_ACQUIRE);
     if (!inprog)
@@ -109,20 +103,24 @@ void check_connect_inprogress_on_poll(struct libos_handle* handle,
 
     struct libos_sock_handle* sock = &handle->info.sock;
     lock(&sock->lock);
+
     if (sock->state != SOCK_CONNECTING) {
-        /* theoretically, another thread could be doing another select/poll on this socket and
-         * modify the state; we don't support this unlikely case */
-        BUG();
+        /* data race: another thread could have done another select/poll on this socket and
+         * modified the state; there's nothing left to be done */
+        goto out;
     }
-    if (pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
+
+    if (error_event) {
         sock->last_error = ECONNREFUSED;
-    } else {
-        sock->last_error = 0;
-        __atomic_store_n(&sock->connecting_in_progress, false, __ATOMIC_RELEASE);
-        sock->state = SOCK_CONNECTED;
-        sock->can_be_read = true;
-        sock->can_be_written = true;
+        goto out;
     }
+
+    sock->last_error = 0;
+    sock->can_be_read = true;
+    sock->can_be_written = true;
+    __atomic_store_n(&sock->connecting_in_progress, false, __ATOMIC_RELEASE);
+    sock->state = SOCK_CONNECTED;
+out:
     unlock(&sock->lock);
 }
 
@@ -254,9 +252,8 @@ long libos_syscall_socketpair(int family, int type, int protocol, int* sv) {
         unlock(&sock2->lock);
         goto out;
     }
-    bool inprogress;
-    ret = sock2->ops->connect(handle2, &addr, sizeof(addr), &inprogress);
-    assert(inprogress == false);
+    bool inprogress_unused;
+    ret = sock2->ops->connect(handle2, &addr, sizeof(addr), &inprogress_unused);
     if (ret < 0) {
         unlock(&sock2->lock);
         goto out;

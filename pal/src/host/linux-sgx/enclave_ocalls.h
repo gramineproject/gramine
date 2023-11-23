@@ -63,7 +63,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
 int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const struct sockaddr* addr,
                   size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen);
 
-int ocall_connect_simple(int fd, int nonblocking, struct sockaddr_storage* addr, size_t* addrlen,
+int ocall_connect_simple(int fd, bool nonblocking, struct sockaddr_storage* addr, size_t* addrlen,
                          bool* out_inprogress);
 
 ssize_t ocall_recv(int sockfd, struct iovec* buf, size_t iov_len, void* addr, size_t* addrlenptr,

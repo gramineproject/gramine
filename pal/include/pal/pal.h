@@ -596,7 +596,7 @@ int PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE*
  * \param[out] out_local_addr  On success contains the local address of the socket.
  *                             Can be NULL, to ignore the result.
  * \param[out] out_inprogress  On success, returns true in special case of an in-progress connection
- *                             on non-blocking socket.
+ *                             on a non-blocking socket.
  *
  * \returns 0 on success, negative error code on failure.
  *
