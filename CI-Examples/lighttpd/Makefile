@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 THIS_DIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
