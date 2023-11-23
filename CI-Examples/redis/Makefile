@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 # Build Redis as follows:
 #
 # - make               -- create non-SGX no-debug-log manifest

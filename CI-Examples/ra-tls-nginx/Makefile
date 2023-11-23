@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 RA_TYPE ?= dcap
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 

@@ -1,5 +1,8 @@
 Gramine itself is licensed under the LGPL-3.0-or-later.
 
+Examples (the `CI-Examples` subdirectory) are licensed under BSD-3-Clause,
+except for several C files. See each file for its license.
+
 Gramine also includes the following third party sources (and licenses):
 * cJSON - MIT
 * curl/libcurl - MIT derivative
