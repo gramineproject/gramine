@@ -1373,14 +1373,14 @@ static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
 
 static bool vma_filter_needs_reload(struct libos_vma* vma, void* arg) {
     struct libos_handle* hdl = arg;
+    assert(hdl && hdl->inode); /* guaranteed to have inode because invoked from `write` callback */
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
 
-    assert(vma->file && vma->file->inode);
-    assert(hdl && hdl->inode);
+    assert(vma->file); /* check above filtered out non-file-backed mappings */
 
-    if (vma->file->inode != hdl->inode)
+    if (!vma->file->inode || vma->file->inode != hdl->inode)
         return false;
 
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->read)
