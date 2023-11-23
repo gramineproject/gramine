@@ -1377,9 +1377,10 @@ static bool vma_filter_needs_reload(struct libos_vma* vma, void* arg) {
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
         return false;
 
-    assert(vma->file);
+    assert(vma->file && vma->file->inode);
+    assert(hdl && hdl->inode);
 
-    if (hdl && hdl->inode && vma->file->inode && vma->file->inode != hdl->inode)
+    if (vma->file->inode != hdl->inode)
         return false;
 
     if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->read)
