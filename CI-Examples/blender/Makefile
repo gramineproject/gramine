@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 # assumes this makefile lies in cwd
 PWD := $(shell pwd)
 

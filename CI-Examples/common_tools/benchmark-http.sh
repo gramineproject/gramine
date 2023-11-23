@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 # On Ubuntu, this script requires wrk2 tool installed for the wrk binary.
 #
 # Run like: ./benchmark-http.sh host:port

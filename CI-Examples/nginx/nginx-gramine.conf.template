@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
 # This configuration file is based on nginx.conf.default from Nginx v1.16.1.
 #
 # The following changes are made:
