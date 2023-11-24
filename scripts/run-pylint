@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# Currently not used in CI due to a high ratio of questionable findings to meaningful ones and
+# incompatible changes between pylint versions.
+# It is still recommended to use it and check the results manually when doing bigger changes in
+# Python codebase. It's just not suitable as a CI check.
+
 set -e
 
 cd "$(git rev-parse --show-toplevel)"

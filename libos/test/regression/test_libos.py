@@ -1264,8 +1264,6 @@ class TC_50_GDB(RegressionTestCase):
         return match.group(1).strip()
 
     def test_000_gdb_backtrace(self):
-        # pylint: disable=fixme
-        #
         # To run this test manually, use:
         # GDB=1 GDB_SCRIPT=debug.gdb gramine-{direct|sgx} debug
         #
