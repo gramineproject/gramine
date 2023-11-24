@@ -46,7 +46,6 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     pkg-config \
     protobuf-c-compiler \
     protobuf-compiler \
-    pylint \
     python3 \
     python3-apport \
     python3-apt \

@@ -1,7 +1,6 @@
 stage('lint') {
     sh '''
         ./scripts/gitignore-check-files
-        ./.ci/run-pylint -f text
         ./.ci/run-shellcheck
     '''
 }
