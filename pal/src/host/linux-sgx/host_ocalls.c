@@ -60,7 +60,7 @@ static long sgx_ocall_exit(void* args) {
     block_async_signals(true);
     ecall_thread_reset();
 
-    unmap_tcs();
+    unmap_my_tcs();
 
     if (!current_enclave_thread_cnt()) {
         /* no enclave threads left, kill the whole process */

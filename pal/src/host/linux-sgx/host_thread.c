@@ -19,6 +19,7 @@ struct enclave_thread_map {
 };
 
 static struct enclave_thread_map* g_enclave_thread_map = NULL;
+static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
 
 /* total number of items in g_enclave_thread_map; protected by g_enclave_thread_map_lock */
 static size_t g_enclave_thread_num = 0;
@@ -86,15 +87,12 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
 }
 
-static spinlock_t g_enclave_thread_map_lock = INIT_SPINLOCK_UNLOCKED;
-
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
-    size_t enclave_thread_map_size_in_bytes = (sizeof(struct enclave_thread_map) * thread_num);
     sgx_arch_tcs_t* enclave_tcs = tcs_base;
 
-    g_enclave_thread_map = (struct enclave_thread_map*)malloc(enclave_thread_map_size_in_bytes);
+    g_enclave_thread_map = malloc(sizeof(struct enclave_thread_map) * thread_num);
     if (!g_enclave_thread_map) {
-        return -PAL_ERROR_NOMEM;
+        return -ENOMEM;
     }
 
     for (uint32_t i = 0; i < thread_num; i++) {
@@ -138,12 +136,10 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
         }
 
         size_t new_enclave_thread_num = MIN(g_enclave_thread_num * 2, (size_t)MAX_DBG_THREADS);
-        size_t new_enclave_thread_map_size_in_bytes =
-            sizeof(struct enclave_thread_map) * new_enclave_thread_num;
-        struct enclave_thread_map* new_enclave_thread_map = (struct enclave_thread_map*)realloc(
-            g_enclave_thread_map, new_enclave_thread_map_size_in_bytes);
+        struct enclave_thread_map* new_enclave_thread_map = realloc(
+            g_enclave_thread_map, sizeof(struct enclave_thread_map) * new_enclave_thread_num);
         if (!new_enclave_thread_map) {
-            ret = -PAL_ERROR_NOMEM;
+            ret = -ENOMEM;
             goto out;
         }
 
@@ -190,20 +186,22 @@ void map_tcs(unsigned int tid) {
          * because the enclave decided to reuse some TCS that is being currently unmapped
          * by another thread -- in this case, the host-enclave map may still have all TCS slots
          * occupied, but only for a small window of time until the exiting thread calls
-         * `unmap_tcs()`.
+         * `unmap_my_tcs()`.
          */
         CPU_RELAX();
     }
 }
 
-void unmap_tcs(void) {
+void unmap_my_tcs(void) {
+    size_t i = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
-    for (size_t i = 0; i < g_enclave_thread_num; i++)
+    for (i = 0; i < g_enclave_thread_num; i++)
         if (g_enclave_thread_map[i].tcs == pal_get_host_tcb()->tcs) {
             g_enclave_thread_map[i].tid = 0;
             ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i] = 0;
             break;
         }
+    assert(i < g_enclave_thread_num);
     pal_get_host_tcb()->tcs = NULL;
     spinlock_unlock(&g_enclave_thread_map_lock);
 }
@@ -272,7 +270,7 @@ int pal_thread_init(void* tcbptr) {
     /* not-first (child) thread, start it */
     ecall_thread_start();
 
-    unmap_tcs();
+    unmap_my_tcs();
     ret = 0;
 out:
     if (ret != 0)

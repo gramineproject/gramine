@@ -1055,7 +1055,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
                         &qe_targetinfo, &topo_info, &dns_conf, enclave->edmm_enabled,
                         reserved_mem_ranges, reserved_mem_ranges_size);
 
-    unmap_tcs();
+    unmap_my_tcs();
     DO_SYSCALL(munmap, alt_stack, ALT_STACK_SIZE);
     DO_SYSCALL(exit, 0);
     die_or_inf_loop();
