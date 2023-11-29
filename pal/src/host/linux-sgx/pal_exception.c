@@ -257,19 +257,19 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
      *   | --------------------------- |     | #MF |     | #GP | others           |   none     |
      *   |  SW signals (untrusted) |   | #UD | #XM | #PF | #AC | (#BR,#DB,#BP,#CP)| (valid=0)  |
      *   |                         v   |     |     |     |     |                  |            |
-     * ----------------------------+-----------------------------------------------------------+
+     * --+-----------------------------+-----+-----+-----+-----+------------------+------------+
      * s |                             |     |     |     |     |                  |            |
      * y | PAL_EVENT_ILLEGAL           | yes | no  | no  | no  |                  |            |
      * n |                             |     |     |     |     |                  |            |
-     * c +-----------------------------------------------------+        no        |    no      |
+     * c +-----------------------------+-----+-----+-----+-----+        no        |    no      |
      * h |                             |     |     |     |     |   (exceptions    | (malicious |
      * r | PAL_EVENT_ARITHMETIC_ERROR  | no  | yes | no  | no  |    unsupported   |  host      |
      * o |                             |     |     |     |     |    by Gramine)   |  injects   |
-     * n +-----------------------------------------------------+                  |  SW signal)|
+     * n +-----------------------------+-----+-----+-----+-----+                  |  SW signal)|
      * o |                             |     |     |     |     |                  |            |
      * u | PAL_EVENT_MEMFAULT          | no  | no  |yes* | yes |                  |            |
      * s |                             |     |     |     |     |                  |            |
-     * --------------------------------------+-----+-----+-----+-------------------------------+
+     * --+-----------------------------+-----+-----+-----+-----+------------------+------------+
      *   |                             |                                          |            |
      * a | PAL_EVENT_QUIT              |                                          |    yes     |
      * s |                             |          no, except #PF case*            |            |
@@ -329,6 +329,11 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                      * considered spurious and should be ignored. So the event must be a
                      * host-induced external event (note that `event_num` is already set), so in the
                      * following we handle this external event and ignore the #PF info.
+                     *
+                     * Note that there is a possibility of DoS: if the host modified a real memory
+                     * fault (valid #PF) to e.g. a PAL_EVENT_INTERRUPTED signal, then we end up in
+                     * this special case and the app will not handle a real memory fault (but a
+                     * dummy PAL_EVENT_INTERRUPTED) and will get stuck in the #PF exception.
                      */
                     memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
                     event_num = untrusted_external_event;
