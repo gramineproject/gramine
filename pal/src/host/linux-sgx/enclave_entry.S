@@ -267,7 +267,7 @@ enclave_entry:
     # Instead if we're in such situation, we emulate it as if RIP reached to the safe point,
     # .Lcssa0_ocall_return_after_stack_restore. In other words, the stage-1 handler jumps to the
     # regular returning-from-OCALL flow (CSSA=0) with RSI=<external event> which forces that flow
-    # to call the _PalExceptionHandler() before proceeding with normal enclave code.
+    # to call _PalExceptionHandler() before proceeding with normal enclave code.
     #
     # Ocall sequence:
     #  1. call sgx_ocall()
