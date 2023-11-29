@@ -486,14 +486,14 @@ enclave_entry:
     movq %r14, SGX_GPR_RDI(%rbx)
     movq %r15, SGX_GPR_RSI(%rbx)
 
-    # Continue rewire SSA0 (args to _PalExceptionHandler()):
+    # Continue rewiring SSA0 (args to _PalExceptionHandler()):
     #    - pointer to sgx_cpu_context_t (3rd arg)
     #    - pointer to PAL_XREGS_STATE   (4th arg)
     movq %rsi, SGX_GPR_RDX(%rbx)
     movq %rsi, SGX_GPR_RCX(%rbx)
     addq $SGX_CPU_CONTEXT_SIZE, SGX_GPR_RCX(%rbx)
 
-    # Continue rewire SSA0 (args to _PalExceptionHandler()):
+    # Continue rewiring SSA0 (args to _PalExceptionHandler()):
     #    - pointer to EXINFO            (5th arg)
     sub $SSA_MISC_EXINFO_SIZE, %rsi
     mov %rsi, SGX_GPR_R8(%rbx)

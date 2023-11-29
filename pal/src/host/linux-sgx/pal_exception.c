@@ -242,15 +242,64 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
     static_assert(sizeof(trusted_exit_info) == sizeof(trusted_exit_info_), "invalid size");
     memcpy(&trusted_exit_info, &trusted_exit_info_, sizeof(trusted_exit_info));
 
-    uint32_t event_num = untrusted_external_event;
+    /*
+     * Intel SGX hardware exposes information on a HW exception in the EXITINFO struct.
+     * Host OS + Gramine's untrusted part of PAL deliver a SW signal. The SW signal can be a
+     * reaction to HW exception (synchronous signal) or a reaction to software events (asynchronous
+     * signal). For security, it is important to cross-check HW exception state vs SW signal state.
+     *
+     * The below table shows the cross checks. "yes" means allowed combination, "no" means
+     * prohibited combination (Gramine terminates). "yes*" means a special case of #PF, see comments
+     * below on #PF handling.
+     *
+     *   +-----------------------------+-----+-----+-----+-----+------------------+------------+
+     *   | HW exceptions (trusted) ->  |     | #DE |     |     |                  |            |
+     *   | --------------------------- |     | #MF |     | #GP | others           |   none     |
+     *   |  SW signals (untrusted) |   | #UD | #XM | #PF | #AC | (#BR,#DB,#BP,#CP)| (valid=0)  |
+     *   |                         v   |     |     |     |     |                  |            |
+     * ----------------------------+-----------------------------------------------------------+
+     * s |                             |     |     |     |     |                  |            |
+     * y | PAL_EVENT_ILLEGAL           | yes | no  | no  | no  |                  |            |
+     * n |                             |     |     |     |     |                  |            |
+     * c +-----------------------------------------------------+        no        |    no      |
+     * h |                             |     |     |     |     |   (exceptions    | (malicious |
+     * r | PAL_EVENT_ARITHMETIC_ERROR  | no  | yes | no  | no  |    unsupported   |  host      |
+     * o |                             |     |     |     |     |    by Gramine)   |  injects   |
+     * n +-----------------------------------------------------+                  |  SW signal)|
+     * o |                             |     |     |     |     |                  |            |
+     * u | PAL_EVENT_MEMFAULT          | no  | no  |yes* | yes |                  |            |
+     * s |                             |     |     |     |     |                  |            |
+     * --------------------------------------+-----+-----+-----+-------------------------------+
+     *   |                             |                                          |            |
+     * a | PAL_EVENT_QUIT              |                                          |    yes     |
+     * s |                             |          no, except #PF case*            |            |
+     * y +-----------------------------+  (malicious host ignores HW exception)   +------------+
+     * n |                             |                                          |            |
+     * c | PAL_EVENT_INTERRUPTED       |                                          |    yes     |
+     *   |                             |                                          |            |
+     * --+-----------------------------+------------------------------------------+------------+
+     */
 
-    if (trusted_exit_info.valid) {
+    uint32_t event_num = 0; /* illegal event */
+
+    if (!trusted_exit_info.valid) {
+        /* corresponds to last column in the table above */
+        if (untrusted_external_event != PAL_EVENT_QUIT
+                && untrusted_external_event != PAL_EVENT_INTERRUPTED) {
+            log_error("Host injected malicious signal %u", untrusted_external_event);
+            _PalProcessExit(1);
+        }
+        event_num = untrusted_external_event;
+    } else {
+        /* corresponds to all but last columns in the table above */
+        const char* exception_name = NULL;
         switch (trusted_exit_info.vector) {
-            case SGX_EXCEPTION_VECTOR_BR:
-                log_error("Handling #BR exceptions is currently unsupported by Gramine");
-                _PalProcessExit(1);
-                break;
             case SGX_EXCEPTION_VECTOR_UD:
+                if (untrusted_external_event != PAL_EVENT_ILLEGAL) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_ILLEGAL, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 if (handle_ud(uc)) {
                     restore_sgx_context(uc, xregs_state);
                     /* NOTREACHED */
@@ -260,6 +309,11 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             case SGX_EXCEPTION_VECTOR_DE:
             case SGX_EXCEPTION_VECTOR_MF:
             case SGX_EXCEPTION_VECTOR_XM:
+                if (untrusted_external_event != PAL_EVENT_ARITHMETIC_ERROR) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_ARITHMETIC_ERROR, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 event_num = PAL_EVENT_ARITHMETIC_ERROR;
                 break;
             case SGX_EXCEPTION_VECTOR_PF:
@@ -275,25 +329,37 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                      * considered spurious and should be ignored. So the event must be a
                      * host-induced external event (note that `event_num` is already set), so in the
                      * following we handle this external event and ignore the #PF info.
-                     *
-                     * SECURITY NOTE: Here we make a decision based on the input from the possibly
-                     * malicious host (`untrusted_external_event`). However, this is benign in SGX
-                     * threat model: if the host modified a real memory fault (valid #PF) to e.g. a
-                     * SIGCONT event, then the app will not handle a real memory fault and will get
-                     * stuck in the #PF exception (hang, i.e. a DoS attack).
                      */
                     memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
+                    event_num = untrusted_external_event;
                     break;
                 }
                 /* fallthrough */
             case SGX_EXCEPTION_VECTOR_GP:
             case SGX_EXCEPTION_VECTOR_AC:
+                if (untrusted_external_event != PAL_EVENT_MEMFAULT) {
+                    log_error("Host reported mismatching signal (expected %u, got %u)",
+                              PAL_EVENT_MEMFAULT, untrusted_external_event);
+                    _PalProcessExit(1);
+                }
                 event_num = PAL_EVENT_MEMFAULT;
                 break;
+            case SGX_EXCEPTION_VECTOR_BR:
+                exception_name = exception_name ? : "#BR";
+                /* fallthrough */
             case SGX_EXCEPTION_VECTOR_DB:
+                exception_name = exception_name ? : "#DB";
+                /* fallthrough */
             case SGX_EXCEPTION_VECTOR_BP:
+                exception_name = exception_name ? : "#BP";
+                /* fallthrough */
+            case SGX_EXCEPTION_VECTOR_CP:
+                exception_name = exception_name ? : "#CP";
+                /* fallthrough */
             default:
-                restore_sgx_context(uc, xregs_state);
+                log_error("Handling %s exceptions is currently unsupported by Gramine",
+                          exception_name ? : "[unknown]");
+                _PalProcessExit(1);
                 /* NOTREACHED */
         }
     }
