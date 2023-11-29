@@ -28,10 +28,10 @@ struct thread_param {
 
 extern uintptr_t g_enclave_base;
 
-/* number of unused items with TCS page */
-static size_t g_available_enclave_thread_num = 0;
+/* number of unused TCS pages; protected by g_unused_tcs_pages_num_lock */
+size_t g_unused_tcs_pages_num = 0;
 
-static spinlock_t g_available_enclave_thread_num_lock = INIT_SPINLOCK_UNLOCKED;
+static spinlock_t g_unused_tcs_pages_num_lock = INIT_SPINLOCK_UNLOCKED;
 
 /*
  * This function initializes the TCB, SSA, TCS, etc. of a new enclave thread (dynamically
@@ -40,7 +40,7 @@ static spinlock_t g_available_enclave_thread_num_lock = INIT_SPINLOCK_UNLOCKED;
  *
  * This function is equivalent to host_main.c:initialize_enclave()
  *
- * Layout of the enclave thread:
+ * Layout of the enclave thread data block:
  *
  *         TCS +--> +-------------------+
  *                  |  TCS              | PAGE_SIZE
@@ -55,9 +55,9 @@ static spinlock_t g_available_enclave_thread_num_lock = INIT_SPINLOCK_UNLOCKED;
  *                  +-------------------+
  *
  */
-#define THREAD_DATA_SIZE                                                           \
-    (SSA_FRAME_NUM * SSA_FRAME_SIZE + PAGE_SIZE + PAGE_SIZE + ENCLAVE_STACK_SIZE + \
-     ENCLAVE_SIG_STACK_SIZE)
+#define THREAD_DATA_SIZE                                                               \
+    (PAGE_SIZE + SSA_FRAME_NUM * SSA_FRAME_SIZE + PAGE_SIZE + ENCLAVE_SIG_STACK_SIZE + \
+     ENCLAVE_STACK_SIZE)
 static void init_dynamic_thread(void* addr) {
     sgx_arch_tcs_t* tcs         = addr;
     void* ssa                   = (char*)tcs + PAGE_SIZE;
@@ -93,24 +93,14 @@ static void init_dynamic_thread(void* addr) {
 
 static int create_dynamic_tcs_if_none_available(void** out_tcs) {
     int ret;
-    spinlock_lock(&g_available_enclave_thread_num_lock);
-    if (FIRST_TIME()) {
-        int64_t thread_num_int64;
-        ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.max_threads",
-                          /*defaultval=*/-1, &thread_num_int64);
-        if (ret < 0 || thread_num_int64 <= 0)
-            BUG();
-        /* `- 1` is because we have the main thread that already uses one TCS */
-        g_available_enclave_thread_num = thread_num_int64 - 1;
-    }
-
-    if (g_available_enclave_thread_num) {
-        g_available_enclave_thread_num--;
+    spinlock_lock(&g_unused_tcs_pages_num_lock);
+    if (g_unused_tcs_pages_num) {
+        g_unused_tcs_pages_num--;
         *out_tcs = NULL;
-        spinlock_unlock(&g_available_enclave_thread_num_lock);
+        spinlock_unlock(&g_unused_tcs_pages_num_lock);
         return 0;
     }
-    spinlock_unlock(&g_available_enclave_thread_num_lock);
+    spinlock_unlock(&g_unused_tcs_pages_num_lock);
 
     void* addr;
     /* This memory is page aligned and never freed but only re-used by new enclave threads */
@@ -249,9 +239,9 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
         spinlock_unlock(&g_thread_list_lock);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
-            spinlock_lock(&g_available_enclave_thread_num_lock);
-            g_available_enclave_thread_num++;
-            spinlock_unlock(&g_available_enclave_thread_num_lock);
+            spinlock_lock(&g_unused_tcs_pages_num_lock);
+            g_unused_tcs_pages_num++;
+            spinlock_unlock(&g_unused_tcs_pages_num_lock);
         }
     }
 
