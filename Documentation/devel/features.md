@@ -7,8 +7,8 @@
 > ⚠ This is a highly technical document intended for software engineers with knowledge of OS
 > kernels.
 
-> ⛏ This is a living document. The last major update happened in **June 2023** and closely
-> corresponds to Gramine v1.5.
+> ⛏ This is a living document. The last major update happened in **November 2023** and closely
+> corresponds to Gramine v1.6.
 
 Gramine strives to **run native, unmodified Linux applications** on any platform. The SGX backend
 additionally strives to **provide security guarantees**, in particular, protect against a malicious
@@ -1318,7 +1318,7 @@ grows with time, as Gramine adds functionality required by real-world workloads.
   - ☑ `/dev/zero` <sup>[23](#misc)</sup>
   - ☑ `/dev/random` <sup>[21](#randomness)</sup>
   - ☑ `/dev/urandom` <sup>[21](#randomness)</sup>
-  - ☒ `/dev/shm` <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup>
+  - ▣ `/dev/shm` <sup>[15](#semaphores)</sup> <sup>[17](#shared-memory)</sup>
   - ☑ `/dev/stdin` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
   - ☑ `/dev/stdout` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
   - ☑ `/dev/stderr` <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
@@ -1420,9 +1420,15 @@ grows with time, as Gramine adds functionality required by real-world workloads.
           <sup>[22](#system-information-and-resource-accounting)</sup>
         - ☑ `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
           <sup>[22](#system-information-and-resource-accounting)</sup>
+    - ☑ `/sys/devices/system/cpu/kernel_max`
+      <sup>[22](#system-information-and-resource-accounting)</sup>
+    - ☑ `/sys/devices/system/cpu/offline`
+      <sup>[22](#system-information-and-resource-accounting)</sup>
     - ☑ `/sys/devices/system/cpu/online`
       <sup>[22](#system-information-and-resource-accounting)</sup>
     - ☑ `/sys/devices/system/cpu/possible`
+      <sup>[22](#system-information-and-resource-accounting)</sup>
+    - ☑ `/sys/devices/system/cpu/present`
       <sup>[22](#system-information-and-resource-accounting)</sup>
 
   - ▣ `/sys/devices/system/node/`
@@ -1785,9 +1791,9 @@ Gramine implements most of the Linux IPC mechanisms. In particular:
 - ☑ FIFOs (named pipes)
 - ▣ UNIX domain sockets
 - ▣ File locking
+- ▣ Shared memory (untrusted, POSIX only)
+- ▣ Semaphores (untrusted, POSIX only)
 - ☒ Message queues
-- ☒ Semaphores
-- ☒ Shared memory
 
 Gramine implements pipes, FIFOs and UNIX domain sockets (UDSes) via host-OS pipes. In case of SGX
 backend, all pipe, FIFO and UDS communication is transparently encrypted.
@@ -1809,6 +1815,17 @@ that is managed by the leader.
 Because of this Gramine peculiarity, IPC-intensive applications may experience performance
 degradation. Also, some IPC-related system calls and pseudo-files are not implemented in Gramine due
 to the complexity of message-passing implementation.
+
+Gramine implements limited support for POSIX shared memory (but not for System V shared memory).
+Please note that in case of the SGX backend, implementation of shared memory is *insecure*. For more
+information, please refer to the [corresponding manifest
+syntax](../manifest-syntax.html#untrusted-shared-memory) and [the corresponding section in this
+document](#shared-memory).
+
+Since Gramine has support for POSIX shared memory, consequently Gramine has support for POSIX
+semaphores (which are built on top of POSIX shared memory). In case of the SGX backend,
+implementation of POSIX semaphores is *insecure*, similarly to POSIX shared memory. Please refer to
+[the corresponding section in this document](#semaphores).
 
 To learn more about Gramine support for each of the Linux IPC mechanisms, refer to corresponding
 sections below.
@@ -2095,7 +2112,8 @@ Recall however that users and groups are dummy in Gramine, thus the checks are a
 irrelevant.
 
 Gramine implements `sendfile()` system call. However, this system call is emulated in an inefficient
-way (for simplicity). Pay attention to this if your application relies heavily on `sendfile()`.
+way (for simplicity), especially in multi-threaded cases. Pay attention to this if your application
+relies heavily on `sendfile()`.
 
 Gramine supports directory operations: `chdir()` and `fchdir()` to change the working directory, and
 `getcwd()` to get the current working directory.
@@ -2404,8 +2422,11 @@ Gramine supports TCP/IP sockets and UDP/IP sockets, i.e. the combinations `AF_IN
 domain sockets (`AF_UNIX` + `SOCK_STREAM`), but does *not* support datagram UNIX domain sockets
 (`AF_UNIX` + `SOCK_DGRAM`).
 
-Non-blocking sockets (`SOCK_NONBLOCK`) are supported. Generation of the `SIGPIPE` signal on send
-operation if the receive end of a socket has been closed is supported.
+Non-blocking sockets (`SOCK_NONBLOCK`) are supported. Non-blocking connects are supported, i.e.,
+cases when `connect()` returns `-EINPROGRESS` are supported.
+
+Generation of the `SIGPIPE` signal on send operation if the receive end of a socket has been closed
+is supported.
 
 Gramine does *not* implement full network stack by design. Gramine relies on the host network stack
 for most operations.
@@ -2684,8 +2705,13 @@ There are two semaphore APIs in Linux kernel:
 POSIX semaphores are technically not a Linux kernel API. Instead, they are implemented on top of the
 POSIX shared memory functionality of Linux by libc (i.e., via `/dev/shm` pseudo-filesystem).
 
-Gramine does *not* currently implement either of these APIs. Gramine could implement them in
-the future, if need arises.
+Gramine currently has limited support for POSIX semaphores. Gramine does *not* implement System V
+semaphores.
+
+Please note that in case of the SGX backend, implementation of POSIX semaphores is *insecure*, as
+semaphores are placed in [shared memory](#shared-memory) which by design is allocated in untrusted
+non-enclave memory, and there is no way for Gramine to intercept memory accesses to shared memory
+regions (to provide some security guarantees).
 
 <details><summary>Related system calls</summary>
 
@@ -2698,7 +2724,7 @@ the future, if need arises.
 
 <details><summary>Related pseudo-files</summary>
 
-- ☒ `/dev/shm`
+- ▣ `/dev/shm`: partially implemented, insecure by itself, see [here](#shared-memory)
 
 </details><br />
 
@@ -2733,21 +2759,20 @@ There are two shared-memory APIs in Linux kernel:
 - System V shared memory (older API),
 - POSIX shared memory (newer API).
 
-Gramine does *not* currently implement either of these APIs.
+Gramine currently has limited support for POSIX shared memory, targeted for special use cases like
+communication with hardware accelerators (e.g. GPUs).
 
-In case of SGX backend, implementation of shared memory would be *insecure*, as shared memory by
-design would be allocated in untrusted non-enclave memory, and there is no way for Gramine to
-intercept memory accesses to shared memory regions (to provide some security guarantees).
+Gramine does *not* implement System V shared memory.
 
-<details><summary>Adding limited POSIX shared memory support</summary>
+Please note that in case of the SGX backend, implementation of shared memory is *insecure*, as
+shared memory by design is allocated in untrusted non-enclave memory, and there is no way for
+Gramine to intercept memory accesses to shared memory regions (to provide some security guarantees).
+It is the responsibility of the app developer to correctly use shared memory, with security
+implications in mind.
 
-There is an effort to add limited support for POSIX shared memory, targeted for special use cases
-like communication with hardware accelerators (e.g. GPUs):
-- [Whitepaper](https://arxiv.org/abs/2203.01813),
-- [GitHub issue](https://github.com/gramineproject/gramine/issues/757),
-- [GitHub pull request](https://github.com/gramineproject/gramine/pull/827).
-
-</details>
+For more information, please refer to the [corresponding manifest
+syntax](../manifest-syntax.html#untrusted-shared-memory). Also see [this
+whitepaper](https://arxiv.org/abs/2203.01813).
 
 <details><summary>Related system calls</summary>
 
@@ -2760,7 +2785,7 @@ like communication with hardware accelerators (e.g. GPUs):
 
 <details><summary>Related pseudo-files</summary>
 
-- ☒ `/dev/shm`: may be implemented in the future (in a limited insecure way, see note above)
+- ▣ `/dev/shm`: partially implemented, insecure by itself
 
 </details><br />
 
@@ -2942,7 +2967,7 @@ pseudo-files". For additional pseudo-files containing process-specific informati
 
 - ▣ `/proc/cpuinfo`: partially implemented
     - ☑ `processor`, `vendor_id`, `cpu family`, `model`, `model name`, `stepping`,
-      `physical id`, `core id`, `cpu cores`, `bogomips`
+      `physical id`, `core id`, `cpu cores`, `bogomips`, `siblings`
     - ☑ `flags`: all known CPU flags
 
 - ▣ `/proc/meminfo`: partially implemented
@@ -2976,8 +3001,11 @@ pseudo-files". For additional pseudo-files containing process-specific informati
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/core_siblings`
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/physical_package_id`
       - ☑ `/sys/devices/system/cpu/cpu[x]/topology/thread_siblings`
+  - ☑ `/sys/devices/system/cpu/kernel_max`
+  - ☑ `/sys/devices/system/cpu/offline`
   - ☑ `/sys/devices/system/cpu/online`
   - ☑ `/sys/devices/system/cpu/possible`
+  - ☑ `/sys/devices/system/cpu/present`
 
 - ▣ `/sys/devices/system/node/`: only most important files implemented
   - ▣ `/sys/devices/system/node/node[x]/`
