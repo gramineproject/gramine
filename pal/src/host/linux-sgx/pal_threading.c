@@ -38,7 +38,8 @@ static spinlock_t g_unused_tcs_pages_num_lock = INIT_SPINLOCK_UNLOCKED;
  * allocated using EDMM). The TCS is properly filled out and ready to be converted to the
  * TCS page using the SGX EDMM flow (see `sgx_edmm_convert_pages_to_tcs()`).
  *
- * This function is equivalent to host_main.c:initialize_enclave()
+ * The initialization of fields in TCB and TCS of the thread is equivalent to
+ * host_main.c:initialize_enclave().
  *
  * Layout of the enclave thread data block:
  *

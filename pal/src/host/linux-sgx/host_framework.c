@@ -468,9 +468,14 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
     }
 
     if (type == SGX_PAGE_TYPE_TCS) {
-        /* in-kernel SGX driver sets PTE protection to PROT_NONE when changing page type to TCS.
-         * We need to set TCS pages to RW protection, otherwise the pages will be inaccessible for
-         * the enclave. */
+        /*
+         * In-kernel SGX driver sets PTE permissions to NONE upon SGX_IOC_ENCLAVE_MODIFY_TYPES
+         * ioctl, and the SGX hardware sets EPCM permissions to RW upon EMODT instruction (executed
+         * as part of the ioctl). Therefore, we must restore TCS page permissions to RW via an
+         * mprotect. Note that restoring TCS page permissions to R results in a non-writable TCS
+         * page which makes EENTER on that TCS page fail with #PF, and restoring permissions to RWX
+         * is prohibited by the SGX driver.
+         */
         ret = DO_SYSCALL(mprotect, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE);
         if (ret < 0) {
             log_error("Changing protections of TCS pages failed: %s", unix_strerror(ret));
