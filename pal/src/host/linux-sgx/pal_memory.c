@@ -26,10 +26,30 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_add_pages((uint64_t)addr, size / PAGE_SIZE, PAL_TO_SGX_PROT(prot));
-        if (ret < 0) {
-            return ret;
+        /* defer page accepts to page-fault events when `PAL_PROT_LAZYALLOC` is set */
+        if (prot & PAL_PROT_LAZYALLOC)
+            return 0;
+
+        int ret;
+        uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
+
+        if (g_enclave_page_tracker) {
+            ret = add_uncommitted_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
+        } else {
+            /* for enclave pages allocated when the tracker is not ready (on bootstrap) */
+            if (g_initial_page_allocs_count < MAX_INITIAL_PAGE_ALLOCS) {
+                g_initial_page_allocs[g_initial_page_allocs_count].addr = (uintptr_t)addr;
+                g_initial_page_allocs[g_initial_page_allocs_count].num_pages = size / PAGE_SIZE;
+                g_initial_page_allocs_count++;
+            } else {
+                log_error("initial page allocs buffer is full");
+                _PalProcessExit(1);
+            }
+            ret = sgx_edmm_add_pages((uint64_t)addr, size / PAGE_SIZE, prot_flags);
         }
+
+        if (ret < 0)
+            return ret;
     } else {
 #ifdef ASAN
         asan_unpoison_region((uintptr_t)addr, size);
@@ -53,10 +73,10 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
                && addr + size <= g_pal_linuxsgx_state.heap_max);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
-            int ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
-            if (ret < 0) {
+            assert(g_enclave_page_tracker);
+            int ret = remove_committed_pages((uintptr_t)addr, size / PAGE_SIZE);
+            if (ret < 0)
                 return ret;
-            }
         } else {
 #ifdef ASAN
             asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
@@ -96,11 +116,11 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
-                                                PAL_TO_SGX_PROT(prot));
-        if (ret < 0) {
+        assert(g_enclave_page_tracker);
+        int ret = set_committed_page_permissions((uintptr_t)addr, size / PAGE_SIZE,
+                                                 PAL_TO_SGX_PROT(prot));
+        if (ret < 0)
             return ret;
-        }
     } else {
 #ifdef ASAN
         if (prot) {

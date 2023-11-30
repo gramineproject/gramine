@@ -865,6 +865,13 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['munmap'])
         self.assertIn('TEST OK', stdout)
 
+    def test_05B_mmap_map_noreserve(self):
+        try:
+            stdout, _ = self.run_binary(['mmap_map_noreserve'], timeout=360)
+            self.assertIn('TEST OK', stdout)
+        finally:
+            os.remove('testfile_map_noreserve')
+
     @unittest.skip('sigaltstack isn\'t correctly implemented')
     def test_060_sigaltstack(self):
         stdout, _ = self.run_binary(['sigaltstack'])

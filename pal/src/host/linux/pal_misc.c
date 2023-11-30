@@ -79,3 +79,25 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(key_size);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
+
+int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
+                          size_t* bitvector_size) {
+    __UNUSED(addr);
+    assert(bitvector);
+    assert(bitvector_size);
+
+    size_t num_pages = ALIGN_UP(size, g_page_size) / g_page_size;
+    size_t num_bytes = ALIGN_UP(num_pages, 8) / 8;
+    if (num_bytes > *bitvector_size) {
+        return -PAL_ERROR_NOMEM;
+    }
+    *bitvector_size = num_bytes;
+
+    memset(bitvector, 0xFF, num_bytes);
+
+    size_t leftover_pages = num_pages % 8;
+    if (leftover_pages)
+        bitvector[num_bytes - 1] = (1 << leftover_pages) - 1;
+
+    return 0;
+}

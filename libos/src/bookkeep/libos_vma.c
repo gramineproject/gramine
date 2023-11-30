@@ -34,7 +34,7 @@ static size_t g_peak_total_memory_size = 0;
  * MAP_FIXED or unsupported flags. */
 static int filter_saved_flags(int flags) {
     return flags & (MAP_SHARED | MAP_SHARED_VALIDATE | MAP_PRIVATE | MAP_ANONYMOUS | MAP_GROWSDOWN
-                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK
+                    | MAP_HUGETLB | MAP_HUGE_2MB | MAP_HUGE_1GB | MAP_STACK | MAP_NORESERVE
                     | VMA_UNMAPPED | VMA_INTERNAL | VMA_TAINTED);
 }
 
@@ -556,6 +556,7 @@ static int _bkeep_initial_vma(struct libos_vma* new_vma) {
 
 static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr);
 static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags);
 
 #define ASLR_BITS 12
 /* This variable is written to only once, during initialization, so it does not need to
@@ -563,7 +564,8 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size);
 static void* g_aslr_addr_top = NULL;
 
 int init_vma(void) {
-    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free);
+    PalSetMemoryBookkeepingUpcalls(pal_mem_bkeep_alloc, pal_mem_bkeep_free,
+                                   pal_mem_bkeep_get_vma_info);
 
     size_t initial_ranges_count = 0;
     for (size_t i = 0; i < g_pal_public_state->initial_mem_ranges_len; i++) {
@@ -1156,6 +1158,16 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
     return 0;
 }
 
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
+    struct libos_vma_info vma_info;
+    int ret = lookup_vma((void*)addr, &vma_info);
+    if (ret < 0)
+        return ret;
+
+    *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
+    return 0;
+}
+
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     vma_info->addr        = (void*)vma->begin;
     vma_info->length      = vma->end - vma->begin;
@@ -1304,10 +1316,14 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
+    unsigned char* bitvector;
+    size_t bitvector_size;
     int error;
 };
 
 static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
     struct madvise_dontneed_ctx* ctx = (struct madvise_dontneed_ctx*)visitor_arg;
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL)) {
@@ -1333,14 +1349,49 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
     uintptr_t zero_end = MIN(ctx->end, vma->end);
-    memset((void*)zero_start, 0, zero_end - zero_start);
+    if (vma->flags & MAP_NORESERVE) {
+        /* Lazy allocation of pages, zeroize only the committed pages. Note that the uncommitted
+         * pages have to be skipped to avoid deadlocks. This is because we're holding the
+         * non-reentrant/recursive `vma_tree_lock` when we're in this visitor callback (which is
+         * invoked during VMA traversing). And if we hit page faults on accessing the uncommitted
+         * pages, our lazy allocation logic would also try to acquire the same lock for VMA lookup
+         * in g_mem_bkeep_get_vma_info_upcall (see `pal_mem_bkeep_get_vma_info()` for details). */
+        memset(ctx->bitvector, 0, ctx->bitvector_size);
+        size_t actual_bitvector_size = ctx->bitvector_size;
+        int ret = PalGetCommittedPages(zero_start, (zero_end - zero_start), ctx->bitvector,
+                                       &actual_bitvector_size);
+        if (ret < 0)
+            return false;
+
+        for (size_t byte_idx = 0; byte_idx < actual_bitvector_size; byte_idx++) {
+            unsigned char byte = (ctx->bitvector)[byte_idx];
+            for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
+                if (byte & (1 << bit_idx)) {
+                    memset((void*)(zero_start + (byte_idx * 8 + bit_idx) * PAGE_SIZE), 0,
+                           PAGE_SIZE);
+                }
+            }
+        }
+    } else {
+        memset((void*)zero_start, 0, zero_end - zero_start);
+    }
     return true;
 }
 
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
+    /* allocate the bitvector for committed pages info outside the VMA traversing to avoid
+     * recursively holding `vma_tree_lock` */
+    size_t vma_length = end - begin;
+    size_t bitvector_size = ALIGN_UP(ALIGN_UP(vma_length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
+    unsigned char* bitvector = calloc(1, bitvector_size);
+    if (!bitvector)
+        return -ENOMEM;
+
     struct madvise_dontneed_ctx ctx = {
         .begin = begin,
         .end = end,
+        .bitvector = bitvector,
+        .bitvector_size = bitvector_size,
         .error = 0,
     };
 
@@ -1349,7 +1400,9 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     spinlock_unlock(&vma_tree_lock);
 
     if (!is_continuous)
-        return -ENOMEM;
+        ctx.error = -ENOMEM;
+
+    free(bitvector);
     return ctx.error;
 }
 
@@ -1557,9 +1610,39 @@ BEGIN_CP_FUNC(vma) {
 
             if (!vma->file) {
                 /* Send anonymous memory region. */
-                struct libos_mem_entry* mem;
-                DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
-                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                if (vma->flags & MAP_NORESERVE) {
+                    /* lazy allocation of pages, send only committed pages */
+                    size_t bitvector_size =
+                        ALIGN_UP(ALIGN_UP(vma->length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
+                    unsigned char* bitvector = calloc(1, bitvector_size);
+                    if (!bitvector)
+                        return -ENOMEM;
+
+                    int ret = PalGetCommittedPages((uintptr_t)vma->addr, vma->length, bitvector,
+                                                   &bitvector_size);
+                    if (ret < 0) {
+                        free(bitvector);
+                        return pal_to_unix_errno(ret);
+                    }
+
+                    for (size_t byte_idx = 0; byte_idx < bitvector_size; byte_idx++) {
+                        unsigned char byte = bitvector[byte_idx];
+                        for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
+                            if (byte & (1 << bit_idx)) {
+                                struct libos_mem_entry* mem;
+                                DO_CP_SIZE(memory, vma->addr + (byte_idx * 8 + bit_idx) * PAGE_SIZE,
+                                           PAGE_SIZE, &mem);
+                                mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                            }
+                        }
+                    }
+                    free(bitvector);
+                } else {
+                    /* no lazy allocation of pages, send the whole memory region of VMA */
+                    struct libos_mem_entry* mem;
+                    DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
+                }
             } else {
                 /* Send file-backed memory region. */
                 uint64_t file_size = 0;
