@@ -2711,8 +2711,7 @@ semaphores.
 Please note that in case of the SGX backend, implementation of POSIX semaphores is *insecure*, as
 semaphores are placed in [shared memory](#shared-memory) which by design is allocated in untrusted
 non-enclave memory, and there is no way for Gramine to intercept memory accesses to shared memory
-regions (to provide some security guarantees). It is the responsibility of the app developer to
-correctly use POSIX semaphores, with security implications in mind.
+regions (to provide some security guarantees).
 
 <details><summary>Related system calls</summary>
 
