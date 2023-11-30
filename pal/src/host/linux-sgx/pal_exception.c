@@ -264,7 +264,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
      * c +-----------------------------+-----+-----+-----+-----+        no        |    no      |
      * h |                             |     |     |     |     |   (exceptions    | (malicious |
      * r | PAL_EVENT_ARITHMETIC_ERROR  | no  | yes | no  | no  |    unsupported   |  host      |
-     * o |                             |     |     |     |     |    by Gramine)   |  injects   |
+     * o |                             |     |     |     |     |    by Gramine)   |  injected  |
      * n +-----------------------------+-----+-----+-----+-----+                  |  SW signal)|
      * o |                             |     |     |     |     |                  |            |
      * u | PAL_EVENT_MEMFAULT          | no  | no  |yes* | yes |                  |            |
@@ -273,7 +273,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
      *   |                             |                                          |            |
      * a | PAL_EVENT_QUIT              |                                          |    yes     |
      * s |                             |          no, except #PF case*            |            |
-     * y +-----------------------------+  (malicious host ignores HW exception)   +------------+
+     * y +-----------------------------+  (malicious host ignored HW exception)   +------------+
      * n |                             |                                          |            |
      * c | PAL_EVENT_INTERRUPTED       |                                          |    yes     |
      *   |                             |                                          |            |
@@ -302,7 +302,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                 }
                 if (handle_ud(uc)) {
                     restore_sgx_context(uc, xregs_state);
-                    /* NOTREACHED */
+                    /* UNREACHABLE */
                 }
                 event_num = PAL_EVENT_ILLEGAL;
                 break;
@@ -327,13 +327,14 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                      *
                      * The SGX hardware always reports such benign #PFs though they can be
                      * considered spurious and should be ignored. So the event must be a
-                     * host-induced external event (note that `event_num` is already set), so in the
-                     * following we handle this external event and ignore the #PF info.
+                     * host-induced external event, so in the following we handle this external
+                     * event and ignore the #PF info.
                      *
-                     * Note that there is a possibility of DoS: if the host modified a real memory
-                     * fault (valid #PF) to e.g. a PAL_EVENT_INTERRUPTED signal, then we end up in
-                     * this special case and the app will not handle a real memory fault (but a
-                     * dummy PAL_EVENT_INTERRUPTED) and will get stuck in the #PF exception.
+                     * Note that the host could modify a real memory fault (a valid #PF) to e.g. a
+                     * PAL_EVENT_INTERRUPTED signal. Then we end up in this special case and the app
+                     * will not handle a real memory fault but a dummy PAL_EVENT_INTERRUPTED. This
+                     * will lead to the app getting stuck on #PF. Since this is a DoS, and Intel SGX
+                     * and Gramine don't care about DoSes, this special case is benign.
                      */
                     memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
                     event_num = untrusted_external_event;
@@ -365,7 +366,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                 log_error("Handling %s exceptions is currently unsupported by Gramine",
                           exception_name ? : "[unknown]");
                 _PalProcessExit(1);
-                /* NOTREACHED */
+                /* UNREACHABLE */
         }
     }
 
