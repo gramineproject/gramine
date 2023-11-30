@@ -11,11 +11,13 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
 @pytest.fixture
-def tmp_rsa_key(tmp_path):
+def tmp_rsa_key(tmpdir):
     from graminelibos.sgx_sign import (SGX_RSA_KEY_SIZE, SGX_RSA_PUBLIC_EXPONENT,
         _cryptography_backend)
     def gen_rsa_key(passphrase=None, key_size=SGX_RSA_KEY_SIZE):
-        key_path = tmp_path / 'key.pem'
+        # TODO: use `tmp_path` fixture after we drop support for distros (RHEL 8, CentOS Stream 8)
+        # that have old pytest version (< 3.9.0) installed
+        key_path = tmpdir.join('key.pem')
         with open(key_path, 'wb') as pfile:
             key = rsa.generate_private_key(public_exponent=SGX_RSA_PUBLIC_EXPONENT,
                 key_size=key_size, backend=_cryptography_backend)
