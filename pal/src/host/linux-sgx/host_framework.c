@@ -469,12 +469,23 @@ int edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
 
     if (type == SGX_PAGE_TYPE_TCS) {
         /*
-         * In-kernel SGX driver sets PTE permissions to NONE upon SGX_IOC_ENCLAVE_MODIFY_TYPES
-         * ioctl, and the SGX hardware sets EPCM permissions to RW upon EMODT instruction (executed
-         * as part of the ioctl). Therefore, we must restore TCS page permissions to RW via an
-         * mprotect. Note that restoring TCS page permissions to R results in a non-writable TCS
-         * page which makes EENTER on that TCS page fail with #PF, and restoring permissions to RWX
-         * is prohibited by the SGX driver.
+         * In-kernel SGX driver clears PTE permissions of the TCS page upon
+         * SGX_IOC_ENCLAVE_MODIFY_TYPES ioctl, and the SGX hardware clears EPCM permissions of the
+         * same TCS page upon EMODT instruction (executed as part of the ioctl). Additionally, the
+         * SGX driver sets the "max possible permissions" metadata on this TCS page as RW. Note that
+         * from this moment on, we mean classic PTE permissions; EPCM permissions always stay
+         * cleared (none) for TCS pages.
+         *
+         * When this page is accessed later, a #PF fault occurs and the Linux kernel tries to map
+         * this page into a VMA (i.e., lazy page allocation). At this point, the page-backing VMA
+         * must have permissions not exceeding "max possible permissions" saved earlier. E.g., if a
+         * VMA was initially mapped with RWX, then the #PF handler for the TCS page will fail, and
+         * the page would still be inaccessible due to cleared PTE permissions.
+         *
+         * Therefore, we must split a new VMA with RW permissions to back this TCS page, by invoking
+         * mprotect. Note that creating a VMA with only R permission results in a non-writable TCS
+         * page which makes EENTER on that TCS page fail with unrecoverable #PF, and creating a VMA
+         * with RWX permissions is explicitly prohibited by the SGX driver.
          */
         ret = DO_SYSCALL(mprotect, addr, count * PAGE_SIZE, PROT_READ | PROT_WRITE);
         if (ret < 0) {

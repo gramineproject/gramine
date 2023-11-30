@@ -750,7 +750,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
-    if (edmm_enabled){
+    if (edmm_enabled) {
         int64_t thread_num_int64;
         ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.max_threads",
                           /*defaultval=*/-1, &thread_num_int64);
