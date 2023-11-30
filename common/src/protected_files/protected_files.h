@@ -50,6 +50,8 @@ typedef enum _pf_status_t {
     PF_STATUS_CRYPTO_ERROR         = -15,
     PF_STATUS_CORRUPTED            = -16,
     PF_STATUS_WRITE_TO_DISK_FAILED = -17,
+    PF_STATUS_INVALID_ADDRESS      = -18,
+    PF_STATUS_INVALID_FILE_SIZE    = -19,
 } pf_status_t;
 
 #define PF_SUCCESS(status) ((status) == PF_STATUS_SUCCESS)
@@ -67,39 +69,15 @@ typedef enum _pf_file_mode_t {
 typedef void* pf_handle_t;
 
 /*!
- * \brief File read callback.
- *
- * \param      handle  File handle.
- * \param[out] buffer  Buffer to read to.
- * \param      offset  Offset to read from.
- * \param      size    Number of bytes to read.
- *
- * \returns PF status.
- */
-typedef pf_status_t (*pf_read_f)(pf_handle_t handle, void* buffer, uint64_t offset, size_t size);
-
-/*!
- * \brief File write callback.
- *
- * \param handle  File handle.
- * \param buffer  Buffer to write from.
- * \param offset  Offset to write to.
- * \param size    Number of bytes to write.
- *
- * \returns PF status.
- */
-typedef pf_status_t (*pf_write_f)(pf_handle_t handle, const void* buffer, uint64_t offset,
-                                  size_t size);
-
-/*!
  * \brief File truncate callback.
  *
- * \param handle  File handle.
- * \param size    Target file size.
+ * \param      handle   File handle.
+ * \param      size     Target file size.
+ * \param[out] addr     A pointer to the mapped area.
  *
  * \returns PF status.
  */
-typedef pf_status_t (*pf_truncate_f)(pf_handle_t handle, uint64_t size);
+typedef pf_status_t (*pf_truncate_f)(pf_handle_t handle, uint64_t size, void** addr);
 
 /*!
  * \brief Debug print callback.
@@ -170,8 +148,6 @@ typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
 /*!
  * \brief Initialize I/O callbacks.
  *
- * \param read_f             File read callback.
- * \param write_f            File write callback.
  * \param truncate_f         File truncate callback.
  * \param aes_cmac_f         AES-CMAC callback.
  * \param aes_gcm_encrypt_f  AES-GCM encrypt callback.
@@ -181,10 +157,9 @@ typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
  *
  * Must be called before any actual APIs.
  */
-void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_truncate_f truncate_f,
-                      pf_aes_cmac_f aes_cmac_f, pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
-                      pf_aes_gcm_decrypt_f aes_gcm_decrypt_f, pf_random_f random_f,
-                      pf_debug_f debug_f);
+void pf_set_callbacks(pf_truncate_f truncate_f, pf_aes_cmac_f aes_cmac_f,
+                      pf_aes_gcm_encrypt_f aes_gcm_encrypt_f, pf_aes_gcm_decrypt_f aes_gcm_decrypt_f,
+                      pf_random_f random_f, pf_debug_f debug_f);
 
 /*! Context representing an open protected file */
 typedef struct pf_context pf_context_t;
@@ -207,6 +182,7 @@ const char* pf_strerror(int err);
  * \param      path             Path to the file. If NULL and \p create is false, don't check path
  *                              for validity.
  * \param      underlying_size  Underlying file size.
+ * \param      addr             Mapped file address.
  * \param      mode             Access mode.
  * \param      create           Overwrite file contents if true.
  * \param      key              Wrap key.
@@ -214,7 +190,7 @@ const char* pf_strerror(int err);
  *
  * \returns PF status.
  */
-pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
+pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size, void* addr,
                     pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context);
 
 /*!

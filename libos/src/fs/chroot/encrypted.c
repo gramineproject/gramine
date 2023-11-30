@@ -373,7 +373,7 @@ static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
 
     struct libos_encrypted_file* enc = hdl->inode->data;
     mode_t host_perm = HOST_PERM(perm);
-    PAL_STREAM_ATTR attr = {.share_flags = host_perm};
+    PAL_STREAM_ATTR attr = {.share_flags = host_perm, .addr = (void*)-1};
     int ret = PalStreamAttributesSetByHandle(enc->pal_handle, &attr);
     if (ret < 0)
         return pal_to_unix_errno(ret);

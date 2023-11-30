@@ -75,6 +75,24 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     hdl->file.seekable = !S_ISFIFO(st.st_mode);
 
+    /* map file into memroy when open encrypted files */
+    if (options & PAL_OPTION_ENCRYPTED_FILE) {
+        hdl->file.encrypted = true;
+        if (st.st_size > 0) {
+            void* addr = (void*)DO_SYSCALL(mmap, NULL, st.st_size, PROT_READ | PROT_WRITE,
+                                           MAP_SHARED, hdl->file.fd, 0);
+            if (IS_PTR_ERR(addr)) {
+                DO_SYSCALL(close, hdl->file.fd);
+                free(hdl);
+                free(path);
+                return unix_to_pal_error(PTR_TO_ERR(addr));
+            }
+
+            hdl->file.addr = addr;
+            hdl->file.total = st.st_size;
+        }
+    }
+
     *handle = hdl;
     return 0;
 }
@@ -115,6 +133,11 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 
 static void file_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_FILE);
+
+    if (handle->file.addr && handle->file.total) {
+        /* case of encrypted file: the whole file was mmapped in memory */
+        DO_SYSCALL(munmap, handle->file.addr, handle->file.total);
+    }
 
     int ret = DO_SYSCALL(close, handle->file.fd);
     if (ret < 0) {
@@ -160,6 +183,26 @@ static int64_t file_setlength(PAL_HANDLE handle, uint64_t length) {
         return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
                                                  : -PAL_ERROR_DENIED;
 
+    if (handle->file.encrypted) {
+        if (handle->file.addr && handle->file.total > 0) {
+            ret = DO_SYSCALL(munmap, handle->file.addr, handle->file.total);
+            if (ret < 0)
+                return unix_to_pal_error(ret);
+        }
+
+        void* addr = NULL;
+
+        if (length > 0) {
+            addr = (void*)DO_SYSCALL(mmap, NULL, length, PROT_READ | PROT_WRITE, MAP_SHARED,
+                                     handle->file.fd, 0);
+            if (IS_PTR_ERR(addr))
+                return unix_to_pal_error(PTR_TO_ERR(addr));
+        }
+
+        handle->file.addr = addr;
+        handle->file.total = length;
+    }
+
     return (int64_t)length;
 }
 
@@ -201,6 +244,10 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
         return unix_to_pal_error(ret);
 
     file_attrcopy(attr, &stat_buf);
+
+    if (handle->file.encrypted)
+        attr->addr = handle->file.addr;
+
     return 0;
 }
 
@@ -211,6 +258,9 @@ static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     ret = DO_SYSCALL(fchmod, fd, attr->share_flags);
     if (ret < 0)
         return unix_to_pal_error(ret);
+
+    if (handle->file.encrypted && !IS_PTR_ERR(attr->addr))
+        handle->file.addr = attr->addr;
 
     return 0;
 }
