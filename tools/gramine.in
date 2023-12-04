@@ -15,6 +15,12 @@ APPLICATION=
 ENVS=()
 PREFIX=()
 
+if [ -d "/dev/attestation/keys" ]; then
+    echo "Gramine ($0) seems to be executed in a Gramine environment (not a host environment)." >&2
+    echo "Such nested execution is impossible; please check your deployment scripts for bugs." >&2
+    exit 2
+fi
+
 if [ "$GDB" == "1" ]; then
     PREFIX=("gdb" "-q")
     if [ -n "$INSIDE_EMACS" ]; then
