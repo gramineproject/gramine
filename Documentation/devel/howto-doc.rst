@@ -38,15 +38,13 @@ not published.
    When launched through ``make`` (like ``make -C Documentation html``), this
    becomes "target" in Make terminology.
 
-Building documentation
-----------------------
+Installing prerequisites
+------------------------
 
-To build documentation, change directory to ``Documentation``, install prerequisites, and use
-``make``, specifying the appropriate target. The documentation is built with python3; if you have
-similar packages in python2, it may create problems; we recommend removing any similar packages in
-python2. Similarly, the documentation requires version 1.8 of sphinx.
-
-The output is in the ``_build`` directory:
+Change directory to ``Documentation``, install prerequisites including Doxygen,
+Breathe and Sphinx. Gramine documentation requires version 1.8 of Sphinx. The
+documentation is built with python3; if you have similar packages in python2, it
+may create problems; we recommend removing any similar packages in python2.
 
 .. code-block:: sh
 
@@ -56,6 +54,14 @@ The output is in the ``_build`` directory:
    # install prerequisites
    sudo apt-get install doxygen
    python3 -m pip install -r requirements.txt
+
+Building documentation
+----------------------
+
+Execute ``make`` command in ``Documentation`` directory, specifying the
+appropriate target. The output is in the ``_build`` directory.
+
+.. code-block:: sh
 
    # build targets "html" and "man"
    make html man

@@ -58,12 +58,12 @@ GCC's build dependencies::
 Dependencies for SGX
 ^^^^^^^^^^^^^^^^^^^^
 
-The build of Gramine with SGX support requires the corresponding SGX software
-infrastructure to be installed on the system. We require Linux kernel with SGX
-driver built in (``CONFIG_X86_SGX=y``, which is the case for most of available
-distribution kernels), which is available since version 5.11 (and also as
-backported patches to older kernels in certain distros). Note this requires CPU
-with :term:`FLC`.
+The build of Gramine with SGX support requires CPU with :term:`Flexible Launch
+Control (FLC)<FLC>` feature and the corresponding SGX software infrastructure to
+be installed on the system. We require Linux kernel with SGX driver built in
+(``CONFIG_X86_SGX=y``, which is the case for most of available distribution
+kernels), which is available since version 5.11 (and also as backported patches
+to older kernels in certain distros).
 
 Kernel version can be checked using the following command::
 
@@ -126,7 +126,7 @@ directory of Gramine repo, run the following command (recall that "direct" means
 non-SGX version)::
 
    meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
-       -Dsgx_driver=<driver> -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+       -Dsgx_driver=(upstream|oot) -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
 
 .. note::
 
@@ -140,11 +140,6 @@ non-SGX version)::
    ``meson configure``. For example, if you built with ``meson setup build/
    -Dsgx=disabled`` first and now want to enable SGX, type ``meson configure
    build/ -Dsgx=enabled``.
-
-Then, build and install Gramine by running the following::
-
-   ninja -C build/
-   sudo ninja -C build/ install
 
 Set ``-Ddirect=`` and ``-Dsgx=`` options to ``enabled`` or ``disabled``
 according to whether you built the corresponding PAL (the snippet assumes you
@@ -173,6 +168,11 @@ it's usually not needed.
 Set ``-Dlibc`` option to ``musl`` if you wish to build musl instead of glibc
 (which is built by default), or to ``none`` if you do not want to build any
 libc.
+
+Then, build and install Gramine by running the following::
+
+   ninja -C build/
+   sudo ninja -C build/ install
 
 Installation prefix
 ^^^^^^^^^^^^^^^^^^^

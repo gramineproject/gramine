@@ -25,6 +25,8 @@ We supply a tool, :doc:`manpages/is-sgx-available` that checks the environment
 for SGX compatibility. Use this tool to check your hardware and system. It is
 installed together with the Gramine package.
 
+.. _prepare-a-signing-key:
+
 Prepare a signing key
 ---------------------
 
