@@ -238,3 +238,44 @@ other technical positions) and other participants in the Project (collectively,
 
 1. This charter may be amended by a two-thirds vote of the entire TSC and is
    subject to approval by LF Projects.
+
+
+Examples Exception
+==================
+
+*The following exception was enacted on 5 December 2023.*
+
+Gramine Technical Steering Committee,
+
+- acting in accordance with the Technical Charter, adopted on 14 September 2020,
+
+Whereas:
+
+(1) As stated in Mission and Scope of the Project (Charter §1-2), it is one of
+    the goals of the project to make adoption of Gramine as wide and as easy as
+    possible.
+
+(2) Downstream projects that use, but not modify Gramine, might be licensed
+    under terms incompatible with LGPL-3, which is fine. Nevertheless they need
+    to copy and modify some boilerplate (like manifests), which might be
+    available from our project.
+
+(3) The directory `CI-Examples/` in main project repository, and the `examples`
+    auxiliary repository (hereinafter “Examples”) serve as examples, templates
+    and/or boilerplate for downstream projects that use gramine. Those Examples
+    should be available for reuse by downstream projects under permissive
+    licence.
+
+Resolves:
+
+1. That as a special exception, in accordance with §7.3 of the Charter,
+   Examples are allowed to be accepted under permissive licence approved by OSI
+   (e.g., BSD-3-Clause or another).
+
+   What constitutes “example code” that fits Examples is left to the discretion
+   of the reviewers who accept the relevant contribution.
+
+2. That the project is to attempt to relicense existing Examples, if not
+   already licensed under permissive licence, by asking authors and/or
+   copyright holders thereof to relicense their respective contributions under
+   BSD-3-Clause licence.
