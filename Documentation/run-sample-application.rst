@@ -16,11 +16,16 @@ Build and run HelloWorld sample app
 -----------------------------------
 
 To build the HelloWorld application, install the ``gcc`` compiler and the
-``make`` build system by entering the following::
+``make`` build system by entering one of the following::
 
-   sudo apt-get install gcc make  # for Ubuntu distribution
-   sudo dnf install gcc make      # for RHEL-like distribution
-   sudo apk add build-base make   # for Alpine distribution
+   # for Ubuntu distribution
+   sudo apt-get install gcc make
+
+   # for RHEL-like distribution
+   sudo dnf install gcc make
+
+   # for Alpine distribution
+   sudo apk add build-base make
 
 Go to the HelloWorld example directory::
 
@@ -40,6 +45,26 @@ If you want to run this example on Alpine, then before building, modify the
 :file:`helloworld.manifest.template` file: replace ``gramine.runtimedir()`` with
 ``gramine.runtimedir('musl')``. For details, see the section "glibc vs musl"
 below.
+
+Troubleshooting
+^^^^^^^^^^^^^^^
+
+- **Signing key not existed error**
+If the following error occurs, please refer to :ref:`prepare-a-signing-key`
+section to prepare a key if you haven't done so::
+
+   $ make SGX=1
+   Error: Invalid value for "--key" / "-k": File "~/.config/gramine/enclave-key.pem" does not exist.
+   make: *** [Makefile:44: sgx_sign] Error 2
+
+- **Cannot open SGX driver device error**
+If the following error occurs, please refer to :doc:`sgx-setup` section to check
+the system environment for SGX compatibility::
+
+   $ gramine-sgx helloworld
+   Gramine is starting. Parsing TOML manifest file, this may take some time...
+   error: Cannot open SGX driver device. Please make sure you're using an up-to-date kernel or the standalone Intel SGX kernel module is loaded.
+   error: load_enclave() failed with error: No such file or directory (ENOENT)
 
 Other sample applications
 -------------------------
