@@ -10,9 +10,11 @@
 Gramine manifest management and rendering
 """
 
+import errno
 import hashlib
 import os
 import pathlib
+import posixpath
 
 import tomli
 import tomli_w
@@ -33,6 +35,83 @@ def uri2path(uri):
     if not uri.startswith('file:'):
         raise ManifestError(f'Unsupported URI type: {uri}')
     return pathlib.Path(uri[len('file:'):])
+
+
+# loosely based on posixpath._joinrealpath
+def resolve_symlinks(path, *, chroot, seen=None):
+    """Resolve symlink inside chroot
+
+    Args:
+        path (pathlib.Path or str): the path to resolve
+        chroot (pathlib.Path): path to chroot
+
+    Raises:
+        OSError: When resolution fails. The following variants can be raised: ``ENOTDIR`` aka
+            :py:class:`NotADirectoryError` for paths like ``a/b/file/c``; ``ELOOP`` for loops.
+    """
+    path = pathlib.Path(path)
+    if not path.is_absolute():
+        raise ManifestError('only absolute paths can be measured in chroot')
+
+    if seen is None:
+        # a mapping of linksrc -> linkdest (all within chroot), but can be None while recursing,
+        # and if None is encountered, then we'll know we have a loop
+        seen = {}
+
+    # Current state. This is a path that is:
+    # - an instance of pathlib.Path;
+    # - absolute (stats with '/');
+    # - fully resolved path (contains no symlinks);
+    # - inside chroot. (chroot_current_path is this path as seen from outside).
+    # Therefore it's safe to traverse '..' in current_path by just taking .parent attribute.
+    current_path = pathlib.Path('/')
+    chroot_current_path = chroot / current_path.relative_to('/')
+
+    for part in path.relative_to('/').parts:
+        if not chroot_current_path.is_dir():
+            raise NotADirectoryError(errno.ENOTDIR, os.strerror(errno.ENOTDIR), current_path)
+
+        if part == posixpath.curdir: # '.'
+            continue
+
+        if part == posixpath.pardir: # '..'
+            current_path = current_path.parent  # this works correctly for /, just returns /
+            chroot_current_path = chroot / current_path.relative_to('/')
+            continue
+
+        current_path /= part
+        chroot_current_path = chroot / current_path.relative_to('/')
+
+        if not chroot_current_path.is_symlink():
+            continue
+
+        # else: here's the hard part, symlink resolution
+
+        if current_path not in seen:
+            seen[current_path] = None
+            # TODO after python >= 3.9: use Path.readlink()
+            next_path = pathlib.Path(os.readlink(chroot_current_path))
+
+            # The following path concatenation is suboptimal, it will cause the recurring function
+            # to traverse and stat() all parts of current_path again, so it's easy to construct
+            # exploding O(n²) tree. However, to write this optimally, it would require to complicate
+            # already convoluted logic. Trees that would trigger suboptimal complexity are uncommon,
+            # so I think it's a reasonable tradeoff.  --woju 12.12.2023
+            if not next_path.is_absolute():
+                next_path = current_path.parent / next_path
+
+            seen[current_path] = resolve_symlinks(next_path, chroot=chroot, seen=seen)
+
+        if seen[current_path] is None:
+            # we have a loop in symlinks
+            print(f'{current_path=}')
+            raise OSError(errno.ELOOP, os.strerror(errno.ELOOP), current_path)
+
+        current_path = seen[current_path]
+        chroot_current_path = chroot / current_path.relative_to('/')
+        continue
+
+    return current_path
 
 
 class TrustedFile:
@@ -63,9 +142,7 @@ class TrustedFile:
         if self.chroot is None:
             self.realpath = pathlib.Path(path)
         else:
-            if not path.is_absolute():
-                raise ManifestError('only absolute paths can be measured in chroot')
-            self.realpath = self.chroot / path.relative_to('/')
+            self.realpath = resolve_symlinks(path, chroot=self.chroot)
 
     @classmethod
     def from_manifest(cls, data, *, chroot=None):
@@ -116,7 +193,6 @@ class TrustedFile:
             # path.relative_to(chroot) will throw ValueError if the path is not relative to chroot
             path = '/' / path.relative_to(chroot)
         self = cls(f'file:{path}{"/" if realpath.is_dir() else ""}', chroot=chroot)
-        assert self.realpath == realpath
         return self
 
     def __repr__(self):
