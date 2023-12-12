@@ -1,7 +1,7 @@
 # Copyright (c) 2021-2022 Wojtek Porczyk <woju@invisiblethingslab.com>
 
 Name: gramine
-Version: 1.6
+Version: 1.6post~UNRELEASED
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
