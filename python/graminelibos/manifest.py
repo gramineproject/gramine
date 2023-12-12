@@ -65,7 +65,20 @@ class TrustedFile:
         else:
             if not path.is_absolute():
                 raise ManifestError('only absolute paths can be measured in chroot')
-            self.realpath = self.chroot / path.relative_to('/')
+
+            path = self.chroot / path.relative_to('/')
+
+            # If any of the symlinks in the resolution chain is absolute, we must interpret it
+            # relative to chroot. Therefore, we can't just open(2) it, because that will interpret
+            # paths relative to global VFS root, which it not what we want.
+            while path.is_symlink():
+                linkdest = path.readlink()
+                if linkdest.is_absolute():
+                    path = self.chroot / linkdest.relative_to('/')
+                else:
+                    path = path.parent / linkdest
+
+            self.realpath = path
 
     @classmethod
     def from_manifest(cls, data, *, chroot=None):
@@ -116,7 +129,6 @@ class TrustedFile:
             # path.relative_to(chroot) will throw ValueError if the path is not relative to chroot
             path = '/' / path.relative_to(chroot)
         self = cls(f'file:{path}{"/" if realpath.is_dir() else ""}', chroot=chroot)
-        assert self.realpath == realpath
         return self
 
     def __repr__(self):
