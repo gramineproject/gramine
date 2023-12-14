@@ -426,7 +426,7 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
     long ret;
     char* buf = NULL;
 
-    size_t read_from_in  = 0;
+    __attribute__((unused)) size_t read_from_in = 0; /* "unused" to silence newer Clang */
     size_t copied_to_out = 0;
 
     if (offset && !is_user_memory_writable(offset, sizeof(*offset)))
