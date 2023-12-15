@@ -310,9 +310,7 @@ int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t 
     return _PalStreamMap(handle, addr, prot, offset, size);
 }
 
-/* _PalStreamSetLength for internal use. This function truncate the stream to certain length. This
- *  call might not be support for certain streams */
-int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
+int _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
@@ -328,15 +326,7 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
     }
-
-    int64_t ret = _PalStreamSetLength(handle, length);
-
-    if (ret < 0) {
-        return ret;
-    }
-
-    assert((uint64_t)ret == length);
-    return 0;
+    return _PalStreamSetLength(handle, length);
 }
 
 /* _PalStreamFlush for internal use. This function sync up the handle with devices. Some streams may

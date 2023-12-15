@@ -382,13 +382,13 @@ out:
 }
 
 /* 'setlength' operation for file stream. */
-static int64_t file_setlength(PAL_HANDLE handle, uint64_t length) {
+static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = ocall_ftruncate(handle->file.fd, length);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
     handle->file.total = length;
-    return (int64_t)length;
+    return 0;
 }
 
 /* 'flush' operation for file stream. */

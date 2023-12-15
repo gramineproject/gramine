@@ -153,14 +153,14 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 }
 
 /* 'setlength' operation for file stream. */
-static int64_t file_setlength(PAL_HANDLE handle, uint64_t length) {
+static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = DO_SYSCALL(ftruncate, handle->file.fd, length);
 
     if (ret < 0)
         return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
                                                  : -PAL_ERROR_DENIED;
 
-    return (int64_t)length;
+    return 0;
 }
 
 /* 'flush' operation for file stream. */
