@@ -43,7 +43,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 }
 
 /* 'setlength' operation for file stream. */
-static int64_t file_setlength(PAL_HANDLE handle, uint64_t length) {
+static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

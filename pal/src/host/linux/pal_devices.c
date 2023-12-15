@@ -133,11 +133,11 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
+static int dev_setlength(PAL_HANDLE handle, uint64_t length) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     int ret = DO_SYSCALL(ftruncate, handle->dev.fd, length);
-    return ret < 0 ? unix_to_pal_error(ret) : (int64_t)length;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,

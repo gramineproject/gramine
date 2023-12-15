@@ -32,7 +32,7 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int64_t dev_setlength(PAL_HANDLE handle, uint64_t length) {
+static int dev_setlength(PAL_HANDLE handle, uint64_t length) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

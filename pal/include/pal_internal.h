@@ -67,8 +67,8 @@ struct handle_ops {
     int (*map)(PAL_HANDLE handle, void* address, pal_prot_flags_t prot, uint64_t offset,
                uint64_t size);
 
-    /* 'setlength' is used by PalStreamFlush. It truncate the stream to certain size. */
-    int64_t (*setlength)(PAL_HANDLE handle, uint64_t length);
+    /* 'setlength' is used by PalStreamFlush. It truncates the stream to certain size. */
+    int (*setlength)(PAL_HANDLE handle, uint64_t length);
 
     /* 'flush' is used by PalStreamFlush. It syncs the stream to the device */
     int (*flush)(PAL_HANDLE handle);
@@ -177,7 +177,7 @@ int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
 int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size);
-int64_t _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
+int _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _PalStreamFlush(PAL_HANDLE handle);
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
