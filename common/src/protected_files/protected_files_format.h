@@ -94,12 +94,6 @@ typedef struct _data_node {
 
 static_assert(sizeof(data_node_t) == PF_NODE_SIZE, "sizeof(data_node_t)");
 
-typedef struct _encrypted_node {
-    uint8_t cipher[PF_NODE_SIZE];
-} encrypted_node_t;
-
-static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");
-
 #define MAX_PAGES_IN_CACHE 48
 
 typedef enum {
@@ -119,10 +113,7 @@ typedef struct _file_node {
     struct _file_node* parent;
     bool need_writing;
     bool new_node;
-    struct {
-        uint64_t physical_node_number;
-        encrypted_node_t encrypted; // the actual data from the disk
-    };
+    uint64_t physical_node_number;
     union { // decrypted data
         mht_node_t mht;
         data_node_t data;

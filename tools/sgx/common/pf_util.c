@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -29,81 +30,40 @@
 
 /* High-level protected files helper functions. */
 
-/* PF callbacks usable in a standard Linux environment.
-   Assume that pf handle is a pointer to file's fd. */
+/* PF handle structure in Linux environment */
+typedef struct _linux_pf_handle_t {
+    int fd;
+    void* addr;
+    size_t size;
+} linux_pf_handle_t;
 
-static pf_status_t linux_read(pf_handle_t handle, void* buffer, uint64_t offset, size_t size) {
-    int fd = *(int*)handle;
-    DBG("linux_read: fd %d, buf %p, offset %zu, size %zu\n", fd, buffer, offset, size);
-    if (lseek64(fd, offset, SEEK_SET) < 0) {
-        ERROR("lseek64 failed: %s\n", strerror(errno));
-        return PF_STATUS_CALLBACK_FAILED;
-    }
+/* PF callbacks usable in a standard Linux environment.*/
+static pf_status_t linux_truncate(pf_handle_t handle, uint64_t size, void** ret_addr) {
+    linux_pf_handle_t* hdl = (linux_pf_handle_t*)handle;
 
-    size_t buffer_offset = 0;
-    while (size > 0) {
-        ssize_t ret = read(fd, buffer + buffer_offset, size);
-        if (ret == -EINTR)
-            continue;
-
-        if (ret < 0) {
-            ERROR("read failed: %s\n", strerror(errno));
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        /* EOF is an error condition, we want to read exactly `size` bytes */
-        if (ret == 0) {
-            ERROR("EOF\n");
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        size -= ret;
-        buffer_offset += ret;
-    }
-
-    return PF_STATUS_SUCCESS;
-}
-
-static pf_status_t linux_write(pf_handle_t handle, const void* buffer, uint64_t offset,
-                               size_t size) {
-    int fd = *(int*)handle;
-    DBG("linux_write: fd %d, buf %p, offset %zu, size %zu\n", fd, buffer, offset, size);
-    if (lseek64(fd, offset, SEEK_SET) < 0) {
-        ERROR("lseek64 failed: %s\n", strerror(errno));
-        return PF_STATUS_CALLBACK_FAILED;
-    }
-
-    size_t buffer_offset = 0;
-    while (size > 0) {
-        ssize_t ret = write(fd, buffer + buffer_offset, size);
-        if (ret == -EINTR)
-            continue;
-
-        if (ret < 0) {
-            ERROR("write failed: %s\n", strerror(errno));
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        /* EOF is an error condition, we want to write exactly `size` bytes */
-        if (ret == 0) {
-            ERROR("EOF\n");
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        size -= ret;
-        buffer_offset += ret;
-    }
-    return PF_STATUS_SUCCESS;
-}
-
-static pf_status_t linux_truncate(pf_handle_t handle, uint64_t size) {
-    int fd = *(int*)handle;
-    DBG("linux_truncate: fd %d, size %zu\n", fd, size);
-    int ret = ftruncate64(fd, size);
+    DBG("linux_truncate: fd %d, size %zu\n", hdl->fd, hdl->size);
+    int ret = ftruncate64(hdl->fd, size);
     if (ret < 0) {
         ERROR("ftruncate64 failed: %s\n", strerror(errno));
         return PF_STATUS_CALLBACK_FAILED;
     }
+
+    DBG("linux_truncate: addr %p, old_size %zu, new_size %zu\n", hdl->addr, hdl->size, size);
+    void* addr;
+    if (!hdl->addr && hdl->size == 0)
+        addr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hdl->fd, 0);
+    else
+        addr = mremap(hdl->addr, hdl->size, size, MREMAP_MAYMOVE);
+    if (addr == MAP_FAILED) {
+        ERROR("mmap/mremap failed: %s\n", strerror(errno));
+        return PF_STATUS_CALLBACK_FAILED;
+    }
+
+    hdl->addr = addr;
+    hdl->size = size;
+
+    if (ret_addr)
+        *ret_addr = addr;
 
     return PF_STATUS_SUCCESS;
 }
@@ -207,8 +167,8 @@ static int pf_set_linux_callbacks(pf_debug_f debug_f) {
         return -1;
     }
 
-    pf_set_callbacks(linux_read, linux_write, linux_truncate, mbedtls_aes_cmac,
-                     mbedtls_aes_gcm_encrypt, mbedtls_aes_gcm_decrypt, mbedtls_random, debug_f);
+    pf_set_callbacks(linux_truncate, mbedtls_aes_cmac, mbedtls_aes_gcm_encrypt,
+                     mbedtls_aes_gcm_decrypt, mbedtls_random, debug_f);
     return 0;
 }
 
@@ -271,6 +231,7 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
     int output = -1;
     pf_context_t* pf = NULL;
     char* norm_output_path = NULL;
+    linux_pf_handle_t hdl = { .fd = output, .addr = NULL, .size = 0 };
 
     void* chunk = malloc(PF_NODE_SIZE);
     if (!chunk) {
@@ -307,8 +268,9 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
     INFO("            (Gramine's encrypted files must contain this exact path: \"%s\")\n",
                       norm_output_path);
 
-    pf_handle_t handle = (pf_handle_t)&output;
-    pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, PF_FILE_MODE_WRITE,
+    hdl.fd = output;
+    pf_handle_t handle = (pf_handle_t)&hdl;
+    pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, NULL, PF_FILE_MODE_WRITE,
                               /*create=*/true, wrap_key, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Failed to open output PF: %s\n", pf_strerror(pfs));
@@ -356,6 +318,13 @@ out:
         }
     }
 
+    if (hdl.addr && hdl.size > 0) {
+        if (munmap(hdl.addr, hdl.size) < 0) {
+            ERROR("failed to munmap: %s\n", strerror(errno));
+            ret = -1;
+        }
+    }
+
     free(chunk);
     free(norm_output_path);
     if (input >= 0)
@@ -373,6 +342,7 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     int output = -1;
     pf_context_t* pf = NULL;
     char* norm_input_path = NULL;
+    linux_pf_handle_t hdl = { .fd = input, .addr = NULL, .size = 0 };
 
     void* chunk = malloc(PF_NODE_SIZE);
     if (!chunk) {
@@ -416,7 +386,18 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
         }
     }
 
-    pf_status_t pfs = pf_open((pf_handle_t)&input, norm_input_path, input_size, PF_FILE_MODE_READ,
+    /* Get file mapped address */
+    void* addr = mmap(NULL, input_size, PROT_READ, MAP_SHARED, input, 0);
+    if (addr == MAP_FAILED) {
+        ERROR("Failed to mmap input file '%s': %s\n", input_path, strerror(errno));
+        goto out;
+    }
+
+    hdl.fd = input;
+    hdl.addr = addr;
+    hdl.size = input_size;
+    pf_handle_t handle = (pf_handle_t)&hdl;
+    pf_status_t pfs = pf_open(handle, norm_input_path, input_size, addr, PF_FILE_MODE_READ,
                               /*create=*/false, wrap_key, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Opening protected input file failed: %s\n", pf_strerror(pfs));
@@ -471,6 +452,13 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     ret = 0;
 
 out:
+    if (hdl.addr && hdl.size > 0) {
+        if (munmap(hdl.addr, hdl.size) < 0) {
+            ERROR("failed to munmap: %s\n", strerror(errno));
+            ret = -1;
+        }
+    }
+
     free(norm_input_path);
     free(chunk);
     if (pf)

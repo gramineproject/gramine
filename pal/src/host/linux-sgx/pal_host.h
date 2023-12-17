@@ -50,6 +50,8 @@ typedef struct {
             PAL_IDX fd;
             char* realpath;
             size_t total;
+            bool encrypted;                 /* flag to indicate encrypted files */
+            void* addr;                     /* mapped address, used only for encrypted files */
             /* below fields are used only for trusted files */
             sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
             void* umem;                     /* valid only when chunk_hashes != NULL */

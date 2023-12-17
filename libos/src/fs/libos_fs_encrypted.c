@@ -20,72 +20,24 @@ static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 /* Protects the `g_keys` list, but also individual keys, since they can be updated */
 static struct libos_lock g_keys_lock;
 
-static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, size_t size) {
+static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size, void** ret_addr) {
+    int ret;
     PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
 
-    size_t buffer_offset = 0;
-    size_t remaining = size;
-
-    while (remaining > 0) {
-        size_t count = remaining;
-        int ret = PalStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset);
-        if (ret == -PAL_ERROR_INTERRUPTED)
-            continue;
-
-        if (ret < 0) {
-            log_warning("PalStreamRead failed: %s", pal_strerror(ret));
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        if (count == 0) {
-            log_warning("EOF");
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        assert(count <= remaining);
-        remaining -= count;
-        buffer_offset += count;
-    }
-    return PF_STATUS_SUCCESS;
-}
-
-static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t offset, size_t size) {
-    PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
-
-    size_t buffer_offset = 0;
-    size_t remaining = size;
-
-    while (remaining > 0) {
-        size_t count = remaining;
-        int ret = PalStreamWrite(pal_handle, offset + buffer_offset, &count,
-                                 (void*)(buffer + buffer_offset));
-        if (ret == -PAL_ERROR_INTERRUPTED)
-            continue;
-
-        if (ret < 0) {
-            log_warning("PalStreamWrite failed: %s", pal_strerror(ret));
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        if (count == 0) {
-            log_warning("EOF");
-            return PF_STATUS_CALLBACK_FAILED;
-        }
-
-        assert(count <= remaining);
-        remaining -= count;
-        buffer_offset += count;
-    }
-    return PF_STATUS_SUCCESS;
-}
-
-static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size) {
-    PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
-
-    int ret = PalStreamSetLength(pal_handle, size);
+    ret = PalStreamSetLength(pal_handle, size);
     if (ret < 0) {
         log_warning("PalStreamSetLength failed: %s", pal_strerror(ret));
         return PF_STATUS_CALLBACK_FAILED;
+    }
+
+    if (ret_addr) {
+        PAL_STREAM_ATTR pal_attr;
+        ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
+        if (ret < 0) {
+            log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+            return PF_STATUS_CALLBACK_FAILED;
+        }
+        *ret_addr = pal_attr.addr;
     }
 
     return PF_STATUS_SUCCESS;
@@ -157,7 +109,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
         ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
-                            PAL_OPTION_PASSTHROUGH, &pal_handle);
+                            PAL_OPTION_PASSTHROUGH | PAL_OPTION_ENCRYPTED_FILE, &pal_handle);
         if (ret < 0) {
             log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
             return pal_to_unix_errno(ret);
@@ -172,6 +124,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         goto out;
     }
     size_t size = pal_attr.pending_size;
+    void* addr = pal_attr.addr;
 
     assert(strstartswith(enc->uri, URI_PREFIX_FILE));
     const char* path = enc->uri + static_strlen(URI_PREFIX_FILE);
@@ -196,7 +149,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = -EACCES;
         goto out;
     }
-    pf_status_t pfs = pf_open(pal_handle, normpath, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
+    pf_status_t pfs = pf_open(pal_handle, normpath, size, addr, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
                               create, &enc->key->pf_key, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
@@ -272,9 +225,8 @@ int init_encrypted_files(void) {
     if (!create_lock(&g_keys_lock))
         return -ENOMEM;
 
-    pf_set_callbacks(&cb_read, &cb_write, &cb_truncate,
-                     &cb_aes_cmac, &cb_aes_gcm_encrypt, &cb_aes_gcm_decrypt,
-                     &cb_random, cb_debug_ptr);
+    pf_set_callbacks(&cb_truncate, &cb_aes_cmac, &cb_aes_gcm_encrypt,
+                     &cb_aes_gcm_decrypt, &cb_random, cb_debug_ptr);
 
     int ret;
 
@@ -782,7 +734,28 @@ BEGIN_RS_FUNC(encrypted_file) {
     assert(!enc->pf);
     if (enc->use_count > 0) {
         assert(enc->pal_handle);
-        int ret = encrypted_file_internal_open(enc, enc->pal_handle, /*create=*/false,
+
+        /* Recreate file map: set handle->file.addr to NULL and call PalStreamSetLength */
+        int ret;
+        PAL_STREAM_ATTR pal_attr;
+        ret = PalStreamAttributesQueryByHandle(enc->pal_handle, &pal_attr);
+        if (ret < 0) {
+            log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+            return pal_to_unix_errno(ret);
+        }
+        pal_attr.addr = NULL;
+        ret = PalStreamAttributesSetByHandle(enc->pal_handle, &pal_attr);
+        if (ret < 0) {
+            log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+            return pal_to_unix_errno(ret);
+        }
+        ret = PalStreamSetLength(enc->pal_handle, pal_attr.pending_size);
+        if (ret < 0) {
+            log_warning("PalStreamSetLength failed: %s", pal_strerror(ret));
+            return pal_to_unix_errno(ret);
+        }
+
+        ret = encrypted_file_internal_open(enc, enc->pal_handle, /*create=*/false,
                                                /*share_flags=*/0);
         if (ret < 0)
             return ret;

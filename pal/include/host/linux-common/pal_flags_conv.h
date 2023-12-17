@@ -60,6 +60,6 @@ static inline int PAL_CREATE_TO_LINUX_OPEN(enum pal_create_mode create) {
 }
 
 static inline int PAL_OPTION_TO_LINUX_OPEN(pal_stream_options_t options) {
-    assert(WITHIN_MASK(options, PAL_OPTION_NONBLOCK | PAL_OPTION_PASSTHROUGH));
+    assert(WITHIN_MASK(options, PAL_OPTION_MASK));
     return options & PAL_OPTION_NONBLOCK ? O_NONBLOCK : 0;
 }

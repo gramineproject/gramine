@@ -19,6 +19,7 @@ struct pf_context {
     metadata_encrypted_t encrypted_part_plain; // encrypted part of metadata node, decrypted
     file_node_t root_mht; // the root of the mht is always needed (for files bigger than 3KB)
     pf_handle_t file;
+    void* addr;
     pf_file_mode_t mode;
     uint64_t real_file_size;
     bool need_writing;
