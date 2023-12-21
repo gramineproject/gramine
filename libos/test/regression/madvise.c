@@ -15,7 +15,7 @@
 
 #define PAGES_CNT 128
 
-int main(void) {
+static void test_madvise_rw(void) {
     size_t page_size = getpagesize();
 
     char* m = (char*)mmap(NULL, PAGES_CNT * page_size,
@@ -53,6 +53,32 @@ int main(void) {
             }
         }
     }
+
+    if (munmap(m, PAGES_CNT * page_size) < 0)
+        err(1, "munmap");
+}
+
+/* this test emulates Node.js v20 behavior */
+static void test_madvise_none(void) {
+    size_t page_size = getpagesize();
+
+    char* m = (char*)mmap(NULL, PAGES_CNT * page_size,
+                          PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS,
+                          -1, 0);
+    if (m == MAP_FAILED)
+        err(1, "mmap()");
+
+    int res = madvise(m, PAGES_CNT * page_size, MADV_DONTNEED);
+    if (res)
+        err(1, "madvise(%p, 0x%zx, MADV_DONTNEED) failed", m, PAGES_CNT * page_size);
+
+    if (munmap(m, PAGES_CNT * page_size) < 0)
+        err(1, "munmap");
+}
+
+int main(void) {
+    test_madvise_rw();
+    test_madvise_none();
     puts("TEST OK");
     return 0;
 }
