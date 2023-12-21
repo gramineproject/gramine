@@ -1728,7 +1728,6 @@ applications that would use these flags. In case of SGX backend, `mprotect()` be
 `madvise()` implements only a minimal subset of functionality:
 - `MADV_DONTNEED` is partially supported:
   - resetting writable file-backed mappings is not implemented;
-  - zeroing non-writable mappings is not implemented;
   - all other cases are implemented.
 - `MADV_NORMAL`, `MADV_RANDOM`, `MADV_SEQUENTIAL`, `MADV_WILLNEED`, `MADV_FREE`,
   `MADV_SOFT_OFFLINE`, `MADV_MERGEABLE`, `MADV_UNMERGEABLE`, `MADV_HUGEPAGE`, `MADV_NOHUGEPAGE` are

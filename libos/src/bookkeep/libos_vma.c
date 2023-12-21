@@ -1326,14 +1326,32 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         return true;
     }
 
-    if (!(vma->prot & PROT_WRITE)) {
-        ctx->error = -ENOSYS; // Zeroing non-writable mappings is not yet implemented.
-        return false;
-    }
-
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
     uintptr_t zero_end = MIN(ctx->end, vma->end);
+
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags);
+    pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
+
+    if (pal_prot != pal_prot_writable) {
+        /* make the area writable so that it can be memset-to-zero */
+        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start,
+                                          pal_prot_writable);
+        if (ret < 0) {
+            ctx->error = pal_to_unix_errno(ret);
+            return false;
+        }
+    }
+
     memset((void*)zero_start, 0, zero_end - zero_start);
+
+    if (pal_prot != pal_prot_writable) {
+        /* the area was made writable above; restore the original permissions */
+        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start, pal_prot);
+        if (ret < 0) {
+            log_error("restoring original permissions failed: %s", pal_strerror(ret));
+            BUG();
+        }
+    }
     return true;
 }
 
