@@ -217,8 +217,17 @@ static void cb_debug(const char* msg) {
     DBG("%s\n", msg);
 }
 
+/* The encrypted files related tools (gramine-sgx-pf-crypt, gramine-sgx-pf-tamper) are not
+ * performance-sensitive so we set the limit of the node free list to 0 which by default disables
+ * the node free list optimization. */
+#define LIMIT_ENCRYPTED_FILES_NODE_FREE_LIST 0
+
 /* Initialize protected files for native environment */
 int pf_init(void) {
+    int ret = pf_init_node_free_list(LIMIT_ENCRYPTED_FILES_NODE_FREE_LIST);
+    if (ret < 0)
+        return ret;
+
     return pf_set_linux_callbacks(cb_debug);
 }
 

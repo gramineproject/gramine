@@ -272,15 +272,32 @@ int init_encrypted_files(void) {
     if (!create_lock(&g_keys_lock))
         return -ENOMEM;
 
+    int ret;
+
+    toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
+
+    int64_t limit_node_free_list_int64;
+    ret = toml_int_in(manifest_fs, "limit.encrypted_files_node_free_list", /*defaultval=*/0,
+                      &limit_node_free_list_int64);
+    if (ret < 0) {
+        log_error("Cannot parse 'limit.encrypted_files_node_free_list'");
+        return -EINVAL;
+    }
+    if (limit_node_free_list_int64 < 0) {
+        log_error("'limit.encrypted_files_node_free_list' = %ld is negative",
+                  limit_node_free_list_int64);
+        return -EINVAL;
+    }
+
+    ret = pf_init_node_free_list((size_t)limit_node_free_list_int64);
+    if (ret < 0)
+        return ret;
+
     pf_set_callbacks(&cb_read, &cb_write, &cb_truncate,
                      &cb_aes_cmac, &cb_aes_gcm_encrypt, &cb_aes_gcm_decrypt,
                      &cb_random, cb_debug_ptr);
 
-    int ret;
-
     /* Parse `fs.insecure__keys.*` */
-
-    toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
     toml_table_t* manifest_fs_keys =
         manifest_fs ? toml_table_in(manifest_fs, "insecure__keys") : NULL;
     if (manifest_fs && manifest_fs_keys) {
