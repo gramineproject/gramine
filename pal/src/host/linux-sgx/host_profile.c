@@ -314,8 +314,16 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     if (!strcmp(filename, ""))
         filename = get_main_exec_path();
 
-    if (!strcmp(filename, "[vdso_libos]"))
+    if (!strcmp(filename, "[vdso]") || !strcmp(filename, "[vdso_libos]")) {
+        /*
+         * Our SGX profiler currently does not support reporting perf events in vDSO binaries:
+         * host-Linux `[vdso]` and enclave-LibOS `[vdso_libos]`. It is hard to find these vDSO
+         * binaries: the former is embedded in host Linux and the latter is embedded in LibOS
+         * `libsysdb.so` binary. The assumption is that vDSO is never a perf bottleneck in SGX
+         * environments, so we don't lose much precision in our profiler.
+         */
         return;
+    }
 
     // Convert filename to absolute path - some tools (e.g. libunwind in 'perf report') refuse to
     // process relative paths.
