@@ -45,6 +45,8 @@ static int unix_to_pal_error_positive(int unix_errno) {
         case ECONNRESET:
         case ECONNREFUSED:
             return PAL_ERROR_CONNFAILED;
+        case ENOTCONN:
+            return PAL_ERROR_NOTCONNECTION;
         case EPIPE:
             return PAL_ERROR_CONNFAILED_PIPE;
         case EAFNOSUPPORT:
