@@ -85,6 +85,7 @@ stage('build') {
         | jq -r '(map(select(.name == "prefix")) + map(select(.name == "libdir"))) | map(.value) | join("/")'
     ''').trim()
 
+    env.GRAMINE_LIBDIR = libdir
     env.GRAMINE_PKGLIBDIR = libdir + '/gramine'
 
     // In CI we install to non-standard --prefix (see above). This makes sure the libraries are

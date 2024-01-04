@@ -1,7 +1,9 @@
 stage('test-direct') {
     sh '''
-        .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/libsysdb.so
-        .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/direct/libpal.so
+        find ${GRAMINE_LIBDIR} -exec file {} \\; | \
+            grep ELF | \
+            cut -d':' -f1 | \
+            xargs -L1 .ci/check-rwx.py
     '''
 
     try {

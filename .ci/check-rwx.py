@@ -13,5 +13,5 @@ args = argparser.parse_args()
 elf = ELFFile(args.infile)
 for i, segment in enumerate(elf.iter_segments()):
     if segment.header.p_flags & P_FLAGS.PF_X and segment.header.p_flags & P_FLAGS.PF_W:
-        print(f"error: segment {i} is both writable and executable")
+        print(f"error in {args.infile.name}: segment {i} is both writable and executable")
         sys.exit(1)

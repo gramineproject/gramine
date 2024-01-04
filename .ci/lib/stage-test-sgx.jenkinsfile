@@ -1,8 +1,9 @@
 stage('test-sgx') {
     sh '''
-        .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/libsysdb.so
-        .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/sgx/loader
-        .ci/check-rwx.py "$GRAMINE_PKGLIBDIR"/sgx/libpal.so
+        find ${GRAMINE_LIBDIR} -exec file {} \\; | \
+            grep ELF | \
+            cut -d':' -f1 | \
+            xargs -L1 .ci/check-rwx.py
         if test -f "$GRAMINE_PKGLIBDIR"/runtime/glibc/libc.so.6
         then
             .ci/check-no-syscall.sh "$GRAMINE_PKGLIBDIR"/runtime/glibc/libc.so.6
