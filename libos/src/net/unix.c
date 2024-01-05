@@ -141,7 +141,7 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
 
     PAL_HANDLE pal_handle = NULL;
     ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                        &pal_handle);
+                        false, &pal_handle);
     if (ret < 0) {
         return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
@@ -238,7 +238,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
 
     PAL_HANDLE pal_handle = NULL;
     ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                        &pal_handle);
+                        false, &pal_handle);
     if (ret < 0) {
         return (ret == -PAL_ERROR_CONNFAILED) ? -ENOENT : pal_to_unix_errno(ret);
     }

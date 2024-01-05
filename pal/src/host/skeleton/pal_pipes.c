@@ -24,7 +24,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
 
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+                     pal_stream_options_t options, bool create_delete_handle) {
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
         return pipe_listen(handle, uri, options);
 

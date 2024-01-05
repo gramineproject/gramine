@@ -29,6 +29,8 @@ static const char* g_pal_error_list[] = {
     [PAL_ERROR_CONNFAILED] = "Connection failed (PAL_ERROR_CONNFAILED)",
     [PAL_ERROR_ADDRNOTEXIST] = "Resource address does not exist (PAL_ERROR_ADDRNOTEXIST)",
     [PAL_ERROR_AFNOSUPPORT] = "Address family not supported by protocol (PAL_ERROR_AFNOSUPPORT)",
+    [PAL_ERROR_LOOP] = "Symbolic link path with O_NOFOLLOW or too many symbolic links encountered (PAL_ERROR_LOOP)",
+    [PAL_ERROR_NO_PERMISSION] = "Operation not permitted (PAL_ERROR_NO_PERMISSION)",
     [PAL_ERROR_CONNFAILED_PIPE] = "Broken pipe (PAL_ERROR_CONNFAILED_PIPE)",
 
     [PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE] = "[Crypto] Feature not available (PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE)",

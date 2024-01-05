@@ -65,7 +65,7 @@ static int dev_tty_open(struct libos_handle* hdl, struct libos_dentry* dent, int
 
     PAL_HANDLE palhdl;
     int ret = PalStreamOpen(uri, LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags), PSEUDO_PERM_FILE_RW,
-                            PAL_CREATE_NEVER, /*options=*/0, &palhdl);
+                            PAL_CREATE_NEVER, /*options=*/0, false, &palhdl);
     if (ret < 0) {
         free(uri);
         return pal_to_unix_errno(ret);

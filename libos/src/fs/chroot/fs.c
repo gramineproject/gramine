@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  * Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2024 Fortanix, Inc.
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
  */
 
 /*
@@ -62,6 +64,7 @@ int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri) {
     size_t prefix_len;
     switch (type) {
         case S_IFREG:
+        case S_IFLNK:
             prefix = URI_PREFIX_FILE;
             prefix_len = static_strlen(URI_PREFIX_FILE);
             break;
@@ -182,14 +185,15 @@ out:
 }
 
 /* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
-static int chroot_temp_open(struct libos_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl) {
+static int chroot_temp_open(struct libos_dentry* dent, mode_t type,
+                            bool create_delete_handle,  PAL_HANDLE* out_palhdl) {
     char* uri;
     int ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
 
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, out_palhdl);
+                        /*options=*/0, create_delete_handle, out_palhdl);
     free(uri);
     return pal_to_unix_errno(ret);
 }
@@ -201,7 +205,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
 
     int ret;
 
-    char* uri;
+    char* uri = NULL;
     ret = chroot_dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
@@ -211,7 +215,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    ret = PalStreamOpen(uri, access, host_perm, create, options, false,  &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -347,7 +351,7 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
     char* buf = NULL;
     size_t buf_size = READDIR_BUF_SIZE;
 
-    ret = chroot_temp_open(dent, S_IFDIR, &palhdl);
+    ret = chroot_temp_open(dent, S_IFDIR, false, &palhdl);
     if (ret < 0)
         return ret;
 
@@ -408,7 +412,7 @@ int chroot_unlink(struct libos_dentry* dent) {
     int ret;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->inode->type, true, &palhdl);
     if (ret < 0)
         return ret;
 
@@ -432,7 +436,7 @@ static int chroot_rename(struct libos_dentry* old, struct libos_dentry* new) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(old, old->inode->type, &palhdl);
+    ret = chroot_temp_open(old, old->inode->type, false, &palhdl);
     if (ret < 0)
         goto out;
 
@@ -456,7 +460,7 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     int ret;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
+    ret = chroot_temp_open(dent, dent->inode->type, false, &palhdl);
     if (ret < 0)
         return ret;
 

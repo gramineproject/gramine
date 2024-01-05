@@ -389,6 +389,19 @@ struct libos_d_ops {
     int (*follow_link)(struct libos_dentry* dent, char** out_target);
 
     /*
+     * \brief Set up a link/symlink name to a dentry.
+     *
+     * \param dent          Dentry (must be positive for hard links).
+     * \param target        Link name.
+     * \param is_soft_link  true if it is a soft/ymbolic link
+     *
+     * Set up hard/soft link name to a dentry.
+     *
+     * The caller should hold `g_dcache_lock`.
+     */
+    int (*set_link)(struct libos_dentry* dent, const char* link, bool is_soft_link);
+
+    /*
      * \brief Change file permissions.
      *
      * \param dent  Dentry, positive.

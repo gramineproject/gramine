@@ -24,6 +24,30 @@ CPUINFO_TEST_FLAGS = [
     'syscall',
 ]
 
+SYMLINK_TEST_FILENAME_PREFIX = "link_symlink_test_file"
+SYMLINK_TEST_DIRNAME_PREFIX = "link_symlink_test_dir"
+
+def del_test_files_and_dirs(path, file_pfix, dir_pfix):
+    path = os.path.abspath(path)
+    if os.path.isfile(path):
+        raise Exception(f"{path} cannot be a file")
+    if not os.path.exists(path):
+        raise FileNotFoundError()
+    if (path == "/") and (file_pfix == "") and (dir_pfix == ""):
+        raise Exception("cannot delete everything in the 'root' directory")
+
+    try:
+        for entry in os.listdir(path):
+            if os.path.isdir(entry):
+                if entry.startswith(dir_pfix):
+                    del_test_files_and_dirs(entry, file_pfix, dir_pfix)
+                    os.rmdir(entry)
+            else:
+                if entry.startswith(file_pfix):
+                    os.unlink(entry)
+
+    except Exception as e:
+        raise Exception(f"Failed to delete directory {path}: {e}")
 
 class TC_00_Unittests(RegressionTestCase):
     def test_000_spinlock(self):
@@ -748,6 +772,99 @@ class TC_30_Syscall(RegressionTestCase):
         file1 = '/mnt/tmpfs/file1'
         file2 = '/mnt/tmpfs/file2'
         stdout, _ = self.run_binary(['rename_unlink', file1, file2])
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skip  # No hardlink support for pass-through filesystem
+    def test_037_link_chroot(self):
+        dir1 = 'tmp/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-h', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skip  # No symlink support for pass-through filesystem
+    def test_038_symlink_chroot(self):
+        dir1 = 'tmp/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-s', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skip  # No hardlink support for pass-through filesystem
+    def test_039_link_pf(self):
+        dir1 = 'tmp/pf/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-h', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skip  # No symlink support for pass-through filesystem
+    def test_03A_symlink_pf(self):
+        dir1 = 'tmp/pf/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-s', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skip  # No hardlink support for encrypted filesystem
+    def test_03B_link_enc(self):
+        dir1 = 'tmp_enc/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-h', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    def test_03C_symlink_enc(self):
+        dir1 = 'tmp_enc/'
+        os.makedirs(dir1, exist_ok=True)
+        try:
+            stdout, _ = self.run_binary(['link_symlink', '-s', dir1])
+        finally:
+            del_test_files_and_dirs(dir1, 
+                                    SYMLINK_TEST_FILENAME_PREFIX,
+                                    SYMLINK_TEST_DIRNAME_PREFIX)
+        self.assertIn('TEST OK', stdout)
+
+    def test_03D_link_tmpfs(self):
+        dir1 = '/mnt/tmpfs/'
+        try:
+            os.makedirs(dir1, exist_ok=True)
+        except OSError as e:
+            if e == PermissionError:
+                print(f'{dir1} already exists')
+
+        stdout, _ = self.run_binary(['link_symlink', '-h', dir1])
+        self.assertIn('TEST OK', stdout)
+
+    def test_03E_symlink_tmpfs(self):
+        dir1 = '/mnt/tmpfs/'
+        try:
+            os.makedirs(dir1, exist_ok=True)
+        except OSError as e:
+            if e == PermissionError:
+                print(f'{dir1} already exists')
+
+        stdout, _ = self.run_binary(['link_symlink', '-s', dir1])
         self.assertIn('TEST OK', stdout)
 
     def test_040_futex_bitset(self):

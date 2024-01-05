@@ -26,7 +26,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file1 = NULL;
     ret = PalStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &file1);
+                        PAL_CREATE_NEVER, /*options=*/0, false, &file1);
     if (ret >= 0 && file1) {
         pal_printf("File Open Test 1 OK\n");
 
@@ -94,7 +94,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file2 = NULL;
     ret = PalStreamOpen("file:File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &file2);
+                        PAL_CREATE_NEVER, /*options=*/0, false, &file2);
     if (ret >= 0 && file2) {
         pal_printf("File Open Test 2 OK\n");
         PalObjectDestroy(file2);
@@ -102,7 +102,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file3 = NULL;
     ret = PalStreamOpen("file:../regression/File.manifest", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &file3);
+                        PAL_CREATE_NEVER, /*options=*/0, false, &file3);
     if (ret >= 0 && file3) {
         pal_printf("File Open Test 3 OK\n");
         PalObjectDestroy(file3);
@@ -119,14 +119,14 @@ int main(int argc, char** argv, char** envp) {
     PAL_HANDLE file4 = NULL;
     ret = PalStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, /*options=*/0,
-                        &file4);
+                        false, &file4);
     if (ret >= 0 && file4)
         pal_printf("File Creation Test 1 OK\n");
 
     PAL_HANDLE file5 = NULL;
     ret = PalStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_ALWAYS, /*options=*/0,
-                        &file5);
+                        false, &file5);
     if (ret >= 0) {
         PalObjectDestroy(file5);
     } else {
@@ -136,7 +136,7 @@ int main(int argc, char** argv, char** envp) {
     PAL_HANDLE file6 = NULL;
     ret = PalStreamOpen("file:file_nonexist.tmp", PAL_ACCESS_RDWR,
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_TRY, /*options=*/0,
-                        &file6);
+                        false, &file6);
     if (ret >= 0 && file6) {
         pal_printf("File Creation Test 3 OK\n");
         PalObjectDestroy(file6);
@@ -175,7 +175,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE file7 = NULL;
     ret = PalStreamOpen("file:file_delete.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &file7);
+                        PAL_CREATE_NEVER, /*options=*/0, false, &file7);
     if (ret >= 0 && file7) {
         ret = PalStreamDelete(file7, PAL_DELETE_ALL);
         if (ret < 0) {

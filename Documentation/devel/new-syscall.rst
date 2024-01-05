@@ -53,9 +53,9 @@ call.
 4. Export new PAL calls from PAL binaries (optional)
 ----------------------------------------------------
 
-For each directory in :file:`PAL/host/`, there is a :file:`pal.map` file. This
-file lists all the symbols accessible to the library OS. The new PAL call needs
-to be listed here in order to be used by your system call implementation.
+The :file:`pal/src/pal_symbols` file lists all the symbols accessible to the library
+OS. The new PAL call needs to be listed here in order to be used by your system
+call implementation.
 
 5. Implement new PAL calls (optional)
 -------------------------------------
