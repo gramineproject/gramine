@@ -636,6 +636,23 @@ uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack) {
     return (uintptr_t)alt_stack->ss_sp + alt_stack->ss_size;
 }
 
+int wakeup_one_thread_on_signal(struct libos_thread* thread, void* arg) {
+    int sig = (int)(long)arg;
+
+    if (thread == get_cur_thread())
+        return 0;
+
+    lock(&thread->lock);
+    int ret = 0;
+    if (!__sigismember(&thread->signal_mask, sig)) {
+        thread_wakeup(thread);
+        ret = PalThreadResume(thread->pal_handle);
+        ret = ret < 0 ? pal_to_unix_errno(ret) : 1; /* "1" to finish one-shot thread walk */
+    }
+    unlock(&thread->lock);
+    return ret;
+}
+
 void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
     assert(signal);
     signal->siginfo.si_signo = 0;
@@ -696,7 +713,9 @@ void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
     } else if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED) != 0) {
         static_assert(SIGS_CNT < 0xff, "This code requires 0xff to be an invalid signal number");
         lock(&current->lock);
+        bool sigterm_allowed_on_this_thread = false;
         if (!__sigismember(mask ? : &current->signal_mask, SIGTERM)) {
+            sigterm_allowed_on_this_thread = true;
             int sig = __atomic_exchange_n(&g_host_injected_signal, 0xff, __ATOMIC_RELAXED);
             if (sig != 0xff) {
                 signal->siginfo.si_signo = sig;
@@ -704,6 +723,19 @@ void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
             }
         }
         unlock(&current->lock);
+
+        if (!sigterm_allowed_on_this_thread) {
+            /* host delivered SIGTERM on the current thread but this thread blocked SIGTERM, need to
+             * find another thread that didn't block this signal and wake it up (this covers a
+             * common case of one dedicated app thread doing sigtimedwait(SIGTERM) while other
+             * threads mark SIGTERM as blocked) */
+            int ret = walk_thread_list(wakeup_one_thread_on_signal, /*arg=*/(void*)SIGTERM,
+                                       /*one_shot=*/true);
+            if (ret < 0 && ret != -ESRCH) {
+                log_error("error occured while trying to deliver SIGTERM signal to a thread (%s)",
+                          unix_strerror(ret));
+            }
+        }
     }
 }
 
