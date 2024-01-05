@@ -234,6 +234,33 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
+static int file_lstat(const char *link_path, struct stat *sb) {
+    int ret = DO_SYSCALL(lstat, link_path, sb);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
+static int file_readlink(const char *link_path, char *buf, size_t buf_sz, size_t *ret_len) {
+    int ret = DO_SYSCALL(readlink, link_path, buf, buf_sz);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    if (ret_len != NULL)
+        *ret_len = ret;
+
+    return 0;
+}
+
+static int file_link(const char* target, const char* link_path, bool is_soft_link) {
+    int ret = DO_SYSCALL(link, target, link_path, is_soft_link);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -247,6 +274,9 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .lstat          = &file_lstat,
+    .readlink       = &file_readlink,
+    .link           = &file_link,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a
@@ -433,4 +463,5 @@ struct handle_ops g_dir_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &dir_rename,
+    .link           = &file_link,
 };

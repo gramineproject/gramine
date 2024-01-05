@@ -49,6 +49,10 @@ static int unix_to_pal_error_positive(int unix_errno) {
             return PAL_ERROR_CONNFAILED_PIPE;
         case EAFNOSUPPORT:
             return PAL_ERROR_AFNOSUPPORT;
+        case ELOOP:
+            return PAL_ERROR_LOOP;
+        case EPERM:
+            return PAL_ERROR_NO_PERMISSION;
         default:
             return PAL_ERROR_DENIED;
     }

@@ -103,6 +103,8 @@ long libos_syscall_rename(const char* oldname, const char* newname);
 long libos_syscall_mkdir(const char* pathname, int mode);
 long libos_syscall_rmdir(const char* pathname);
 long libos_syscall_creat(const char* path, mode_t mode);
+long libos_syscall_link(const char* target, const char* linkpath);
+long libos_syscall_symlink(const char* target, const char* linkpath);
 long libos_syscall_unlink(const char* file);
 long libos_syscall_readlink(const char* file, char* buf, int bufsize);
 long libos_syscall_chmod(const char* filename, mode_t mode);
@@ -176,6 +178,9 @@ long libos_syscall_mkdirat(int dfd, const char* pathname, int mode);
 long libos_syscall_newfstatat(int dirfd, const char* pathname, struct stat* statbuf, int flags);
 long libos_syscall_unlinkat(int dfd, const char* pathname, int flag);
 long libos_syscall_readlinkat(int dirfd, const char* file, char* buf, int bufsize);
+long libos_syscall_linkat(int olddirfd, const char* target, int newdirfd, const char* linkpath,
+                          int flags);
+long libos_syscall_symlinkat(const char* target, int newdirfd, const char* linkpath);
 long libos_syscall_renameat(int olddfd, const char* pathname, int newdfd, const char* newname);
 long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode);
 long libos_syscall_fchownat(int dfd, const char* filename, uid_t user, gid_t group, int flags);

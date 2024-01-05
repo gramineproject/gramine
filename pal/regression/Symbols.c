@@ -34,6 +34,8 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalStreamAttributesSetByHandle);
     PRINT_SYMBOL(PalStreamChangeName);
     PRINT_SYMBOL(PalStreamsWaitEvents);
+    PRINT_SYMBOL(PalReadLink);
+    PRINT_SYMBOL(PalCreateLink);
 
     PRINT_SYMBOL(PalThreadCreate);
     PRINT_SYMBOL(PalThreadYieldExecution);

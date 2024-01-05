@@ -9,6 +9,7 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
+#include "stat.h"
 
 /* Stream handler table: this table corresponds to all the handle types supported by PAL. Threads
  * are not streams, so they need no handler. Sockets have their own table. */
@@ -385,6 +386,42 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
         return -PAL_ERROR_NOTSUPPORT;
 
     return hops->rename(hdl, type, uri);
+}
+
+int PalGetLinkStats(const char* link_path, struct stat* sb) {
+    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
+    if (ops == NULL || ops->lstat == NULL)
+        return -PAL_ERROR_NOTSUPPORT;
+
+    int ret = ops->lstat(link_path, sb);
+    if (ret < 0)
+        return ret;
+
+    return PAL_ERROR_SUCCESS;
+}
+
+int PalReadLink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len) {
+    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
+    if (ops == NULL || ops->readlink == NULL)
+        return -PAL_ERROR_NOTSUPPORT;
+
+    int ret = ops->readlink(link_path, buf, buf_sz, ret_len);
+    if (ret < 0)
+        return ret;
+
+    return PAL_ERROR_SUCCESS;
+}
+
+int PalCreateLink(const char* target, const char* link_path, bool is_soft_link) {
+    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
+    if (ops == NULL || ops->link == NULL)
+        return -PAL_ERROR_NOTSUPPORT;
+
+    int ret = ops->link(target, link_path, is_soft_link);
+    if (ret < 0)
+        return ret;
+
+    return PAL_ERROR_SUCCESS;
 }
 
 int PalDebugLog(const void* buffer, size_t size) {

@@ -97,6 +97,12 @@ int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us);
 
 int ocall_rename(const char* oldpath, const char* newpath);
 
+int ocall_lstat(const char* link_path, struct stat* sb);
+
+int ocall_readlink(const char* link_path, char* buf, size_t buf_sz, ssize_t* ret_len);
+
+int ocall_link(const char* oldpath, const char* newpath, bool is_soft_link);
+
 int ocall_delete(const char* pathname);
 
 int ocall_debug_map_add(const char* name, void* addr);
