@@ -88,10 +88,21 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {
             ret = unix_to_pal_error(fd);
-            goto fail;
+            if (ret != -PAL_ERROR_STREAMNOTEXIST)
+                goto fail;
+
+            /* check for symlink */
+            fd = ocall_open(uri, flags | O_NOFOLLOW, pal_share);
+            if (fd < 0) {
+                ret = unix_to_pal_error(fd);
+                if (ret != -PAL_ERROR_LOOP)
+                    goto fail;
+                ret = -PAL_ERROR_SUCCESS;
+                fd = -1;
+            }
         }
 
-        ret = ocall_fstat(fd, &st);
+        ret = (fd < 0) ? ocall_lstat(uri, &st): ocall_fstat(fd, &st);
         if (ret < 0) {
             ret = unix_to_pal_error(ret);
             goto fail;
@@ -118,10 +129,21 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     fd = ocall_open(uri, flags, pal_share);
     if (fd < 0) {
         ret = unix_to_pal_error(fd);
-        goto fail;
+        if (ret != -PAL_ERROR_STREAMNOTEXIST)
+            goto fail;
+
+        /* check for symlink */
+        fd = ocall_open(uri, flags | O_NOFOLLOW, pal_share);
+        if (fd < 0) {
+            ret = unix_to_pal_error(fd);
+            if (ret != -PAL_ERROR_LOOP)
+                goto fail;
+            ret = -PAL_ERROR_SUCCESS;
+            fd = -1;
+        }
     }
 
-    ret = ocall_fstat(fd, &st);
+    ret = (fd < 0) ? ocall_lstat(uri, &st): ocall_fstat(fd, &st);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         goto fail;
@@ -483,6 +505,34 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
+static int file_lstat(const char* link_path, struct stat* sb) {
+    int ret = ocall_lstat(link_path, sb);
+    if (ret < 0) {
+        return unix_to_pal_error(ret);
+    }
+
+    return 0;
+}
+
+static int file_readlink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len) {
+    ssize_t n_ret = 0;
+    int ret = ocall_readlink(link_path, buf, buf_sz, &n_ret);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+    static_assert(sizeof(*ret_len) >= sizeof(n_ret));
+    *ret_len = (size_t)n_ret;
+
+    return 0;
+}
+
+static int file_link(const char* target, const char* link_path, bool is_soft_link) {
+    int ret = ocall_link(target, link_path, is_soft_link);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}
+
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -496,6 +546,9 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
+    .lstat          = &file_lstat,
+    .readlink       = &file_readlink,
+    .link           = &file_link,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a
@@ -685,4 +738,7 @@ struct handle_ops g_dir_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &dir_rename,
+    .lstat          = &file_lstat,
+    .readlink       = &file_readlink,
+    .link           = &file_link,
 };

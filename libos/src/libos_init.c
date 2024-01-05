@@ -67,6 +67,8 @@ static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT + 1] = {
     [PAL_ERROR_CONNFAILED]      = ECONNRESET,
     [PAL_ERROR_ADDRNOTEXIST]    = EADDRNOTAVAIL,
     [PAL_ERROR_AFNOSUPPORT]     = EAFNOSUPPORT,
+    [PAL_ERROR_LOOP]            = ELOOP,
+    [PAL_ERROR_NO_PERMISSION]   = EPERM,
     [PAL_ERROR_CONNFAILED_PIPE] = EPIPE,
 };
 

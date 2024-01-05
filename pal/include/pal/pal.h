@@ -23,6 +23,8 @@
 #include "cpu.h"
 #endif
 
+struct stat;    /* forward declaration */
+
 /* TODO: we should `#include "toml.h"` here. However, this is currently inconvenient to do in Meson,
  * because `toml.h` is a generated (patched) file, and all targets built using `pal.h` would need to
  * declare a dependency on it. */
@@ -514,6 +516,21 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
  * \brief This API changes the name of an open stream.
  */
 int PalStreamChangeName(PAL_HANDLE handle, const char* typed_uri);
+
+/*!
+ * \brief This API reads the file stats of the symbolic link file.
+ */
+int PalGetLinkStats(const char* link_path, struct stat* sb);
+
+/*!
+ * \brief This API performs a readlink on the host link path.
+ */
+int PalReadLink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len);
+
+/*!
+ * \brief This API creates hard/symbolic link to an open file/directory.
+ */
+int PalCreateLink(const char* target, const char* link_path, bool is_soft_link);
 
 struct pal_socket_addr {
     enum pal_socket_domain domain;

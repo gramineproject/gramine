@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <asm/stat.h>
 
 #include "api.h"
 #include "log.h"
@@ -89,9 +90,24 @@ struct handle_ops {
 
     /* 'rename' is used to change name of a stream, or reset its share option */
     int (*rename)(PAL_HANDLE handle, const char* type, const char* uri);
+
+    /* 'lstat' is used to return information about a symbolic link */
+    int (*lstat)(const char* link_path, struct stat *sb);
+
+    /* 'readlink' is used to read the value of a symbolic link */
+    int (*readlink)(const char *link_path, char *buf, size_t buf_sz, size_t *ret_len);
+
+    /* 'link' is used to create a hard or soft-link to a file */
+    int (*link)(const char* target, const char* link_path, bool is_soft_link);
 };
 
 extern const struct handle_ops* g_pal_handle_ops[];
+
+static inline const struct handle_ops* handle_ops_by_type(PAL_IDX type) {
+    if (type >= PAL_HANDLE_TYPE_BOUND)
+        return NULL;
+    return g_pal_handle_ops[type];
+}
 
 static inline const struct handle_ops* HANDLE_OPS(PAL_HANDLE handle) {
     int _type = handle->hdr.type;

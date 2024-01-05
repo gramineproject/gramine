@@ -62,6 +62,7 @@ int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri) {
     size_t prefix_len;
     switch (type) {
         case S_IFREG:
+        case S_IFLNK:
             prefix = URI_PREFIX_FILE;
             prefix_len = static_strlen(URI_PREFIX_FILE);
             break;
@@ -449,6 +450,88 @@ out:
     return ret;
 }
 
+static int chroot_follow_link(struct libos_dentry* link_dent, char** out_target) {
+    assert(locked(&g_dcache_lock));
+
+    int ret;
+    char* new_uri = NULL;
+    char* target_buf = NULL;
+
+    /* get link path (no prefix) */
+    ret = chroot_dentry_uri(link_dent, S_IFREG, &new_uri);
+    if (ret < 0) {
+        goto out;
+    }
+    assert(strstartswith(new_uri, URI_PREFIX_FILE));
+    char* linkpath = new_uri + URI_PREFIX_FILE_LEN;
+    if ((*(linkpath + 0) == "./"[0]) && (*(linkpath + 1) == "./"[1])) {
+        linkpath += 2;
+    }
+
+    struct stat sb;
+    ret = PalGetLinkStats(linkpath, &sb);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    size_t target_sz = sb.st_size + 1;
+    target_buf = malloc(target_sz);
+    if (target_buf == NULL) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    size_t ret_len = 0;
+    ret = PalReadLink(linkpath, target_buf, target_sz - 1, &ret_len);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    assert(ret_len < target_sz);
+    *(target_buf + ret_len) = '\x0';
+
+    *out_target = target_buf;
+    target_buf = NULL;
+    ret = 0;
+
+out:
+    free(target_buf);
+    free(new_uri);
+    return ret;
+}
+
+static int chroot_set_link(struct libos_dentry* link_dent, const char* targetpath,
+                           bool is_soft_link) {
+    assert(locked(&g_dcache_lock));
+
+    int ret;
+    char* new_uri = NULL;
+
+    /* get link path (no prefix) */
+    ret = chroot_dentry_uri(link_dent, S_IFREG, &new_uri);
+    if (ret < 0) {
+        goto out;
+    }
+    assert(strstartswith(new_uri, URI_PREFIX_FILE));
+    char* linkpath = new_uri + URI_PREFIX_FILE_LEN;
+    if ((*(linkpath + 0) == '.') && (*(linkpath + 1) == '/')) {
+        linkpath += 2;
+    }
+
+    ret = PalCreateLink(targetpath, linkpath, is_soft_link);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+    ret = 0;
+
+out:
+    free(new_uri);
+    return ret;
+}
+
 static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
@@ -506,8 +589,10 @@ struct libos_d_ops chroot_d_ops = {
     .stat    = &generic_inode_stat,
     .readdir = &chroot_readdir,
     .unlink  = &chroot_unlink,
-    .rename  = &chroot_rename,
-    .chmod   = &chroot_chmod,
+    .follow_link = &chroot_follow_link,
+    .set_link    = &chroot_set_link,
+    .rename      = &chroot_rename,
+    .chmod       = &chroot_chmod,
 };
 
 struct libos_fs chroot_builtin_fs = {
