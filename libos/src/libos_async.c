@@ -156,9 +156,13 @@ static void clean_async_list(void) {
     struct async_event* tmp, *n;
     LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
         if (tmp->hdl_to_put) {
-            put_handle(tmp->hdl_to_put);
-            LISTP_DEL(tmp, &async_list, list);
-            free(tmp);
+            if (put_handle(tmp->hdl_to_put) == 0) {
+                /* no more users */
+                LISTP_DEL(tmp, &async_list, list);
+                free(tmp);
+            } else {
+                tmp->hdl_to_put = 0;
+            }
         }
     }
 }

@@ -224,7 +224,7 @@ struct libos_handle {
 /* allocating / manage handle */
 struct libos_handle* get_new_handle(void);
 void get_handle(struct libos_handle* hdl);
-void put_handle(struct libos_handle* hdl);
+refcount_t put_handle(struct libos_handle* hdl);
 
 /* Set handle to non-blocking or blocking mode. */
 int set_handle_nonblocking(struct libos_handle* hdl, bool on);

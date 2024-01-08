@@ -505,7 +505,7 @@ static int clear_flock_locks(struct libos_handle* hdl) {
     return 0;
 }
 
-void put_handle(struct libos_handle* hdl) {
+refcount_t put_handle(struct libos_handle* hdl) {
     refcount_t ref_count = refcount_dec(&hdl->ref_count);
 
     if (!ref_count) {
@@ -536,6 +536,7 @@ void put_handle(struct libos_handle* hdl) {
 
         destroy_handle(hdl);
     }
+    return ref_count;
 }
 
 int get_file_size(struct libos_handle* hdl, uint64_t* size) {
