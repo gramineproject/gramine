@@ -38,8 +38,8 @@ not published.
    When launched through ``make`` (like ``make -C Documentation html``), this
    becomes "target" in Make terminology.
 
-Install Prerequisites
-----------------------
+Installing prerequisites
+------------------------
 
 Change directory to ``Documentation``, install prerequisites including Doxygen,
 Breathe and Sphinx. Gramine documentation requires version 1.8 of Sphinx. The

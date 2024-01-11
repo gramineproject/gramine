@@ -26,6 +26,7 @@ for SGX compatibility. Use this tool to check your hardware and system. It is
 installed together with the Gramine package.
 
 .. _prepare-a-signing-key:
+
 Prepare a signing key
 ---------------------
 

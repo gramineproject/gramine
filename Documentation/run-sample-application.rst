@@ -12,6 +12,11 @@ installation. To clone the Gramine repo, use the following command:
 
 Don't build Gramine if it is already installed on the system.
 
+Prerequisite
+------------
+
+Please refer to :doc:`sgx-setup` section to set up the host environment.
+
 Build and run HelloWorld sample app
 -----------------------------------
 
@@ -49,7 +54,7 @@ below.
 Troubleshooting
 ^^^^^^^^^^^^^^^
 
-- **Signing key not existed error**
+- **"Signing key does not exist" error**
 If the following error occurs, please refer to :ref:`prepare-a-signing-key`
 section to prepare a key if you haven't done so::
 
@@ -57,14 +62,12 @@ section to prepare a key if you haven't done so::
    Error: Invalid value for "--key" / "-k": File "~/.config/gramine/enclave-key.pem" does not exist.
    make: *** [Makefile:44: sgx_sign] Error 2
 
-- **Cannot open SGX driver device error**
+- **"Cannot open SGX driver device" error**
 If the following error occurs, please refer to :doc:`sgx-setup` section to check
 the system environment for SGX compatibility::
 
    $ gramine-sgx helloworld
-   Gramine is starting. Parsing TOML manifest file, this may take some time...
-   error: Cannot open SGX driver device. Please make sure you're using an up-to-date kernel or the standalone Intel SGX kernel module is loaded.
-   error: load_enclave() failed with error: No such file or directory (ENOENT)
+   error: Cannot open SGX driver device.  [...]
 
 Other sample applications
 -------------------------
