@@ -53,7 +53,6 @@ utility:
 
 .. code-block:: jinja
 
-    loader.entrypoint = "file:{{ gramine.libos }}"
     loader.argv = [
         "gramine-ratls", "/tmp/crt.der", "/tmp/key.der",
         "cat", "/tmp/crt.der",
@@ -74,7 +73,6 @@ utility:
     sgx.debug = true
 
     sgx.trusted_files = [
-        "file:{{ gramine.libos }}",
         "file:/usr/bin/gramine-ratls",
         "file:{{ gramine.runtimedir() }}/",
         "file:/bin/cat",

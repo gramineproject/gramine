@@ -342,6 +342,13 @@ class Manifest:
             else:
                 raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
+        # for convenience, users are not required to specify `loader.entrypoint` and
+        # `sgx.trusted_files = [ <loader.entrypoint file name> ]`; replace with the default LibOS
+        loader = manifest.setdefault('loader', {})
+        if 'entrypoint' not in loader:
+            loader['entrypoint'] = f"file:{_env.globals['gramine']['libos']}"
+            trusted_files.append({'uri': loader['entrypoint']})
+
         sgx['trusted_files'] = trusted_files
 
         self._manifest = manifest

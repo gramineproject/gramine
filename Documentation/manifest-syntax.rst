@@ -70,10 +70,12 @@ Loader entrypoint
 ::
 
    loader.entrypoint = "[URI]"
+    (Default: "<path to libsysdb.so>")
 
 This specifies the LibOS component that Gramine will load and run before loading
-the first executable of the user application. Currently, there is only one LibOS
-implementation: ``libsysdb.so``.
+the first executable of the user application. **Note**: currently, there is only
+one LibOS implementation: ``libsysdb.so``, and there is no need to specify this
+option explicitly.
 
 Note that the loader (the PAL binary) loads the LibOS binary specified in
 ``loader.entrypoint`` and passes control to this binary. Next, the LibOS binary
