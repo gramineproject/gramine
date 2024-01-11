@@ -3,7 +3,6 @@
 
 # Client manifest file
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "/client"
 
 loader.log_level = "{{ log_level }}"
@@ -33,7 +32,6 @@ sgx.enclave_size = "512M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:client",
   "file:{{ gramine.runtimedir() }}/",
   "file:/usr/local/lib/",

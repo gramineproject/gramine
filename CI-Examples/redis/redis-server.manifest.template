@@ -5,10 +5,6 @@
 
 ################################## GRAMINE ####################################
 
-# PAL entrypoint (points to the LibOS layer library of Gramine). There is
-# currently only one implementation, so it is always set to libsysdb.so.
-loader.entrypoint = "file:{{ gramine.libos }}"
-
 # Entrypoint binary which Gramine invokes.
 libos.entrypoint = "/redis-server"
 
@@ -115,7 +111,6 @@ sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 # If hashes match, this file is trusted and allowed to be loaded and used. Note
 # that this happens on the deployment machine.
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:redis-server",
   "file:{{ gramine.runtimedir() }}/",
 ]

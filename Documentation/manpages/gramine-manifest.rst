@@ -110,10 +110,12 @@ Example
 
    fs.mounts = [
      { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+     { path = "/{{ entrypoint }}", uri = "file:{{ entrypoint }}" },
    ]
 
    sgx.trusted_files = [
      "file:{{ entrypoint }}",
+     "file:{{ gramine.libos }}",
      "file:{{ gramine.runtimedir() }}/",
    ]
 
