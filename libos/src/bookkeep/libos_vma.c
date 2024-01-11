@@ -1346,10 +1346,9 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 
     if (pal_prot != pal_prot_writable) {
         /* the area was made writable above; restore the original permissions */
-        int protect_ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start,
-                                                  pal_prot);
-        if (protect_ret < 0) {
-            log_error("restore original permissions failed: %s", pal_strerror(protect_ret));
+        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start, pal_prot);
+        if (ret < 0) {
+            log_error("restore original permissions failed: %s", pal_strerror(ret));
             BUG();
         }
     }
