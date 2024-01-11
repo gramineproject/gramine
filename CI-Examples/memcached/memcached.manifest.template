@@ -3,7 +3,6 @@
 
 # Memcached manifest file example
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "/memcached"
 
 loader.log_level = "{{ log_level }}"
@@ -40,5 +39,4 @@ sgx.trusted_files = [
   "file:memcached",
   "file:{{ gramine.runtimedir() }}/",
   "file:/usr/{{ arch_libdir }}/",
-  "file:{{ gramine.libos }}",
 ]

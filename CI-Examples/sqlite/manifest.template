@@ -3,7 +3,6 @@
 
 # This is a general manifest template for running SQLite.
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ execdir }}/sqlite3"
 
 loader.log_level = "{{ log_level }}"
@@ -35,7 +34,6 @@ sgx.enclave_size = "256M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ execdir }}/sqlite3",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",
