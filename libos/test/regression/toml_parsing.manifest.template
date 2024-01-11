@@ -13,7 +13,7 @@ fs.mounts = [
 ]
 
 # the manifest option below added only so that this feature has any test coverage
-libos.check_invalid_pointers = false
+sys.check_invalid_pointers = false
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}

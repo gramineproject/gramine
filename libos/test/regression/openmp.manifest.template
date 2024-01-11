@@ -12,9 +12,9 @@ sys.enable_sigterm_injection = true
 # `sgx.preheat_enclave` is invalid with EDMM
 sgx.preheat_enclave = {{ 'false' if env.get('EDMM', '0') == '1' else 'true' }}
 
-# Note that `libos.check_invalid_pointers` cannot be disabled, because LLVM's OpenMP depends on it
+# Note that `sys.check_invalid_pointers` cannot be disabled, because LLVM's OpenMP depends on it
 # (by calling `sched_setaffinity` with NULL and expecting it to return either -EFAULT or -ENOSYS)
-# libos.check_invalid_pointers = false
+# sys.check_invalid_pointers = false
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },

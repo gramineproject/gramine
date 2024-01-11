@@ -445,8 +445,22 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
-                       /*defaultval=*/false, &disable_aslr);
+    /* TODO: Keep only `sys.insecure__disable_aslr` parsing starting from v1.8 */
+    bool sys_disable_aslr_exists = false;
+    toml_table_t* manifest_sys = toml_table_in(g_pal_public_state.manifest_root, "sys");
+    if (manifest_sys) {
+        toml_raw_t manifest_aslr_raw = toml_raw_in(manifest_sys, "insecure__disable_aslr");
+        if (manifest_aslr_raw)
+            sys_disable_aslr_exists = true;
+    }
+
+   if (sys_disable_aslr_exists) {
+        ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.insecure__disable_aslr",
+                           /*defaultval=*/false, &disable_aslr);
+    } else {
+        ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
+                           /*defaultval=*/false, &disable_aslr);
+    }
     if (ret < 0)
         goto out;
 

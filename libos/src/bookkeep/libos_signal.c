@@ -541,10 +541,24 @@ int init_signal_handling(void) {
         return -EINVAL;
     }
 
-    ret = toml_bool_in(g_manifest_root, "libos.check_invalid_pointers", /*defaultval=*/true,
-                       &g_check_invalid_ptrs);
+    /* TODO: Keep only `sys.check_invalid_pointers` parsing starting from v1.8 */
+    bool sys_check_invalid_pointers_exists = false;
+    toml_table_t* manifest_sys = toml_table_in(g_manifest_root, "sys");
+    if (manifest_sys) {
+        toml_raw_t manifest_pointers_raw = toml_raw_in(manifest_sys, "check_invalid_pointers");
+        if (manifest_pointers_raw)
+            sys_check_invalid_pointers_exists = true;
+    }
+
+    if (sys_check_invalid_pointers_exists) {
+        ret = toml_bool_in(g_manifest_root, "sys.check_invalid_pointers", /*defaultval=*/true,
+                           &g_check_invalid_ptrs);
+    } else {
+        ret = toml_bool_in(g_manifest_root, "libos.check_invalid_pointers", /*defaultval=*/true,
+                           &g_check_invalid_ptrs);
+    }
     if (ret < 0) {
-        log_error("Cannot parse 'libos.check_invalid_pointers' (the value must be `true` or "
+        log_error("Cannot parse 'sys.check_invalid_pointers' (the value must be `true` or "
                   "`false`)");
         return -EINVAL;
     }

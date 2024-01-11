@@ -452,7 +452,7 @@ option ``loader.log_level = "none"``.
 There are several manifest options that may improve performance of some
 workloads. The manifest options include:
 
-- ``libos.check_invalid_pointers = false`` -- disable checks of invalid pointers
+- ``sys.check_invalid_pointers = false`` -- disable checks of invalid pointers
   on system call invocations. Most real-world applications never provide invalid
   arguments to system calls, so there is no need in additional checks.
 - ``sgx.preheat_enclave = true`` -- pre-fault all enclave pages during enclave

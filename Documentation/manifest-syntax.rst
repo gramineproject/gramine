@@ -266,7 +266,7 @@ Disabling ASLR
 
 ::
 
-    loader.insecure__disable_aslr = [true|false]
+    sys.insecure__disable_aslr = [true|false]
     (Default: false)
 
 This specifies whether to disable Address Space Layout Randomization (ASLR).
@@ -278,7 +278,7 @@ Check invalid pointers
 
 ::
 
-    libos.check_invalid_pointers = [true|false]
+    sys.check_invalid_pointers = [true|false]
     (Default: true)
 
 This specifies whether to enable checks of invalid pointers on syscall
@@ -1298,3 +1298,25 @@ SGX EXINFO (deprecated syntax)
 This syntax specified whether a user application can retrieve faulting address
 in signal handler in case of a page fault. This syntax was renamed to
 ``sgx.use_exinfo``. The default value was ``false``.
+
+
+Deprecated options
+------------------
+
+Disabling ASLR
+^^^^^^^^^^^^^^
+
+::
+
+    loader.insecure__disable_aslr = [true|false]
+
+This syntax was renamed to ``sys.insecure__disable_aslr``.
+
+Check invalid pointers
+^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    libos.check_invalid_pointers = [true|false]
+
+This syntax was renamed to ``sys.check_invalid_pointers``.

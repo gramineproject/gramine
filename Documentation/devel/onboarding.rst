@@ -264,7 +264,7 @@ fine on native Linux but fails under Gramine::
    - Analyze the manifest file carefully. If you suspect problems with
      environment variables, see if it works with ``loader.insecure__use_host_env
      = true``. If you observe that memory addresses change constantly and hinder
-     your debugging, set ``loader.insecure__disable_aslr = true``. But don't use
+     your debugging, set ``sys.insecure__disable_aslr = true``. But don't use
      these two options in production; use them only for debugging and analysis!
 
    - Analyze FS mount points (``fs.mounts``) in the manifest file carefully.
