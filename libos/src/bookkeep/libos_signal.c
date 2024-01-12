@@ -729,9 +729,10 @@ void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
              * find another thread that didn't block this signal and wake it up (this covers a
              * common case of one dedicated app thread doing sigtimedwait(SIGTERM) while other
              * threads mark SIGTERM as blocked) */
-            int ret = walk_thread_list(wakeup_one_thread_on_sigterm, NULL, /*one_shot=*/true);
+            int ret = walk_thread_list(wakeup_one_thread_on_sigterm, /*arg=*/NULL,
+                                       /*one_shot=*/true);
             if (ret < 0 && ret != -ESRCH) {
-                log_error("failed to deliver a SIGTERM signal to any thread (%s)",
+                log_error("error occured while trying to deliver SIGTERM signal to a thread (%s)",
                           unix_strerror(ret));
             }
         }
