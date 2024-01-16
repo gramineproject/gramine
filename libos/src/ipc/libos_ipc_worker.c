@@ -425,8 +425,12 @@ int init_ipc_worker(void) {
     return create_ipc_worker();
 }
 
-void terminate_ipc_worker(void) {
-    if (is_ipc_leader()) {
+/* Terminate the IPC worker. If 'force' is set, the IPC leader will not wait
+ * until it has 0 connections but terminate immediatel, otherwise it will
+ * wait until all child processes have died and there are 0 connections.
+ */
+void terminate_ipc_worker(bool force) {
+    if (is_ipc_leader() && !force) {
         PalEventClear(g_leader_notifier);
         while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0 &&
                PalEventWait(g_leader_notifier, NULL) < 0);
