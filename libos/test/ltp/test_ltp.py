@@ -20,7 +20,7 @@ from graminelibos.regression import HAS_SGX, run_command
 DEFAULT_LTP_SCENARIO = 'install/runtest/syscalls'
 DEFAULT_LTP_CONFIG = 'ltp.cfg'
 if HAS_SGX:
-    DEFAULT_LTP_CONFIG = 'ltp.cfg ltp_sgx.cfg ltp_bug_1075.cfg'
+    DEFAULT_LTP_CONFIG = 'ltp.cfg ltp_sgx.cfg'
 
 LTP_SCENARIO = os.environ.get('LTP_SCENARIO', DEFAULT_LTP_SCENARIO)
 LTP_CONFIG = os.environ.get('LTP_CONFIG', DEFAULT_LTP_CONFIG).split(' ')
