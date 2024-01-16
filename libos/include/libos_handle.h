@@ -134,6 +134,8 @@ struct libos_epoll_handle {
     size_t last_returned_index;
 };
 
+typedef void (*libos_handle_free_callback_t)(struct libos_handle* handle);
+
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
@@ -155,6 +157,7 @@ struct libos_handle {
     bool created_by_process;
 
     refcount_t ref_count;
+    libos_handle_free_callback_t free_callback;
 
     struct libos_fs* fs;
     struct libos_dentry* dentry;
@@ -225,6 +228,16 @@ struct libos_handle {
 struct libos_handle* get_new_handle(void);
 void get_handle(struct libos_handle* hdl);
 void put_handle(struct libos_handle* hdl);
+
+/* Callback to call before freeing libos_handle */
+static inline libos_handle_free_callback_t
+set_handle_free_callback(struct libos_handle* hdl,
+                         libos_handle_free_callback_t cb)
+{
+    libos_handle_free_callback_t ret = hdl->free_callback;
+    hdl->free_callback = cb;
+    return ret;
+}
 
 /* Set handle to non-blocking or blocking mode. */
 int set_handle_nonblocking(struct libos_handle* hdl, bool on);

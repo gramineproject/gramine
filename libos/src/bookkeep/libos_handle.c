@@ -512,6 +512,10 @@ void put_handle(struct libos_handle* hdl) {
         assert(hdl->epoll_items_count == 0);
         assert(LISTP_EMPTY(&hdl->epoll_items));
 
+        if (hdl->free_callback) {
+            hdl->free_callback(hdl);
+        }
+
         if (hdl->is_dir) {
             clear_directory_handle(hdl);
         }
