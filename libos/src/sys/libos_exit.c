@@ -17,7 +17,7 @@
 #include "libos_utils.h"
 #include "pal.h"
 
-static noreturn void libos_clean_and_exit(int exit_code) {
+static noreturn void libos_clean_and_exit(int exit_code, int term_signal) {
     /*
      * TODO: if we are the IPC leader, we need to either:
      * 1) kill all other Gramine processes
@@ -53,7 +53,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
      */
     release_id(get_cur_thread()->tid);
 
-    terminate_ipc_worker();
+    terminate_ipc_worker(term_signal == SIGTERM);
 
     log_debug("process %u exited with status %d", g_process_ipc_ids.self_vmid, exit_code);
 
@@ -147,7 +147,7 @@ noreturn void thread_exit(int error_code, int term_signal) {
 
     /* At this point other threads might be still in the middle of an exit routine, but we don't
      * care since the below will call `exit_group` eventually. */
-    libos_clean_and_exit(term_signal ? 128 + (term_signal & ~__WCOREDUMP_BIT) : error_code);
+    libos_clean_and_exit(term_signal ? 128 + (term_signal & ~__WCOREDUMP_BIT) : error_code, term_signal);
 }
 
 static int mark_thread_to_die(struct libos_thread* thread, void* arg) {
