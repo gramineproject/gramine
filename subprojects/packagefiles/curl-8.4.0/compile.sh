@@ -29,6 +29,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
     # The list of configure options is selected based on:
     # https://github.com/curl/curl/blob/curl-8_4_0/docs/INSTALL.md#reducing-size
     ./configure                                     \
+        --enable-proxy                              \
         --disable-alt-svc                           \
         --disable-ares                              \
         --disable-cookies                           \
@@ -53,7 +54,6 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-ntlm-wb                           \
         --disable-pop3                              \
         --disable-progress-meter                    \
-        --disable-proxy                             \
         --disable-pthreads                          \
         --disable-rtsp                              \
         --disable-shared                            \
