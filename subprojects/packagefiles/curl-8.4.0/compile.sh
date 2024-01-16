@@ -28,6 +28,9 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
     log "running configure..."
     # The list of configure options is selected based on:
     # https://github.com/curl/curl/blob/curl-8_4_0/docs/INSTALL.md#reducing-size
+    #
+    # Note: `--disable-proxy` is excluded from the list because this minimized libcurl is used in
+    # e.g. RA-TLS libs that may run in proxy-restricted environments (e.g., a company-wide proxy)
     ./configure                                     \
         --disable-alt-svc                           \
         --disable-ares                              \
@@ -53,7 +56,6 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-ntlm-wb                           \
         --disable-pop3                              \
         --disable-progress-meter                    \
-        --disable-proxy                             \
         --disable-pthreads                          \
         --disable-rtsp                              \
         --disable-shared                            \
