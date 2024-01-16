@@ -25,6 +25,7 @@ struct async_event {
     void* arg;
     PAL_HANDLE object;    /* handle (async IO) to wait on */
     uint64_t expire_time; /* alarm/timer to wait on */
+    struct libos_handle* hdl;
 };
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
@@ -39,6 +40,28 @@ static struct libos_lock async_worker_lock;
 static struct libos_pollable_event install_new_event;
 
 static int create_async_worker(void);
+
+/* Remove a PAL_HANDLE from the list of monitored handles.
+ * This function will be called before the libos_handle is freed.
+ */
+static void remove_pal_handle(struct libos_handle* hdl) {
+    lock(&async_worker_lock);
+    if (async_worker_state == WORKER_NOTALIVE)
+        goto exit;
+
+    struct async_event* tmp, *n;
+    LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
+        if (tmp->object == hdl->pal_handle) {
+            LISTP_DEL(tmp, &async_list, list);
+            free(tmp);
+            break;
+        }
+    }
+
+exit:
+    unlock(&async_worker_lock);
+}
+
 
 /* Threads register async events like alarm(), setitimer(), ioctl(FIOASYNC)
  * using this function. These events are enqueued in async_list and delivered
@@ -55,10 +78,10 @@ static int create_async_worker(void);
  * Function returns remaining usecs for alarm/timer events (same as alarm())
  * or 0 for async IO events. On error, it returns a negated error code.
  */
-int64_t install_async_event(PAL_HANDLE object, uint64_t time,
+int64_t install_async_event(struct libos_handle *hdl, uint64_t time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg) {
     /* if event happens on object, time must be zero */
-    assert(!object || (object && !time));
+    assert(!hdl || (hdl && !time));
 
     uint64_t now = 0;
     int ret = PalSystemTimeQuery(&now);
@@ -73,11 +96,14 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
         return -ENOMEM;
     }
 
+    PAL_HANDLE object = hdl ? hdl->pal_handle : NULL;
+
     event->callback    = callback;
     event->arg         = arg;
     event->caller      = get_cur_tid();
     event->object      = object;
     event->expire_time = time ? now + time : 0;
+    event->hdl         = hdl;
 
     lock(&async_worker_lock);
 
@@ -93,6 +119,8 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
                     max_prev_expire_time = tmp->expire_time;
 
                 LISTP_DEL(tmp, &async_list, list);
+                if (tmp->hdl)
+                    assert(set_handle_free_callback(tmp->hdl, NULL) == remove_pal_handle);
                 free(tmp);
             }
         }
@@ -105,6 +133,9 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
             return max_prev_expire_time - now;
         }
     }
+
+    if (event->hdl)
+        assert(set_handle_free_callback(event->hdl, remove_pal_handle) == NULL);
 
     INIT_LIST_HEAD(event, list);
     LISTP_ADD_TAIL(event, &async_list, list);
