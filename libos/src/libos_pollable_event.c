@@ -23,7 +23,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     PAL_HANDLE write_handle;
     do {
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            PAL_OPTION_NONBLOCK, &write_handle);
+                            PAL_OPTION_NONBLOCK, false, &write_handle);
     } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamOpen failed: %s", pal_strerror(ret));

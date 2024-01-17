@@ -313,7 +313,7 @@ static int load_cstring_array(const char* uri, const char*** res) {
     int ret;
 
     ret = _PalStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                         /*options=*/0);
+                         /*options=*/0, false);
     if (ret < 0)
         return ret;
     ret = _PalStreamAttributesQueryByHandle(hdl, &attr);

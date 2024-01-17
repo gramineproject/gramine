@@ -467,6 +467,15 @@ int open_namei(struct libos_handle* hdl, struct libos_dentry* start, const char*
 
     if (dent->inode && dent->inode->type == S_IFLNK) {
         /*
+         *  If O_EXCL and O_CREAT are set, and path names a symbolic link, 
+         *  open() shall fail and set errno to [EEXIST]
+         */
+        if ((flags & O_CREAT) && (flags & O_EXCL)) {
+            ret = -EEXIST;
+            goto out;
+        }
+
+        /*
          * Can happen if user specified O_NOFOLLOW, or O_TRUNC | O_EXCL. Posix requires us to fail
          * with -ELOOP when trying to open a symlink.
          */

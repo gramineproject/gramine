@@ -328,9 +328,10 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  */
 static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+                     pal_stream_options_t options, bool create_delete_handle) {
     __UNUSED(access);
     __UNUSED(create);
+    __UNUSED(create_delete_handle);
     assert(create == PAL_CREATE_IGNORED);
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))

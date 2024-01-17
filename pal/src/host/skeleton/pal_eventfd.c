@@ -14,7 +14,8 @@
  * `options` holds eventfd's flags */
 static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
                             enum pal_access access, pal_share_flags_t share,
-                            enum pal_create_mode create, pal_stream_options_t options) {
+                            enum pal_create_mode create, pal_stream_options_t options,
+                            bool create_delete_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 

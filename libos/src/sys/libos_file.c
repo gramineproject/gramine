@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
+ */
 
 /*
  * Implementation of system calls "unlink", "unlinkat", "mkdir", "mkdirat", "rmdir", "umask",
@@ -75,6 +78,7 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
     struct libos_fs* fs = dent->inode->fs;
     if (fs->d_ops && fs->d_ops->unlink) {
         ret = fs->d_ops->unlink(dent);
+        log_always("%s(%4u): %d::'%s', unlink ret:%d", __func__, __LINE__, dfd, pathname, ret); //@@BM - remove
         if (ret < 0) {
             goto out;
         }
@@ -89,6 +93,7 @@ out:
         put_dentry(dir);
     if (dent)
         put_dentry(dent);
+    log_always("%s(%4u): %d::'%s', out ret:%d", __func__, __LINE__, dfd, pathname, ret); //@@BM - remove
     return ret;
 }
 
@@ -725,23 +730,6 @@ static long do_linkat(int targetfd, const char* target, int newdirfd, const char
                     goto out;
                 assert(target_path != NULL);
                 ret = fs->d_ops->set_link(link_dent, target_path, is_soft_link);
-            }
-            if (ret == 0) {
-                if (link_dent->inode == NULL) {
-                    /* reload, to pickup an inode */
-                    put_dentry(link_dent);
-                    link_dent = NULL;
-                    ret = path_lookupat(link_dir, linkpath, LOOKUP_CREATE, &link_dent);
-                    if (ret < 0)
-                        goto out;
-                }
-                if (is_soft_link && (link_dent->inode != NULL)) {
-                    struct libos_inode* inode = link_dent->inode;
-                    lock(&inode->lock);
-                    inode->type = S_IFLNK;
-                    inode->size = strlen(target);
-                    unlock(&inode->lock);
-                }
             }
         } else
             ret = -EPERM;

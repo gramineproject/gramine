@@ -566,7 +566,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
             return -ERANGE;
 
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            /*options=*/0, &pipe);
+                            /*options=*/0, false, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */

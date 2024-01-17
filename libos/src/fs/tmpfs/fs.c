@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation
+ * Copyright (C) 2024 Fortanix, Inc.
  *                    Li Xun <xun.li@intel.com>
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
  */
 
 /*

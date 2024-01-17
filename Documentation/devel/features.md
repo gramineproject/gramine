@@ -419,13 +419,13 @@ The below list is generated from the [syscall table of Linux
 - ☑ `creat()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `link()`
+- ☑ `link()`
   <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ☑ `unlink()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `symlink()`
+- ☑ `symlink()`
   <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlink()`
@@ -966,10 +966,10 @@ The below list is generated from the [syscall table of Linux
 - ▣ `renameat()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `linkat()`
+- ☑ `linkat()`
   <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
-- ☒ `symlinkat()`
+- ☑ `symlinkat()`
   <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
 
 - ▣ `readlinkat()`
@@ -2068,6 +2068,9 @@ Gramine supports creating files and directories (via `creat()`, `mkdir()`, `mkdi
 calls), reading directories (via `getdents()`), deleting files and directories (via `unlink()`,
 `unlinkat()`, `rmdir()`), renaming files and directories (via `rename()` and `renameat()`).
 
+Gramine supports creating symbolic links for files and directories (via `link()`, `linkat()`,
+`symlink()` and `symlinkat()` system calls).
+
 Gramine supports read and write operations on files. Appending to files is currently unsupported.
 Writing to trusted files is prohibited.
 
@@ -2294,21 +2297,24 @@ There are two notions that must be discussed separately:
 
 1. Host OS's links: Gramine sees them as normal files. On Linux host, these links are currently
    always followed during directory/file lookup.
-2. In-Gramine links: Gramine has no support for links (i.e., applications cannot create links).
-   - There is one exception: some pseudo-files like `/proc/[pid]/cwd` and `/proc/self`.
+2. In-Gramine links: Gramine has no support for symlinks (i.e., applications can create links).
+   - The symlinks are passthrough symlinks (except for `tmpfs`) and are stored on the host.
+     It is recommended to use `chroot/encrypted` ot `tmpfs` to avoid potential security problems.
+   - Hard links are also implemented as passthrough hardlink and follow all host limitations:
+     no cross file system hard links and no directory hard links. The current `chroot/encrypted`
+     implementation does not support hard links.
 
-The above means that Gramine does not implement `link()` and `symlink()` system calls. Support for
-`readlink()` system call is limited to only pseudo-files' links mentioned above.
+Support for `readlink()` system call is limited to only pseudo-files' links mentioned above.
 
-Gramine may implement hard and soft links in the future.
+Gramine may implement a complete support for hard and soft links in the future.
 
 <details><summary>Related system calls</summary>
 
-- ☒ `link()`
-- ☒ `symlink()`
+- ▣ `link()`: see note above
+- ☑ `symlink()`
 - ▣ `readlink()`: see note above
-- ☒ `linkat()`
-- ☒ `symlinkat()`
+- ☑ `linkat()`
+- ☑ `symlinkat()`
 - ▣ `readlinkat()`: see note above
 - ☒ `lchown()`
 
