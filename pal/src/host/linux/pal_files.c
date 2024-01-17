@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
+ */
 
 /*
  * This file contains operands to handle streams with URIs that start with "file:" or "dir:".
@@ -19,22 +22,27 @@
 /* 'open' operation for file streams */
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+                     pal_stream_options_t options, bool create_delete_handle) {
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
-    assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
-    assert(WITHIN_MASK(options, PAL_OPTION_MASK));
+    int ret = -1;
 
-    /* try to do the real open */
-    int ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
-                                    PAL_CREATE_TO_LINUX_OPEN(create)  |
-                                    PAL_OPTION_TO_LINUX_OPEN(options) |
-                                    O_CLOEXEC,
-                         share);
+    if (!create_delete_handle) {
+        assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
+        assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
-    if (ret < 0)
-        return unix_to_pal_error(ret);
+        /* try to do the real open */
+        int oflags = PAL_ACCESS_TO_LINUX_OPEN(access) |
+                     PAL_CREATE_TO_LINUX_OPEN(create) |
+                     PAL_OPTION_TO_LINUX_OPEN(options)|
+                     O_CLOEXEC                        ;
+        ret = DO_SYSCALL(open, uri, oflags, share);
+        if (ret < 0) {
+            ret = unix_to_pal_error(ret);
+            return ret;
+        }
+    }
 
     /* if try_create_path succeeded, prepare for the file handle */
     size_t uri_size = strlen(uri) + 1;
@@ -64,16 +72,19 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     hdl->file.realpath = path;
 
-    struct stat st;
-    ret = DO_SYSCALL(fstat, hdl->file.fd, &st);
-    if (ret < 0) {
-        DO_SYSCALL(close, hdl->file.fd);
-        free(hdl);
-        free(path);
-        return unix_to_pal_error(ret);
-    }
+    if (!create_delete_handle) {
+        struct stat st;
+        ret = DO_SYSCALL(fstat, hdl->file.fd, &st);
+        if (ret < 0) {
+            DO_SYSCALL(close, hdl->file.fd);
+            free(hdl);
+            free(path);
+            return unix_to_pal_error(ret);
+        }
 
-    hdl->file.seekable = !S_ISFIFO(st.st_mode);
+        hdl->file.seekable = !S_ISFIFO(st.st_mode);
+    } else
+        hdl->file.seekable = true;
 
     *handle = hdl;
     return 0;
@@ -116,10 +127,12 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 static void file_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_FILE);
 
-    int ret = DO_SYSCALL(close, handle->file.fd);
-    if (ret < 0) {
-        log_error("closing file host fd %d failed: %s", handle->file.fd, unix_strerror(ret));
-        /* We cannot do anything about it anyway... */
+    if ((int)handle->file.fd != -1) {
+        int ret = DO_SYSCALL(close, handle->file.fd);
+        if (ret < 0) {
+            log_error("closing file host fd %d failed: %s", handle->file.fd, unix_strerror(ret));
+            /* We cannot do anything about it anyway... */
+        }
     }
 
     free(handle->file.realpath);
@@ -234,33 +247,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-static int file_lstat(const char *link_path, struct stat *sb) {
-    int ret = DO_SYSCALL(lstat, link_path, sb);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
-}
-
-static int file_readlink(const char *link_path, char *buf, size_t buf_sz, size_t *ret_len) {
-    int ret = DO_SYSCALL(readlink, link_path, buf, buf_sz);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    if (ret_len != NULL)
-        *ret_len = ret;
-
-    return 0;
-}
-
-static int file_link(const char* target, const char* link_path, bool is_soft_link) {
-    int ret = DO_SYSCALL(link, target, link_path, is_soft_link);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
-}
-
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -274,9 +260,6 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
-    .lstat          = &file_lstat,
-    .readlink       = &file_readlink,
-    .link           = &file_link,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a
@@ -284,8 +267,9 @@ struct handle_ops g_file_ops = {
    ended with slashes. dir_open will be called by file_open. */
 static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
+                    pal_stream_options_t options, bool create_delete_handle) {
     __UNUSED(access);
+    __UNUSED(create_delete_handle);
     assert(create != PAL_CREATE_IGNORED);
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
@@ -463,5 +447,4 @@ struct handle_ops g_dir_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &dir_rename,
-    .link           = &file_link,
 };

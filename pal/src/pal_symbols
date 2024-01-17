@@ -42,9 +42,6 @@ PalSetExceptionHandler
 PalSegmentBaseGet
 PalSegmentBaseSet
 PalStreamChangeName
-PalGetLinkStats
-PalReadLink
-PalCreateLink
 PalStreamAttributesSetByHandle
 PalDeviceIoControl
 PalDebugMapAdd

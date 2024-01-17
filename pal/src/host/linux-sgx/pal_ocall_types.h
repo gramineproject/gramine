@@ -63,9 +63,6 @@ enum {
     OCALL_SCHED_YIELD,
     OCALL_POLL,
     OCALL_RENAME,
-    OCALL_LSTAT,
-    OCALL_READLINK,
-    OCALL_LINK,
     OCALL_DELETE,
     OCALL_DEBUG_MAP_ADD,
     OCALL_DEBUG_MAP_REMOVE,
@@ -302,24 +299,6 @@ struct ocall_poll {
     struct pollfd* fds;
     size_t nfds;
     uint64_t timeout_us;
-};
-
-struct ocall_lstat {
-    const char* link_path;
-    struct stat stat;
-};
-
-struct ocall_readlink {
-    const char* link_path;
-    char* buf;
-    size_t buf_sz;
-    ssize_t ret_len;
-};
-
-struct ocall_link {
-    const char* oldpath;
-    const char* newpath;
-    bool is_soft_link;
 };
 
 struct ocall_rename {

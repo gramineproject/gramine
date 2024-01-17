@@ -338,6 +338,8 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  * \param share_flags  A combination of the `PAL_SHARE_*` flags.
  * \param create       See #pal_create_mode.
  * \param options      A combination of the `PAL_OPTION_*` flags.
+ * \param create_delete_handle  creates a limited use handle that can only be use to delete the
+ *                     associated stream. It does not open the specified stream.
  * \param handle[out]  If the resource is successfully opened or created, a PAL handle is returned
  *                     in `*handle` for further access such as reading or writing.
  *
@@ -354,7 +356,8 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
  */
 int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share_flags,
-                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
+                  enum pal_create_mode create, pal_stream_options_t options,
+                  bool create_delete_handle, PAL_HANDLE* handle);
 
 /*!
  * \brief Block until a new connection is accepted and return the PAL handle for the connection.
@@ -516,21 +519,6 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr);
  * \brief This API changes the name of an open stream.
  */
 int PalStreamChangeName(PAL_HANDLE handle, const char* typed_uri);
-
-/*!
- * \brief This API reads the file stats of the symbolic link file.
- */
-int PalGetLinkStats(const char* link_path, struct stat* sb);
-
-/*!
- * \brief This API performs a readlink on the host link path.
- */
-int PalReadLink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len);
-
-/*!
- * \brief This API creates hard/symbolic link to an open file/directory.
- */
-int PalCreateLink(const char* target, const char* link_path, bool is_soft_link);
 
 struct pal_socket_addr {
     enum pal_socket_domain domain;

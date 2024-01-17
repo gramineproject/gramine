@@ -42,7 +42,8 @@ struct handle_ops {
      * normalized prefix, 'uri' is the remaining string of uri. access, share, create, and options
      * follow the same flags defined for PalStreamOpen in pal.h. */
     int (*open)(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options);
+                pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options,
+                bool create_delete_handle);
 
     /* 'read' and 'write' is used by PalStreamRead and PalStreamWrite, so they have exactly same
      * prototype as them. */
@@ -90,15 +91,6 @@ struct handle_ops {
 
     /* 'rename' is used to change name of a stream, or reset its share option */
     int (*rename)(PAL_HANDLE handle, const char* type, const char* uri);
-
-    /* 'lstat' is used to return information about a symbolic link */
-    int (*lstat)(const char* link_path, struct stat *sb);
-
-    /* 'readlink' is used to read the value of a symbolic link */
-    int (*readlink)(const char *link_path, char *buf, size_t buf_sz, size_t *ret_len);
-
-    /* 'link' is used to create a hard or soft-link to a file */
-    int (*link)(const char* target, const char* link_path, bool is_soft_link);
 };
 
 extern const struct handle_ops* g_pal_handle_ops[];
@@ -185,7 +177,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* info);
 /* PalStream calls */
 int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
-                   pal_stream_options_t options);
+                   pal_stream_options_t options, bool create_delete_handle);
 int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf);
 int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);

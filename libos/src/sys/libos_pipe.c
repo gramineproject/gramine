@@ -35,7 +35,7 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
     }
 
     ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                        LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
+                        LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), false, &hdl2);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         log_error("pipe connection failure");

@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
+ */
 
 /*
  * This file contains APIs to open, read, write and get attribute of streams.
@@ -9,7 +12,6 @@
 #include "pal.h"
 #include "pal_error.h"
 #include "pal_internal.h"
-#include "stat.h"
 
 /* Stream handler table: this table corresponds to all the handle types supported by PAL. Threads
  * are not streams, so they need no handler. Sockets have their own table. */
@@ -77,7 +79,7 @@ static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const c
 
 int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
-                   pal_stream_options_t options) {
+                   pal_stream_options_t options, bool create_delete_handle) {
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
@@ -90,7 +92,7 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access ac
         return ret;
 
     assert(ops && ops->open);
-    return ops->open(handle, type, uri, access, share, create, options);
+    return ops->open(handle, type, uri, access, share, create, options, create_delete_handle);
 }
 
 /*
@@ -101,9 +103,10 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access ac
  * portable and will cause problems when implementing other PALs.
  */
 int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share,
-                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
+                  enum pal_create_mode create, pal_stream_options_t options,
+                  bool create_delete_handle, PAL_HANDLE* handle) {
     *handle = NULL;
-    return _PalStreamOpen(handle, typed_uri, access, share, create, options);
+    return _PalStreamOpen(handle, typed_uri, access, share, create, options, create_delete_handle);
 }
 
 static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
@@ -386,42 +389,6 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
         return -PAL_ERROR_NOTSUPPORT;
 
     return hops->rename(hdl, type, uri);
-}
-
-int PalGetLinkStats(const char* link_path, struct stat* sb) {
-    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
-    if (ops == NULL || ops->lstat == NULL)
-        return -PAL_ERROR_NOTSUPPORT;
-
-    int ret = ops->lstat(link_path, sb);
-    if (ret < 0)
-        return ret;
-
-    return PAL_ERROR_SUCCESS;
-}
-
-int PalReadLink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len) {
-    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
-    if (ops == NULL || ops->readlink == NULL)
-        return -PAL_ERROR_NOTSUPPORT;
-
-    int ret = ops->readlink(link_path, buf, buf_sz, ret_len);
-    if (ret < 0)
-        return ret;
-
-    return PAL_ERROR_SUCCESS;
-}
-
-int PalCreateLink(const char* target, const char* link_path, bool is_soft_link) {
-    const struct handle_ops* ops = handle_ops_by_type(PAL_TYPE_FILE);
-    if (ops == NULL || ops->link == NULL)
-        return -PAL_ERROR_NOTSUPPORT;
-
-    int ret = ops->link(target, link_path, is_soft_link);
-    if (ret < 0)
-        return ret;
-
-    return PAL_ERROR_SUCCESS;
 }
 
 int PalDebugLog(const void* buffer, size_t size) {

@@ -1,10 +1,10 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
- *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+/* Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <Bobby.Marinov@fortanix.com>
  */
 
 /*
- * Tests for renaming and deleting files. Mostly focus on cases where a file is still open.
+ * Tests for symbolic and hard links.
  */
 
 #define _DEFAULT_SOURCE /* fchmod */
@@ -229,6 +229,17 @@ static void should_exist_symlink(const char* path, size_t size) {
     check_statbuf(path, &statbuf, size);
 }
 
+static void should_exist_infinite_loop(const char* path) {
+    struct stat statbuf;
+
+    if (stat(path, &statbuf) == 0)
+        err(1, "'%s' does not contain an infinite loop. expected: ELOOP, received: SUCCESS", path);
+
+    if (errno != ELOOP)
+        err(1, "'%s' does not contain an infinite loop. expected: ELOOP(%d), received: %d",
+            path, ELOOP, errno);
+}
+
 static int create_file(const char* path, const char* str, size_t len) {
     int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, 0600);
     if (fd < 0)
@@ -433,6 +444,26 @@ static void test_bad_symlink_removal(const char* target, const char* targetpath,
     return;
 }
 
+static void test_infinite_symlink_removal(const char* target, const char* linkpath) {
+    const char* txt = "symlink";
+
+    should_not_exist(linkpath);
+    if (symlink(target, linkpath) != 0)
+        err(1, "%s", txt);
+
+    /* check for infinite loop symlink */
+    should_exist_infinite_loop(linkpath);
+
+    /* remove broken (pointing to itself) symlink */
+    errno = 0;
+    int ret = unlink(linkpath);
+    if ((ret < 0) || (errno != 0))
+        err(1, "Deleting %s '%s' should succeed.(errno:%d)", txt, linkpath, errno);
+    should_not_exist(linkpath);
+
+    return;
+}
+
 int main(int argc, char* argv[]) {
 //    int ret = 0;
 
@@ -461,8 +492,12 @@ int main(int argc, char* argv[]) {
     char* path3 = os_path_join(argv[2], FILENAME_PREFIX "1b", NULL);
     if (path3 == NULL)
         err(1, "path1b path join fail");
-
     const char* oldpath3 = is_sym_link ? "./" FILENAME_PREFIX "1b" : oldpath;
+
+    char* path4 = os_path_join(argv[2], FILENAME_PREFIX "4", NULL);
+    if (path4 == NULL)
+        err(1, "path4 path join fail");
+    const char* path4_target = FILENAME_PREFIX "4";
 
     /* cleanup any potential files */
     remove_test_files_and_dirs_recursively(argv[2]);
@@ -502,12 +537,15 @@ int main(int argc, char* argv[]) {
 #endif
 
     test_link_removal(file3_link, dir1_file3, path2, is_sym_link);
-    if (is_sym_link)
+    if (is_sym_link) {
         test_bad_symlink_removal(fil_symlink3, dir1_file3, path2);
+        test_infinite_symlink_removal(path4_target, path4);
+    }
 
     /* cleanup */
     free(dir1_file3);
     free(dir1);
+    free(path4);
     free(path3);
     free(path2);
     free(path1);

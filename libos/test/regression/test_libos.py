@@ -770,6 +770,7 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['rename_unlink', file1, file2])
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skip  # No hardlink support for pass-through filesystem
     def test_037_link_chroot(self):
         dir1 = 'tmp/'
         os.makedirs(dir1, exist_ok=True)
@@ -781,6 +782,7 @@ class TC_30_Syscall(RegressionTestCase):
                                     SYMLINK_TEST_DIRNAME_PREFIX)
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skip  # No symlink support for pass-through filesystem
     def test_038_symlink_chroot(self):
         dir1 = 'tmp/'
         os.makedirs(dir1, exist_ok=True)
@@ -792,6 +794,7 @@ class TC_30_Syscall(RegressionTestCase):
                                     SYMLINK_TEST_DIRNAME_PREFIX)
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skip  # No hardlink support for pass-through filesystem
     def test_039_link_pf(self):
         dir1 = 'tmp/pf/'
         os.makedirs(dir1, exist_ok=True)
@@ -803,6 +806,7 @@ class TC_30_Syscall(RegressionTestCase):
                                     SYMLINK_TEST_DIRNAME_PREFIX)
         self.assertIn('TEST OK', stdout)
 
+    @unittest.skip  # No symlink support for pass-through filesystem
     def test_03A_symlink_pf(self):
         dir1 = 'tmp/pf/'
         os.makedirs(dir1, exist_ok=True)

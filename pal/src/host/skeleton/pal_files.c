@@ -13,7 +13,7 @@
 /* 'open' operation for file streams */
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+                     pal_stream_options_t options, bool create_delete_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -66,10 +66,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int file_link(const char* target, const char* link_path, bool is_soft_link) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
-}
-
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -82,7 +78,6 @@ struct handle_ops g_file_ops = {
     .attrquery      = &file_attrquery,
     .attrquerybyhdl = &file_attrquerybyhdl,
     .rename         = &file_rename,
-    .link           = &file_link,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a specific type prefix, its
@@ -90,7 +85,7 @@ struct handle_ops g_file_ops = {
  * file_open. */
 static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
+                    pal_stream_options_t options, bool create_delete_handle) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
@@ -125,5 +120,4 @@ struct handle_ops g_dir_ops = {
     .attrquery      = &file_attrquery,
     .attrquerybyhdl = &dir_attrquerybyhdl,
     .rename         = &dir_rename,
-    .link           = &file_link,
 };

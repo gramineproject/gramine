@@ -648,34 +648,6 @@ static long sgx_ocall_rename(void* args) {
     return DO_SYSCALL(rename, ocall_rename_args->oldpath, ocall_rename_args->newpath);
 }
 
-static long sgx_ocall_lstat(void* args) {
-    struct ocall_lstat* ocall_lstat_args = args;
-    return DO_SYSCALL_INTERRUPTIBLE(lstat, ocall_lstat_args->link_path, &ocall_lstat_args->stat);
-}
-
-static long sgx_ocall_readlink(void* args) {
-    struct ocall_readlink* ocall_readlink_args = args;
-    ssize_t retval = DO_SYSCALL_INTERRUPTIBLE(readlink,
-                                              ocall_readlink_args->link_path, 
-                                              ocall_readlink_args->buf,
-                                              ocall_readlink_args->buf_sz);
-    if (retval < 0) {
-        return (long)retval;
-    }
-
-    ocall_readlink_args->ret_len = retval;
-    return 0;
-}
-
-static long sgx_ocall_link(void* args) {
-    struct ocall_link* ocall_link_args = args;
-    long retval = ocall_link_args->is_soft_link ?
-                    DO_SYSCALL(symlink, ocall_link_args->oldpath, ocall_link_args->newpath):
-                    DO_SYSCALL(link   , ocall_link_args->oldpath, ocall_link_args->newpath);
-
-    return retval;
-}
-
 static long sgx_ocall_delete(void* args) {
     struct ocall_delete* ocall_delete_args = args;
     long ret;
@@ -805,9 +777,6 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_SCHED_YIELD]              = sgx_ocall_sched_yield,
     [OCALL_POLL]                     = sgx_ocall_poll,
     [OCALL_RENAME]                   = sgx_ocall_rename,
-    [OCALL_LSTAT]                    = sgx_ocall_lstat,
-    [OCALL_READLINK]                 = sgx_ocall_readlink,
-    [OCALL_LINK]                     = sgx_ocall_link,
     [OCALL_DELETE]                   = sgx_ocall_delete,
     [OCALL_DEBUG_MAP_ADD]            = sgx_ocall_debug_map_add,
     [OCALL_DEBUG_MAP_REMOVE]         = sgx_ocall_debug_map_remove,

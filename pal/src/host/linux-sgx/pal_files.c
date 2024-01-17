@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
+ */
 
 /*
  * This file contains operands to handle streams with URIs that start with "file:" or "dir:".
@@ -30,14 +33,15 @@
 
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
                      enum pal_access pal_access, pal_share_flags_t pal_share,
-                     enum pal_create_mode pal_create, pal_stream_options_t pal_options) {
+                     enum pal_create_mode pal_create, pal_stream_options_t pal_options,
+                     bool create_delete_handle) {
     assert(pal_create != PAL_CREATE_IGNORED);
     int ret;
     int fd = -1;
     PAL_HANDLE hdl = NULL;
     bool do_create = (pal_create == PAL_CREATE_ALWAYS) || (pal_create == PAL_CREATE_TRY);
 
-    struct stat st;
+    struct stat st = {0};
     int flags = PAL_ACCESS_TO_LINUX_OPEN(pal_access) | PAL_CREATE_TO_LINUX_OPEN(pal_create)
                 | PAL_OPTION_TO_LINUX_OPEN(pal_options) | O_CLOEXEC;
 
@@ -85,27 +89,18 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     }
 
     if (!tf) {
-        fd = ocall_open(uri, flags, pal_share);
-        if (fd < 0) {
-            ret = unix_to_pal_error(fd);
-            if (ret != -PAL_ERROR_STREAMNOTEXIST)
-                goto fail;
-
-            /* check for symlink */
-            fd = ocall_open(uri, flags | O_NOFOLLOW, pal_share);
+        if (!create_delete_handle) {
+            fd = ocall_open(uri, flags, pal_share);
             if (fd < 0) {
                 ret = unix_to_pal_error(fd);
-                if (ret != -PAL_ERROR_LOOP)
-                    goto fail;
-                ret = -PAL_ERROR_SUCCESS;
-                fd = -1;
+                goto fail;
             }
-        }
 
-        ret = (fd < 0) ? ocall_lstat(uri, &st): ocall_fstat(fd, &st);
-        if (ret < 0) {
-            ret = unix_to_pal_error(ret);
-            goto fail;
+            ret = ocall_fstat(fd, &st);
+            if (ret < 0) {
+                ret = unix_to_pal_error(ret);
+                goto fail;
+            }
         }
 
         hdl->file.fd = fd;
@@ -126,46 +121,39 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         goto fail;
     }
 
-    fd = ocall_open(uri, flags, pal_share);
-    if (fd < 0) {
-        ret = unix_to_pal_error(fd);
-        if (ret != -PAL_ERROR_STREAMNOTEXIST)
-            goto fail;
-
-        /* check for symlink */
-        fd = ocall_open(uri, flags | O_NOFOLLOW, pal_share);
+    if (!create_delete_handle) {
+        fd = ocall_open(uri, flags, pal_share);
         if (fd < 0) {
             ret = unix_to_pal_error(fd);
-            if (ret != -PAL_ERROR_LOOP)
-                goto fail;
-            ret = -PAL_ERROR_SUCCESS;
-            fd = -1;
+            goto fail;
         }
-    }
 
-    ret = (fd < 0) ? ocall_lstat(uri, &st): ocall_fstat(fd, &st);
-    if (ret < 0) {
-        ret = unix_to_pal_error(ret);
-        goto fail;
+        ret = ocall_fstat(fd, &st);
+        if (ret < 0) {
+            ret = unix_to_pal_error(ret);
+            goto fail;
+        }
     }
 
     hdl->file.fd = fd;
     hdl->file.seekable = !S_ISFIFO(st.st_mode);
     hdl->file.total = st.st_size;
 
-    sgx_chunk_hash_t* chunk_hashes;
-    uint64_t total;
-    void* umem;
+    if (!create_delete_handle) {
+        sgx_chunk_hash_t* chunk_hashes;
+        uint64_t total;
+        void* umem;
 
-    /* we lazily update the size of the trusted file */
-    tf->size = st.st_size;
-    ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
-    if (ret < 0)
-        goto fail;
+        /* we lazily update the size of the trusted file */
+        tf->size = st.st_size;
+        ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
+        if (ret < 0)
+            goto fail;
 
-    hdl->file.chunk_hashes = chunk_hashes;
-    hdl->file.total = total;
-    hdl->file.umem  = umem;
+        hdl->file.chunk_hashes = chunk_hashes;
+        hdl->file.total = total;
+        hdl->file.umem  = umem;
+    }
 
     *handle = hdl;
     return 0;
@@ -505,34 +493,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-static int file_lstat(const char* link_path, struct stat* sb) {
-    int ret = ocall_lstat(link_path, sb);
-    if (ret < 0) {
-        return unix_to_pal_error(ret);
-    }
-
-    return 0;
-}
-
-static int file_readlink(const char* link_path, char* buf, size_t buf_sz, size_t* ret_len) {
-    ssize_t n_ret = 0;
-    int ret = ocall_readlink(link_path, buf, buf_sz, &n_ret);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-    static_assert(sizeof(*ret_len) >= sizeof(n_ret));
-    *ret_len = (size_t)n_ret;
-
-    return 0;
-}
-
-static int file_link(const char* target, const char* link_path, bool is_soft_link) {
-    int ret = ocall_link(target, link_path, is_soft_link);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
-}
-
 struct handle_ops g_file_ops = {
     .open           = &file_open,
     .read           = &file_read,
@@ -546,9 +506,6 @@ struct handle_ops g_file_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &file_rename,
-    .lstat          = &file_lstat,
-    .readlink       = &file_readlink,
-    .link           = &file_link,
 };
 
 /* 'open' operation for directory stream. Directory stream does not have a
@@ -556,8 +513,9 @@ struct handle_ops g_file_ops = {
  * ended with slashes. dir_open will be called by file_open. */
 static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
+                    pal_stream_options_t options, bool create_delete_handle) {
     __UNUSED(access);
+    __UNUSED(create_delete_handle);
 
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
@@ -738,7 +696,4 @@ struct handle_ops g_dir_ops = {
     .attrquerybyhdl = &file_attrquerybyhdl,
     .attrsetbyhdl   = &file_attrsetbyhdl,
     .rename         = &dir_rename,
-    .lstat          = &file_lstat,
-    .readlink       = &file_readlink,
-    .link           = &file_link,
 };
