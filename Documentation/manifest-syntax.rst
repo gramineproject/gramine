@@ -1056,11 +1056,14 @@ Gramine:
 
 * ``"_sgx_mrenclave"`` (SGX only) is the SGX sealing key based on the MRENCLAVE
   identity of the enclave. This is useful to allow only the same enclave (on the
-  same platform) to unseal files.
+  same platform) to unseal files, i.e., this key is not accessible to any other
+  software other than the specific enclave on the specific platform.
 
 * ``"_sgx_mrsigner"`` (SGX only) is the SGX sealing key based on the MRSIGNER
   identity of the enclave. This is useful to allow all enclaves signed with the
-  same key (and on the same platform) to unseal files.
+  same key (and on the same platform) to unseal files, i.e., this key is not
+  accessible to any other software other than the specific set of same-MRSIGNER
+  enclaves on the specific platform.
 
 .. warning::
    The same key must not be used for the encrypted-files mount and for the
