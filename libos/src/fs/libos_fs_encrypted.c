@@ -276,20 +276,19 @@ int init_encrypted_files(void) {
 
     toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
 
-    int64_t limit_node_free_list_int64;
-    ret = toml_int_in(manifest_fs, "limit.encrypted_files_node_free_list", /*defaultval=*/0,
-                      &limit_node_free_list_int64);
+    int64_t limit_nodes_int64;
+    ret = toml_int_in(manifest_fs, "limits.encrypted_files_free_list_nodes", /*defaultval=*/0,
+                      &limit_nodes_int64);
     if (ret < 0) {
-        log_error("Cannot parse 'limit.encrypted_files_node_free_list'");
+        log_error("Cannot parse 'limits.encrypted_files_free_list_nodes'!");
         return -EINVAL;
     }
-    if (limit_node_free_list_int64 < 0) {
-        log_error("'limit.encrypted_files_node_free_list' = %ld is negative",
-                  limit_node_free_list_int64);
+    if (limit_nodes_int64 < 0) {
+        log_error("Invalid 'limits.encrypted_files_free_list_nodes' value!");
         return -EINVAL;
     }
 
-    ret = pf_init_node_free_list((size_t)limit_node_free_list_int64);
+    ret = pf_init_node_free_list((size_t)limit_nodes_int64);
     if (ret < 0)
         return ret;
 

@@ -11,6 +11,9 @@
 
 #include "api.h"
 
+/* Function `get_cur_tid()` is forward declared as "static" in "spinlock.h" to keep the header
+ * independent. This requires that the function has been defined, which is actually done in
+ * "libos_thread.h". */
 #ifdef IN_LIBOS
 #include "libos_thread.h"
 #endif
@@ -501,18 +504,19 @@ struct pf_node_item {
     bool from_free_list;
 };
 
-struct pf_node_item* g_pf_node_free_list = NULL;
+static struct pf_node_item* g_pf_node_free_list = NULL;
+static bool g_pf_node_free_list_in_use = false;
 static spinlock_t g_pf_node_free_list_lock = INIT_SPINLOCK_UNLOCKED;
 
-pf_status_t pf_init_node_free_list(size_t limit_node_free_list) {
+pf_status_t pf_init_node_free_list(size_t limit_nodes) {
     assert(!g_initialized);
-    struct pf_node_item* item;
 
-    for (size_t i = 0; i < limit_node_free_list; i++) {
-        item = calloc(1, sizeof(struct pf_node_item));
+    for (size_t i = 0; i < limit_nodes; i++) {
+        struct pf_node_item* item = calloc(1, sizeof(struct pf_node_item));
         if (item == NULL) {
             log_error("Not enough memory for the encrypted files node free list. Please consider "
-                      "dicreasing the limit in the manifest.");
+                      "dicreasing the free list node limit via the manifest option "
+                      "'fs.limits.encrypted_files_free_list_nodes'.");
             return PF_STATUS_NO_MEMORY;
         }
 
@@ -521,54 +525,57 @@ pf_status_t pf_init_node_free_list(size_t limit_node_free_list) {
         g_pf_node_free_list = item;
     }
 
+    if (limit_nodes > 0)
+        g_pf_node_free_list_in_use = true;
+
     return PF_STATUS_SUCCESS;
 }
 
-static struct pf_node_item* ipf_allocate_node(void) {
-    struct pf_node_item* item;
-
+static struct pf_node_item* ipf_allocate_node_item(void) {
     spinlock_lock(&g_pf_node_free_list_lock);
+
     if (g_pf_node_free_list == NULL) {
         spinlock_unlock(&g_pf_node_free_list_lock);
 
-        if (FIRST_TIME()) {
-            log_warning("No free file nodes available; using malloc as fallbacks. "
-                        "Please consider adjusting the limit of the encrypted files node free list "
-                        "in the manifest.");
+        if (FIRST_TIME() && g_pf_node_free_list_in_use) {
+            log_warning("No free file nodes left; using malloc as fallback. "
+                        "Please consider adjusting the free list node limit via the manifest "
+                        "option 'fs.limits.encrypted_files_free_list_nodes'.");
         }
 
-        item = calloc(1, sizeof(struct pf_node_item));
-        if (item == NULL)
-            return NULL;
-    } else {
-        item = g_pf_node_free_list;
-        g_pf_node_free_list = item->next;
-
-        spinlock_unlock(&g_pf_node_free_list_lock);
-        memset(&item->file_node, 0, sizeof(item->file_node));
+        return calloc(1, sizeof(struct pf_node_item));
     }
+
+    struct pf_node_item* item = g_pf_node_free_list;
+    g_pf_node_free_list = item->next;
+
+    spinlock_unlock(&g_pf_node_free_list_lock);
+    memset(&item->file_node, 0, sizeof(item->file_node));
 
     return item;
 }
 
-static void ipf_free_node(struct pf_node_item* item) {
+static void ipf_free_node_item(struct pf_node_item* item) {
     if (!item->from_free_list) {
         free(item);
-    } else {
-        spinlock_lock(&g_pf_node_free_list_lock);
-
-        item->next = g_pf_node_free_list;
-        g_pf_node_free_list = item;
-
-        spinlock_unlock(&g_pf_node_free_list_lock);
+        return;
     }
+
+    spinlock_lock(&g_pf_node_free_list_lock);
+
+    item->next = g_pf_node_free_list;
+    g_pf_node_free_list = item;
+
+    spinlock_unlock(&g_pf_node_free_list_lock);
 }
 
-static void ipf_free_node_from_data(file_node_t* data_ptr) {
+static void ipf_free_node_item_from_data(file_node_t* data_ptr) {
+    assert(data_ptr);
+
     struct pf_node_item* item =
         (struct pf_node_item*)((char*)data_ptr - offsetof(struct pf_node_item, file_node));
 
-    ipf_free_node(item);
+    ipf_free_node_item(item);
 }
 
 static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset) {
@@ -610,12 +617,12 @@ static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_numb
                                     // the '1' is for the mht node preceding every 96 data nodes
                                     mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
 
-    struct pf_node_item* new_file_mht_node_item = ipf_allocate_node();
+    struct pf_node_item* new_file_mht_node_item = ipf_allocate_node_item();
     if (!new_file_mht_node_item) {
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
     }
-    file_node_t* new_file_mht_node = &(new_file_mht_node_item->file_node);
+    file_node_t* new_file_mht_node = &new_file_mht_node_item->file_node;
 
     new_file_mht_node->type = FILE_MHT_NODE_TYPE;
     new_file_mht_node->new_node = true;
@@ -624,7 +631,7 @@ static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_numb
     new_file_mht_node->physical_node_number = physical_node_number;
 
     if (!lruc_add(pf->cache, new_file_mht_node->physical_node_number, new_file_mht_node)) {
-        ipf_free_node(new_file_mht_node_item);
+        ipf_free_node_item(new_file_mht_node_item);
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
     }
@@ -675,7 +682,7 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
             // before deleting the memory, need to scrub the plain secrets
             file_node_t* file_node = (file_node_t*)data;
             erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-            ipf_free_node_from_data(file_node);
+            ipf_free_node_item_from_data(file_node);
         } else {
             if (!ipf_internal_flush(pf)) {
                 // error, can't flush cache, file status changed to error
@@ -695,7 +702,7 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset) {
     if (file_mht_node == NULL) // some error happened
         return NULL;
 
-    struct pf_node_item* new_file_data_node_item = ipf_allocate_node();
+    struct pf_node_item* new_file_data_node_item = ipf_allocate_node_item();
     if (!new_file_data_node_item) {
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
@@ -712,7 +719,7 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset) {
     new_file_data_node->physical_node_number = physical_node_number;
 
     if (!lruc_add(pf->cache, new_file_data_node->physical_node_number, new_file_data_node)) {
-        ipf_free_node(new_file_data_node_item);
+        ipf_free_node_item(new_file_data_node_item);
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
     }
@@ -738,7 +745,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     if (file_mht_node == NULL) // some error happened
         return NULL;
 
-    struct pf_node_item* file_data_node_item = ipf_allocate_node();
+    struct pf_node_item* file_data_node_item = ipf_allocate_node_item();
     if (!file_data_node_item) {
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
@@ -752,7 +759,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
 
     if (!ipf_read_node(pf, pf->file, file_data_node->physical_node_number,
                        file_data_node->encrypted.cipher, PF_NODE_SIZE)) {
-        ipf_free_node(file_data_node_item);
+        ipf_free_node_item(file_data_node_item);
         return NULL;
     }
 
@@ -766,7 +773,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
                                   file_data_node->decrypted.data.data, &gcm_crypto_data->gmac);
 
     if (PF_FAILURE(status)) {
-        ipf_free_node(file_data_node_item);
+        ipf_free_node_item(file_data_node_item);
         pf->last_error = status;
         if (status == PF_STATUS_MAC_MISMATCH)
             pf->file_status = PF_STATUS_CORRUPTED;
@@ -776,7 +783,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     if (!lruc_add(pf->cache, file_data_node->physical_node_number, file_data_node)) {
         // scrub the plaintext data
         erase_memory(&file_data_node->decrypted, sizeof(file_data_node->decrypted));
-        ipf_free_node(file_data_node_item);
+        ipf_free_node_item(file_data_node_item);
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
     }
@@ -804,7 +811,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
     if (parent_file_mht_node == NULL) // some error happened
         return NULL;
 
-    struct pf_node_item* file_mht_node_item = ipf_allocate_node();
+    struct pf_node_item* file_mht_node_item = ipf_allocate_node_item();
     if (!file_mht_node_item) {
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
@@ -818,7 +825,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
 
     if (!ipf_read_node(pf, pf->file, file_mht_node->physical_node_number,
                        file_mht_node->encrypted.cipher, PF_NODE_SIZE)) {
-        ipf_free_node(file_mht_node_item);
+        ipf_free_node_item(file_mht_node_item);
         return NULL;
     }
 
@@ -831,7 +838,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
                                   file_mht_node->encrypted.cipher, PF_NODE_SIZE,
                                   &file_mht_node->decrypted.mht, &gcm_crypto_data->gmac);
     if (PF_FAILURE(status)) {
-        ipf_free_node(file_mht_node_item);
+        ipf_free_node_item(file_mht_node_item);
         pf->last_error = status;
         if (status == PF_STATUS_MAC_MISMATCH)
             pf->file_status = PF_STATUS_CORRUPTED;
@@ -840,7 +847,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
 
     if (!lruc_add(pf->cache, file_mht_node->physical_node_number, file_mht_node)) {
         erase_memory(&file_mht_node->decrypted, sizeof(file_mht_node->decrypted));
-        ipf_free_node(file_mht_node_item);
+        ipf_free_node_item(file_mht_node_item);
         pf->last_error = PF_STATUS_NO_MEMORY;
         return NULL;
     }
@@ -1232,7 +1239,7 @@ static bool ipf_close(pf_context_t* pf) {
     while ((data = lruc_get_last(pf->cache)) != NULL) {
         file_node_t* file_node = (file_node_t*)data;
         erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-        ipf_free_node_from_data(file_node);
+        ipf_free_node_item_from_data(file_node);
         lruc_remove_last(pf->cache);
     }
 
@@ -1346,7 +1353,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         while ((data = lruc_get_last(pf->cache)) != NULL) {
             file_node_t* file_node = (file_node_t*)data;
             erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-            ipf_free_node_from_data(file_node);
+            ipf_free_node_item_from_data(file_node);
             lruc_remove_last(pf->cache);
         }
 

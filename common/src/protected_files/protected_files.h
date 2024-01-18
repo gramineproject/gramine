@@ -308,9 +308,11 @@ pf_status_t pf_flush(pf_context_t* pf);
 /*!
  * \brief Initialize the free list of file nodes for a PF.
  *
- * \param limit_node_free_list  Limit number of nodes for the PF free list.
+ * \param limit_nodes  Limit number of nodes for the PF free list.
  *
  * \returns PF status.
+ *
+ * Note that calling this function is optional -- if it's not called then no free list of file nodes
+ * will be created (i.e., this optimization will be disabled).
  */
-
-pf_status_t pf_init_node_free_list(size_t limit_node_free_list);
+pf_status_t pf_init_node_free_list(size_t limit_nodes);

@@ -1021,17 +1021,16 @@ Gramine:
    in the application is insecure. If you need to derive encryption keys from
    such a "doubly-used" key, you must apply a KDF.
 
-Encrypted files free list node limit
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Encrypted files optimization: free list node limit
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
-    fs.limit.encrypted_files_node_free_list = [NUM]
+    fs.limits.encrypted_files_free_list_nodes = [NUM]
     (Default: 0)
 
 This syntax specifies a limit on the number of nodes in the pre-allocated
-encrypted files free list, as a performance optimization that trades space for
+encrypted files free list, as a performance optimization that trades memory for
 time. By default, this optimization is disabled as the limit should be
 application-specific.
 
