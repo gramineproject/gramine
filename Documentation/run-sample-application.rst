@@ -55,6 +55,7 @@ Troubleshooting
 ^^^^^^^^^^^^^^^
 
 - **"Signing key does not exist" error**
+
 If the following error occurs, please refer to :ref:`prepare-a-signing-key`
 section to prepare a key if you haven't done so::
 
@@ -63,6 +64,7 @@ section to prepare a key if you haven't done so::
    make: *** [Makefile:44: sgx_sign] Error 2
 
 - **"Cannot open SGX driver device" error**
+
 If the following error occurs, please refer to :doc:`sgx-setup` section to check
 the system environment for SGX compatibility::
 
