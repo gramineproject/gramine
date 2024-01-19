@@ -515,7 +515,7 @@ pf_status_t pf_init_node_free_list(size_t limit_nodes) {
         struct pf_node_item* item = calloc(1, sizeof(struct pf_node_item));
         if (item == NULL) {
             log_error("Not enough memory for the encrypted files node free list. Please consider "
-                      "dicreasing the free list node limit via the manifest option "
+                      "decreasing the free list node limit via the manifest option "
                       "'fs.limits.encrypted_files_free_list_nodes'.");
             return PF_STATUS_NO_MEMORY;
         }

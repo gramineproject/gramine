@@ -283,11 +283,11 @@ int init_encrypted_files(void) {
     ret = toml_int_in(manifest_fs, "limits.encrypted_files_free_list_nodes", /*defaultval=*/0,
                       &limit_nodes_int64);
     if (ret < 0) {
-        log_error("Cannot parse 'limits.encrypted_files_free_list_nodes'!");
+        log_error("Cannot parse 'fs.limits.encrypted_files_free_list_nodes'!");
         return -EINVAL;
     }
     if (limit_nodes_int64 < 0) {
-        log_error("Invalid 'limits.encrypted_files_free_list_nodes' value!");
+        log_error("Invalid 'fs.limits.encrypted_files_free_list_nodes' value!");
         return -EINVAL;
     }
 

@@ -308,13 +308,20 @@ in Gramine:
 Optimizations for file I/O
 --------------------------
 
-Allocation of the Encrypted FS file nodes (e.g., MHT nodes, data nodes) can be
-one source of overhead for certain workloads (e.g., RocksDB compaction). To
-address this performance bottleneck, instead of using alloc/free directly on
-file nodes, Gramine provides an optional free list of pre-allocacted nodes as an
-optimization that trades memory for time. This optimization is by default
-disabled, but can be enabled and tuned according to the needs of the application
-via the manifest option ``fs.limits.encrypted_files_node_free_list``.
+An encrypted file is split into equally-sized chunks (nodes). The first node is
+the file metadata node, and the other nodes are stored as a variant of Merkle
+Hash Tree (MHT). In this MHT variant, MHT nodes host the crypto metadata like
+the encryption keys and MACs of the child nodes; data nodes host the actual
+encrypted data and are linked to MHT nodes.
+
+Allocation of the file nodes can be one source of overhead for certain workloads
+(e.g., RocksDB compaction). To address this performance bottleneck, instead of
+using alloc/free directly on file nodes, Gramine provides an optional free list
+of pre-allocated nodes as an optimization that trades memory for time. This
+optimization is by default disabled, but can be enabled and tuned according to
+the needs of the application via the manifest option
+``fs.limits.encrypted_files_node_free_list``. See
+:ref:`encrypted-files-free-list-node-limit` for more information.
 
 .. _choice_of_sgx_machine:
 

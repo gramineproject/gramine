@@ -1021,6 +1021,8 @@ Gramine:
    in the application is insecure. If you need to derive encryption keys from
    such a "doubly-used" key, you must apply a KDF.
 
+.. _encrypted-files-free-list-node-limit:
+
 Encrypted files optimization: free list node limit
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
