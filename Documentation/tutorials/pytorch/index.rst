@@ -248,7 +248,6 @@ First, here are the following SGX-specific lines in the manifest template::
 
    sgx.trusted_files = [
      "file:{{ entrypoint }}",
-     "file:{{ gramine.libos }}",
      "file:{{ gramine.runtimedir() }}/",
       ...
    ]

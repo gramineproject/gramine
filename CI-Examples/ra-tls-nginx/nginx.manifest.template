@@ -1,4 +1,3 @@
-loader.entrypoint = "file:{{ gramine.libos }}"
 loader.argv = [
     "gramine-ratls", "/tmp/crt.pem", "/tmp/key.pem", "--",
     "/usr/sbin/nginx", "-p", "/etc/nginx", "-c", "nginx.conf",
@@ -48,7 +47,6 @@ sys.enable_sigterm_injection = true
 sgx.debug = true
 
 sgx.trusted_files = [
-    "file:{{ gramine.libos }}",
     "file:{{ gramine.runtimedir() }}/",
 
     "file:{{ entrypoint }}",
