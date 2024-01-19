@@ -23,12 +23,21 @@ struct async_event {
     LIST_TYPE(async_event) triggered_list;
     void (*callback)(IDTYPE caller, void* arg);
     void* arg;
-    PAL_HANDLE object;       /* handle (async IO) to wait on */
-    uint64_t expire_time_us; /* alarm/timer to wait on */
-    struct libos_handle* hdl;
+    struct libos_handle* hdl; /* hdl->pal_handle (async IO) to wait on */
+    uint64_t expire_time_us;  /* alarm/timer to wait on */
 };
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
+
+/* List of events thread needs to remove from async_list */
+DEFINE_LIST(remove_event);
+struct remove_event {
+    LIST_TYPE(remove_event) list;
+    struct libos_handle* hdl;
+    PAL_HANDLE done_notifier;
+};
+DEFINE_LISTP(remove_event);
+static LISTP_TYPE(remove_event) hdls_to_remove_from_list;
 
 /* Should be accessed with async_worker_lock held. */
 static enum { WORKER_NOTALIVE, WORKER_ALIVE } async_worker_state;
@@ -41,25 +50,66 @@ static struct libos_pollable_event install_new_event;
 
 static int create_async_worker(void);
 
-/* Remove a PAL_HANDLE from the list of monitored handles.
- * This function will be called before the libos_handle is freed.
- */
-static void remove_pal_handle(struct libos_handle* hdl) {
-    lock(&async_worker_lock);
-    if (async_worker_state == WORKER_NOTALIVE)
-        goto exit;
+static inline PAL_HANDLE get_pal_handle(struct libos_handle* hdl) {
+    if (!hdl)
+        return NULL;
+    return hdl->pal_handle;
+}
 
+
+/* Remove a libos_handle from the async_list; caller must hold async_worker_lock */
+static void async_list_remove_pal_handle(struct libos_handle* hdl) {
     struct async_event* tmp, *n;
+
     LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-        if (tmp->object == hdl->pal_handle) {
+        if (get_pal_handle(tmp->hdl) == hdl->pal_handle) {
             LISTP_DEL(tmp, &async_list, list);
             free(tmp);
             break;
         }
     }
+}
 
-exit:
+/* Clean up the async_list by removing all handles on hdls_to_remove_from_list list */
+static void async_list_cleanup_pal_handles(void) {
+    struct remove_event* tmp, *n;
+
+    lock(&async_worker_lock);
+
+    LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &hdls_to_remove_from_list, list) {
+        async_list_remove_pal_handle(tmp->hdl);
+        LISTP_DEL(tmp, &hdls_to_remove_from_list, list);
+        PalEventSet(tmp->done_notifier);
+    }
+
     unlock(&async_worker_lock);
+}
+
+/* Remove a PAL_HANDLE from the list of monitored handles.
+ * This function will be called before the libos_handle is freed.
+ */
+static void remove_pal_handle(struct libos_handle* hdl) {
+    lock(&async_worker_lock);
+
+    if (async_worker_state == WORKER_NOTALIVE) {
+        async_list_remove_pal_handle(hdl);
+        unlock(&async_worker_lock);
+        return;
+    }
+
+    struct remove_event remove_event = {
+        .hdl = hdl,
+    };
+    INIT_LIST_HEAD(&remove_event, list);
+    LISTP_ADD_TAIL(&remove_event, &hdls_to_remove_from_list, list);
+    assert(!PalEventCreate(&remove_event.done_notifier, /*init_signaled=*/false, /*auto_clear=*/false));
+
+    unlock(&async_worker_lock);
+
+    set_pollable_event(&install_new_event);
+
+    while (PalEventWait(remove_event.done_notifier, /*timeout=*/NULL) < 0);
+    PalObjectDestroy(remove_event.done_notifier);
 }
 
 
@@ -96,18 +146,15 @@ int64_t install_async_event(struct libos_handle *hdl, uint64_t time_us,
         return -ENOMEM;
     }
 
-    PAL_HANDLE object = hdl ? hdl->pal_handle : NULL;
-
     event->callback       = callback;
     event->arg            = arg;
     event->caller         = get_cur_tid();
-    event->object         = object;
     event->expire_time_us = time_us ? now_us + time_us : 0;
     event->hdl            = hdl;
 
     lock(&async_worker_lock);
 
-    if (callback != &cleanup_thread && !object) {
+    if (callback != &cleanup_thread && !get_pal_handle(hdl)) {
         /* This is alarm() or setitimer() emulation, treat both according to
          * alarm() syscall semantics: cancel any pending alarm/timer. */
         struct async_event* tmp;
@@ -120,7 +167,7 @@ int64_t install_async_event(struct libos_handle *hdl, uint64_t time_us,
 
                 LISTP_DEL(tmp, &async_list, list);
                 if (tmp->hdl)
-                    assert(set_handle_free_callback(tmp->hdl, NULL) == remove_pal_handle);
+                    set_handle_free_callback(tmp->hdl, NULL);
                 free(tmp);
             }
         }
@@ -135,7 +182,7 @@ int64_t install_async_event(struct libos_handle *hdl, uint64_t time_us,
     }
 
     if (event->hdl)
-        assert(set_handle_free_callback(event->hdl, remove_pal_handle) == NULL);
+        set_handle_free_callback(event->hdl, remove_pal_handle);
 
     INIT_LIST_HEAD(event, list);
     LISTP_ADD_TAIL(event, &async_list, list);
@@ -239,7 +286,7 @@ static int libos_async_worker(void* arg) {
         bool other_event = false;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
             /* repopulate `pals` with IO events and find the next expiring alarm/timer */
-            if (tmp->object) {
+            if (get_pal_handle(tmp->hdl)) {
                 if (pals_cnt == pals_max_cnt) {
                     /* grow `pals` to accommodate more objects */
                     PAL_HANDLE* tmp_pals = malloc(sizeof(*tmp_pals) * (1 + pals_max_cnt * 2));
@@ -271,7 +318,7 @@ static int libos_async_worker(void* arg) {
                     ret_events = tmp_ret_events;
                 }
 
-                pals[pals_cnt + 1]       = tmp->object;
+                pals[pals_cnt + 1]       = get_pal_handle(tmp->hdl);
                 pal_events[pals_cnt + 1] = PAL_WAIT_READ;
                 ret_events[pals_cnt + 1] = 0;
                 pals_cnt++;
@@ -319,6 +366,8 @@ static int libos_async_worker(void* arg) {
         }
         bool polled = ret == 0;
 
+        async_list_cleanup_pal_handles();
+
         ret = PalSystemTimeQuery(&now_us);
         if (ret < 0) {
             log_error("PalSystemTimeQuery failed with: %s", pal_strerror(ret));
@@ -343,7 +392,7 @@ static int libos_async_worker(void* arg) {
 
                 /* check if this event is an IO event found in async_list */
                 LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-                    if (tmp->object == pals[i]) {
+                    if (get_pal_handle(tmp->hdl) == pals[i]) {
                         log_debug("Async IO event triggered at %lu", now_us);
                         LISTP_ADD_TAIL(tmp, &triggered, triggered_list);
                         break;
@@ -373,7 +422,7 @@ static int libos_async_worker(void* arg) {
             LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &triggered, triggered_list) {
                 LISTP_DEL(tmp, &triggered, triggered_list);
                 tmp->callback(tmp->caller, tmp->arg);
-                if (!tmp->object) {
+                if (!get_pal_handle(tmp->hdl)) {
                     /* this is a one-off exit-child or alarm/timer event */
                     free(tmp);
                 }
