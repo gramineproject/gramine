@@ -19,3 +19,6 @@ tomli==2.0.*
 
 # https://tracker.debian.org/pkg/python-tomli-w
 tomli-w==1.0.*
+
+# https://tracker.debian.org/pkg/voluptuous
+voluptuous==0.12.*

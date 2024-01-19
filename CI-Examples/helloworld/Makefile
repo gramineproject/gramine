@@ -25,6 +25,7 @@ helloworld.manifest: helloworld.manifest.template
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		$< $@
+	gramine-manifest-check $@
 
 # gramine-sgx-sign generates both a .sig file and a .manifest.sgx file. This is somewhat
 # hard to express properly in Make. The simple solution would be to use
@@ -47,6 +48,7 @@ sgx_sign: helloworld.manifest helloworld
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
+	gramine-manifest-check $<.sgx
 
 ifeq ($(SGX),)
 GRAMINE = gramine-direct
