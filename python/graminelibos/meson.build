@@ -15,6 +15,7 @@ python_src = [
     init_py,
     'gen_jinja_env.py',
     'manifest.py',
+    'manifest_check.py',
 ]
 
 if enable_tests
