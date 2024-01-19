@@ -157,7 +157,7 @@ struct libos_handle {
     bool created_by_process;
 
     refcount_t ref_count;
-    libos_handle_free_callback_t free_callback;
+    libos_handle_free_callback_t free_in_async_helper_thread_callback;
 
     struct libos_fs* fs;
     struct libos_dentry* dentry;
@@ -230,13 +230,9 @@ void get_handle(struct libos_handle* hdl);
 void put_handle(struct libos_handle* hdl);
 
 /* Callback to call before freeing libos_handle */
-static inline libos_handle_free_callback_t
-set_handle_free_callback(struct libos_handle* hdl,
-                         libos_handle_free_callback_t cb)
-{
-    libos_handle_free_callback_t ret = hdl->free_callback;
-    hdl->free_callback = cb;
-    return ret;
+static inline void set_handle_free_callback(struct libos_handle* hdl,
+                                            libos_handle_free_callback_t cb) {
+    hdl->free_in_async_helper_thread_callback = cb;
 }
 
 /* Set handle to non-blocking or blocking mode. */
