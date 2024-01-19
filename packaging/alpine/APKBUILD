@@ -41,6 +41,7 @@ depends="
     py3-jinja2
     py3-tomli
     py3-tomli-w
+    py3-voluptuous
     "
 source="$pkgname-$pkgver.tar.gz"
 builddir="$srcdir/$pkgname-$_real_pkgver/"
