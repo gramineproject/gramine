@@ -1,0 +1,28 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2024 Wojtek Porczyk <woju@invisiblethingslab.com>
+
+import click
+import voluptuous
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+from graminelibos.manifest_check import GramineManifestSchema
+
+@click.command()
+@click.argument('file', type=click.File('rb'), default='-')
+def main(file):
+    with file:
+        data = tomllib.load(file)
+    try:
+        GramineManifestSchema(data)
+    except voluptuous.MultipleInvalid as err:
+        print(f'error in manifest: {err!s}')
+        return 1
+    return 0
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter
