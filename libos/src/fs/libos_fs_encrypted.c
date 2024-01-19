@@ -274,7 +274,10 @@ int init_encrypted_files(void) {
 
     int ret;
 
+    assert(g_manifest_root);
     toml_table_t* manifest_fs = toml_table_in(g_manifest_root, "fs");
+    if (!manifest_fs)
+        return -EINVAL;
 
     int64_t limit_nodes_int64;
     ret = toml_int_in(manifest_fs, "limits.encrypted_files_free_list_nodes", /*defaultval=*/0,

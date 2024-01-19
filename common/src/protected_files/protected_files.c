@@ -572,8 +572,7 @@ static void ipf_free_node_item(struct pf_node_item* item) {
 static void ipf_free_node_item_from_data(file_node_t* data_ptr) {
     assert(data_ptr);
 
-    struct pf_node_item* item =
-        (struct pf_node_item*)((char*)data_ptr - offsetof(struct pf_node_item, file_node));
+    struct pf_node_item* item = container_of(data_ptr, struct pf_node_item, file_node);
 
     ipf_free_node_item(item);
 }
