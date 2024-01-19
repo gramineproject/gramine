@@ -397,10 +397,12 @@ static int create_ipc_worker(void) {
     }
 
     /* IPC leader gets a notifier used in terminate_ipc_leader */
-    if (is_ipc_leader() &&
-        (ret = PalEventCreate(&g_leader_notifier, /*init_signaled=*/false, /*auto_clear=*/false)) < 0) {
-        log_error("IPC leader: PalEventCreate() failed");
-        return pal_to_unix_errno(ret);;
+    if (is_ipc_leader()) {
+        ret = PalEventCreate(&g_leader_notifier, /*init_signaled=*/false, /*auto_clear=*/false);
+        if (ret < 0) {
+            log_error("IPC leader: PalEventCreate() failed");
+            return pal_to_unix_errno(ret);
+        }
     }
 
     g_worker_thread = get_new_internal_thread();
@@ -425,9 +427,10 @@ int init_ipc_worker(void) {
     return create_ipc_worker();
 }
 
-/* Terminate the IPC worker. If 'force' is set, the IPC leader will not wait
- * until it has 0 connections but terminate immediatel, otherwise it will
- * wait until all child processes have died and there are 0 connections.
+/* Terminate the IPC worker. If 'force' is set, the IPC leader will not wait until it has 0
+ * connections but terminate immediately, otherwise it will wait until all child processes have
+ * died and there are 0 connections. 'force' will for example be set when the user sends a SIGTERM
+ * signal to the Gramine process.
  */
 void terminate_ipc_worker(bool force) {
     if (is_ipc_leader() && !force) {
