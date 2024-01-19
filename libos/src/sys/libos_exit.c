@@ -18,12 +18,6 @@
 #include "pal.h"
 
 static noreturn void libos_clean_and_exit(int exit_code, int term_signal) {
-    /*
-     * TODO: if we are the IPC leader, we need to either:
-     * 1) kill all other Gramine processes
-     * 2) wait for them to exit here, before we terminate the IPC helper
-     */
-
     shutdown_sync_client();
 
     struct libos_thread* async_thread = terminate_async_worker();
@@ -53,6 +47,10 @@ static noreturn void libos_clean_and_exit(int exit_code, int term_signal) {
      */
     release_id(get_cur_thread()->tid);
 
+    /* Terminate the IPC worker and wait until all child processes have also terminated. However,
+     * if we received a SIGTERM then the IPC worker will be forcefully terminated without waiting
+     * for child processes. Once we exit, all child proceses will then also exit.
+     */
     terminate_ipc_worker(term_signal == SIGTERM);
 
     log_debug("process %u exited with status %d", g_process_ipc_ids.self_vmid, exit_code);
@@ -147,7 +145,8 @@ noreturn void thread_exit(int error_code, int term_signal) {
 
     /* At this point other threads might be still in the middle of an exit routine, but we don't
      * care since the below will call `exit_group` eventually. */
-    libos_clean_and_exit(term_signal ? 128 + (term_signal & ~__WCOREDUMP_BIT) : error_code, term_signal);
+    libos_clean_and_exit(term_signal ? 128 + (term_signal & ~__WCOREDUMP_BIT) : error_code,
+                         term_signal);
 }
 
 static int mark_thread_to_die(struct libos_thread* thread, void* arg) {
