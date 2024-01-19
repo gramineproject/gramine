@@ -448,4 +448,6 @@ void terminate_ipc_worker(bool force) {
     g_worker_thread = NULL;
     PalObjectDestroy(g_self_ipc_handle);
     g_self_ipc_handle = NULL;
+    if (g_leader_notifier)
+        PalObjectDestroy(g_leader_notifier);
 }
