@@ -30,12 +30,6 @@ sgx.trusted_files = [
   "file:{{ arch_libdir }}/",
 ]
 
-# The Tokio runtime requires eventfd, and the Gramine implementation
-# currently relies on the host in an insecure manner. This setting isn't
-# suitable for production deployment, but works well as a stopgap during
-# development while a proper implementation in Gramine is being worked on.
-sys.insecure__allow_eventfd = true
-
 # The maximum number of threads in a single process needs to be declared in advance.
 # You need to account for:
 # - one main thread

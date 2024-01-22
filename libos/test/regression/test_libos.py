@@ -899,6 +899,20 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['eventfd_read_then_write'])
         self.assertIn('TEST OK', stdout)
 
+    def test_073_eventfd_fork_allowed_failing(self):
+        try:
+            self.run_binary(['eventfd_fork_allowed_failing'])
+            self.fail('eventfd_fork_allowed_failing unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stdout = e.stdout.decode()
+            stderr = e.stderr.decode()
+            self.assertIn('Child process tried to access eventfd created by parent process', stderr)
+            self.assertIn('eventfd write failed', stdout)
+
+    def test_074_eventfd_races(self):
+        stdout, _ = self.run_binary(['eventfd_races'])
+        self.assertIn('TEST OK', stdout)
+
     @unittest.skipIf(USES_MUSL, 'sched_setscheduler is not supported in musl')
     def test_080_sched(self):
         stdout, _ = self.run_binary(['sched'])

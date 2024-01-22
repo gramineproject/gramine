@@ -181,9 +181,9 @@ void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool 
                  * Some workloads (e.g. rust's tokio crate) use eventfd with EPOLLET in a peculiar
                  * way: each write to that eventfd increases counter by 1 and thanks to EPOLLET is
                  * reported by epoll only once, even if there is no read from eventfd.
+                 *
                  * To handle such usage pattern, we mark eventfd as read-epollet-pollable on each
                  * write - we assume that eventfd is not shared between processes.
-                 * Hopefully no app tries to increase the eventfd counter by 0...
                  */
                 __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
                 needs_et = true;
@@ -658,6 +658,11 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
                 continue;
             }
 
+            if (items[i]->handle->fs && items[i]->handle->fs->fs_ops
+                    && items[i]->handle->fs->fs_ops->post_poll) {
+                items[i]->handle->fs->fs_ops->post_poll(items[i]->handle, &pal_ret_events[i]);
+            }
+
             uint32_t this_item_events = 0;
             if (pal_ret_events[i] & PAL_WAIT_ERROR) {
                 this_item_events |= EPOLLERR;
@@ -674,6 +679,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
                 this_item_events |= items[i]->events & (EPOLLOUT | EPOLLWRNORM);
             }
 
+            /* TODO: move this to socket FS's post_poll() callback */
             if (items[i]->handle->type == TYPE_SOCK &&
                     (pal_ret_events[i] & (PAL_WAIT_READ | PAL_WAIT_WRITE))) {
                 bool error_event = !!(pal_ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP));

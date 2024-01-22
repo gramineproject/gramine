@@ -2657,21 +2657,35 @@ Gramine and is supported.
 
 ### Event notifications (eventfd)
 
-Gramine currently implements an *insecure* version of the `eventfd()` system call. It is considered
-insecure in the context of SGX backend because it relies on the host OS, which could for example
-maliciously drop an event or inject a random one. To enable this `eventfd()` implementation, the
-manifest file must contain `sys.insecure__allow_eventfd = true` ({ref}`see manifest documentation
-<allowing-eventfd>`).
+There are two modes of eventfd:
 
-Gramine supports polling on eventfd via `poll()`, `ppoll()`, `select()`, `epoll_*()` system calls.
+1. Secure "emulate-in-Gramine" -- the eventfd object is created inside Gramine, and all operations
+   are resolved entirely inside Gramine. A dummy eventfd object is created on the host, purely to
+   trigger read/write notifications (e.g., in epoll); eventfd values are verified inside Gramine and
+   are never exposed to the host. Since the host is used purely for notifications, a malicious host
+   can only induce Denial of Service (DoS) attacks; thus this implementation is secure and enabled
+   by default. This implementation is automatically disabled if `sys.insecure__allow_eventfd`
+   {ref}`manifest option <allowing-eventfd>` is enabled.
 
-Gramine may implement a secure version of `eventfd()` for communication between Gramine processes in
-the future. Such secure version will *not* be able to receive events from the host OS.
+   The emulation is currently implemented at the level of a single process. The emulation *may* work
+   for multi-process applications, e.g., if the child process inherits the eventfd object but
+   doesn't use it. However, all eventfds created in the parent process are marked as invalid in
+   child processes, i.e. inter-process communication via eventfds is not allowed.
+
+   Note that this secure version is *not* able to receive events from the host OS.
+
+2. Insecure "passthrough-to-host" -- the eventfd object is created on the host, and all operations
+   are delegated to the host. Since this implementation is insecure, it is disallowed by default. To
+   use this implementation, it must be explicitly allowed via the `sys.insecure__allow_eventfd`
+   {ref}`manifest option <allowing-eventfd>`.
+
+Gramine supports polling on eventfd via `poll()`, `ppoll()`, `select()`, `epoll_*()` system calls,
+in both secure and insecure modes.
 
 <details><summary>Related system calls</summary>
 
-- ▣ `eventfd()`: insecure implementation
-- ▣ `eventfd2()`: insecure implementation
+- ☑ `eventfd()`: see notes above
+- ☑ `eventfd2()`: see notes above
 - ☑ `close()`
 
 - ☑ `read()`

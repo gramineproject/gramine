@@ -327,17 +327,28 @@ a 1 |~| MiB brk size.
 
 .. _allowing-eventfd:
 
-Allowing eventfd
-^^^^^^^^^^^^^^^^
+Allowing host-based insecure eventfd
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
     sys.insecure__allow_eventfd = [true|false]
     (Default: false)
 
-This specifies whether to allow system calls `eventfd()` and `eventfd2()`. Since
-eventfd emulation currently relies on the host, these system calls are
-disallowed by default due to security concerns.
+By default, Gramine implements eventfd in a secure but restricted way: currently
+this secure implementation only works when eventfd usage is confined to a single
+process (note that application may still be multi-process and spawn child
+processes, but eventfds created in parent will be invalid in children).
+
+However, sometimes it is acceptable for applications to use host-based insecure
+eventfd implementation. This implementation works without the above-mentioned
+restriction in multi-process applications. Use ``sys.insecure__allow_eventfd``
+manifest syntax to switch to this insecure implementation.
+
+.. note ::
+   ``sys.insecure__allow_eventfd`` is pass-through and thus potentially insecure
+   in e.g. SGX environments. It is the responsibility of the app developer to
+   analyze the app usage of eventfd, with security implications in mind.
 
 .. _external-sigterm-injection:
 
