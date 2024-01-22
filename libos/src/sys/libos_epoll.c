@@ -658,6 +658,11 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
                 continue;
             }
 
+            if (items[i]->handle->fs && items[i]->handle->fs->fs_ops
+                    && items[i]->handle->fs->fs_ops->post_poll) {
+                items[i]->handle->fs->fs_ops->post_poll(items[i]->handle, &pal_ret_events[i]);
+            }
+
             uint32_t this_item_events = 0;
             if (pal_ret_events[i] & PAL_WAIT_ERROR) {
                 this_item_events |= EPOLLERR;
@@ -674,6 +679,7 @@ static int do_epoll_wait(int epfd, struct epoll_event* events, int maxevents, in
                 this_item_events |= items[i]->events & (EPOLLOUT | EPOLLWRNORM);
             }
 
+            /* TODO: move this to socket FS's post_poll() callback */
             if (items[i]->handle->type == TYPE_SOCK &&
                     (pal_ret_events[i] & (PAL_WAIT_READ | PAL_WAIT_WRITE))) {
                 bool error_event = !!(pal_ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP));
