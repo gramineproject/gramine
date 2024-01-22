@@ -1,0 +1,29 @@
+{% set entrypoint = "eventfd_fork" -%}
+
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+loader.insecure__use_cmdline_argv = true
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
+
+# below is commented out to test the negative case: fork must fail because eventfd is in
+# a secure single-process mode (due to commented-out line)
+#sys.insecure__allow_eventfd = true
+
+# below line enables forking, but after the fork, the child writes in its own version of eventfd
+# object and the parent sees a weird read on its own version (so the test fails)
+sys.experimental__allow_eventfd_fork = true
+
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
