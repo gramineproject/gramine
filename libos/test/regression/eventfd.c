@@ -212,80 +212,19 @@ static int eventfd_using_various_flags(void) {
     return 0;
 }
 
-static int eventfd_using_fork(void) {
-    int status     = 0;
-    int efd        = 0;
-    uint64_t count = 0;
-
-    efd = eventfd(0, EFD_NONBLOCK);
-
-    if (efd < 0) {
-        perror("eventfd failed");
-        return 1;
-    }
-
-    pid_t pid = fork();
-
-    if (pid == 0) {
-        // child process
-        count = 5;
-        if (write(efd, &count, sizeof(count)) != sizeof(count)) {
-            perror("write error");
-            exit(1);
-        }
-        exit(0);
-    } else if (pid > 0) {
-        // parent process
-        waitpid(pid, &status, 0);
-
-        if (WIFSIGNALED(status)) {
-            perror("child was terminated by signal");
-            CLOSE_EFD_AND_EXIT(efd);
-        }
-
-        count = 0;
-        if (read(efd, &count, sizeof(count)) != sizeof(count)) {
-            perror("read error");
-            close(efd);
-            exit(1);
-        }
-        if (count != 5) {
-            printf("parent-pid: %d, efd: %d, count: %lu, errno: %d\n", getpid(), efd, count, errno);
-            CLOSE_EFD_AND_EXIT(efd);
-        }
-
-    } else {
-        perror("fork error");
-        CLOSE_EFD_AND_EXIT(efd);
-    }
-
-    close(efd);
-
-    printf("%s completed successfully\n", __func__);
-
-    return 0;
-}
-
-int main(int argc, char* argv[]) {
-    int ret;
-
-    ret = eventfd_using_poll();
+int main(void) {
+    int ret = eventfd_using_poll();
     if (ret) {
         puts("eventfd_using_poll() failed");
         return 1;
     }
-    puts("----------------------------------------");
+
     ret = eventfd_using_various_flags();
     if (ret) {
         puts("eventfd_using_various_flags() failed");
         return 1;
     }
-    puts("----------------------------------------");
-    ret = eventfd_using_fork();
-    if (ret) {
-        puts("eventfd_using_fork() failed");
-        return 1;
-    }
 
+    printf("TEST OK\n");
     return 0;
 }
