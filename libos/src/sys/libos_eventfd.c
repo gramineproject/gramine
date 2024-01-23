@@ -17,36 +17,21 @@
 #include "pal.h"
 #include "toml_utils.h"
 
-static bool g_eventfd_passthrough_mode = false;
+bool g_eventfd_passthrough_mode = false;
 
-static int init_eventfd_mode(void) {
+int init_eventfd_mode(void) {
+    assert(g_manifest_root);
     int ret;
 
-    static bool inited = false;
-    static spinlock_t init_lock = INIT_SPINLOCK_UNLOCKED;
-
-    spinlock_lock(&init_lock);
-
-    if (inited) {
-        ret = 0;
-        goto out;
-    }
-
-    assert(g_manifest_root);
     ret = toml_bool_in(g_manifest_root, "sys.insecure__allow_eventfd", /*defaultval=*/false,
                        &g_eventfd_passthrough_mode);
     if (ret < 0) {
         log_error("Cannot parse 'sys.insecure__allow_eventfd' (the value must be `true` or "
                   "`false`)");
-        ret = -ENOSYS;
-        goto out;
+        return -EPERM;
     }
 
-    inited = true;
-    ret = 0;
-out:
-    spinlock_unlock(&init_lock);
-    return ret;
+    return 0;
 }
 
 static int create_eventfd_pal_handle(uint64_t initial_count, int flags,
@@ -92,10 +77,6 @@ static int create_eventfd_pal_handle(uint64_t initial_count, int flags,
 
 long libos_syscall_eventfd2(unsigned int count, int flags) {
     int ret;
-
-    ret = init_eventfd_mode();
-    if (ret < 0)
-        return ret;
 
     struct libos_handle* hdl = get_new_handle();
     if (!hdl)

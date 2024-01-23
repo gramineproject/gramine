@@ -35,7 +35,7 @@ int main(void) {
     }
 
     CHECK(close(efd));
-    printf("TEST OK\n");
+    puts("TEST OK");
     return 0;
 }
 
