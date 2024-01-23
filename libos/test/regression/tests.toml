@@ -22,6 +22,8 @@ manifests = [
   "epoll_test",
   "eventfd",
   "eventfd_fork",
+  "eventfd_fork_disallowed",
+  "eventfd_fork_allowed_failing",
   "exec",
   "exec_fork",
   "exec_invalid_args",

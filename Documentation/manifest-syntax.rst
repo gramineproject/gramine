@@ -317,17 +317,48 @@ Units like ``K`` (KiB), ``M`` (MiB), and ``G`` (GiB) can be appended to the
 values for convenience. For example, ``sys.brk.max_size = "1M"`` indicates
 a 1 |~| MiB brk size.
 
-Allowing eventfd
-^^^^^^^^^^^^^^^^
+.. _host-based-insecure-eventfd:
+
+Allowing host-based insecure eventfd
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
     sys.insecure__allow_eventfd = [true|false]
     (Default: false)
 
-This specifies whether to allow system calls `eventfd()` and `eventfd2()`. Since
-eventfd emulation currently relies on the host, these system calls are
-disallowed by default due to security concerns.
+By default, Gramine implements eventfd in a secure but restricted way: currently
+this secure implementation only works in single-process applications. In other
+words, if your application uses eventfd *and* spawns child processes, then this
+implementation will not work and Gramine will fail with a warning. (But see
+:ref:`eventfd-in-multi-process`.)
+
+However, sometimes it is acceptable for applications to use host-based insecure
+eventfd implementation. This implementation works also for multi-process
+applications. Use ``sys.insecure__allow_eventfd`` manifest syntax to switch to
+this insecure implementation.
+
+.. note ::
+   ``sys.insecure__allow_eventfd`` is pass-through and thus potentially insecure
+   in e.g. SGX environments. It is the responsibility of the app developer to
+   analyze the app usage of eventfd, with security implications in mind.
+
+.. _eventfd-in-multi-process:
+
+Allowing eventfd in multi-process applications
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.experimental__allow_eventfd_fork = [true|false]
+    (Default: false)
+
+By default, Gramine implements eventfd in a secure way, but this implementation
+works only in single-process applications. If you have a multi-process
+application and you are sure that the parent process and its child processes do
+not use eventfd for cross-process communication, you can use
+``sys.experimental__allow_eventfd_fork`` manifest syntax. Also see
+:ref:`host-based-insecure-eventfd`.
 
 External SIGTERM injection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^

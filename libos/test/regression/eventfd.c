@@ -119,11 +119,13 @@ static int eventfd_using_poll(void) {
         }
     }
 
-    if (nread_events == MAX_EFDS)
-        printf("%s completed successfully\n", __func__);
-    else
+    if (nread_events != MAX_EFDS) {
         printf("%s: nread_events: %d, MAX_EFDS: %d\n", __func__, nread_events, MAX_EFDS);
+        ret = 1;
+        goto out;
+    }
 
+    printf("%s completed successfully\n", __func__);
     pthread_join(tid, NULL);
 
 out:
