@@ -1,4 +1,5 @@
 binary_dir = "@GRAMINE_PKGLIBDIR@/tests/pal"
+no-check = true
 
 manifests = [
   "..Bootstrap",
