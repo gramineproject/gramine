@@ -14,7 +14,6 @@ fs.mounts = [
 # must print a warning: "The app tried to create a subprocess, but this is disabled"
 sys.disallow_subprocesses = true
 
-sgx.nonpie_binary = true
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
