@@ -20,6 +20,7 @@ import tomli
 import tomli_w
 
 from . import _env
+from .manifest_check import GramineManifestSchema
 
 DEFAULT_ENCLAVE_SIZE_NO_EDMM = '256M'
 DEFAULT_ENCLAVE_SIZE_WITH_EDMM = '1024G'  # 1TB; note that DebugInfo is at 1TB and ASan at 1.5TB
@@ -382,6 +383,15 @@ class Manifest:
 
     def dump(self, f):
         tomli_w.dump(self._manifest, f)
+
+    def check(self):
+        """Check the manifest against builtin schema
+
+        Raises:
+            voluptuous.MultipleInvalid: when check fails
+        """
+
+        return GramineManifestSchema(self._manifest)
 
     def expand_all_trusted_files(self, chroot=None):
         """Expand all trusted files entries.
