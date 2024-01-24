@@ -67,6 +67,8 @@ class TestConfig:
 
         self.libc = data.get('libc', 'glibc')
 
+        self.no_check = data.get('gramine-manifest-no-check', False)
+
         self.arch_libdir = _CONFIG_SYSLIBDIR
 
         # Used by LTP, for `libstdbuf.so`
@@ -126,6 +128,7 @@ class TestConfig:
                      '-Dentrypoint=$ENTRYPOINT '
                      '-Dbinary_dir=$BINARY_DIR '
                      '-Dlibc=$GRAMINE_LIBC '
+                    f'{"--no-check " if self.no_check else ""}'
                      '$in $out'),
             description='manifest: $out'
         )

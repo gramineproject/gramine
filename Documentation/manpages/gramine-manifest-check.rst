@@ -26,3 +26,7 @@ Note that options that are allowed and/or mandatory for default LibOS
 implementation (``libsysdb.so``) are considered allowed/mandatory in schema.
 Therefore, if you have another LibOS implementation (like it happens in PAL
 test suite), the check may be wrong.
+
+By default the check is already performed in :program:`gramine-manifest` (see
+:option:`gramine-manifest --check`). This standalone tool may be useful for
+example to validate existing manifests when updating Gramine version.
