@@ -145,10 +145,6 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
         /* blocking write to wait for some other's read */
         eventfd_dummy_host_write(hdl, UINT64_MAX - 1);
         spinlock_lock(&hdl->info.eventfd.lock);
-        /* we are back from blocking write, it means that some other thread unblocked this thread
-         * via the read, which forced dummy_host_val to be reset */
-        if (hdl->info.eventfd.dummy_host_val != 0)
-            BUG();
     }
 
     hdl->info.eventfd.val = val;
@@ -173,10 +169,38 @@ static int eventfd_close(struct libos_handle* hdl) {
     return 0;
 }
 
+static void eventfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_ret_events) {
+    if (g_eventfd_passthrough_mode)
+        return;
+
+    if (*pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
+        /* impossible: we control eventfd inside the LibOS, and we never raise such conditions */
+        BUG();
+    }
+
+    spinlock_lock(&hdl->info.eventfd.lock);
+    if (*pal_ret_events & PAL_WAIT_READ) {
+        /* there is data to read: verify if counter has value greater than zero */
+        if (!hdl->info.eventfd.val) {
+            /* spurious or malicious notification -- for now we don't BUG but ignore it */
+            *pal_ret_events &= ~PAL_WAIT_READ;
+        }
+    }
+    if (*pal_ret_events & PAL_WAIT_WRITE) {
+        /* verify it's really possible to write a value of at least "1" without blocking */
+        if (hdl->info.eventfd.val >= UINT64_MAX - 1) {
+            /* spurious or malicious notification -- for now we don't BUG but ignore it */
+            *pal_ret_events &= ~PAL_WAIT_WRITE;
+        }
+    }
+    spinlock_unlock(&hdl->info.eventfd.lock);
+}
+
 struct libos_fs_ops eventfd_fs_ops = {
-    .read  = &eventfd_read,
-    .write = &eventfd_write,
-    .close = &eventfd_close,
+    .read      = &eventfd_read,
+    .write     = &eventfd_write,
+    .close     = &eventfd_close,
+    .post_poll = &eventfd_post_poll,
 };
 
 struct libos_fs eventfd_builtin_fs = {

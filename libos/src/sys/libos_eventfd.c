@@ -14,16 +14,31 @@
  * 2. Emulate-in-libos -- the eventfd object is created inside the LibOS, and all operations are
  *    resolved entirely inside the LibOS. A dummy eventfd object is created on the host, purely to
  *    trigger read/write notifications (e.g., in epoll); eventfd values are verified inside the
- *    LibOS and are never exposed to the host. Since the host is used purely for notifications, a
- *    malicious host can only induce Denial of Service (DoS) attacks; thus this implementation is
- *    secure and enabled by default. This implementation is automatically disabled if the manifest
- *    option `sys.insecure__allow_eventfd` is enabled.
+ *    LibOS and are never exposed to the host. Since the host is used purely for notifications (see
+ *    notes below), this implementation is considered secure and enabled by default. It is
+ *    automatically disabled if the manifest option `sys.insecure__allow_eventfd` is enabled.
  *
  *    - The emulation is currently implemented at the level of a single process. The emulation *may*
  *      work for multi-process applications, e.g., if the child process inherits the eventfd object
  *      but doesn't use it. However, multi-process support is brittle and thus disabled by default
  *      (Gramine will issue a warning, see `libos_clone.c`). To enable it still, set the manifest
  *      option `sys.experimental__allow_eventfd_fork`.
+ *
+ *    - The host's eventfd object is "dummy" and used purely for notifications -- to unblock
+ *      blocking read/write/select/poll/epoll system calls. The read/write notify logic is already
+ *      hardened, by double-checking that the object was indeed updated. However, there are three
+ *      possible attacks on polling mechanisms (select/poll/epoll):
+ *
+ *      a. Malicious host may inject the notification too early: POLLIN when nothing was written
+ *         yet or POLLOUT when nothing was read yet. This may lead to a synchronization failure
+ *         of the app: e.g., Rust Tokio's Metal I/O (mio) lib would incorrectly wake up a thread.
+ *         To prevent this, eventfd implements a callback `post_poll()` where it verifies that some
+ *         data was indeed written/read (i.e., that the notification is not spurious).
+ *      b. Malicious host may inject the notification too late or not send a notification at all.
+ *         This is a Denial of Service (DoS), which we don't care about.
+ *      c. Malicious host may inject POLLERR, POLLHUP, POLLRDHUP, POLLNVAL. This is impossible as we
+ *         control eventfd objects inside the LibOS, and we never raise such conditions. So the
+ *         callback `post_poll()` panics if it detects such a return event.
  */
 
 #include "libos_checkpoint.h"
