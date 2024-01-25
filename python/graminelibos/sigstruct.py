@@ -116,7 +116,7 @@ class Sigstruct:
                 struct.pack_into(fmt, buffer, offset, int(f'{self[key]}', 16))
                 continue
             struct.pack_into(fmt, buffer, offset, self[key])
-        return buffer
+        return bytes(buffer)
 
 
     @classmethod
