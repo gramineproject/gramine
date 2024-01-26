@@ -139,6 +139,7 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
             }
 
             hdl->type = TYPE_STR;
+            hdl->seekable = true;
             mem_file_init(&hdl->info.str.mem, str, len);
             hdl->pos = 0;
             break;
@@ -146,6 +147,8 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
 
         case PSEUDO_DEV: {
             hdl->type = TYPE_DEV;
+            hdl->seekable = true;
+            hdl->pos = 0;
             if (node->dev.dev_ops.open) {
                 ret = node->dev.dev_ops.open(hdl, dent, flags);
                 if (ret < 0)
@@ -482,11 +485,9 @@ static int pseudo_poll(struct libos_handle* hdl, int events, int* out_events) {
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
-            lock(&hdl->pos_lock);
             lock(&hdl->lock);
             int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, events, out_events);
             unlock(&hdl->lock);
-            unlock(&hdl->pos_lock);
             return ret;
         }
 

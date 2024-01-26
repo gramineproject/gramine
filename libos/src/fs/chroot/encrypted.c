@@ -196,6 +196,7 @@ static int chroot_encrypted_open(struct libos_handle* hdl, struct libos_dentry* 
     hdl->inode = dent->inode;
     get_inode(dent->inode);
     hdl->type = TYPE_CHROOT_ENCRYPTED;
+    hdl->seekable = true;
     hdl->pos = 0;
     return 0;
 }
@@ -232,6 +233,7 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
     hdl->inode = dent->inode;
     get_inode(inode);
     hdl->type = TYPE_CHROOT_ENCRYPTED;
+    hdl->seekable = true;
     hdl->pos = 0;
     ret = 0;
 out:

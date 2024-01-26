@@ -31,6 +31,16 @@ static MEM_MGR handle_mgr = NULL;
 
 #define INIT_HANDLE_MAP_SIZE 32
 
+void maybe_lock_pos_handle(struct libos_handle* hdl) {
+    if (hdl->seekable)
+        lock(&hdl->pos_lock);
+}
+
+void maybe_unlock_pos_handle(struct libos_handle* hdl) {
+    if (hdl->seekable)
+        unlock(&hdl->pos_lock);
+}
+
 int open_executable(struct libos_handle* hdl, const char* path) {
     struct libos_dentry* dent = NULL;
 
