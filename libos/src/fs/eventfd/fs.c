@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2019 Intel Corporation */
+/* Copyright (C) 2024 Intel Corporation */
 
 /*
  * This file contains code for passthrough-to-host and emulate-in-libos implementations of 'eventfd'
@@ -13,31 +13,42 @@
 #include "linux_abi/errors.h"
 #include "pal.h"
 
-static void eventfd_dummy_host_read(struct libos_handle* hdl, uint64_t* out_host_val) {
+static void eventfd_dummy_host_read(struct libos_handle* hdl) {
+    int ret;
     uint64_t buf_dummy_host_val = 0;
     size_t dummy_host_val_count = sizeof(buf_dummy_host_val);
-
-    int ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
+    do {
+        ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                             &buf_dummy_host_val);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
         /* must not happen in benign case, consider it an attack and panic */
         BUG();
     }
-
-    if (out_host_val)
-        *out_host_val = buf_dummy_host_val;
 }
 
-static void eventfd_dummy_host_write(struct libos_handle* hdl, uint64_t host_val) {
-    uint64_t buf_dummy_host_val = host_val;
+static void eventfd_dummy_host_write(struct libos_handle* hdl) {
+    int ret;
+    uint64_t buf_dummy_host_val = 1;
     size_t dummy_host_val_count = sizeof(buf_dummy_host_val);
-
-    int ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
+    do {
+        ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                              &buf_dummy_host_val);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
         /* must not happen in benign case, consider it an attack and panic */
         BUG();
     }
+}
+
+static void eventfd_dummy_host_wait(struct libos_handle* hdl, bool wait_for_read) {
+    pal_wait_flags_t wait_for_events = wait_for_read ? PAL_WAIT_READ : PAL_WAIT_WRITE;
+    pal_wait_flags_t ret_events = 0;
+    int ret = PalStreamsWaitEvents(1, &hdl->pal_handle, &wait_for_events, &ret_events, NULL);
+    if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED) {
+        BUG();
+    }
+    (void)ret_events; /* we don't care what events the host returned, we can't trust them anyway */
 }
 
 static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
@@ -63,22 +74,9 @@ static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, f
             ret = -EAGAIN;
             goto out;
         }
-        /* must block -- use the host's blocking read() on a dummy eventfd */
-        if (hdl->info.eventfd.dummy_host_val) {
-            /* value on host is non-zero, must perform a read to make it zero (and thus the next
-             * read will become blocking) */
-            uint64_t host_val;
-            eventfd_dummy_host_read(hdl, &host_val);
-            if (host_val != hdl->info.eventfd.dummy_host_val)
-                BUG();
-            hdl->info.eventfd.dummy_host_val = 0;
-        }
-
         spinlock_unlock(&hdl->info.eventfd.lock);
-        /* blocking read to wait for some value (we don't care which value) */
-        eventfd_dummy_host_read(hdl, /*out_host_val=*/NULL);
+        eventfd_dummy_host_wait(hdl, /*wait_for_read=*/true);
         spinlock_lock(&hdl->info.eventfd.lock);
-        hdl->info.eventfd.dummy_host_val = 0;
     }
 
     if (!hdl->info.eventfd.is_semaphore) {
@@ -90,9 +88,10 @@ static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, f
         hdl->info.eventfd.val--;
     }
 
-    /* perform a read (not supposed to block) to clear the event from writing/polling threads */
+    /* perform a read (not supposed to block) to clear the event from polling threads and to send an
+     * event to writing threads */
     if (hdl->info.eventfd.dummy_host_val) {
-        eventfd_dummy_host_read(hdl, /*out_host_val=*/NULL);
+        eventfd_dummy_host_read(hdl);
         hdl->info.eventfd.dummy_host_val = 0;
     }
 
@@ -133,26 +132,18 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
             ret = -EAGAIN;
             goto out;
         }
-
-        /* must block -- use the host's blocking write() on a dummy eventfd */
-        if (!hdl->info.eventfd.dummy_host_val) {
-            /* value on host is zero, a write will not be able to block, so perform a helper write
-             * now (thus the next write will become blocking) */
-            eventfd_dummy_host_write(hdl, /*host_val=*/1);
-            hdl->info.eventfd.dummy_host_val = 1;
-        }
         spinlock_unlock(&hdl->info.eventfd.lock);
-        /* blocking write to wait for some other's read */
-        eventfd_dummy_host_write(hdl, UINT64_MAX - 1);
+        eventfd_dummy_host_wait(hdl, /*wait_for_read=*/false);
         spinlock_lock(&hdl->info.eventfd.lock);
     }
 
     hdl->info.eventfd.val = val;
 
     /* perform a write (not supposed to block) to send an event to reading/polling threads */
-    assert(hdl->info.eventfd.dummy_host_val < UINT64_MAX - 1);
+    if (hdl->info.eventfd.dummy_host_val >= UINT64_MAX - 1)
+        BUG();
     hdl->info.eventfd.dummy_host_val++;
-    eventfd_dummy_host_write(hdl, /*host_val=*/1);
+    eventfd_dummy_host_write(hdl);
 
     ret = (ssize_t)count;
 out:

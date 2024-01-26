@@ -15,6 +15,7 @@ static int g_efd;
 static uint64_t g_read_events;  /* atomic counter */
 static uint64_t g_write_events; /* atomic counter */
 static uint64_t g_total_events; /* atomic counter */
+static int g_stop_test;         /* atomic boolean */
 
 static void pthread_check(int x) {
     if (x) {
@@ -33,6 +34,7 @@ static void* write_eventfd_thread(void* arg) {
             /* wait until some reader thread updates the read_events counter */;
     }
     /* send one last event to unblock the second reader */
+    __atomic_store_n(&g_stop_test, 1, __ATOMIC_SEQ_CST);
     if (write(g_efd, &val, sizeof(val)) != sizeof(val))
         errx(1, "eventfd write failed");
     return NULL;
@@ -43,10 +45,12 @@ static void* read_eventfd_thread(void* arg) {
     uint64_t read_events_total = 0;
     while (true) {
         uint64_t curr_read_events = __atomic_load_n(&g_read_events, __ATOMIC_SEQ_CST);
-        if (curr_read_events >= TEST_RUNS)
+        if (curr_read_events == TEST_RUNS)
             break;
         if (read(g_efd, &val, sizeof(val)) != sizeof(val))
             errx(1, "eventfd read failed");
+        if (__atomic_load_n(&g_stop_test, __ATOMIC_SEQ_CST))
+            break;
         __atomic_add_fetch(&g_read_events, 1, __ATOMIC_SEQ_CST);
         read_events_total++;
     }
@@ -63,7 +67,7 @@ static void* poll_then_read_eventfd_thread(void* arg) {
     uint64_t read_events_total = 0;
     while (true) {
         uint64_t curr_read_events = __atomic_load_n(&g_read_events, __ATOMIC_SEQ_CST);
-        if (curr_read_events >= TEST_RUNS)
+        if (curr_read_events == TEST_RUNS)
             break;
         int ret = CHECK(poll(&pollfd, /*nfds=*/1, /*timeout=*/-1));
         poll_events_total++;
@@ -74,9 +78,11 @@ static void* poll_then_read_eventfd_thread(void* arg) {
         if (!(pollfd.revents & POLLIN))
             continue;
         /* below read may block because of the race: another thread can read first and reset the
-         * eventd value; we don't care as this is benign */
+         * event value; we don't care as this is benign */
         if (read(g_efd, &val, sizeof(val)) != sizeof(val))
             errx(1, "eventfd read failed");
+        if (__atomic_load_n(&g_stop_test, __ATOMIC_SEQ_CST))
+            break;
         __atomic_add_fetch(&g_read_events, 1, __ATOMIC_SEQ_CST);
         read_events_total++;
     }
@@ -91,10 +97,12 @@ static void* blocking_write_eventfd_thread(void* arg) {
     uint64_t write_events_total = 0;
     while (true) {
         uint64_t curr_write_events = __atomic_load_n(&g_write_events, __ATOMIC_SEQ_CST);
-        if (curr_write_events >= TEST_RUNS)
+        if (curr_write_events == TEST_RUNS)
             break;
         if (write(g_efd, &val, sizeof(val)) != sizeof(val))
             errx(1, "eventfd write failed");
+        if (__atomic_load_n(&g_stop_test, __ATOMIC_SEQ_CST))
+            break;
         __atomic_add_fetch(&g_write_events, 1, __ATOMIC_SEQ_CST);
         write_events_total++;
     }
@@ -113,13 +121,14 @@ static void* read_for_blocking_write_eventfd_thread(void* arg) {
             /* wait until some writer thread updates the write_events counter */;
     }
     /* get one last event to unblock the second writer */
+    __atomic_store_n(&g_stop_test, 1, __ATOMIC_SEQ_CST);
     if (read(g_efd, &val, sizeof(val)) != sizeof(val))
         errx(1, "eventfd read failed");
     return NULL;
 }
 
 static void eventfd_two_readers_doing_two_reads(void) {
-    g_read_events = g_total_events = 0;
+    g_read_events = g_total_events = g_stop_test = 0;
     g_efd = CHECK(eventfd(0, 0)); /* a blocking non-semaphore eventfd */
 
     pthread_t th[3]; /* two readers (both do blocking reads) and one writer */
@@ -131,12 +140,12 @@ static void eventfd_two_readers_doing_two_reads(void) {
         pthread_check(pthread_join(th[i], NULL));
     }
     CHECK(close(g_efd));
-    if (g_total_events != TEST_RUNS + 1)
-        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS + 1);
+    if (g_total_events != TEST_RUNS)
+        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS);
 }
 
 static void eventfd_two_readers_doing_read_and_poll(void) {
-    g_read_events = g_total_events = 0;
+    g_read_events = g_total_events = g_stop_test = 0;
     g_efd = CHECK(eventfd(0, 0)); /* a blocking non-semaphore eventfd */
 
     pthread_t th[3]; /* two readers (one does blocking read, one does poll) and one writer */
@@ -148,12 +157,12 @@ static void eventfd_two_readers_doing_read_and_poll(void) {
         pthread_check(pthread_join(th[i], NULL));
     }
     CHECK(close(g_efd));
-    if (g_total_events != TEST_RUNS + 1)
-        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS + 1);
+    if (g_total_events != TEST_RUNS)
+        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS);
 }
 
 static void eventfd_two_readers_doing_two_polls(void) {
-    g_read_events = g_total_events = 0;
+    g_read_events = g_total_events = g_stop_test = 0;
     g_efd = CHECK(eventfd(0, 0)); /* a blocking non-semaphore eventfd */
 
     pthread_t th[3]; /* two readers (both do poll) and one writer */
@@ -165,12 +174,12 @@ static void eventfd_two_readers_doing_two_polls(void) {
         pthread_check(pthread_join(th[i], NULL));
     }
     CHECK(close(g_efd));
-    if (g_total_events != TEST_RUNS + 1)
-        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS + 1);
+    if (g_total_events != TEST_RUNS)
+        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS);
 }
 
 static void eventfd_two_writers(void) {
-    g_write_events = g_total_events = 0;
+    g_write_events = g_total_events = g_stop_test = 0;
     /* a blocking semaphore eventfd (we don't want reads to reset value, so that writes block) */
     g_efd = CHECK(eventfd(0, EFD_SEMAPHORE));
     uint64_t val = UINT64_MAX - 1;
@@ -186,11 +195,12 @@ static void eventfd_two_writers(void) {
         pthread_check(pthread_join(th[i], NULL));
     }
     CHECK(close(g_efd));
-    if (g_total_events != TEST_RUNS + 1)
-        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS + 1);
+    if (g_total_events != TEST_RUNS)
+        errx(1, "total events for subtest is %lu (expected %d)", g_total_events, TEST_RUNS);
 }
 
 int main(void) {
+    setbuf(stdout, NULL);
     puts("------------------------");
     eventfd_two_readers_doing_two_reads();
     puts("------------------------");
