@@ -144,6 +144,8 @@ tests = {
     'tcp_einprogress': {},
     'tcp_ipv6_v6only': {},
     'tcp_msg_peek': {},
+    'timerfd': {},
+    'timerfd_fork': {},
     'udp': {},
     'uid_gid': {},
     'unix': {},

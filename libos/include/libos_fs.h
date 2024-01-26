@@ -182,6 +182,10 @@ struct libos_fs_ops {
     /* Poll a single handle. Must not block. */
     int (*poll)(struct libos_handle* hdl, int in_events, int* out_events);
 
+    /* Verify a single handle after poll. Must update `pal_ret_events` in-place with only allowed
+     * ones. Used in e.g. secure timerfd FS. */
+    void (*post_poll)(struct libos_handle* hdl, pal_wait_flags_t* pal_ret_events);
+
     /* checkpoint/migrate the file system */
     ssize_t (*checkpoint)(void** checkpoint, void* mount_data);
     int (*migrate)(void* checkpoint, void** mount_data);
@@ -930,6 +934,7 @@ extern struct libos_fs eventfd_builtin_fs;
 extern struct libos_fs synthetic_builtin_fs;
 extern struct libos_fs path_builtin_fs;
 extern struct libos_fs shm_builtin_fs;
+extern struct libos_fs timerfd_builtin_fs;
 
 struct libos_fs* find_fs(const char* name);
 

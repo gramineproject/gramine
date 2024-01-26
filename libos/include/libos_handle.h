@@ -46,6 +46,7 @@ enum libos_handle_type {
     /* Special handles: */
     TYPE_EPOLL,      /* epoll handles, see `libos_epoll.c` */
     TYPE_EVENTFD,    /* eventfd handles, used by `eventfd` filesystem */
+    TYPE_TIMERFD,    /* timerfd handles, used by `timerfd` filesystem */
 };
 
 struct libos_pipe_handle {
@@ -134,6 +135,16 @@ struct libos_epoll_handle {
     size_t last_returned_index;
 };
 
+struct libos_timerfd_handle {
+    spinlock_t expiration_lock; /* protecting below fields */
+    uint64_t num_expirations;
+    uint64_t dummy_host_val;
+
+    spinlock_t timer_lock;
+    uint64_t timeout;
+    uint64_t reset;
+};
+
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
@@ -204,6 +215,7 @@ struct libos_handle {
 
         struct libos_epoll_handle epoll;         /* TYPE_EPOLL */
         struct { bool is_semaphore; } eventfd;   /* TYPE_EVENTFD */
+        struct libos_timerfd_handle timerfd;     /* TYPE_TIMERFD */
     } info;
 
     struct libos_dir_handle dir_info;

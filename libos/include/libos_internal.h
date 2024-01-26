@@ -262,3 +262,7 @@ int init_stack(const char* const* argv, const char* const* envp, char*** out_arg
  * The implementation of this function depends on the used architecture.
  */
 noreturn void call_elf_entry(elf_addr_t entry, void* argp);
+
+extern bool g_timerfd_allow_fork;
+extern uint32_t g_timerfd_cnt;
+int init_timerfd(void);

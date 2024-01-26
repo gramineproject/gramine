@@ -364,6 +364,22 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
+.. _timerfd-in-multi-process:
+
+Allowing timerfd in multi-process applications
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.experimental__allow_timerfd_fork = [true|false]
+    (Default: false)
+
+Gramine implements timerfd in a secure way, but this implementation works only
+in single-process applications. If you have a multi-process application and you
+are sure that the parent process and its child processes do not have
+cross-process usage of timerfd, you can use
+``sys.experimental__allow_timerfd_fork`` manifest syntax.
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 

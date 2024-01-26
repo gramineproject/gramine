@@ -992,6 +992,26 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/flock_file2')
         self.assertIn('TEST OK', stdout)
 
+    def test_150_timerfd(self):
+        stdout, _ = self.run_binary(['timerfd'], timeout=120)
+        self.assertIn("TEST OK", stdout)
+
+    def test_151_timerfd_fork_disallowed(self):
+        try:
+            self.run_binary(['timerfd_fork_disallowed'])
+            self.fail('timerfd_fork_disallowed unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stderr = e.stderr.decode()
+            self.assertIn('The app tried to create a subprocess, but this is disallowed because '
+                          'timerfd is emulated in a secure single-process mode', stderr)
+
+    def test_152_timerfd_fork_allowed_failing(self):
+        try:
+            self.run_binary(['timerfd_fork_allowed_failing'])
+            self.fail('timerfd_fork_allowed_failing unexpectedly succeeded')
+        except AssertionError as e:
+            self.assertIn('timed out', e.args[0])
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])

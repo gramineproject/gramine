@@ -23,8 +23,9 @@ struct async_event {
     LIST_TYPE(async_event) triggered_list;
     void (*callback)(IDTYPE caller, void* arg);
     void* arg;
-    PAL_HANDLE object;    /* handle (async IO) to wait on */
-    uint64_t expire_time; /* alarm/timer to wait on */
+    PAL_HANDLE object;       /* handle (async IO) to wait on */
+    PAL_HANDLE timer_object; /* handle to identify timer object; currently used for timerfd */
+    uint64_t expire_time;    /* alarm/timer to wait on */
 };
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
@@ -40,26 +41,22 @@ static struct libos_pollable_event install_new_event;
 
 static int create_async_worker(void);
 
-/* Threads register async events like alarm(), setitimer(), ioctl(FIOASYNC)
- * using this function. These events are enqueued in async_list and delivered
- * to async worker thread by triggering install_new_event. When event is
- * triggered in async worker thread, the corresponding event's callback with
- * arguments `arg` is called. This callback typically sends a signal to the
+/* Threads register async events like alarm(), setitimer(), timerfd_settime(), ioctl(FIOASYNC) using
+ * this function. These events are enqueued in async_list and delivered to async worker thread by
+ * triggering install_new_event. When event is triggered in async worker thread, the corresponding
+ * event's callback with arguments `arg` is called. This callback typically sends a signal to the
  * thread which registered the event (saved in `event->caller`).
  *
  * We distinguish between alarm/timer events and async IO events:
- *   - alarm/timer events set object = NULL and time = seconds
- *     (time = 0 cancels all pending alarms/timers).
+ *   - alarm/timer events set time = seconds (time = 0 cancels all pending alarms/timers).
+ *     Specfically when object != NULL and time != 0, this indicates a timerfd event.
  *   - async IO events set object = handle and time = 0.
  *
- * Function returns remaining usecs for alarm/timer events (same as alarm())
- * or 0 for async IO events. On error, it returns a negated error code.
+ * Function returns remaining usecs for alarm/timer events (same as alarm()) or 0 for async IO
+ * events. On error, it returns a negated error code.
  */
-int64_t install_async_event(PAL_HANDLE object, uint64_t time,
+int64_t install_async_event(PAL_HANDLE object, uint64_t time, bool absolute_time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg) {
-    /* if event happens on object, time must be zero */
-    assert(!object || (object && !time));
-
     uint64_t now = 0;
     int ret = PalSystemTimeQuery(&now);
     if (ret < 0) {
@@ -73,21 +70,22 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
         return -ENOMEM;
     }
 
-    event->callback    = callback;
-    event->arg         = arg;
-    event->caller      = get_cur_tid();
-    event->object      = object;
-    event->expire_time = time ? now + time : 0;
+    event->callback     = callback;
+    event->arg          = arg;
+    event->caller       = get_cur_tid();
+    event->object       = time ? NULL : object;
+    event->timer_object = (object && time) ? object : NULL;
+    event->expire_time  = time ? (absolute_time ? time : now + time) : 0;
 
     lock(&async_worker_lock);
 
-    if (callback != &cleanup_thread && !object) {
-        /* This is alarm() or setitimer() emulation, treat both according to
-         * alarm() syscall semantics: cancel any pending alarm/timer. */
+    if (callback != &cleanup_thread && (!object || event->timer_object)) {
+        /* This is alarm(), setitimer(), timerfd_settime() emulation, treat all according to alarm()
+         * syscall semantics: cancel any pending alarm/timer. */
         struct async_event* tmp;
         struct async_event* n;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-            if (tmp->expire_time) {
+            if (tmp->timer_object == object && tmp->expire_time) {
                 /* this is a pending alarm/timer, cancel it and save its expiration time */
                 if (max_prev_expire_time < tmp->expire_time)
                     max_prev_expire_time = tmp->expire_time;

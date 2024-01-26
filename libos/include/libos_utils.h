@@ -53,7 +53,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
 /* Asynchronous event support */
 int init_async_worker(void);
-int64_t install_async_event(PAL_HANDLE object, unsigned long time,
+int64_t install_async_event(PAL_HANDLE object, unsigned long time, bool absolute_time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg);
 struct libos_thread* terminate_async_worker(void);
 

@@ -461,6 +461,7 @@ long libos_syscall_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event
         case TYPE_PIPE:
         case TYPE_SOCK:
         case TYPE_EVENTFD:
+        case TYPE_TIMERFD:
             break;
         default:
             /* epoll not supported by this type of handle */
