@@ -1036,7 +1036,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `signalfd()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
-- ☒ `timerfd_create()`
+- ▣ `timerfd_create()`
   <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ▣ `eventfd()`
@@ -1045,10 +1045,10 @@ The below list is generated from the [syscall table of Linux
 - ▣ `fallocate()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `timerfd_settime()`
+- ▣ `timerfd_settime()`
   <sup>[20](#sleeps-timers-and-alarms)</sup>
 
-- ☒ `timerfd_gettime()`
+- ▣ `timerfd_gettime()`
   <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `accept4()`
@@ -2871,9 +2871,20 @@ Gramine implements getting and setting the interval timer: `getitimer()` and `se
 
 Gramine implements alarm clocks via `alarm()`.
 
+Gramine implements timers that notify via file descriptors: `timerfd_create()`, `timerfd_settime()`
+and `timerfd_gettime()`. The timerfd object is created inside Gramine, and all operations are
+resolved entirely inside Gramine. Each timerfd object is associated with a dummy eventfd created on
+the host. This is purely for triggering read notifications (e.g., in epoll); timerfd data is
+verified inside Gramine and is never exposed to the host. Since the host is used purely for
+notifications, a malicious host can only induce Denial of Service (DoS) attacks.
+
+The emulation is currently implemented at the level of a single process. The emulation *may* work for
+multi-process applications, e.g., if the child process inherits the timerfd object but doesn't use
+it. However, all timerfds created in the parent process are marked as invalid in child processes,
+i.e. inter-process timing signals via timerfds are not allowed.
+
 Gramine does *not* currently implement the POSIX per-process timer: `timer_create()`, etc. Gramine
-also does not currently implement timers that notify via file descriptors. Gramine could implement
-these timers in the future, if need arises.
+could implement it in the future, if need arises.
 
 <details><summary>Related system calls</summary>
 
@@ -2889,9 +2900,9 @@ these timers in the future, if need arises.
 - ☒ `timer_getoverrun()`: may be implemented in the future
 - ☒ `timer_delete()`: may be implemented in the future
 
-- ☒ `timerfd_create()`: may be implemented in the future
-- ☒ `timerfd_settime()`: may be implemented in the future
-- ☒ `timerfd_gettime()`: may be implemented in the future
+- ▣ `timerfd_create()`: see notes above
+- ▣ `timerfd_settime()`: see notes above
+- ▣ `timerfd_gettime()`: see notes above
 
 </details><br />
 
