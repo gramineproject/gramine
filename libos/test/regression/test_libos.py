@@ -892,6 +892,10 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('eventfd_using_various_flags completed successfully', stdout)
         self.assertIn('eventfd_using_fork completed successfully', stdout)
 
+    def test_071_eventfd_read_then_write(self):
+        stdout, _ = self.run_binary(['eventfd_read_then_write'])
+        self.assertIn('TEST OK', stdout)
+
     @unittest.skipIf(USES_MUSL, 'sched_setscheduler is not supported in musl')
     def test_080_sched(self):
         stdout, _ = self.run_binary(['sched'])
