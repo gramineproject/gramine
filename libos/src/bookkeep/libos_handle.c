@@ -31,6 +31,46 @@ static MEM_MGR handle_mgr = NULL;
 
 #define INIT_HANDLE_MAP_SIZE 32
 
+static void lock_unlock_pos_handle(struct libos_handle* hdl, bool is_lock) {
+    bool need = false;
+    switch (hdl->type) {
+        case TYPE_CHROOT:
+        case TYPE_CHROOT_ENCRYPTED:
+        case TYPE_DEV:
+        case TYPE_STR:
+        case TYPE_PSEUDO:
+        case TYPE_TMPFS:
+        case TYPE_SYNTHETIC:
+        case TYPE_PATH:
+        case TYPE_SHM:
+            /* these are file- or dir-related handle types, they have a position so must lock */
+            need = true;
+            break;
+        case TYPE_PIPE:
+        case TYPE_SOCK:
+        case TYPE_EVENTFD:
+            /* these handle types do not have a position, so no need to lock */
+            break;
+        default:
+            /* other handle types must never be called with read(), write(), etc. */
+            BUG();
+    }
+    if (need) {
+        if (is_lock)
+            lock(&hdl->pos_lock);
+        else
+            unlock(&hdl->pos_lock);
+    }
+}
+
+void lock_pos_handle(struct libos_handle* hdl) {
+    lock_unlock_pos_handle(hdl, /*is_lock=*/true);
+}
+
+void unlock_pos_handle(struct libos_handle* hdl) {
+    lock_unlock_pos_handle(hdl, /*is_lock=*/false);
+}
+
 int open_executable(struct libos_handle* hdl, const char* path) {
     struct libos_dentry* dent = NULL;
 
