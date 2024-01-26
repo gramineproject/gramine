@@ -21,6 +21,7 @@ tests = {
     'epoll_test': {},
     'eventfd': {},
     'eventfd_fork': {},
+    'eventfd_races': {},
     'exec': {},
     'exec_fork': {},
     'exec_invalid_args': {},

@@ -911,6 +911,10 @@ class TC_30_Syscall(RegressionTestCase):
             stdout = e.stdout.decode()
             self.assertIn('eventfd read failed', stdout)
 
+    def test_075_eventfd_races(self):
+        stdout, _ = self.run_binary(['eventfd_races'])
+        self.assertIn('TEST OK', stdout)
+
     @unittest.skipIf(USES_MUSL, 'sched_setscheduler is not supported in musl')
     def test_080_sched(self):
         stdout, _ = self.run_binary(['sched'])
