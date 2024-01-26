@@ -104,7 +104,8 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
             rwlock_write_unlock(&handle_map->lock);
             break;
         case FIOASYNC:
-            ret = install_async_event(hdl->pal_handle, 0, &signal_io, NULL);
+            ret = install_async_event(ASYNC_EVENT_TYPE_IO, hdl->pal_handle,
+                                      /*time_us=*/0, /*absolute_time=*/false, &signal_io, NULL);
             break;
         case FIONREAD: {
             if (!is_user_memory_writable((void*)arg, sizeof(int))) {

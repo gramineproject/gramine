@@ -189,6 +189,10 @@ void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool 
                 needs_et = true;
             }
             break;
+        case TYPE_TIMERFD:
+            needs_et = true;
+            if (!in)
+                __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
         default:
             /* Type unsupported with EPOLLET. */
             break;
@@ -461,6 +465,7 @@ long libos_syscall_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event
         case TYPE_PIPE:
         case TYPE_SOCK:
         case TYPE_EVENTFD:
+        case TYPE_TIMERFD:
             break;
         default:
             /* epoll not supported by this type of handle */
