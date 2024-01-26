@@ -136,6 +136,7 @@ static void tmpfs_do_open(struct libos_handle* hdl, struct libos_dentry* dent, i
     __UNUSED(flags);
 
     hdl->type = TYPE_TMPFS;
+    hdl->seekable = true;
     hdl->pos = 0;
 }
 

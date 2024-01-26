@@ -174,7 +174,12 @@ struct libos_handle {
      */
     struct libos_inode* inode;
 
-    /* Offset in file. Protected by `pos_lock`. */
+    /* Whether the handle is seekable (based on `type`). This field does not change, so reading it
+     * does not require holding any locks. Affects the `pos` field, see below. */
+    bool seekable;
+
+    /* Offset in file. Protected by `pos_lock`. Only meaningful for `seekable` handles; always zero
+     * for non-seekable handles. */
     file_off_t pos;
 
     /* This list contains `libos_epoll_item` objects this handle is part of. All accesses should be
@@ -221,7 +226,9 @@ struct libos_handle {
 
     /* Lock for handle position (`pos`). Intended for operations that change the position (e.g.
      * `read`, `seek` but not `pread`). This lock should be taken *before* `libos_handle.lock` and
-     * `libos_inode.lock`. */
+     * `libos_inode.lock`. Must be used *only* via maybe_lock_pos_handle() and
+     * maybe_unlock_pos_handle(); these functions make sure that the lock is acquired only on those
+     * handle types that are seekable (e.g. not on eventfds or pipes). */
     struct libos_lock pos_lock;
 };
 
@@ -295,3 +302,6 @@ int get_file_size(struct libos_handle* file, uint64_t* size);
 
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count);
 ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count);
+
+void maybe_lock_pos_handle(struct libos_handle* hdl);
+void maybe_unlock_pos_handle(struct libos_handle* hdl);

@@ -76,6 +76,9 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
     uri = NULL;
 
     hdl->type = TYPE_SHM;
+    hdl->seekable = true;
+    hdl->pos = 0;
+
     hdl->pal_handle = palhdl;
     ret = 0;
 

@@ -104,7 +104,10 @@ int generic_inode_hstat(struct libos_handle* hdl, struct stat* buf) {
 file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int origin) {
     file_off_t ret;
 
-    lock(&hdl->pos_lock);
+    if (!hdl->seekable)
+        return 0;
+
+    maybe_lock_pos_handle(hdl);
     lock(&hdl->inode->lock);
     file_off_t pos = hdl->pos;
     file_off_t size = hdl->inode->size;
@@ -115,7 +118,7 @@ file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int o
         ret = pos;
     }
     unlock(&hdl->inode->lock);
-    unlock(&hdl->pos_lock);
+    maybe_unlock_pos_handle(hdl);
     return ret;
 }
 

@@ -35,7 +35,7 @@ long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen
     if (!hdl)
         return -EBADF;
 
-    lock(&hdl->pos_lock);
+    maybe_lock_pos_handle(hdl);
 
     int ret = 0;
 
@@ -75,7 +75,7 @@ long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen
 
     ret = bytes;
 out:
-    unlock(&hdl->pos_lock);
+    maybe_unlock_pos_handle(hdl);
     put_handle(hdl);
     if (ret == -EINTR) {
         ret = -ERESTARTSYS;
@@ -103,7 +103,7 @@ long libos_syscall_writev(unsigned long fd, struct iovec* vec, unsigned long vle
     if (!hdl)
         return -EBADF;
 
-    lock(&hdl->pos_lock);
+    maybe_lock_pos_handle(hdl);
 
     int ret = 0;
 
@@ -143,7 +143,7 @@ long libos_syscall_writev(unsigned long fd, struct iovec* vec, unsigned long vle
 
     ret = bytes;
 out:
-    unlock(&hdl->pos_lock);
+    maybe_unlock_pos_handle(hdl);
     put_handle(hdl);
     if (ret == -EINTR) {
         ret = -ERESTARTSYS;

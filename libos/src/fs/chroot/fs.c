@@ -222,6 +222,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
         uri = NULL;
 
         hdl->type = TYPE_CHROOT;
+        hdl->seekable = true;
         hdl->pos = 0;
         hdl->pal_handle = palhdl;
     } else {
