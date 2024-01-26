@@ -46,6 +46,7 @@ enum libos_handle_type {
     /* Special handles: */
     TYPE_EPOLL,      /* epoll handles, see `libos_epoll.c` */
     TYPE_EVENTFD,    /* eventfd handles, used by `eventfd` filesystem */
+    TYPE_TIMERFD,    /* timerfd handles, used by `timerfd` filesystem */
 };
 
 struct libos_pipe_handle {
@@ -142,6 +143,18 @@ struct libos_eventfd_handle {
     uint64_t dummy_host_val;
 };
 
+struct libos_timerfd_handle {
+    bool broken_in_child;
+
+    spinlock_t expiration_lock; /* protecting below fields */
+    uint64_t num_expirations;
+    uint64_t dummy_host_val;
+
+    spinlock_t timer_lock; /* protecting below fields */
+    uint64_t timeout;
+    uint64_t reset;
+};
+
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
@@ -217,6 +230,8 @@ struct libos_handle {
 
         struct libos_epoll_handle epoll;         /* TYPE_EPOLL */
         struct libos_eventfd_handle eventfd;     /* TYPE_EVENTFD */
+
+        struct libos_timerfd_handle timerfd;     /* TYPE_TIMERFD */
     } info;
 
     struct libos_dir_handle dir_info;
@@ -232,7 +247,7 @@ struct libos_handle {
      * `read`, `seek` but not `pread`). This lock should be taken *before* `libos_handle.lock` and
      * `libos_inode.lock`. Must be used *only* via maybe_lock_pos_handle() and
      * maybe_unlock_pos_handle(); these functions make sure that the lock is acquired only on those
-     * handle types that are seekable (e.g. not on eventfds or pipes). */
+     * handle types that are seekable (e.g. not on eventfds, timerfds or pipes). */
     struct libos_lock pos_lock;
 };
 
