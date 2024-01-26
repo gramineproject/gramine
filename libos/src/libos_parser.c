@@ -38,6 +38,7 @@ static void parse_sigprocmask_how(struct print_buf*, va_list*);
 static void parse_msync_flags(struct print_buf*, va_list*);
 static void parse_madvise_behavior(struct print_buf*, va_list* ap);
 static void parse_timespec(struct print_buf*, va_list*);
+static void parse_itimerspec(struct print_buf*, va_list*);
 static void parse_sockaddr(struct print_buf*, va_list*);
 static void parse_domain(struct print_buf*, va_list*);
 static void parse_socktype(struct print_buf*, va_list*);
@@ -53,6 +54,8 @@ static void parse_getrandom_flags(struct print_buf*, va_list*);
 static void parse_epoll_op(struct print_buf*, va_list*);
 static void parse_epoll_event(struct print_buf* buf, va_list* ap);
 static void parse_close_range_flags(struct print_buf* buf, va_list* ap);
+static void parse_timerfd_create_flags(struct print_buf* buf, va_list* ap);
+static void parse_timerfd_settime_flags(struct print_buf* buf, va_list* ap);
 
 static void parse_string_arg(struct print_buf*, va_list* ap);
 static void parse_pointer_arg(struct print_buf*, va_list* ap);
@@ -516,13 +519,17 @@ struct parser_table {
                           parse_integer_arg, parse_pointer_arg, parse_integer_arg,
                           parse_integer_arg, parse_pointer_arg, parse_pointer_arg}},
     [__NR_signalfd] = {.slow = false, .name = "signalfd", .parser = {NULL}},
-    [__NR_timerfd_create] = {.slow = false, .name = "timerfd_create", .parser = {NULL}},
+    [__NR_timerfd_create] = {.slow = false, .name = "timerfd_create", .parser = {parse_long_arg,
+                             parse_integer_arg, parse_timerfd_create_flags}},
     [__NR_eventfd] = {.slow = false, .name = "eventfd", .parser = {parse_long_arg,
                       parse_integer_arg}},
     [__NR_fallocate] = {.slow = false, .name = "fallocate", .parser = {parse_long_arg,
                         parse_integer_arg, parse_integer_arg, parse_long_arg, parse_long_arg}},
-    [__NR_timerfd_settime] = {.slow = false, .name = "timerfd_settime", .parser = {NULL}},
-    [__NR_timerfd_gettime] = {.slow = false, .name = "timerfd_gettime", .parser = {NULL}},
+    [__NR_timerfd_settime] = {.slow = false, .name = "timerfd_settime", .parser = {parse_long_arg,
+                              parse_integer_arg, parse_timerfd_settime_flags, parse_itimerspec,
+                              parse_itimerspec}},
+    [__NR_timerfd_gettime] = {.slow = false, .name = "timerfd_gettime", .parser = {parse_long_arg,
+                              parse_integer_arg, parse_itimerspec}},
     [__NR_accept4] = {.slow = true, .name = "accept4", .parser = {parse_long_arg, parse_integer_arg,
                       parse_pointer_arg, parse_pointer_arg, parse_integer_arg}},
     [__NR_signalfd4] = {.slow = false, .name = "signalfd4", .parser = {NULL}},
@@ -1139,6 +1146,24 @@ static void parse_timespec(struct print_buf* buf, va_list* ap) {
     buf_printf(buf, "[%ld,%ld]", tv->tv_sec, tv->tv_nsec);
 }
 
+static void parse_itimerspec(struct print_buf* buf, va_list* ap) {
+    const struct itimerspec* it = va_arg(*ap, const struct itimerspec*);
+
+    if (!it) {
+        buf_puts(buf, "NULL");
+        return;
+    }
+
+    if (!is_user_memory_readable((void*)it, sizeof(*it))) {
+        buf_printf(buf, "(invalid-addr %p)", it);
+        return;
+    }
+
+    buf_printf(buf, "intvl:[%ld,%ld] val: [%ld,%ld]",
+               it->it_interval.tv_sec, it->it_interval.tv_nsec,
+               it->it_value.tv_sec, it->it_value.tv_nsec);
+}
+
 static void parse_sockaddr(struct print_buf* buf, va_list* ap) {
     void* addr = va_arg(*ap, void*);
 
@@ -1607,6 +1632,38 @@ static void parse_close_range_flags(struct print_buf* buf, va_list* ap) {
     const struct flag_table all_flags[] = {
         FLG(CLOSE_RANGE_CLOEXEC),
         FLG(CLOSE_RANGE_UNSHARE),
+    };
+#undef FLG
+
+    flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
+    if (flags)
+        buf_printf(buf, "|0x%x", flags);
+}
+
+static void parse_timerfd_create_flags(struct print_buf* buf, va_list* ap) {
+    int flags = va_arg(*ap, int);
+
+#define FLG(n) \
+    { #n, n }
+    const struct flag_table all_flags[] = {
+        FLG(TFD_NONBLOCK),
+        FLG(TFD_CLOEXEC),
+    };
+#undef FLG
+
+    flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
+    if (flags)
+        buf_printf(buf, "|0x%x", flags);
+}
+
+static void parse_timerfd_settime_flags(struct print_buf* buf, va_list* ap) {
+    int flags = va_arg(*ap, int);
+
+#define FLG(n) \
+    { #n, n }
+    const struct flag_table all_flags[] = {
+        FLG(TFD_TIMER_ABSTIME),
+        FLG(TFD_TIMER_CANCEL_ON_SET),
     };
 #undef FLG
 
