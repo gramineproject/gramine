@@ -1274,7 +1274,7 @@ out:
 
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
                  size_t* addrlen) {
-    log_debug("benl Entering ocall_listen, domain: %d", fd);
+    log_debug("benl Entering ocall_listen);
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     struct ocall_listen* ocall_listen_args;
