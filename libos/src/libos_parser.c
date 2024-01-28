@@ -1663,7 +1663,7 @@ void debug_print_syscall_before(unsigned long sysno, ...) {
     if (g_log_level < LOG_LEVEL_TRACE)
         return;
 
-    if(sysno == __NR_futex)
+    if(sysno == __NR_futex || sysno == __NR_clock_gettime)
         return;
 
     struct parser_table* parser = &syscall_parser_table[sysno];
@@ -1698,6 +1698,9 @@ void debug_print_syscall_before(unsigned long sysno, ...) {
 
 void debug_print_syscall_after(unsigned long sysno, ...) {
     if (g_log_level < LOG_LEVEL_TRACE)
+        return;
+
+    if(sysno == __NR_futex || sysno == __NR_clock_gettime)
         return;
 
     struct parser_table* parser = &syscall_parser_table[sysno];
