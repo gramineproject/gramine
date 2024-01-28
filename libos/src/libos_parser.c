@@ -1663,6 +1663,9 @@ void debug_print_syscall_before(unsigned long sysno, ...) {
     if (g_log_level < LOG_LEVEL_TRACE)
         return;
 
+    if(sysno == __NR_futex)
+        return;
+
     struct parser_table* parser = &syscall_parser_table[sysno];
 
     if (!parser->slow)
