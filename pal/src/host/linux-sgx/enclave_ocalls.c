@@ -46,7 +46,7 @@
 rpc_queue_t* g_rpc_queue = NULL;
 
 static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
-    log_debug("benl Entering sgx_exitless_ocall %lu", code);
+    log_error("benl Entering sgx_exitless_ocall %lu", code);
     /* perform OCALL with enclave exit if no RPC queue (i.e., no exitless); no need for atomics
      * because this pointer is set only once at enclave initialization */
     if (!g_rpc_queue)
@@ -143,7 +143,7 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
 
 __attribute_no_sanitize_address
 noreturn void ocall_exit(int exitcode, int is_exitgroup) {
-    log_debug("benl Entering ocall_exit %d", exitcode);
+    log_error("benl Entering ocall_exit %d", exitcode);
     struct ocall_exit* ocall_exit_args;
 
     sgx_prepare_ustack();
@@ -178,7 +178,7 @@ noreturn void ocall_exit(int exitcode, int is_exitgroup) {
 }
 
 int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int fd, off_t offset) {
-    log_debug("benl Entering ocall_mmap_untrusted size: %lu, prot: %d, flags: %d, fd: %d, offset: %lu", size, prot, flags, fd, offset);
+    log_error("benl Entering ocall_mmap_untrusted size: %lu, prot: %d, flags: %d, fd: %d, offset: %lu", size, prot, flags, fd, offset);
     int retval = 0;
     struct ocall_mmap_untrusted* ocall_mmap_args;
 
@@ -248,7 +248,7 @@ int ocall_mmap_untrusted(void** addrptr, size_t size, int prot, int flags, int f
 }
 
 int ocall_munmap_untrusted(const void* addr, size_t size) {
-    log_debug("benl Entering ocall_munmap_untrusted size: %lu", size);
+    log_error("benl Entering ocall_munmap_untrusted size: %lu", size);
     int retval = 0;
     struct ocall_munmap_untrusted* ocall_munmap_args;
 
@@ -291,7 +291,7 @@ int ocall_munmap_untrusted(const void* addr, size_t size) {
  * indicates whether explicit munmap is needed at the end of such OCALL.
  */
 static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_munmap) {
-    log_debug("benl Entering ocall_mmap_untrusted_cache size: %lu", size);
+    log_error("benl Entering ocall_mmap_untrusted_cache size: %lu", size);
     int ret;
 
     *addrptr = NULL;
@@ -343,7 +343,7 @@ static int ocall_mmap_untrusted_cache(size_t size, void** addrptr, bool* need_mu
 }
 
 static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munmap) {
-    log_debug("benl Entering ocall_munmap_untrusted_cache size: %lu", size);
+    log_error("benl Entering ocall_munmap_untrusted_cache size: %lu", size);
     if (need_munmap) {
         ocall_munmap_untrusted(addr, size);
         /* there is not much we can do in case of error */
@@ -354,7 +354,7 @@ static void ocall_munmap_untrusted_cache(void* addr, size_t size, bool need_munm
 }
 
 int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[static 4]) {
-    log_debug("benl Entering ocall_cpuid leaf: %u, subleaf: %u", leaf, subleaf);
+    log_error("benl Entering ocall_cpuid leaf: %u, subleaf: %u", leaf, subleaf);
     int retval = 0;
     struct ocall_cpuid* ocall_cpuid_args;
 
@@ -391,7 +391,7 @@ int ocall_cpuid(unsigned int leaf, unsigned int subleaf, unsigned int values[sta
 }
 
 int ocall_open(const char* pathname, int flags, unsigned short mode) {
-    log_debug("benl Entering ocall_open pathname: %s, flags: %d", pathname, flags);
+    log_error("benl Entering ocall_open pathname: %s, flags: %d", pathname, flags);
     int retval = 0;
     size_t path_size = pathname ? strlen(pathname) + 1 : 0;
     struct ocall_open* ocall_open_args;
@@ -430,7 +430,7 @@ int ocall_open(const char* pathname, int flags, unsigned short mode) {
 }
 
 int ocall_close(int fd) {
-    log_debug("benl Entering ocall_close fd: %d", fd);
+    log_error("benl Entering ocall_close fd: %d", fd);
     int retval = 0;
     struct ocall_close* ocall_close_args;
 
@@ -460,7 +460,7 @@ int ocall_close(int fd) {
 }
 
 ssize_t ocall_read(int fd, void* buf, size_t count) {
-    log_debug("benl Entering ocall_read fd: %d", fd);
+    log_error("benl Entering ocall_read fd: %d", fd);
     ssize_t retval = 0;
     void* obuf = NULL;
     struct ocall_read* ocall_read_args;
@@ -520,7 +520,7 @@ out:
 }
 
 ssize_t ocall_write(int fd, const void* buf, size_t count) {
-    log_debug("benl Entering ocall_write fd: %d", fd);
+    log_error("benl Entering ocall_write fd: %d", fd);
     ssize_t retval = 0;
     void* obuf = NULL;
     struct ocall_write* ocall_write_args;
@@ -587,7 +587,7 @@ out:
 }
 
 ssize_t ocall_pread(int fd, void* buf, size_t count, off_t offset) {
-    log_debug("benl Entering ocall_pread fd: %d", fd);
+    log_error("benl Entering ocall_pread fd: %d", fd);
     long retval = 0;
     void* obuf = NULL;
     struct ocall_pread* ocall_pread_args;
@@ -648,7 +648,7 @@ out:
 }
 
 ssize_t ocall_pwrite(int fd, const void* buf, size_t count, off_t offset) {
-    log_debug("benl Entering ocall_pwrite fd: %d", fd);
+    log_error("benl Entering ocall_pwrite fd: %d", fd);
     long retval = 0;
     void* obuf = NULL;
     struct ocall_pwrite* ocall_pwrite_args;
@@ -717,7 +717,7 @@ out:
 }
 
 int ocall_fstat(int fd, struct stat* buf) {
-    log_debug("benl Entering ocall_fstat fd: %d", fd);
+    log_error("benl Entering ocall_fstat fd: %d", fd);
     int retval = 0;
     struct ocall_fstat* ocall_fstat_args;
 
@@ -753,7 +753,7 @@ int ocall_fstat(int fd, struct stat* buf) {
 }
 
 int ocall_fionread(int fd) {
-    log_debug("benl Entering ocall_fionread fd: %d", fd);
+    log_error("benl Entering ocall_fionread fd: %d", fd);
     int retval = 0;
     struct ocall_fionread* ocall_fionread_args;
 
@@ -780,7 +780,7 @@ int ocall_fionread(int fd) {
 }
 
 int ocall_fsetnonblock(int fd, int nonblocking) {
-    log_debug("benl Entering ocall_fsetnonblock fd: %d", fd);
+    log_error("benl Entering ocall_fsetnonblock fd: %d", fd);
     int retval = 0;
     struct ocall_fsetnonblock* ocall_fsetnonblock_args;
 
@@ -810,7 +810,7 @@ int ocall_fsetnonblock(int fd, int nonblocking) {
 
 /* TODO: Unneeded OCALL? Gramine doesn't have a notion of permissions currently. */
 int ocall_fchmod(int fd, unsigned short mode) {
-    log_debug("benl Entering ocall_fchmod fd: %d", fd);
+    log_error("benl Entering ocall_fchmod fd: %d", fd);
     int retval = 0;
     struct ocall_fchmod* ocall_fchmod_args;
 
@@ -840,7 +840,7 @@ int ocall_fchmod(int fd, unsigned short mode) {
 }
 
 int ocall_fsync(int fd) {
-    log_debug("benl Entering ocall_fsync fd: %d", fd);
+    log_error("benl Entering ocall_fsync fd: %d", fd);
     int retval = 0;
     struct ocall_fsync* ocall_fsync_args;
 
@@ -867,7 +867,7 @@ int ocall_fsync(int fd) {
 }
 
 int ocall_ftruncate(int fd, uint64_t length) {
-    log_debug("benl Entering ocall_ftruncate fd: %d", fd);
+    log_error("benl Entering ocall_ftruncate fd: %d", fd);
     int retval = 0;
     struct ocall_ftruncate* ocall_ftruncate_args;
 
@@ -896,7 +896,7 @@ int ocall_ftruncate(int fd, uint64_t length) {
 }
 
 int ocall_mkdir(const char* pathname, unsigned short mode) {
-    log_debug("benl Entering ocall_mkdir pathname: %s", pathname);
+    log_error("benl Entering ocall_mkdir pathname: %s", pathname);
     int retval = 0;
     size_t path_size = pathname ? strlen(pathname) + 1 : 0;
     struct ocall_mkdir* ocall_mkdir_args;
@@ -933,7 +933,7 @@ int ocall_mkdir(const char* pathname, unsigned short mode) {
 }
 
 int ocall_getdents(int fd, struct linux_dirent64* dirp, size_t dirp_size) {
-    log_debug("benl Entering ocall_getdents fd: %d", fd);
+    log_error("benl Entering ocall_getdents fd: %d", fd);
     int retval = 0;
     struct ocall_getdents* ocall_getdents_args;
 
@@ -997,7 +997,7 @@ out:
 }
 
 int ocall_resume_thread(void* tcs) {
-    log_debug("benl Entering ocall_resume_thread");
+    log_error("benl Entering ocall_resume_thread");
     int retval = 0;
     do {
         retval = sgx_exitless_ocall(OCALL_RESUME_THREAD, tcs);
@@ -1011,7 +1011,7 @@ int ocall_resume_thread(void* tcs) {
 }
 
 int ocall_clone_thread(void* dynamic_tcs) {
-    log_debug("benl Entering ocall_clone_thread");
+    log_error("benl Entering ocall_clone_thread");
     int retval = 0;
     /* FIXME: if there was an EINTR, there may be an untrusted thread left over */
     do {
@@ -1031,7 +1031,7 @@ int ocall_clone_thread(void* dynamic_tcs) {
 
 int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
                          size_t reserved_mem_ranges_len, int* out_stream_fd) {
-    log_debug("benl Entering ocall_create_process");
+    log_error("benl Entering ocall_create_process");
     int ret;
     void* urts_reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = reserved_mem_ranges_len * sizeof(*reserved_mem_ranges);
@@ -1105,7 +1105,7 @@ out:
 }
 
 int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
-    log_debug("benl Entering ocall_futex");
+    log_error("benl Entering ocall_futex");
     int retval = 0;
     struct ocall_futex* ocall_futex_args;
 
@@ -1165,7 +1165,7 @@ int ocall_futex(uint32_t* futex, int op, int val, uint64_t* timeout_us) {
 }
 
 int ocall_socket(int family, int type, int protocol) {
-    log_debug("benl Entering ocall_socket, family: %d, type: %d, protocol: %d", family, type, protocol);
+    log_error("benl Entering ocall_socket, family: %d, type: %d, protocol: %d", family, type, protocol);
     int ret;
     void* old_ustack = sgx_prepare_ustack();
     struct ocall_socket* ocall_socket_args;
@@ -1196,7 +1196,7 @@ out:
 }
 
 int ocall_bind(int fd, struct sockaddr_storage* addr, size_t addrlen, uint16_t* out_new_port) {
-    log_debug("benl Entering ocall_bind, fd: %d", fd);
+    log_error("benl Entering ocall_bind, fd: %d", fd);
     int ret;
     void* old_ustack = sgx_prepare_ustack();
     struct ocall_bind* ocall_bind_args;
@@ -1245,7 +1245,7 @@ out:
 }
 
 int ocall_listen_simple(int fd, unsigned int backlog) {
-    log_debug("benl Entering ocall_listen_simple, fd: %d", fd);
+    log_error("benl Entering ocall_listen_simple, fd: %d", fd);
     int ret;
     void* old_ustack = sgx_prepare_ustack();
     struct ocall_listen_simple* ocall_listen_args;
@@ -1274,7 +1274,7 @@ out:
 
 int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct sockaddr* addr,
                  size_t* addrlen) {
-    log_debug("benl Entering ocall_listen");
+    log_error("benl Entering ocall_listen");
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     struct ocall_listen* ocall_listen_args;
@@ -1328,7 +1328,7 @@ int ocall_listen(int domain, int type, int protocol, int ipv6_v6only, struct soc
 
 int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sockaddr* local_addr,
                  size_t* local_addrlen, int options) {
-    log_debug("benl Entering ocall_accept, sockfd: %d", sockfd);
+    log_error("benl Entering ocall_accept, sockfd: %d", sockfd);
     int retval = 0;
     size_t len = addrlen ? *addrlen : 0;
     size_t local_len = local_addrlen ? *local_addrlen : 0;
@@ -1397,7 +1397,7 @@ int ocall_accept(int sockfd, struct sockaddr* addr, size_t* addrlen, struct sock
 
 int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const struct sockaddr* addr,
                   size_t addrlen, struct sockaddr* bind_addr, size_t* bind_addrlen) {
-    log_debug("benl Entering ocall_connect, domain: %d", domain);
+    log_error("benl Entering ocall_connect, domain: %d", domain);
     int retval = 0;
     size_t bind_len = bind_addrlen ? *bind_addrlen : 0;
     struct ocall_connect* ocall_connect_args;
@@ -1458,7 +1458,7 @@ int ocall_connect(int domain, int type, int protocol, int ipv6_v6only, const str
 
 int ocall_connect_simple(int fd, bool nonblocking, struct sockaddr_storage* addr, size_t* addrlen,
                          bool* out_inprogress) {
-    log_debug("benl Entering ocall_connect_simple, fd: %d", fd);
+    log_error("benl Entering ocall_connect_simple, fd: %d", fd);
     int ret;
     void* old_ustack = sgx_prepare_ustack();
     struct ocall_connect_simple* ocall_connect_args;
@@ -1531,7 +1531,7 @@ out:
 
 ssize_t ocall_recv(int sockfd, struct iovec* iov, size_t iov_len, void* addr, size_t* addrlenptr,
                    void* control, size_t* controllenptr, unsigned int flags) {
-    log_debug("benl Entering ocall_recv, sockfd: %d", sockfd);
+    log_error("benl Entering ocall_recv, sockfd: %d", sockfd);
     ssize_t retval;
     void* obuf = NULL;
     bool is_obuf_mapped = false;
@@ -1653,7 +1653,7 @@ out:
 
 ssize_t ocall_send(int sockfd, const struct iovec* iov, size_t iov_len, const void* addr,
                    size_t addrlen, void* control, size_t controllen, unsigned int flags) {
-    log_debug("benl Entering ocall_send, sockfd: %d", sockfd);
+    log_error("benl Entering ocall_send, sockfd: %d", sockfd);
     ssize_t retval = 0;
     void* obuf = NULL;
     bool is_obuf_mapped = false;
@@ -1732,7 +1732,7 @@ out:
 }
 
 int ocall_setsockopt(int sockfd, int level, int optname, const void* optval, size_t optlen) {
-    log_debug("benl Entering ocall_setsockopt, sockfd: %d", sockfd);
+    log_error("benl Entering ocall_setsockopt, sockfd: %d", sockfd);
     int retval = 0;
     struct ocall_setsockopt* ocall_setsockopt_args;
 
@@ -1774,7 +1774,7 @@ int ocall_setsockopt(int sockfd, int level, int optname, const void* optval, siz
 }
 
 int ocall_shutdown(int sockfd, int how) {
-    log_debug("benl Entering ocall_shutdown, sockfd: %d", sockfd);
+    log_error("benl Entering ocall_shutdown, sockfd: %d", sockfd);
     int retval = 0;
     struct ocall_shutdown* ocall_shutdown_args;
 
@@ -1803,7 +1803,7 @@ int ocall_shutdown(int sockfd, int how) {
 }
 
 int ocall_gettime(uint64_t* microsec_ptr) {
-    log_debug("benl Entering ocall_gettime");
+    log_error("benl Entering ocall_gettime");
     int retval = 0;
     struct ocall_gettime* ocall_gettime_args;
 
@@ -1849,7 +1849,7 @@ int ocall_gettime(uint64_t* microsec_ptr) {
 }
 
 void ocall_sched_yield(void) {
-    log_debug("benl Entering ocall_sched_yield");
+    log_error("benl Entering ocall_sched_yield");
     void* old_ustack = sgx_prepare_ustack();
 
     /* NOTE: no reason to use exitless for `sched_yield` and it always succeeds. */
@@ -1859,7 +1859,7 @@ void ocall_sched_yield(void) {
 }
 
 int ocall_poll(struct pollfd* fds, size_t nfds, uint64_t* timeout_us) {
-    log_debug("benl Entering ocall_pol");
+    log_error("benl Entering ocall_pol");
     int retval = 0;
     size_t nfds_bytes = nfds * sizeof(struct pollfd);
     struct ocall_poll* ocall_poll_args;
@@ -1915,7 +1915,7 @@ out:
 }
 
 int ocall_rename(const char* oldpath, const char* newpath) {
-    log_debug("benl Entering ocall_rename, oldpath: %s, newpath: %s", oldpath, newpath);
+    log_error("benl Entering ocall_rename, oldpath: %s, newpath: %s", oldpath, newpath);
     int retval = 0;
     size_t old_size = oldpath ? strlen(oldpath) + 1 : 0;
     size_t new_size = newpath ? strlen(newpath) + 1 : 0;
@@ -1955,7 +1955,7 @@ int ocall_rename(const char* oldpath, const char* newpath) {
 }
 
 int ocall_delete(const char* pathname) {
-    log_debug("benl Entering ocall_delete pathname: %s", pathname);
+    log_error("benl Entering ocall_delete pathname: %s", pathname);
     int retval = 0;
     size_t path_size = pathname ? strlen(pathname) + 1 : 0;
     struct ocall_delete* ocall_delete_args;
@@ -1991,7 +1991,7 @@ int ocall_delete(const char* pathname) {
 }
 
 int ocall_debug_map_add(const char* name, void* addr) {
-    log_debug("benl Entering ocall_debug_map_add, name: %s", name);
+    log_error("benl Entering ocall_debug_map_add, name: %s", name);
     int retval = 0;
 
 #ifdef DEBUG
@@ -2029,7 +2029,7 @@ int ocall_debug_map_add(const char* name, void* addr) {
 }
 
 int ocall_debug_map_remove(void* addr) {
-    log_debug("benl Entering ocall_debug_map_remove");
+    log_error("benl Entering ocall_debug_map_remove");
     int retval = 0;
 
 #ifdef DEBUG
@@ -2058,7 +2058,7 @@ int ocall_debug_map_remove(void* addr) {
 }
 
 int ocall_debug_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
-    log_debug("benl Entering ocall_debug_describe_location");
+    log_error("benl Entering ocall_debug_describe_location");
 #ifdef DEBUG
     int retval = 0;
 
@@ -2100,7 +2100,7 @@ out:
 }
 
 int ocall_eventfd(int flags) {
-    log_debug("benl Entering ocall_eventfd");
+    log_error("benl Entering ocall_eventfd");
     int retval = 0;
     struct ocall_eventfd* ocall_eventfd_args;
 
@@ -2128,7 +2128,7 @@ int ocall_eventfd(int flags) {
 }
 
 int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
-    log_debug("benl Entering ocall_ioctl");
+    log_error("benl Entering ocall_ioctl");
     int retval;
     struct ocall_ioctl* ocall_ioctl_args;
 
@@ -2154,7 +2154,7 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
 
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                     const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
-    log_debug("benl Entering ocall_get_quote");
+    log_error("benl Entering ocall_get_quote");
     int retval;
     struct ocall_get_quote* ocall_quote_args;
     char* buf = NULL;
@@ -2235,7 +2235,7 @@ out:
 }
 
 int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len) {
-    log_debug("benl Entering ocall_sched_setaffinity");
+    log_error("benl Entering ocall_sched_setaffinity");
     int retval = 0;
     struct ocall_sched_setaffinity* ocall_sched_args;
 
@@ -2270,7 +2270,7 @@ int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_
 }
 
 static bool is_cpumask_valid(unsigned long* cpu_mask, size_t cpu_mask_len) {
-    log_debug("benl Entering is_cpumask_valid");
+    log_error("benl Entering is_cpumask_valid");
     /* Linux seems to allow setting affinity to offline threads, so we only need to check against
      * the count of possible threads. */
     size_t max_bitmask_len = BITS_TO_LONGS(g_pal_public_state.topo_info.threads_cnt);
@@ -2295,7 +2295,7 @@ static bool is_cpumask_valid(unsigned long* cpu_mask, size_t cpu_mask_len) {
 }
 
 int ocall_sched_getaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len) {
-    log_debug("benl Entering ocall_sched_getaffinity");
+    log_error("benl Entering ocall_sched_getaffinity");
     int retval = 0;
     struct ocall_sched_getaffinity* ocall_sched_args;
 
@@ -2352,7 +2352,7 @@ out:
 }
 
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot) {
-    log_debug("benl Entering ocall_edmm_restrict_pages_perm");
+    log_error("benl Entering ocall_edmm_restrict_pages_perm");
     int ret;
     void* old_ustack = sgx_prepare_ustack();
 
@@ -2385,7 +2385,7 @@ out:
 }
 
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type) {
-    log_debug("benl Entering ocall_edmm_modify_pages_type");
+    log_error("benl Entering ocall_edmm_modify_pages_type");
     int ret;
     void* old_ustack = sgx_prepare_ustack();
 
@@ -2418,7 +2418,7 @@ out:
 }
 
 int ocall_edmm_remove_pages(uint64_t addr, size_t count) {
-    log_debug("benl Entering ocall_edmm_remove_pages");
+    log_error("benl Entering ocall_edmm_remove_pages");
     int ret;
     void* old_ustack = sgx_prepare_ustack();
 
