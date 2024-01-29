@@ -495,9 +495,9 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
             goto out;
         }
     } else {
-        lock(&in_hdl->pos_lock);
+        lock_pos_handle(in_hdl);
         pos_in = in_hdl->pos;
-        unlock(&in_hdl->pos_lock);
+        unlock_pos_handle(in_hdl);
     }
 
     if (!(out_hdl->acc_mode & MAY_WRITE)) {
@@ -523,9 +523,9 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
             break;
         }
 
-        lock(&out_hdl->pos_lock);
+        lock_pos_handle(out_hdl);
         ssize_t y = out_hdl->fs->fs_ops->write(out_hdl, buf, x, &out_hdl->pos);
-        unlock(&out_hdl->pos_lock);
+        unlock_pos_handle(out_hdl);
         if (y < 0) {
             ret = y;
             goto out_update;
@@ -551,9 +551,9 @@ out_update:
     if (offset) {
         *offset = pos_in;
     } else {
-        lock(&in_hdl->pos_lock);
+        lock_pos_handle(in_hdl);
         in_hdl->pos = pos_in;
-        unlock(&in_hdl->pos_lock);
+        unlock_pos_handle(in_hdl);
     }
 
 out:
