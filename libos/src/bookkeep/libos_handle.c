@@ -49,6 +49,7 @@ static void lock_unlock_pos_handle(struct libos_handle* hdl, bool is_lock) {
         case TYPE_PIPE:
         case TYPE_SOCK:
         case TYPE_EVENTFD:
+        case TYPE_TIMERFD:
             /* these handle types do not have a position, so no need to lock */
             break;
         default:

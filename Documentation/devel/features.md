@@ -2865,7 +2865,7 @@ Gramine implements alarm clocks via `alarm()`.
 Gramine implements timers that notify via file descriptors: `timerfd_create()`, `timerfd_settime()`
 and `timerfd_gettime()`. The timerfd object is created inside Gramine, and all operations are
 resolved entirely inside Gramine. Each timerfd object is associated with a dummy eventfd created on
-the host. This is purely for triggering read/write notifications (e.g., in epoll); timerfd data is
+the host. This is purely for triggering read notifications (e.g., in epoll); timerfd data is
 verified inside Gramine and is never exposed to the host. Since the host is used purely for
 notifications, a malicious host can only induce Denial of Service (DoS) attacks.
 

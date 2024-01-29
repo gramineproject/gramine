@@ -7,17 +7,30 @@
  *
  * The timerfd object is created inside Gramine, and all operations are resolved entirely inside
  * Gramine. Each timerfd object is associated with a dummy eventfd created on the host. This is
- * purely for triggering read/write notifications (e.g., in epoll); timerfd data is verified inside
+ * purely for triggering read notifications (e.g., in epoll); timerfd data is verified inside
  * Gramine and is never exposed to the host. Since the host is used purely for notifications, a
- * malicious host can only induce Denial of Service (DoS) attacks. The dummy eventfd object is
- * hardened following the similar approaches as Gramine's `eventfd`/`eventfd2` syscall
- * implementation, see "libos/src/sys/libos_eventfd.c" for details.
+ * malicious host can only induce Denial of Service (DoS) attacks.
  *
  * The emulation is currently implemented at the level of a single process. The emulation may work
  * for multi-process applications, e.g., if the child process inherits the timerfd object but
  * doesn't use it. However, multi-process support is brittle and thus disabled by default (Gramine
  * will issue a warning). To enable it still, set the manifest option
  * `sys.experimental__allow_timerfd_fork`.
+ *
+ * The host's timerfd object is "dummy" and used purely for notifications -- to unblock blocking
+ * read/select/poll/epoll system calls. The read notify logic is already hardened, by
+ * double-checking that the object was indeed updated. However, there are three possible attacks on
+ * polling mechanisms (select/poll/epoll):
+ *
+ * a. Malicious host may inject the notification too early: POLLIN when nothing was written
+ *    yet. This may lead to a synchronization failure of the app. To prevent this, eventfd
+ *    implements a callback `post_poll()` where it verifies that some data was indeed written (i.e.,
+ *    that the notification is not spurious).
+ * b. Malicious host may inject the notification too late or not send a notification at all.
+ *    This is a Denial of Service (DoS), which we don't care about.
+ * c. Malicious host may inject POLLERR, POLLHUP, POLLRDHUP, POLLNVAL, POLLOUT. This is impossible
+ *    as we control eventfd objects inside the LibOS, and we never raise such conditions. So the
+ *    callback `post_poll()` panics if it detects such a return event.
  */
 
 #include "libos_checkpoint.h"
@@ -52,12 +65,14 @@ int init_timerfd(void) {
     return 0;
 }
 
-static void timerfd_dummy_host_write(struct libos_handle* hdl, uint64_t host_val) {
-    uint64_t buf_dummy_host_val = host_val;
+static void timerfd_dummy_host_write(struct libos_handle* hdl) {
+    int ret;
+    uint64_t buf_dummy_host_val = 1;
     size_t dummy_host_val_count = sizeof(buf_dummy_host_val);
-
-    int ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
+    do {
+        ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                              &buf_dummy_host_val);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
         /* must not happen in benign case, consider it an attack and panic */
         BUG();
@@ -125,7 +140,7 @@ static void timerfd_update(struct libos_handle* hdl) {
         hdl->info.timerfd.dummy_host_val++;
 
         /* perform a write (not supposed to block) to send an event to reading/polling threads */
-        timerfd_dummy_host_write(hdl, /*host_val=*/1);
+        timerfd_dummy_host_write(hdl);
     }
 
     spinlock_unlock(&hdl->info.timerfd.expiration_lock);

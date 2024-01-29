@@ -4,7 +4,8 @@
  */
 
 /*
- * This file contains code for implementation of 'timerfd' filesystem.
+ * This file contains code for implementation of "timerfd" filesystem. For more information, see
+ * `libos/src/sys/libos_timerfd.c`.
  */
 
 #include "libos_fs.h"
@@ -14,22 +15,28 @@
 #include "linux_abi/errors.h"
 #include "pal.h"
 
-static void timerfd_dummy_host_read(struct libos_handle* hdl, uint64_t* out_host_val) {
+static void timerfd_dummy_host_read(struct libos_handle* hdl) {
+    int ret;
     uint64_t buf_dummy_host_val = 0;
     size_t dummy_host_val_count = sizeof(buf_dummy_host_val);
-
-    int ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
+    do {
+        ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                             &buf_dummy_host_val);
+    } while (ret == -PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
-        /* should not happen in benign case, but can happen under racing, e.g. threads may race on
-         * the same eventfd event, one of them wins and updates `dummy_host_val` and the other one
-         * looses and gets an unexpected `dummy_host_val` */
-        log_warning("timerfd dummy host read failed or got unexpected value");
-        return;
+        /* must not happen in benign case, consider it an attack and panic */
+        BUG();
     }
+}
 
-    if (out_host_val)
-        *out_host_val = buf_dummy_host_val;
+static void timerfd_dummy_host_wait_for_read(struct libos_handle* hdl) {
+    pal_wait_flags_t wait_for_events = PAL_WAIT_READ;
+    pal_wait_flags_t ret_events = 0;
+    int ret = PalStreamsWaitEvents(1, &hdl->pal_handle, &wait_for_events, &ret_events, NULL);
+    if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED) {
+        BUG();
+    }
+    (void)ret_events; /* we don't care what events the host returned, we can't trust them anyway */
 }
 
 static ssize_t timerfd_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
@@ -47,30 +54,18 @@ static ssize_t timerfd_read(struct libos_handle* hdl, void* buf, size_t count, f
             ret = -EAGAIN;
             goto out;
         }
-        /* must block -- use the host's blocking read() on a dummy eventfd */
-        if (hdl->info.timerfd.dummy_host_val) {
-            /* value on host is non-zero, must perform a read to make it zero (and thus the next
-             * read will become blocking) */
-            uint64_t host_val = 0;
-            timerfd_dummy_host_read(hdl, &host_val);
-            if (host_val != hdl->info.timerfd.dummy_host_val)
-                BUG();
-            hdl->info.timerfd.dummy_host_val = 0;
-        }
-
         spinlock_unlock(&hdl->info.timerfd.expiration_lock);
-        /* blocking read to wait for some value (we don't care which value) */
-        timerfd_dummy_host_read(hdl, /*out_host_val=*/NULL);
+        timerfd_dummy_host_wait_for_read(hdl);
         spinlock_lock(&hdl->info.timerfd.expiration_lock);
-        hdl->info.timerfd.dummy_host_val = 0;
     }
 
     memcpy(buf, &hdl->info.timerfd.num_expirations, sizeof(uint64_t));
     hdl->info.timerfd.num_expirations = 0;
 
-    /* perform a read (not supposed to block) to clear the event from writing/polling threads */
+    /* perform a read (not supposed to block) to clear the event from polling threads and to send an
+     * event to writing threads */
     if (hdl->info.timerfd.dummy_host_val) {
-        timerfd_dummy_host_read(hdl, /*out_host_val=*/NULL);
+        timerfd_dummy_host_read(hdl);
         hdl->info.timerfd.dummy_host_val = 0;
     }
 
@@ -84,22 +79,18 @@ out:
 static void timerfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_ret_events) {
     assert(hdl->type == TYPE_TIMERFD);
 
-    if (*pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
+    if (*pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP | PAL_WAIT_WRITE)) {
         /* impossible: we control eventfd inside the LibOS, and we never raise such conditions */
         BUG();
     }
 
     spinlock_lock(&hdl->info.timerfd.expiration_lock);
     if (*pal_ret_events & PAL_WAIT_READ) {
-        /* there is data to read: verify if counter has value greater than zero */
+        /* there is data to read: verify if timerfd has number of expirations greater than zero */
         if (!hdl->info.timerfd.num_expirations) {
             /* spurious or malicious notification -- for now we don't BUG but ignore it */
             *pal_ret_events &= ~PAL_WAIT_READ;
         }
-    }
-    if (*pal_ret_events & PAL_WAIT_WRITE) {
-        /* spurious or malicious notification */
-        BUG();
     }
     spinlock_unlock(&hdl->info.timerfd.expiration_lock);
 }
