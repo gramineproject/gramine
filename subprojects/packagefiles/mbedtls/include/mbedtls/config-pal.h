@@ -3,7 +3,7 @@
  * Copyright (C) 2021 Intel Corp.
  */
 
-/* This mbedTLS config is for v3.5.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
+/* This mbedTLS config is for v3.5.2 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
 #pragma once
 

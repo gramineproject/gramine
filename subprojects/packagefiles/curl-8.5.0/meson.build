@@ -13,7 +13,7 @@ curl = custom_target('curl',
         meson.build_root() / 'subprojects',
     ],
 
-    depends: subproject('mbedtls-mbedtls-3.5.0').get_variable('mbedtls_curl_libs'),
+    depends: subproject('mbedtls-mbedtls-3.5.2').get_variable('mbedtls_curl_libs'),
     output: curl_libs_output,
 )
 

@@ -1,4 +1,4 @@
-project('mbedtls', 'c', version: '3.5.0')
+project('mbedtls', 'c', version: '3.5.2')
 
 cc = meson.get_compiler('c')
 host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
@@ -23,7 +23,7 @@ mbedtls_libs = custom_target('mbedtls',
     command: [
         find_program('compile-gramine.sh'),
         '@CURRENT_SOURCE_DIR@',
-        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.0',
+        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.2',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         '@OUTPUT@',
@@ -32,7 +32,7 @@ mbedtls_libs = custom_target('mbedtls',
         'SHARED=1',
     ],
 
-    input: ['mbedtls-mbedtls-3.5.0/Makefile', 'gramine.patch'],
+    input: ['mbedtls-mbedtls-3.5.2/Makefile', 'gramine.patch'],
 
     # NOTE we need real sonames here (.so.N, not .so), please keep synced with
     # mbedtls/library/Makefile, variables SOEXT_{TLS,X509,CRYPTO}
@@ -69,14 +69,14 @@ endif
 
 # We rely on the fact that for `mbedtls_gramine` package, we don't need any changes in the default
 # mbedTLS headers
-install_subdir('mbedtls-mbedtls-3.5.0/include/mbedtls', install_dir: get_option('includedir') / 'gramine')
-install_subdir('mbedtls-mbedtls-3.5.0/include/psa', install_dir: get_option('includedir') / 'gramine')
+install_subdir('mbedtls-mbedtls-3.5.2/include/mbedtls', install_dir: get_option('includedir') / 'gramine')
+install_subdir('mbedtls-mbedtls-3.5.2/include/psa', install_dir: get_option('includedir') / 'gramine')
 
 mbedtls_pal_libs = custom_target('mbedtls_pal',
     command: [
         find_program('compile-pal.sh'),
         '@CURRENT_SOURCE_DIR@',
-        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.0',
+        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.2',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         '@OUTPUT@',
@@ -84,7 +84,7 @@ mbedtls_pal_libs = custom_target('mbedtls_pal',
         'SUFFIX=_pal',
     ],
 
-    input: ['mbedtls-mbedtls-3.5.0/Makefile', 'gramine.patch'],
+    input: ['mbedtls-mbedtls-3.5.2/Makefile', 'gramine.patch'],
 
     output: [
         'libmbedcrypto_pal.a',
@@ -99,14 +99,14 @@ mbedtls_curl_libs = custom_target('mbedtls_curl',
     command: [
         find_program('compile-curl.sh'),
         '@CURRENT_SOURCE_DIR@',
-        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.0',
+        '@CURRENT_SOURCE_DIR@/mbedtls-mbedtls-3.5.2',
         meson.current_build_dir(),
         '@PRIVATE_DIR@',
         meson.build_root() / 'subprojects',
         '@OUTPUT@',
     ],
 
-    input: ['mbedtls-mbedtls-3.5.0/Makefile', 'gramine.patch'],
+    input: ['mbedtls-mbedtls-3.5.2/Makefile', 'gramine.patch'],
 
     output: [
         'libmbedcrypto.a',
@@ -117,7 +117,7 @@ mbedtls_curl_libs = custom_target('mbedtls_curl',
     build_by_default: true,
 )
 
-mbedtls_inc = include_directories('include', 'mbedtls-mbedtls-3.5.0/include')
+mbedtls_inc = include_directories('include', 'mbedtls-mbedtls-3.5.2/include')
 
 mbedtls_static_dep = declare_dependency(
     link_with: [mbedtls_libs[6], mbedtls_libs[7], mbedtls_libs[8]],
