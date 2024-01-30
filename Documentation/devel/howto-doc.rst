@@ -42,9 +42,7 @@ Installing prerequisites
 ------------------------
 
 Change directory to ``Documentation``, install prerequisites including Doxygen,
-Breathe and Sphinx. Gramine documentation requires version 1.8 of Sphinx. The
-documentation is built with python3; if you have similar packages in python2, it
-may create problems; we recommend removing any similar packages in python2.
+Breathe and Sphinx. Gramine documentation requires version 3.4 of Sphinx.
 
 .. code-block:: sh
 

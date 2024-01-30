@@ -1,15 +1,25 @@
-sphinx==1.8.0
-breathe<4.13.0
+sphinx==3.4.*
 recommonmark==0.7.1
-sphinx_rtd_theme<1
+sphinx_rtd_theme
 tomli>=1.1.0
 
-# Work around Sphinx/docutils incompatibility, see https://github.com/sphinx-doc/sphinx/issues/9727.
-# TODO: This shouldn't be necessary once we upgrade to newer Sphinx (Sphinx 4.2.0 is not yet
-# compatible with new docutils, but pins the docutils version by itself).
-docutils<0.18
-
 # jinja 3.1.0 removed quite a few functions used by sphinx
+# TODO: remove this after sphinx>=4
 # https://jinja.palletsprojects.com/en/3.1.x/changes/#version-3-1-0
 # https://github.com/pallets/jinja/pull/1544
 jinja2<3.1
+
+# those require sphinx >= 5.0
+# https://github.com/sphinx-doc/sphinxcontrib-applehelp/commit/604e2cb89264b6e2669ac8c15a70d93c1e06d9d3
+sphinxcontrib-applehelp<1.0.5
+# https://github.com/sphinx-doc/sphinxcontrib-devhelp/commit/448fbf6ef773d1fcc9372baf6c8bd8ac27a0a337
+sphinxcontrib-devhelp<1.0.3
+# https://github.com/sphinx-doc/sphinxcontrib-htmlhelp/commit/5a4cbeee53b7bd65453b1847805e6432cfd34b3c
+sphinxcontrib-htmlhelp<2.0.2
+# https://github.com/sphinx-doc/sphinxcontrib-serializinghtml/commit/4ae674533ed62a2da64e7d69d5be50baa35bc16d
+sphinxcontrib-serializinghtml<1.1.6
+# https://github.com/sphinx-doc/sphinxcontrib-qthelp/commit/73d2bfb73e02c16ced9dd84310dc44dda8ef26ff
+sphinxcontrib-qthelp<1.0.4
+
+# https://github.com/breathe-doc/breathe/pull/469
+breathe>=4.26.0,<4.27
