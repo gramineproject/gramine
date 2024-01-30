@@ -328,8 +328,10 @@ int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector,
     return 0;
 }
 
-/* iterate over the given range of enclave pages in the tracker and perform the specified `callback`
- * on the consecutive set/unset pages; return error when `callback` failed */
+/* This function iterates over the given range of enclave pages in the tracker and performs the
+ * specified `callback` on the consecutive set/unset pages; returns error when `callback` failed.
+ * Note that if the set/unset status of an enclave page recorded in the tracker is different from
+ * the input, the page will be skipped and the `callback` will not be executed. */
 static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
                       int (*callback)(uintptr_t, size_t, void*), void* arg) {
     int ret = 0;
