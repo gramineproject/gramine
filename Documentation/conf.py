@@ -126,7 +126,7 @@ else:
             subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
 
 def setup(app):
-    app.add_stylesheet('css/gramine.css')
+    app.add_css_file('css/gramine.css')
     app.connect('builder-inited', generate_doxygen)
 
 todo_include_todos = True
