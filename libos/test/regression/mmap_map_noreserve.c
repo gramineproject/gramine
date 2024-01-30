@@ -19,9 +19,11 @@
 #define _GNU_SOURCE
 #include <err.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -29,14 +31,32 @@
 
 #include "common.h"
 
+#define NUM_THREADS 5
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2 0xC000000
+#define TEST_NUM_PAGES 100
 #define TEST_FILE "testfile_map_noreserve"
+
+static long g_page_size = 0;
+
+static void* thread_func(void* arg) {
+    char data;
+    for (size_t i = 0; i < TEST_NUM_PAGES; i++) {
+        memcpy(&data, arg + i * g_page_size, sizeof(data));
+        if (data != 0)
+            return (void*)1;
+    }
+    return (void*)0;
+}
 
 int main(void) {
     const char expected_val = 0xff;
     unsigned int seed = time(NULL);
     srand(seed);
+
+    g_page_size = sysconf(_SC_PAGESIZE);
+    if (g_page_size < 0)
+        err(1, "sysconf");
 
     /* test anonymous mappings with `MAP_NORESERVE` */
     void* a = mmap(NULL, TEST_LENGTH, PROT_READ, MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1,
@@ -61,6 +81,28 @@ int main(void) {
 
     CHECK(munmap(a, TEST_LENGTH));
 
+    /* test threads racing to access the same page in anonymous mappings with `MAP_NORESERVE` */
+    a = mmap(NULL, TEST_NUM_PAGES * g_page_size, PROT_READ | PROT_WRITE,
+            MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+    if (a == MAP_FAILED)
+        err(1, "mmap 2");
+
+    pthread_t threads[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&threads[i], NULL, thread_func, a))
+            errx(1, "pthread_create failed");
+    }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        intptr_t ret;
+        if (pthread_join(threads[i], (void**)&ret))
+            errx(1, "pthread_join failed");
+        if (ret)
+            errx(1, "threads returned error");
+    }
+
+    CHECK(munmap(a, TEST_NUM_PAGES * g_page_size));
+
     /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write
      *
      * note: we test this because the `read(fd, <mmapped buffer>)` reads into a buffer that was
@@ -70,7 +112,7 @@ int main(void) {
     a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
     if (a == MAP_FAILED)
-        err(1, "mmap 2");
+        err(1, "mmap 3");
 
     int fd = CHECK(open(TEST_FILE, O_RDWR | O_CREAT | O_TRUNC | O_CLOEXEC, 0600));
 
@@ -95,7 +137,7 @@ int main(void) {
     a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE,
              MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
     if (a == MAP_FAILED)
-        err(1, "mmap 3");
+        err(1, "mmap 4");
 
     offset = rand() % TEST_LENGTH2;
     ((char*)a)[offset] = expected_val;

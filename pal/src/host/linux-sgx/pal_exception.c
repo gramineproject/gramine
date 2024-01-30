@@ -345,6 +345,13 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) &&
                                                    (prot_flags & PAL_PROT_LAZYALLOC)) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
+            /* The page's set/unset status will be double-checked against the status recorded in the
+             * enclave page tracker, and if it has already been committed, the page will be skipped.
+             * See `walk_pages()` in "pal/src/host/linux-sgx/enclave_edmm.c" for details.
+             *
+             * This avoids a potential security issue where a malicious host could trick us into
+             * committing the page twice (which effectively allowing the host to replace a random
+             * page with 0s) by removing the page and forcing a page fault. */
             int ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
                                              prot_flags);
             if (ret < 0) {
