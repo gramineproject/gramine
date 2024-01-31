@@ -311,5 +311,4 @@ const char* pal_event_name(enum pal_event event);
 
 extern int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* out_flags);
 
-int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
-                          size_t* bitvector_size);
+int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);

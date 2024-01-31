@@ -131,7 +131,10 @@ struct pal_dns_host_conf {
 struct pal_public_state {
     uint64_t instance_id;
     const char* host_type;
-    const char* attestation_type; /* currently only for Linux-SGX */
+
+    /* currently only for Linux-SGX */
+    const char* attestation_type;
+    bool edmm_enabled;
 
     /*
      * Handles and executables
@@ -187,10 +190,10 @@ struct pal_public_state* PalGetPalPublicState(void);
 
 /*! memory protection flags */
 typedef uint32_t pal_prot_flags_t; /* bitfield */
-#define PAL_PROT_READ      0x1
-#define PAL_PROT_WRITE     0x2
-#define PAL_PROT_EXEC      0x4
-#define PAL_PROT_WRITECOPY 0x8
+#define PAL_PROT_READ       0x1
+#define PAL_PROT_WRITE      0x2
+#define PAL_PROT_EXEC       0x4
+#define PAL_PROT_WRITECOPY  0x8
 #define PAL_PROT_LAZYALLOC 0x10
 #define PAL_PROT_MASK      0x1F
 
@@ -1009,16 +1012,14 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
  *
  * \param         addr           Starting address of the memory area.
  * \param         size           Size of the memory area.
- * \param[in,out] bitvector      On success, will contain the commit status of the pages in the
+ * \param[out]    bitvector      On success, will contain the commit status of the pages in the
  *                               memory area.
  * \param[in,out] bitvector_size On success, will contain the actual size of the bitvector.
  *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
  * be sent to the child process, as a perf optimization specific for SGX EDMM) and
- * madvise(MADV_DONTNEED) logic (to learn which pages need to be zeroized). Returns all-ones for
- * non-SGX non-EDMM PALs; returns a populated bitvector slice for SGX EDMM PAL.
+ * madvise(MADV_DONTNEED) logic (to learn which pages need to be uncommitted).
  */
-int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
-                         size_t* bitvector_size);
+int PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
 
 #undef INSIDE_PAL_H

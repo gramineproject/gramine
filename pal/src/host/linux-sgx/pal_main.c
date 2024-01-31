@@ -629,10 +629,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     init_slab_mgr();
 
     /* initialize the enclave page tracker as soon as we initialized the slab memory allocator */
-    if (edmm_enabled) {
-        initialize_enclave_page_tracker((uintptr_t)g_enclave_base, GET_ENCLAVE_TCB(enclave_size),
-                                        g_page_size);
-    }
+    if (edmm_enabled)
+        initialize_enclave_page_tracker((uintptr_t)g_enclave_base, GET_ENCLAVE_TCB(enclave_size));
 
     /* initialize enclave properties */
     ret = init_enclave();
@@ -716,6 +714,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                   edmm_enabled);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
+    g_pal_public_state.edmm_enabled = edmm_enabled;
 
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",

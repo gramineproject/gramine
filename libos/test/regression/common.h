@@ -30,3 +30,10 @@
     static_assert(IS_STATIC_ARRAY(arr), "not a static array");  \
     sizeof(arr) / sizeof(arr[0]);                               \
 })
+
+/* We need this artificial assignment in READ_ONCE because of a GCC bug:
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99258
+ */
+#define READ_ONCE(x) ({ __typeof__(x) y = *(volatile __typeof__(x)*)&(x); y;})
+
+#define WRITE_ONCE(x, y) do { *(volatile __typeof__(x)*)&(x) = (y); } while (0)

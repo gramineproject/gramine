@@ -34,7 +34,7 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
         uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
 
         if (g_enclave_page_tracker) {
-            ret = add_uncommitted_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
+            ret = commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
         } else {
             /* for enclave pages allocated when the tracker is not ready (on bootstrap) */
             if (g_initial_page_allocs_count < MAX_INITIAL_PAGE_ALLOCS) {
@@ -74,7 +74,7 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
             assert(g_enclave_page_tracker);
-            int ret = remove_committed_pages((uintptr_t)addr, size / PAGE_SIZE);
+            int ret = uncommit_pages((uintptr_t)addr, size / PAGE_SIZE);
             if (ret < 0)
                 return ret;
         } else {

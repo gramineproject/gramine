@@ -813,8 +813,9 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     }
 }
 
-int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
-                          size_t* bitvector_size) {
+/* Get the committed pages of a given memory area; return a populated bitvector slice if EDMM is
+ * enabled for the SGX PAL and all-ones if it's not. */
+int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
     assert(bitvector);
     assert(bitvector_size);
 

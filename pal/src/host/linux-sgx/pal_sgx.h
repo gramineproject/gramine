@@ -26,19 +26,18 @@ extern size_t g_initial_page_allocs_count;
  * Similarly, it will occupy 1048576 bytes (1MB) for a 32GB enclave and 32MB for a 1TB enclave.
  * So the memory overhead for the bitmap is 0.003%. */
 typedef struct {
-    unsigned char* data;    /* bit array to store page allocation status */
+    uint8_t* data;          /* bit array to store page allocation status */
     uintptr_t base_address; /* base address of the enclave memory space */
     size_t size;            /* number of pages in the enclave memory space */
-    size_t page_size;       /* size of each page in bytes */
 } enclave_page_tracker_t;
 
 extern enclave_page_tracker_t* g_enclave_page_tracker;
 
-void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size, size_t page_size);
+void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size);
 void set_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 void unset_enclave_addr_range(uintptr_t start_address, size_t num_pages);
-int get_bitvector_slice(uintptr_t addr, size_t size, unsigned char* bitvector,
-                        size_t* bitvector_size);
-int remove_committed_pages(uintptr_t start_addr, size_t count);
-int add_uncommitted_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags);
+int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
+int uncommit_pages(uintptr_t start_addr, size_t count);
+int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags);
+int commit_one_page_strict(uintptr_t start_addr, uint64_t prot_flags);
 int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags);

@@ -1709,10 +1709,11 @@ mappings, it depends on the type of file:
 - allowed for encrypted files (but synchronization happens only on explicit system calls like
   `msync()` and `close()`).
 
-In case of SGX backend, `MAP_NORESERVE` flag is only supported for anonymous mappings and on
-[systems supporting EDMM](../sgx-intro.html#term-edmm) (otherwise it's silently ignored). When
-supported, instead of pre-accepting the region of enclave pages on mmap requests, the enclave pages
-are lazily accepted on page-fault events.
+In case of Linux backend, `MAP_NORESERVE` flag is supported for anonymous mappings. In case of SGX
+backend and on [systems supporting EDMM](../sgx-intro.html#term-edmm), `MAP_NORESERVE` flag is used
+as a lazy-allocation heuristic/hint for anonymous mappings (otherwise it's silently ignored) --
+instead of pre-accepting the region of enclave pages on mmap requests, the enclave pages are lazily
+accepted on page-fault events.
 
 `MAP_LOCKED`, MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags are
 ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
@@ -1728,6 +1729,10 @@ applications that would use these flags. In case of SGX backend, `mprotect()` be
   - resetting writable file-backed mappings is not implemented;
   - zeroing non-writable mappings is not implemented;
   - all other cases are implemented.
+- `MAP_NORESERVE` is partially supported:
+  - on Linux backend, not reserving swap space for file-backed mappings is not implemented;
+  - on SGX backend, the semantics of this flag is not implemented; it is used as a lazy-allocation
+    heuristic/hint for anonymous mappings on systems supporting EDMM.
 - `MADV_NORMAL`, `MADV_RANDOM`, `MADV_SEQUENTIAL`, `MADV_WILLNEED`, `MADV_FREE`,
   `MADV_SOFT_OFFLINE`, `MADV_MERGEABLE`, `MADV_UNMERGEABLE`, `MADV_HUGEPAGE`, `MADV_NOHUGEPAGE` are
   ignored (allowed but have no effect).

@@ -80,8 +80,8 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-int _PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
-                          size_t* bitvector_size) {
+/* Get the committed pages of a given memory area; return all-ones on Linux PAL. */
+int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
     __UNUSED(addr);
     assert(bitvector);
     assert(bitvector_size);

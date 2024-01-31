@@ -52,7 +52,6 @@ int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
 
-int PalGetCommittedPages(uintptr_t addr, size_t size, unsigned char* bitvector,
-                         size_t* bitvector_size) {
+int PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
     return _PalGetCommittedPages(addr, size, bitvector, bitvector_size);
 }

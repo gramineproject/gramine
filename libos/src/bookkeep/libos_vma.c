@@ -1302,7 +1302,7 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
-    unsigned char* bitvector;
+    uint8_t* bitvector;
     size_t bitvector_size;
     int error;
 };
@@ -1336,7 +1336,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
     uintptr_t zero_end = MIN(ctx->end, vma->end);
     if (vma->flags & MAP_NORESERVE) {
-        /* Lazy allocation of pages, zeroize only the committed pages. Note that the uncommitted
+        /* Lazy allocation of pages, zero only the committed pages. Note that the uncommitted
          * pages have to be skipped to avoid deadlocks. This is because we're holding the
          * non-reentrant/recursive `vma_tree_lock` when we're in this visitor callback (which is
          * invoked during VMA traversing). And if we hit page faults on accessing the uncommitted
@@ -1350,7 +1350,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
             return false;
 
         for (size_t byte_idx = 0; byte_idx < actual_bitvector_size; byte_idx++) {
-            unsigned char byte = (ctx->bitvector)[byte_idx];
+            uint8_t byte = (ctx->bitvector)[byte_idx];
             for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
                 if (byte & (1 << bit_idx)) {
                     memset((void*)(zero_start + (byte_idx * 8 + bit_idx) * PAGE_SIZE), 0,
@@ -1369,7 +1369,7 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
      * recursively holding `vma_tree_lock` */
     size_t vma_length = end - begin;
     size_t bitvector_size = ALIGN_UP(ALIGN_UP(vma_length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
-    unsigned char* bitvector = calloc(1, bitvector_size);
+    uint8_t* bitvector = calloc(1, bitvector_size);
     if (!bitvector)
         return -ENOMEM;
 
@@ -1496,7 +1496,7 @@ BEGIN_CP_FUNC(vma) {
                     /* lazy allocation of pages, send only committed pages */
                     size_t bitvector_size =
                         ALIGN_UP(ALIGN_UP(vma->length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
-                    unsigned char* bitvector = calloc(1, bitvector_size);
+                    uint8_t* bitvector = calloc(1, bitvector_size);
                     if (!bitvector)
                         return -ENOMEM;
 
@@ -1508,7 +1508,7 @@ BEGIN_CP_FUNC(vma) {
                     }
 
                     for (size_t byte_idx = 0; byte_idx < bitvector_size; byte_idx++) {
-                        unsigned char byte = bitvector[byte_idx];
+                        uint8_t byte = bitvector[byte_idx];
                         for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
                             if (byte & (1 << bit_idx)) {
                                 struct libos_mem_entry* mem;

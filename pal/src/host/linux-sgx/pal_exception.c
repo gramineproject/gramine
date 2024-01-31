@@ -233,6 +233,8 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
     return false;
 }
 
+static bool g_page_handling_in_progress = false;
+
 /* perform exception handling inside the enclave */
 void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo) {
@@ -342,23 +344,32 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
         pal_prot_flags_t prot_flags;
 
-        if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) &&
-                                                   (prot_flags & PAL_PROT_LAZYALLOC)) {
+        if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags)
+                                                && (prot_flags & PAL_PROT_LAZYALLOC)) {
+            if (!__atomic_exchange_n(&g_page_handling_in_progress, true, __ATOMIC_ACQUIRE)) {
+                goto out;
+            }
             prot_flags &= ~PAL_PROT_LAZYALLOC;
             /* The page's set/unset status will be double-checked against the status recorded in the
-             * enclave page tracker, and if it has already been committed, the page will be skipped.
-             * See `walk_pages()` in "pal/src/host/linux-sgx/enclave_edmm.c" for details.
+             * enclave page tracker -- if it has already been committed, a specific
+             * `PAL_ERROR_MISMATCH_PAGE_ATTR` will be returned and we propogate the fault to LibOS
+             * via upcall. See the "strict mode" of `walk_pages()` in
+             * "pal/src/host/linux-sgx/enclave_edmm.c" for details.
              *
-             * This avoids a potential security issue where a malicious host could trick us into
-             * committing the page twice (which effectively allowing the host to replace a random
+             * This helps with the case if the memfault is not due to page not existing, but
+             * insufficient access rights which needs the memfault to be propogated. This also
+             * avoids a potential security issue where a malicious host could trick us into
+             * committing the page twice (which would effectively allow the host to replace a random
              * page with 0s) by removing the page and forcing a page fault. */
-            int ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
-                                             prot_flags);
-            if (ret < 0) {
+            int ret = commit_one_page_strict(ALLOC_ALIGN_DOWN_PTR(addr),
+                                             PAL_TO_SGX_PROT(prot_flags));
+            __atomic_store_n(&g_page_handling_in_progress, false, __ATOMIC_RELEASE);
+            if (ret == 0) {
+                goto out;
+            } else if (ret != -PAL_ERROR_MISMATCH_PAGEATTR) {
                 log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
                 _PalProcessExit(1);
             }
-            goto out;
         } else if (ADDR_IN_PAL(uc->rip)) {
             /* inside PAL, and we failed to get the VMA info of the faulting address or we hit a
              * memfault on a not lazily-allocated page */
