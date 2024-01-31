@@ -482,11 +482,9 @@ static int pseudo_poll(struct libos_handle* hdl, int events, int* out_events) {
     switch (node->type) {
         case PSEUDO_STR: {
             assert(hdl->type == TYPE_STR);
-            lock_pos_handle(hdl);
             lock(&hdl->lock);
             int ret = mem_file_poll(&hdl->info.str.mem, hdl->pos, events, out_events);
             unlock(&hdl->lock);
-            unlock_pos_handle(hdl);
             return ret;
         }
 
