@@ -39,5 +39,4 @@ void unset_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
 int uncommit_pages(uintptr_t start_addr, size_t count);
 int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags);
-int commit_one_page_strict(uintptr_t start_addr, uint64_t prot_flags);
 int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags);

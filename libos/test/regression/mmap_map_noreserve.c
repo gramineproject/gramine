@@ -28,7 +28,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
-#include <time.h>
 #include <unistd.h>
 
 #include "common.h"
@@ -43,10 +42,20 @@
 #define TEST_FILE "testfile_map_noreserve"
 
 static sigjmp_buf g_point;
+static int g_urandom_fd;
 
 static void sigsegv_handler(int signum) {
     printf("Got signal: %d\n", signum);
     siglongjmp(g_point, 1);
+}
+
+static unsigned long get_random_ulong(void) {
+    unsigned long random_num;
+    ssize_t x = CHECK(read(g_urandom_fd, &random_num, sizeof(random_num)));
+    if (x != sizeof(random_num))
+        errx(1, "/dev/urandom read: %zd", x);
+
+    return random_num;
 }
 
 static void* thread_func(void* arg) {
@@ -69,7 +78,9 @@ static void* thread_func(void* arg) {
 }
 
 int main(void) {
-    srandom(time(NULL));
+    setbuf(stdout, NULL);
+    g_urandom_fd = CHECK(open("/dev/urandom", O_RDONLY));
+
     struct sigaction action = {0};
     action.sa_handler = sigsegv_handler;
     CHECK(sigaction(SIGSEGV, &action, NULL));
@@ -80,20 +91,20 @@ int main(void) {
     if (a == MAP_FAILED)
         err(1, "mmap 1");
 
-    size_t offset = random() % TEST_LENGTH;
+    size_t offset = get_random_ulong() % TEST_LENGTH;
     char data = READ_ONCE(a[offset]);
     if (data != 0)
         errx(1, "unexpected value read (expected: %x, actual: %x)", 0, data);
 
     const char expected_val = 0xff;
-    offset = random() % TEST_LENGTH;
+    offset = get_random_ulong() % TEST_LENGTH;
     if (sigsetjmp(g_point, 1) == 0) {
         WRITE_ONCE(a[offset], expected_val);
     }
 
     CHECK(mprotect(a, TEST_LENGTH, PROT_READ | PROT_WRITE));
 
-    offset = random() % TEST_LENGTH;
+    offset = get_random_ulong() % TEST_LENGTH;
     WRITE_ONCE(a[offset], expected_val);
 
     CHECK(madvise(a, TEST_LENGTH, MADV_DONTNEED));
@@ -145,7 +156,7 @@ int main(void) {
 
     CHECK(lseek(fd, 0, SEEK_SET));
 
-    offset = random() % TEST_LENGTH2;
+    offset = get_random_ulong() % TEST_LENGTH2;
     n = CHECK(read(fd, &a[offset], sizeof(expected_val)));
     if (n != sizeof(expected_val))
         err(1, "read");
@@ -162,7 +173,7 @@ int main(void) {
     if (a == MAP_FAILED)
         err(1, "mmap 4");
 
-    offset = random() % TEST_LENGTH2;
+    offset = get_random_ulong() % TEST_LENGTH2;
     WRITE_ONCE(a[offset], expected_val);
     pid_t pid = CHECK(fork());
     if (pid == 0) {
@@ -179,6 +190,7 @@ int main(void) {
 
     CHECK(munmap(a, TEST_LENGTH2));
 
+    CHECK(close(g_urandom_fd));
     puts("TEST OK");
     return 0;
 }
