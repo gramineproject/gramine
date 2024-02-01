@@ -992,6 +992,10 @@ class TC_30_Syscall(RegressionTestCase):
                 os.remove('tmp/flock_file2')
         self.assertIn('TEST OK', stdout)
 
+    def test_150_itimer(self):
+        stdout, _ = self.run_binary(['itimer'])
+        self.assertIn("TEST OK", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])
