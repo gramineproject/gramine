@@ -59,6 +59,7 @@ manifests = [
   "hostname_extra_runtime_conf",
   "host_root_fs",
   "init_fail",
+  "itimer",
   "keys",
   "kill_all",
   "large_dir_read",

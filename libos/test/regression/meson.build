@@ -57,6 +57,7 @@ tests = {
     'host_root_fs': {},
     'hostname': {},
     'init_fail': {},
+    'itimer': {},
     'keys': {},
     'kill_all': {},
     'large_dir_read': {},
