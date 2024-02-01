@@ -330,10 +330,9 @@ int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t*
 
 /* This function iterates over the given range of enclave pages in the tracker and performs the
  * specified `callback` on the consecutive set/unset pages; returns error when `callback` failed.
- * If `strict_mode` is true, the function returns an error when the set/unset status of an enclave
- * page recorded in the tracker is different from the input. If `strict_mode` is false, the function
- * skips the page with the mismatched status and the `callback` will not be executed. */
-static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages, bool strict_mode,
+ * Note that when an enclave page has mismatched set/unset status recorded and from the input, the
+ * function skips this page and the `callback` will not be executed. */
+static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
                       int (*callback)(uintptr_t, size_t, void*), void* arg) {
     int ret = 0;
     size_t start = address_to_index(start_addr);
@@ -348,14 +347,8 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages, b
         if (is_page_set == walk_set_pages) {
             uintptr_t consecutive_start_addr = index_to_address(i);
             size_t consecutive_count = 0;
-            while (i < end && i < g_enclave_page_tracker->size) {
-                if (is_enclave_page_set(i) != walk_set_pages) {
-                    if (strict_mode) {
-                        ret = -PAL_ERROR_MISMATCH_PAGEATTR;
-                        goto out;
-                    }
-                    break;
-                }
+            while (i < end && i < g_enclave_page_tracker->size
+                           && is_enclave_page_set(i) == walk_set_pages) {
                 consecutive_count++;
                 i++;
             }
@@ -365,35 +358,26 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages, b
             if (ret < 0)
                 break;
         } else {
-            if (strict_mode) {
-                ret = -PAL_ERROR_MISMATCH_PAGEATTR;
-                goto out;
-            }
             i++;
         }
     }
 
-out:
     spinlock_unlock(&g_enclave_page_tracker_lock);
+
     return ret;
 }
 
 int uncommit_pages(uintptr_t start_addr, size_t count) {
-    return walk_pages(start_addr, count, /*walk_set_pages=*/true, /*strict_mode=*/false,
-                      sgx_edmm_remove_pages_callback, NULL);
+    return walk_pages(start_addr, count, /*walk_set_pages=*/true, sgx_edmm_remove_pages_callback,
+                      NULL);
 }
 
 int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    return walk_pages(start_addr, count, /*walk_set_pages=*/false, /*strict_mode=*/false,
-                      sgx_edmm_add_pages_callback, &prot_flags);
-}
-
-int commit_one_page_strict(uintptr_t start_addr, uint64_t prot_flags) {
-    return walk_pages(start_addr, /*count=*/1, /*walk_set_pages=*/false, /*strict_mode=*/true,
-                      sgx_edmm_add_pages_callback, &prot_flags);
+    return walk_pages(start_addr, count, /*walk_set_pages=*/false, sgx_edmm_add_pages_callback,
+                      &prot_flags);
 }
 
 int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    return walk_pages(start_addr, count, /*walk_set_pages=*/true, /*strict_mode=*/false,
+    return walk_pages(start_addr, count, /*walk_set_pages=*/true,
                       sgx_edmm_set_page_permissions_callback, &prot_flags);
 }
