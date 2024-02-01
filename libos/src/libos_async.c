@@ -13,7 +13,7 @@
 #include "libos_thread.h"
 #include "libos_utils.h"
 
-#define IDLE_SLEEP_TIME 1000000
+#define IDLE_SLEEP_TIME_US 1000000
 #define MAX_IDLE_CYCLES 10000
 
 DEFINE_LIST(async_event);
@@ -23,8 +23,8 @@ struct async_event {
     LIST_TYPE(async_event) triggered_list;
     void (*callback)(IDTYPE caller, void* arg);
     void* arg;
-    PAL_HANDLE object;    /* handle (async IO) to wait on */
-    uint64_t expire_time; /* alarm/timer to wait on */
+    PAL_HANDLE object;       /* handle (async IO) to wait on */
+    uint64_t expire_time_us; /* alarm/timer to wait on */
 };
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
@@ -48,36 +48,36 @@ static int create_async_worker(void);
  * thread which registered the event (saved in `event->caller`).
  *
  * We distinguish between alarm/timer events and async IO events:
- *   - alarm/timer events set object = NULL and time = seconds
- *     (time = 0 cancels all pending alarms/timers).
- *   - async IO events set object = handle and time = 0.
+ *   - alarm/timer events set object = NULL and time_us = microseconds
+ *     (time_us = 0 cancels all pending alarms/timers).
+ *   - async IO events set object = handle and time_us = 0.
  *
  * Function returns remaining usecs for alarm/timer events (same as alarm())
  * or 0 for async IO events. On error, it returns a negated error code.
  */
-int64_t install_async_event(PAL_HANDLE object, uint64_t time,
+int64_t install_async_event(PAL_HANDLE object, uint64_t time_us,
                             void (*callback)(IDTYPE caller, void* arg), void* arg) {
-    /* if event happens on object, time must be zero */
-    assert(!object || (object && !time));
+    /* if event happens on object, time_us must be zero */
+    assert(!object || (object && !time_us));
 
-    uint64_t now = 0;
-    int ret = PalSystemTimeQuery(&now);
+    uint64_t now_us = 0;
+    int ret = PalSystemTimeQuery(&now_us);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
-    uint64_t max_prev_expire_time = now;
+    uint64_t max_prev_expire_time_us = now_us;
 
     struct async_event* event = malloc(sizeof(struct async_event));
     if (!event) {
         return -ENOMEM;
     }
 
-    event->callback    = callback;
-    event->arg         = arg;
-    event->caller      = get_cur_tid();
-    event->object      = object;
-    event->expire_time = time ? now + time : 0;
+    event->callback       = callback;
+    event->arg            = arg;
+    event->caller         = get_cur_tid();
+    event->object         = object;
+    event->expire_time_us = time_us ? now_us + time_us : 0;
 
     lock(&async_worker_lock);
 
@@ -87,22 +87,22 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
         struct async_event* tmp;
         struct async_event* n;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-            if (tmp->expire_time) {
+            if (tmp->expire_time_us) {
                 /* this is a pending alarm/timer, cancel it and save its expiration time */
-                if (max_prev_expire_time < tmp->expire_time)
-                    max_prev_expire_time = tmp->expire_time;
+                if (max_prev_expire_time_us < tmp->expire_time_us)
+                    max_prev_expire_time_us = tmp->expire_time_us;
 
                 LISTP_DEL(tmp, &async_list, list);
                 free(tmp);
             }
         }
 
-        if (!time) {
+        if (!time_us) {
             /* This is alarm(0), we cancelled all pending alarms/timers
              * and user doesn't want to set a new alarm: we are done. */
             free(event);
             unlock(&async_worker_lock);
-            return max_prev_expire_time - now;
+            return max_prev_expire_time_us - now_us;
         }
     }
 
@@ -119,9 +119,9 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time,
 
     unlock(&async_worker_lock);
 
-    log_debug("Installed async event at %lu", now);
+    log_debug("Installed async event at %lu", now_us);
     set_pollable_event(&install_new_event);
-    return max_prev_expire_time - now;
+    return max_prev_expire_time_us - now_us;
 }
 
 int init_async_worker(void) {
@@ -158,7 +158,7 @@ static int libos_async_worker(void* arg) {
     log_debug("Async worker thread started");
 
     /* Simple heuristic to not burn cycles when no async events are installed:
-     * async worker thread sleeps IDLE_SLEEP_TIME for MAX_IDLE_CYCLES and
+     * async worker thread sleeps IDLE_SLEEP_TIME_US for MAX_IDLE_CYCLES and
      * if nothing happens, dies. It will be re-spawned if some thread wants
      * to install a new event. */
     uint64_t idle_cycles = 0;
@@ -185,8 +185,8 @@ static int libos_async_worker(void* arg) {
     ret_events[0] = 0;
 
     while (true) {
-        uint64_t now = 0;
-        int ret = PalSystemTimeQuery(&now);
+        uint64_t now_us = 0;
+        int ret = PalSystemTimeQuery(&now_us);
         if (ret < 0) {
             log_error("PalSystemTimeQuery failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
@@ -200,7 +200,7 @@ static int libos_async_worker(void* arg) {
             break;
         }
 
-        uint64_t next_expire_time = 0;
+        uint64_t next_expire_time_us = 0;
         size_t pals_cnt = 0;
 
         struct async_event* tmp;
@@ -244,10 +244,10 @@ static int libos_async_worker(void* arg) {
                 pal_events[pals_cnt + 1] = PAL_WAIT_READ;
                 ret_events[pals_cnt + 1] = 0;
                 pals_cnt++;
-            } else if (tmp->expire_time && tmp->expire_time > now) {
-                if (!next_expire_time || next_expire_time > tmp->expire_time) {
+            } else if (tmp->expire_time_us && tmp->expire_time_us > now_us) {
+                if (!next_expire_time_us || next_expire_time_us > tmp->expire_time_us) {
                     /* use time of the next expiring alarm/timer */
-                    next_expire_time = tmp->expire_time;
+                    next_expire_time_us = tmp->expire_time_us;
                 }
             } else {
                 /* cleanup events do not have an object nor a timeout */
@@ -256,16 +256,16 @@ static int libos_async_worker(void* arg) {
         }
 
         bool inf_sleep = false;
-        uint64_t sleep_time;
-        if (next_expire_time) {
-            sleep_time  = next_expire_time - now;
+        uint64_t sleep_time_us;
+        if (next_expire_time_us) {
+            sleep_time_us  = next_expire_time_us - now_us;
             idle_cycles = 0;
         } else if (pals_cnt || other_event) {
             inf_sleep = true;
             idle_cycles = 0;
         } else {
             /* no async IO events and no timers/alarms: thread is idling */
-            sleep_time = IDLE_SLEEP_TIME;
+            sleep_time_us = IDLE_SLEEP_TIME_US;
             idle_cycles++;
         }
 
@@ -280,7 +280,7 @@ static int libos_async_worker(void* arg) {
 
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
         ret = PalStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
-                                   inf_sleep ? NULL : &sleep_time);
+                                   inf_sleep ? NULL : &sleep_time_us);
         if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
             log_error("PalStreamsWaitEvents failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
@@ -288,7 +288,7 @@ static int libos_async_worker(void* arg) {
         }
         bool polled = ret == 0;
 
-        ret = PalSystemTimeQuery(&now);
+        ret = PalSystemTimeQuery(&now_us);
         if (ret < 0) {
             log_error("PalSystemTimeQuery failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
@@ -313,7 +313,7 @@ static int libos_async_worker(void* arg) {
                 /* check if this event is an IO event found in async_list */
                 LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
                     if (tmp->object == pals[i]) {
-                        log_debug("Async IO event triggered at %lu", now);
+                        log_debug("Async IO event triggered at %lu", now_us);
                         LISTP_ADD_TAIL(tmp, &triggered, triggered_list);
                         break;
                     }
@@ -327,8 +327,9 @@ static int libos_async_worker(void* arg) {
                 log_debug("Thread exited, cleaning up");
                 LISTP_DEL(tmp, &async_list, list);
                 LISTP_ADD_TAIL(tmp, &triggered, triggered_list);
-            } else if (tmp->expire_time && tmp->expire_time <= now) {
-                log_debug("Alarm/timer triggered at %lu (expired at %lu)", now, tmp->expire_time);
+            } else if (tmp->expire_time_us && tmp->expire_time_us <= now_us) {
+                log_debug("Alarm/timer triggered at %lu (expired at %lu)",
+                          now_us, tmp->expire_time_us);
                 LISTP_DEL(tmp, &async_list, list);
                 LISTP_ADD_TAIL(tmp, &triggered, triggered_list);
             }
