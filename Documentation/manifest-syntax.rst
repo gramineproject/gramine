@@ -797,11 +797,29 @@ SGX EXINFO
     sgx.use_exinfo = [true|false]
     (Default: false)
 
+    sgx.insecure__allow_memfaults_without_exinfo = [true|false]
+    (Default: false)
+
 If ``sgx.use_exinfo`` is set, user application can retrieve faulting address in
-signal handler in case of a page fault. Otherwise (set to ``false``), the
-faulting address will always be provided as ``0``. The default is ``false``
-because some frameworks/runtimes could otherwise print the callstack and
-variables/registers on exceptions, potentially leaking data.
+signal handler in case of page/general protection faults (#PF and #GP).
+Otherwise (set to ``false``), the behavior depends on
+``sgx.insecure__allow_memfaults_without_exinfo``:
+
+- If ``sgx.insecure__allow_memfaults_without_exinfo`` is unset (default), then
+  Gramine terminates with an error, to prevent a possible attack.
+- Otherwise the exception is allowed and Gramine forwards it to the application,
+  and the faulting address is provided as ``0``.
+
+The default value for ``sgx.use_exinfo`` is ``false`` because some
+frameworks/runtimes could otherwise print the callstack and variables/registers
+on exceptions, potentially leaking data.
+
+.. note::
+   The option ``sgx.insecure__allow_memfaults_without_exinfo`` is provided only
+   to allow debugging/testing on old CPUs that do not support the EXINFO
+   feature. Without EXINFO support, a malicious host may attack the application
+   by injecting a memory fault. This option is thus insecure and must not be
+   used in production environments! It will be removed in near future.
 
 Optional CPU features (AVX, AVX512, AMX, MPX, PKRU)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

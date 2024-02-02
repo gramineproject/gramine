@@ -286,8 +286,23 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         /* corresponds to last column in the table above */
         if (untrusted_external_event != PAL_EVENT_QUIT
                 && untrusted_external_event != PAL_EVENT_INTERRUPTED) {
-            log_error("Host injected malicious signal %u", untrusted_external_event);
-            _PalProcessExit(1);
+            if (untrusted_external_event == PAL_EVENT_MEMFAULT
+                    && g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
+                /*
+                 * NOTE: Old CPUs may have SGX without the EXINFO feature, thus they do not
+                 * report/reflect #PF and #GP exceptions in the trusted EXITINFO struct. In some
+                 * situations (debugging using older CPUs) we don't want to terminate immediately.
+                 * Instead we propagate this reported-by-host and possibly malicious exception to
+                 * the app, with MADDR (faulting addr) and ERRCD (error code) set to zeros.
+                 *
+                 * This is enabled via an (insecure) manifest option and will be removed in the near
+                 * future.
+                 */
+                memset(&trusted_exit_info, 0, sizeof(trusted_exit_info));
+            } else {
+                log_error("Host injected malicious signal %u", untrusted_external_event);
+                _PalProcessExit(1);
+            }
         }
         event_num = untrusted_external_event;
     } else {
@@ -416,7 +431,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
-            if (!has_hw_fault_address) {
+            if (!has_hw_fault_address && !g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
                 log_error("Tried to handle a memory fault with no faulting address reported by "
                           "SGX. Please consider enabling 'sgx.use_exinfo' in the manifest.");
                 _PalProcessExit(1);
