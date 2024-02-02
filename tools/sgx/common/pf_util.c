@@ -330,7 +330,7 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
             break;
 
         if (chunk_size < 0) {
-            if (errno == -EINTR)
+            if (errno == EINTR)
                 continue;
 
             ERROR("Failed to read file '%s': %s\n", input_path, strerror(errno));
@@ -458,7 +458,7 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
         ssize_t written = write(output, chunk, chunk_size);
 
         if (written < 0) {
-            if (errno == -EINTR)
+            if (errno == EINTR)
                 continue;
 
             ERROR("Failed to write file '%s': %s\n", output_path, strerror(errno));
