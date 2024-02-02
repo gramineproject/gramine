@@ -304,30 +304,6 @@ long libos_syscall_rt_sigpending(__sigset_t* set, size_t sigsetsize) {
     return 0;
 }
 
-static int _wakeup_one_thread(struct libos_thread* thread, void* arg) {
-    int sig = (int)(long)arg;
-    int ret = 0;
-
-    if (thread == get_cur_thread()) {
-        return ret;
-    }
-
-    lock(&thread->lock);
-
-    if (!__sigismember(&thread->signal_mask, sig)) {
-        thread_wakeup(thread);
-        ret = PalThreadResume(thread->pal_handle);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
-        } else {
-            ret = 1;
-        }
-    }
-
-    unlock(&thread->lock);
-    return ret;
-}
-
 int kill_current_proc(siginfo_t* info) {
     if (!info->si_signo) {
         return 0;
@@ -351,7 +327,7 @@ int kill_current_proc(siginfo_t* info) {
         unlock(&current->lock);
     }
 
-    ret = walk_thread_list(_wakeup_one_thread, (void*)(long)sig, /*one_shot=*/true);
+    ret = walk_thread_list(wakeup_one_thread_on_signal, (void*)(long)sig, /*one_shot=*/true);
     /* Ignore `-ESRCH` as this just means that currently no thread is able to handle the signal. */
     if (ret < 0 && ret != -ESRCH) {
         return ret;
