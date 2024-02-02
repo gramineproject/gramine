@@ -1,8 +1,8 @@
 diff --git a/Makerules b/Makerules
-index d1e139d03c1c448e14aee35af3e54ee7abe2180c..3f3d8739d3419804b35d00a69cab5538ec60f74e 100644
+index 00365bc58be119bb0fec9cf2cfa51780c27fae8c..1995396ae885a75575eebb96254528d80d6686ab 100644
 --- a/Makerules
 +++ b/Makerules
-@@ -818,7 +818,7 @@ verbose	:=
+@@ -777,7 +777,7 @@ verbose	:=
  endif						# not -s
  
  ARFLAGS := r$(verbose)
@@ -12,10 +12,10 @@ index d1e139d03c1c448e14aee35af3e54ee7abe2180c..3f3d8739d3419804b35d00a69cab5538
  # This makes all the object files in the parent library archive.
  
 diff --git a/elf/Makefile b/elf/Makefile
-index fd77d0c7c8799c336c65278f6f8e939ed8707633..6fc16b46d041f2c80f3995be183644d276e8a294 100644
+index 5d78b659ce813ff973e499043154e5b1fc8a639b..ac86ce8f81ac89ae4a9a958503fdc160516856b9 100644
 --- a/elf/Makefile
 +++ b/elf/Makefile
-@@ -1310,7 +1310,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
+@@ -1296,7 +1296,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
  # For lld, skip preceding addresses and values before matching the archive and the member.
  $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
  	LC_ALL=C \
@@ -24,7 +24,7 @@ index fd77d0c7c8799c336c65278f6f8e939ed8707633..6fc16b46d041f2c80f3995be183644d2
  	    $< | \
  	while read lib file; do \
  	  case $$lib in \
-@@ -1318,7 +1318,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
+@@ -1304,7 +1304,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
  	    LC_ALL=C grep -F -l /$$file \
  		  $(common-objpfx)stamp.os $(common-objpfx)*/stamp.os | \
  	    LC_ALL=C \
@@ -34,7 +34,7 @@ index fd77d0c7c8799c336c65278f6f8e939ed8707633..6fc16b46d041f2c80f3995be183644d2
  	  */*.a) \
  	    echo rtld-$${lib%%/*} += $$file ;; \
 diff --git a/elf/dl-load.c b/elf/dl-load.c
-index 1ad0868dad809d56c7ecced65ce482af4982abc9..8c4eae155754d7d9b140fcb838b8b74df6db0368 100644
+index ce8fdea3024359b0d4f4aea90a49796003aeaa1d..58392a372fdb3ebb66b85b8963ccdb01024dc616 100644
 --- a/elf/dl-load.c
 +++ b/elf/dl-load.c
 @@ -76,6 +76,8 @@ struct filebuf
@@ -46,7 +46,7 @@ index 1ad0868dad809d56c7ecced65ce482af4982abc9..8c4eae155754d7d9b140fcb838b8b74d
  #include <endian.h>
  #if BYTE_ORDER == BIG_ENDIAN
  # define byteorder ELFDATA2MSB
-@@ -1490,6 +1492,8 @@ cannot enable executable stack as shared object requires");
+@@ -1480,6 +1482,8 @@ cannot enable executable stack as shared object requires");
    DL_AFTER_LOAD (l);
  #endif
  
@@ -56,33 +56,20 @@ index 1ad0868dad809d56c7ecced65ce482af4982abc9..8c4eae155754d7d9b140fcb838b8b74d
    _dl_add_to_namespace_list (l, nsid);
  
 diff --git a/sysdeps/unix/sysv/linux/x86_64/____longjmp_chk.S b/sysdeps/unix/sysv/linux/x86_64/____longjmp_chk.S
-index ffdf4624bf98648e4bc423cbdf1ce9b46ebf5fd2..d8c40f016f1659d64de1e642b665e9b7c8af00b1 100644
+index 9d9732afdcef471c7e6852f1cebe025296da4d62..af732ed758698fd13d0400024d2427f496a33541 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/____longjmp_chk.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/____longjmp_chk.S
-@@ -89,7 +89,7 @@ ENTRY(____longjmp_chk)
- 	xorl	%edi, %edi
- 	lea	-sizeSS(%rsp), %RSI_LP
- 	movl	$__NR_sigaltstack, %eax
--	syscall
-+	GRAMINE_SYSCALL
- 	/* Without working sigaltstack we cannot perform the test.  */
- 	testl	%eax, %eax
- 	jne	.Lok2
-diff --git a/sysdeps/unix/sysv/linux/x86_64/__start_context.S b/sysdeps/unix/sysv/linux/x86_64/__start_context.S
-index a524c4d7b7f96008c2d38146418449c71cbe678a..a1a3f5f0803f23474960cd1413bb59adb5acaffe 100644
---- a/sysdeps/unix/sysv/linux/x86_64/__start_context.S
-+++ b/sysdeps/unix/sysv/linux/x86_64/__start_context.S
-@@ -51,7 +51,7 @@ ENTRY(__push___start_context)
- 	movl	$ARCH_CET_ALLOC_SHSTK, %edi
- 	movl	$__NR_arch_prctl, %eax
- 	/* The new shadow stack base is returned in __ssp[1].  */
--	syscall
-+	GRAMINE_SYSCALL
- 	testq	%rax, %rax
- 	jne	L(hlt)		/* This should never happen.  */
- 
+@@ -40,7 +40,7 @@ longjmp_msg:
+ 	xorl	%edi, %edi;						\
+ 	lea	-sizeSS(%rsp), %RSI_LP;					\
+ 	movl	$__NR_sigaltstack, %eax;				\
+-	syscall;							\
++	GRAMINE_SYSCALL;							\
+ 	/* Without working sigaltstack we cannot perform the test.  */	\
+ 	testl	%eax, %eax;						\
+ 	jne	.Lok2;							\
 diff --git a/sysdeps/unix/sysv/linux/x86_64/clone.S b/sysdeps/unix/sysv/linux/x86_64/clone.S
-index b6b5cd497ac85be6e84e84da8cec4ec645f605ce..89195e4abe4353a94e5a4086dd2f2aea1947e98f 100644
+index d0adc21c850632aea23aab6a0ce9426ea303334d..9bbf4e08e549d98c32d4dbdbcab0f39222d2a81a 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/clone.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/clone.S
 @@ -78,7 +78,7 @@ ENTRY (__clone)
@@ -104,7 +91,7 @@ index b6b5cd497ac85be6e84e84da8cec4ec645f605ce..89195e4abe4353a94e5a4086dd2f2aea
  
  	cfi_startproc;
 diff --git a/sysdeps/unix/sysv/linux/x86_64/clone3.S b/sysdeps/unix/sysv/linux/x86_64/clone3.S
-index 18fc2ee966a1b748c9234013cc9c3b70c5701b78..9152ef6f0ea145c0d368d3834f0077cef167c005 100644
+index 5a2d42234e0cb16c56fe4a16e81a95ebd7b0c176..b9b65be33f37a77a951967fa50c3284b73a94580 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/clone3.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/clone3.S
 @@ -57,7 +57,7 @@ ENTRY (__clone3)
@@ -116,7 +103,7 @@ index 18fc2ee966a1b748c9234013cc9c3b70c5701b78..9152ef6f0ea145c0d368d3834f0077ce
  
  	test	%RAX_LP, %RAX_LP
  	jl	SYSCALL_ERROR_LABEL
-@@ -82,7 +82,7 @@ L(thread_start):
+@@ -79,7 +79,7 @@ L(thread_start):
  	/* Call exit with return value from function call. */
  	movq	%rax, %rdi
  	movl	$SYS_ify(exit), %eax
@@ -126,19 +113,10 @@ index 18fc2ee966a1b748c9234013cc9c3b70c5701b78..9152ef6f0ea145c0d368d3834f0077ce
  
  	cfi_startproc
 diff --git a/sysdeps/unix/sysv/linux/x86_64/getcontext.S b/sysdeps/unix/sysv/linux/x86_64/getcontext.S
-index 3fab8de49c5e13240477b19d3e661442d313f01f..14ec8dbe1fb94fbacf0f58e20906b467897c7bbd 100644
+index e588a8cc0764064377e3cbac1058254abf190a2d..477d21ecccc894dc8faad1051737ebdab0e71094 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/getcontext.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/getcontext.S
-@@ -72,7 +72,7 @@ ENTRY(__getcontext)
- 	mov	%RSP_LP, %RSI_LP
- 	movl	$ARCH_CET_STATUS, %edi
- 	movl	$__NR_arch_prctl, %eax
--	syscall
-+	GRAMINE_SYSCALL
- 	testq	%rax, %rax
- 	jz	L(continue_no_err)
- 
-@@ -124,7 +124,7 @@ L(no_shstk):
+@@ -104,7 +104,7 @@ L(no_shstk):
  #endif
  	movl	$_NSIG8,%r10d
  	movl	$__NR_rt_sigprocmask, %eax
@@ -148,7 +126,7 @@ index 3fab8de49c5e13240477b19d3e661442d313f01f..14ec8dbe1fb94fbacf0f58e20906b467
  	jae	SYSCALL_ERROR_LABEL	/* Jump to error handler if error.  */
  
 diff --git a/sysdeps/unix/sysv/linux/x86_64/libc_sigaction.c b/sysdeps/unix/sysv/linux/x86_64/libc_sigaction.c
-index e6f9e27247698f8350730de19f58fccca267ee82..a87cbc14aa1d6314722d4b32ef22b8f6f2571e91 100644
+index b39812f81d179878249d73920765d1ac2c6b8315..31c4af1e681ad4e416da9e843a619f84fd53b7b2 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/libc_sigaction.c
 +++ b/sysdeps/unix/sysv/linux/x86_64/libc_sigaction.c
 @@ -78,7 +78,7 @@ asm									\
@@ -161,7 +139,7 @@ index e6f9e27247698f8350730de19f58fccca267ee82..a87cbc14aa1d6314722d4b32ef22b8f6
     ".section .eh_frame,\"a\",@progbits\n"				\
     ".LSTARTFRAME_" #name ":\n"						\
 diff --git a/sysdeps/unix/sysv/linux/x86_64/setcontext.S b/sysdeps/unix/sysv/linux/x86_64/setcontext.S
-index 282c5266e6d00323e02a5472685f836742effedc..9acf0522e7a66fc6c2f1a68f3da9fe4e5c7d84f0 100644
+index d0bcd794e89eebb5d81f676d7090925e96cac524..3befe350309c89188dc6a3030337bc6aaf7f1e04 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/setcontext.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/setcontext.S
 @@ -43,7 +43,7 @@ ENTRY(__setcontext)
@@ -174,7 +152,7 @@ index 282c5266e6d00323e02a5472685f836742effedc..9acf0522e7a66fc6c2f1a68f3da9fe4e
  	   leaving RDI and RSI available for use later can avoid
  	   shuffling values.  */
 diff --git a/sysdeps/unix/sysv/linux/x86_64/swapcontext.S b/sysdeps/unix/sysv/linux/x86_64/swapcontext.S
-index b101c70ac806e18f5bcaefabca572ff6e6246d5a..44bd713daf4108efd23f210624d258ee85448b51 100644
+index b2e0f19a9d57e5007b094037b4cf59868029fc36..94f1eb7ce4ae2746db49282761d2e08c25770ab1 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/swapcontext.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/swapcontext.S
 @@ -76,7 +76,7 @@ ENTRY(__swapcontext)
@@ -186,17 +164,8 @@ index b101c70ac806e18f5bcaefabca572ff6e6246d5a..44bd713daf4108efd23f210624d258ee
  	cmpq	$-4095, %rax		/* Check %rax for error.  */
  	jae	SYSCALL_ERROR_LABEL	/* Jump to error handler if error.  */
  
-@@ -116,7 +116,7 @@ ENTRY(__swapcontext)
- 	mov	%RSP_LP, %RSI_LP
- 	movl	$ARCH_CET_STATUS, %edi
- 	movl	$__NR_arch_prctl, %eax
--	syscall
-+	GRAMINE_SYSCALL
- 	testq	%rax, %rax
- 	jz	L(continue_no_err)
- 
 diff --git a/sysdeps/unix/sysv/linux/x86_64/syscall.S b/sysdeps/unix/sysv/linux/x86_64/syscall.S
-index 192455a89883fc815ecb58677c0da6a7bb4583fa..4041fb7d9b73fc9743666f19ed33bb748ce499a0 100644
+index 43af8087b657fd9954cb1d4368624affa6c53af0..5c0cc9294aa082ab5ffe39b6c524ebbace6ee9c8 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/syscall.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/syscall.S
 @@ -34,7 +34,7 @@ ENTRY (syscall)
@@ -209,7 +178,7 @@ index 192455a89883fc815ecb58677c0da6a7bb4583fa..4041fb7d9b73fc9743666f19ed33bb74
  	jae SYSCALL_ERROR_LABEL	/* Jump to error handler if error.  */
  	ret			/* Return to caller.  */
 diff --git a/sysdeps/unix/sysv/linux/x86_64/sysdep.h b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
-index 740abefcfd3612928bdd42c605ebdcf341d76667..4a675bd1ed886fa0b0c585356a4fb6194c07d2ed 100644
+index a2b021bd86f5d47284958eed11d6024a4027b698..690362d270c90a46968a9bcfc3afb294e39090a3 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 +++ b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 @@ -26,6 +26,8 @@
@@ -294,7 +263,7 @@ index 740abefcfd3612928bdd42c605ebdcf341d76667..4a675bd1ed886fa0b0c585356a4fb619
      : "0" (number), "r" (_a1), "r" (_a2), "r" (_a3), "r" (_a4),		\
        "r" (_a5), "r" (_a6)						\
 diff --git a/sysdeps/unix/sysv/linux/x86_64/vfork.S b/sysdeps/unix/sysv/linux/x86_64/vfork.S
-index 1a1e3039c72dc2ec66a56f2ad0961bbd83de13dd..ae5b208ab88e0a898ca7fb49361d82846c21f4dc 100644
+index 0d8732e37421d2ae003424ca94b7136c0a90469a..0cbfbb0307ca460ecbdbc5fec0dd6c132304f15a 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/vfork.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/vfork.S
 @@ -35,7 +35,7 @@ ENTRY (__vfork)
@@ -307,7 +276,7 @@ index 1a1e3039c72dc2ec66a56f2ad0961bbd83de13dd..ae5b208ab88e0a898ca7fb49361d8284
  	/* Push back the return PC.  */
  	pushq	%rdi
 diff --git a/sysdeps/unix/sysv/linux/x86_64/x32/times.c b/sysdeps/unix/sysv/linux/x86_64/x32/times.c
-index aea8e8c94989d3686b131866798d7bde4cc69f1f..246e2ae4c749f15af848a9c53bd7810f6dc1c89f 100644
+index 67b6fc1da183e8f8affb0a37f7d269847752e686..f98471a4fadf775dc072b342fb2eff72dea4adcb 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/x32/times.c
 +++ b/sysdeps/unix/sysv/linux/x86_64/x32/times.c
 @@ -26,7 +26,7 @@
@@ -320,7 +289,7 @@ index aea8e8c94989d3686b131866798d7bde4cc69f1f..246e2ae4c749f15af848a9c53bd7810f
      : "0" (number), "r" (_a1)						\
      : "memory", REGISTERS_CLOBBERED_BY_SYSCALL);			\
 diff --git a/sysdeps/unix/x86_64/sysdep.h b/sysdeps/unix/x86_64/sysdep.h
-index 0ec37c62aac020d3cc6b37fb38cb333aae6991a9..f5e6975b364eccb3f57b88a2682e785b54489094 100644
+index 6cbb4d867b4f92a7af3d69c41264683911aefe1b..bf861504960263ac6eaa48b003588a4f1f3c3d6f 100644
 --- a/sysdeps/unix/x86_64/sysdep.h
 +++ b/sysdeps/unix/x86_64/sysdep.h
 @@ -25,7 +25,7 @@
@@ -333,7 +302,7 @@ index 0ec37c62aac020d3cc6b37fb38cb333aae6991a9..f5e6975b364eccb3f57b88a2682e785b
  #define	r0		%rax	/* Normal return-value register.  */
  #define	r1		%rbx	/* Secondary return-value register.  */
 diff --git a/sysdeps/x86_64/nptl/tls.h b/sysdeps/x86_64/nptl/tls.h
-index 75f80209758aa19cc59c413e4bbd1a565e5b9696..bb72d936679ff73b378c1b8dc2b894e43226fd91 100644
+index 876889bed4bf2bc97779f1ab0593403d33648aeb..25f5aa07ab24bc22aab66d1065d1027537c9d3a7 100644
 --- a/sysdeps/x86_64/nptl/tls.h
 +++ b/sysdeps/x86_64/nptl/tls.h
 @@ -30,6 +30,8 @@
