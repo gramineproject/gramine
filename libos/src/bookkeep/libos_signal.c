@@ -636,15 +636,15 @@ uintptr_t get_stack_for_sighandler(uintptr_t sp, bool use_altstack) {
     return (uintptr_t)alt_stack->ss_sp + alt_stack->ss_size;
 }
 
-static int wakeup_one_thread_on_sigterm(struct libos_thread* thread, void* arg) {
-    __UNUSED(arg);
+int wakeup_one_thread_on_signal(struct libos_thread* thread, void* arg) {
+    int sig = (int)(long)arg;
 
     if (thread == get_cur_thread())
         return 0;
 
     lock(&thread->lock);
     int ret = 0;
-    if (!__sigismember(&thread->signal_mask, SIGTERM)) {
+    if (!__sigismember(&thread->signal_mask, sig)) {
         thread_wakeup(thread);
         ret = PalThreadResume(thread->pal_handle);
         ret = ret < 0 ? pal_to_unix_errno(ret) : 1; /* "1" to finish one-shot thread walk */
@@ -729,7 +729,7 @@ void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
              * find another thread that didn't block this signal and wake it up (this covers a
              * common case of one dedicated app thread doing sigtimedwait(SIGTERM) while other
              * threads mark SIGTERM as blocked) */
-            int ret = walk_thread_list(wakeup_one_thread_on_sigterm, /*arg=*/NULL,
+            int ret = walk_thread_list(wakeup_one_thread_on_signal, /*arg=*/(void*)SIGTERM,
                                        /*one_shot=*/true);
             if (ret < 0 && ret != -ESRCH) {
                 log_error("error occured while trying to deliver SIGTERM signal to a thread (%s)",

@@ -136,6 +136,9 @@ int init_signal_handling(void);
 
 int append_signal(struct libos_thread* thread, siginfo_t* info);
 
+/* callback for walk_thread_list() */
+int wakeup_one_thread_on_signal(struct libos_thread* thread, void* arg);
+
 /*!
  * \brief Pop any of the pending signals allowed in \p mask.
  *
