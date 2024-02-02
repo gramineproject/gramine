@@ -1,5 +1,5 @@
 diff --git a/sysdeps/x86/hp-timing.h b/sysdeps/x86/hp-timing.h
-index 15e9106105dab9e3f283d320d56ab3283022c2fa..ad0b2360896f00e87c585a4cfd9412b84569d8bf 100644
+index 699baa34725ae7e1f8a52f9c9f7e57a3c8ade414..bdf6463445ed8c43468be514b91fc0516feb37d7 100644
 --- a/sysdeps/x86/hp-timing.h
 +++ b/sysdeps/x86/hp-timing.h
 @@ -17,45 +17,7 @@
