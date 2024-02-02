@@ -74,7 +74,7 @@ int main(void) {
         ssize_t n;
         do {
             n = read(fd, &c, 1);
-        } while (n == -1 && errno == -EINTR);
+        } while (n == -1 && errno == EINTR);
         if (n == -1)
             err(1, "read");
         if (n != 1)
