@@ -34,7 +34,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     assert(pal_create != PAL_CREATE_IGNORED);
     int ret;
     int fd = -1;
-    bool encrypted = false;
+    bool mapped = false;
     void* addr = NULL;
     PAL_HANDLE hdl = NULL;
     bool do_create = (pal_create == PAL_CREATE_ALWAYS) || (pal_create == PAL_CREATE_TRY);
@@ -100,8 +100,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         }
 
         /* map file into untrusted memroy when open encrypted files */
-        if (pal_options & PAL_OPTION_ENCRYPTED_FILE) {
-            encrypted = true;
+        if (pal_options & PAL_OPTION_MAP_FILE) {
+            mapped = true;
             if (st.st_size > 0) {
                 ret = ocall_mmap_untrusted(&addr, st.st_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
                 if (ret < 0) {
@@ -114,7 +114,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         hdl->file.fd = fd;
         hdl->file.seekable = !S_ISFIFO(st.st_mode);
         hdl->file.total = st.st_size;
-        hdl->file.encrypted = encrypted;
+        hdl->file.mapped = mapped;
         hdl->file.addr = addr;
 
         *handle = hdl;
@@ -408,13 +408,13 @@ static int64_t file_setlength(PAL_HANDLE handle, uint64_t length) {
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    if (handle->file.encrypted) {
+    if (handle->file.mapped) {
         if (handle->file.addr && handle->file.total > 0) {
             ret = ocall_munmap_untrusted(handle->file.addr, handle->file.total);
             if (ret < 0) 
                 return unix_to_pal_error(ret);
         }
-        
+
         handle->file.addr = NULL;
 
         if (length > 0) {
@@ -490,7 +490,7 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     file_attrcopy(attr, &stat_buf);
 
-    if (handle->file.encrypted)
+    if (handle->file.mapped)
         attr->addr = handle->file.addr;
 
     return 0;
@@ -501,9 +501,6 @@ static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret = ocall_fchmod(fd, attr->share_flags);
     if (ret < 0)
         return unix_to_pal_error(ret);
-
-    if (handle->file.encrypted && (unsigned long)attr->addr < UINTPTR_MAX)
-        handle->file.addr = attr->addr;
 
     return 0;
 }

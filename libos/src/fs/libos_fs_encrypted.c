@@ -109,7 +109,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
         ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
-                            PAL_OPTION_PASSTHROUGH | PAL_OPTION_ENCRYPTED_FILE, &pal_handle);
+                            PAL_OPTION_PASSTHROUGH | PAL_OPTION_MAP_FILE, &pal_handle);
         if (ret < 0) {
             log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
             return pal_to_unix_errno(ret);
@@ -739,12 +739,6 @@ BEGIN_RS_FUNC(encrypted_file) {
         int ret;
         PAL_STREAM_ATTR pal_attr;
         ret = PalStreamAttributesQueryByHandle(enc->pal_handle, &pal_attr);
-        if (ret < 0) {
-            log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
-            return pal_to_unix_errno(ret);
-        }
-        pal_attr.addr = NULL;
-        ret = PalStreamAttributesSetByHandle(enc->pal_handle, &pal_attr);
         if (ret < 0) {
             log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
             return pal_to_unix_errno(ret);

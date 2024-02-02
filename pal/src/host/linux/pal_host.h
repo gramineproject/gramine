@@ -35,7 +35,7 @@ typedef struct {
         struct {
             PAL_IDX fd;
             char* realpath;
-            bool encrypted; /* flag to indicate encrypted files */
+            bool mapped;    /* mapped file to untrusted memory */
             void* addr;     /* mapped address, used only for encrypted files */
             size_t total;   /* file size, used only for encrypted files */
             bool seekable;  /* regular files are seekable, FIFO pipes are not */

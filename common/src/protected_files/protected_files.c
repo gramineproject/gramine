@@ -204,6 +204,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     bool ret = false;
     file_node_t** mht_array = NULL;
     pf_status_t status;
+    uint8_t temp_enc_node[PF_NODE_SIZE];
     void* data = lruc_get_first(pf->cache);
 
     if (pf->addr == NULL) {
@@ -255,20 +256,21 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
                          .data_nodes_crypto[data_node->node_number % ATTACHED_DATA_NODES_COUNT];
 
                 if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
-                    return false;
+                    goto out;
 
                 // encrypt the data, this also saves the gmac of the operation in the mht crypto
                 // node
-                void* data_node_addr = (unsigned char*)pf->addr + 
+                void* data_node_addr = (unsigned char*)pf->addr +
                                        PF_NODE_SIZE * data_node->physical_node_number;
                 status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
                                               data_node->decrypted.data.data, PF_NODE_SIZE,
-                                              data_node_addr, &gcm_crypto_data->gmac);
+                                              temp_enc_node, &gcm_crypto_data->gmac);
                 if (PF_FAILURE(status)) {
                     pf->last_error = status;
-                    return false;
+                    goto out;
                 }
 
+                memcpy(data_node_addr, temp_enc_node, PF_NODE_SIZE);
                 data_node->need_writing = false;
                 data_node->new_node = false;
 
@@ -333,15 +335,16 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
         }
 
         void* mht_node_addr = (unsigned char*)pf->addr + 
-                                PF_NODE_SIZE * file_mht_node->physical_node_number;
+                              PF_NODE_SIZE * file_mht_node->physical_node_number;
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                       &file_mht_node->decrypted.mht, PF_NODE_SIZE,
-                                      mht_node_addr, &gcm_crypto_data->gmac);
+                                      temp_enc_node, &gcm_crypto_data->gmac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             goto out;
         }
 
+        memcpy(mht_node_addr, temp_enc_node, PF_NODE_SIZE);
         file_mht_node->need_writing = false;
         file_mht_node->new_node = false;
     }
@@ -350,22 +353,22 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     if (!ipf_generate_random_key(pf, &pf->encrypted_part_plain.mht_key))
         goto out;
 
-    status = g_cb_aes_gcm_encrypt(&pf->encrypted_part_plain.mht_key, &g_empty_iv,
-                                  NULL, 0,
+    status = g_cb_aes_gcm_encrypt(&pf->encrypted_part_plain.mht_key, &g_empty_iv, NULL, 0,
                                   &pf->root_mht.decrypted.mht, PF_NODE_SIZE,
-                                  (unsigned char*)pf->addr + PF_NODE_SIZE,
-                                  &pf->encrypted_part_plain.mht_gmac);
+                                  temp_enc_node, &pf->encrypted_part_plain.mht_gmac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         goto out;
     }
 
+    memcpy((unsigned char*)pf->addr + PF_NODE_SIZE, temp_enc_node, PF_NODE_SIZE);
     pf->root_mht.need_writing = false;
     pf->root_mht.new_node = false;
 
     ret = true;
 
 out:
+    erase_memory(temp_enc_node, PF_NODE_SIZE);
     free(mht_array);
     return ret;
 }

@@ -164,7 +164,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
             }
-            hdl->file.chunk_hashes = hdl->file.umem = NULL;
+            hdl->file.addr = hdl->file.chunk_hashes = hdl->file.umem = NULL;
             break;
         }
         case PAL_TYPE_DIR: {
