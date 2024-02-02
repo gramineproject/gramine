@@ -25,6 +25,7 @@
 #include "api.h"
 #include "path_utils.h"
 #include "perm.h"
+#include "spinlock.h"
 #include "util.h"
 
 /* High-level protected files helper functions. */
@@ -185,8 +186,14 @@ out:
 static mbedtls_entropy_context g_entropy;
 static mbedtls_ctr_drbg_context g_prng;
 
+/* CTR_DRBG functions of mbedTLS are not thread-safe, must explicitly sync them */
+static spinlock_t g_mbedtls_ctr_drbg_lock = INIT_SPINLOCK_UNLOCKED;
+
 static pf_status_t mbedtls_random(uint8_t* buffer, size_t size) {
-    if (mbedtls_ctr_drbg_random(&g_prng, buffer, size) != 0) {
+    spinlock_lock(&g_mbedtls_ctr_drbg_lock);
+    int ret = mbedtls_ctr_drbg_random(&g_prng, buffer, size);
+    spinlock_unlock(&g_mbedtls_ctr_drbg_lock);
+    if (ret != 0) {
         ERROR("Failed to get random bytes\n");
         return PF_STATUS_CALLBACK_FAILED;
     }
@@ -226,7 +233,9 @@ int pf_init(void) {
 int pf_generate_wrap_key(const char* wrap_key_path) {
     pf_key_t wrap_key;
 
+    spinlock_lock(&g_mbedtls_ctr_drbg_lock);
     int ret = mbedtls_ctr_drbg_random(&g_prng, (unsigned char*)&wrap_key, sizeof(wrap_key));
+    spinlock_unlock(&g_mbedtls_ctr_drbg_lock);
     if (ret != 0) {
         ERROR("Failed to read random bytes: %d\n", ret);
         return ret;
