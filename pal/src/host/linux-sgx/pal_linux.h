@@ -34,6 +34,7 @@ extern struct pal_linuxsgx_state {
     /* enclave information */
     bool enclave_initialized;        /* thread creation ECALL is allowed only after this is set */
     bool edmm_enabled;
+    bool memfaults_wo_exinfo_allowed;
     sgx_target_info_t qe_targetinfo; /* received from untrusted host, use carefully */
     sgx_report_body_t enclave_info;  /* cached self-report result, trusted */
 
