@@ -77,7 +77,7 @@ static int generic_istat(struct libos_inode* inode, struct stat* buf) {
      *
      * Applications are unlikely to depend on exact value of `nlink`, and for us, it's inconvenient
      * to keep track of the exact value (we would have to list the directory, and also take into
-     * account synthetic files created by Graphene, such as named pipes and sockets).
+     * account synthetic files created by Gramine, such as named pipes and sockets).
      */
     buf->st_nlink = (inode->type == S_IFDIR ? 2 : 1);
 
