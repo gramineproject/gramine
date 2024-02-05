@@ -91,6 +91,18 @@ static pf_status_t cb_truncate(pf_handle_t handle, uint64_t size) {
     return PF_STATUS_SUCCESS;
 }
 
+static pf_status_t cb_fsync(pf_handle_t handle) {
+    PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
+
+    int ret = PalStreamFlush(pal_handle);
+    if (ret < 0) {
+        log_warning("PalStreamFlush failed: %s", pal_strerror(ret));
+        return PF_STATUS_CALLBACK_FAILED;
+    }
+
+    return PF_STATUS_SUCCESS;
+}
+
 static pf_status_t cb_aes_cmac(const pf_key_t* key, const void* input, size_t input_size,
                                pf_mac_t* mac) {
     int ret = lib_AESCMAC((const uint8_t*)key, sizeof(*key), input, input_size, (uint8_t*)mac,
@@ -272,7 +284,7 @@ int init_encrypted_files(void) {
     if (!create_lock(&g_keys_lock))
         return -ENOMEM;
 
-    pf_set_callbacks(&cb_read, &cb_write, &cb_truncate,
+    pf_set_callbacks(&cb_read, &cb_write, &cb_fsync, &cb_truncate,
                      &cb_aes_cmac, &cb_aes_gcm_encrypt, &cb_aes_gcm_decrypt,
                      &cb_random, cb_debug_ptr);
 

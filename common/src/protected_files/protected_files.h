@@ -92,6 +92,15 @@ typedef pf_status_t (*pf_write_f)(pf_handle_t handle, const void* buffer, uint64
                                   size_t size);
 
 /*!
+ * \brief File sync callback.
+ *
+ * \param handle  File handle.
+ *
+ * \returns PF status.
+ */
+typedef pf_status_t (*pf_fsync_f)(pf_handle_t handle);
+
+/*!
  * \brief File truncate callback.
  *
  * \param handle  File handle.
@@ -172,6 +181,7 @@ typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
  *
  * \param read_f             File read callback.
  * \param write_f            File write callback.
+ * \param fsync_f            File sync callback.
  * \param truncate_f         File truncate callback.
  * \param aes_cmac_f         AES-CMAC callback.
  * \param aes_gcm_encrypt_f  AES-GCM encrypt callback.
@@ -181,8 +191,9 @@ typedef pf_status_t (*pf_random_f)(uint8_t* buffer, size_t size);
  *
  * Must be called before any actual APIs.
  */
-void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_truncate_f truncate_f,
-                      pf_aes_cmac_f aes_cmac_f, pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
+void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
+                      pf_truncate_f truncate_f, pf_aes_cmac_f aes_cmac_f,
+                      pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
                       pf_aes_gcm_decrypt_f aes_gcm_decrypt_f, pf_random_f random_f,
                       pf_debug_f debug_f);
 

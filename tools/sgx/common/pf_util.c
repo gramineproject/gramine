@@ -97,6 +97,18 @@ static pf_status_t linux_write(pf_handle_t handle, const void* buffer, uint64_t 
     return PF_STATUS_SUCCESS;
 }
 
+static pf_status_t linux_fsync(pf_handle_t handle) {
+    int fd = *(int*)handle;
+    DBG("linux_fsync: fd %d\n", fd);
+    int ret = fsync(fd);
+    if (ret < 0) {
+        ERROR("fsync failed: %s\n", strerror(errno));
+        return PF_STATUS_CALLBACK_FAILED;
+    }
+
+    return PF_STATUS_SUCCESS;
+}
+
 static pf_status_t linux_truncate(pf_handle_t handle, uint64_t size) {
     int fd = *(int*)handle;
     DBG("linux_truncate: fd %d, size %zu\n", fd, size);
@@ -214,7 +226,7 @@ static int pf_set_linux_callbacks(pf_debug_f debug_f) {
         return -1;
     }
 
-    pf_set_callbacks(linux_read, linux_write, linux_truncate, mbedtls_aes_cmac,
+    pf_set_callbacks(linux_read, linux_write, linux_fsync, linux_truncate, mbedtls_aes_cmac,
                      mbedtls_aes_gcm_encrypt, mbedtls_aes_gcm_decrypt, mbedtls_random, debug_f);
     return 0;
 }
