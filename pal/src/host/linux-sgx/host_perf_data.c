@@ -140,13 +140,13 @@ static int pd_write(struct perf_data* pd, const void* data, size_t size) {
     return 0;
 }
 
-struct perf_data* pd_open(const char* file_name, bool with_stack) {
+int pd_open_file(struct perf_data* pd, const char* file_name) {
     int ret;
 
     int fd = DO_SYSCALL(open, file_name, O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, PERM_rw_r__r__);
     if (fd < 0) {
-        log_error("pd_open: cannot open %s for writing: %s", file_name, unix_strerror(fd));
-        return NULL;
+        log_error("pd_open_file: cannot open %s for writing: %s", file_name, unix_strerror(fd));
+        return fd;
     }
 
     /*
@@ -162,23 +162,36 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
     if (ret < 0)
         goto fail;
 
+    assert(pd->fd == -1);
+    pd->fd = fd;
+    return 0;
+
+fail:;
+    int close_ret = DO_SYSCALL(close, fd);
+    if (close_ret < 0)
+        log_error("pd_open_file: close failed: %s", unix_strerror(close_ret));
+    return ret;
+}
+
+struct perf_data* pd_open(const char* file_name, bool with_stack) {
     struct perf_data* pd = malloc(sizeof(*pd));
     if (!pd) {
         log_error("pd_open: out of memory");
-        goto fail;
+        return NULL;
     }
 
-    pd->fd = fd;
+    pd->fd  = -1;
+    int ret = pd_open_file(pd, file_name);
+    if (ret < 0) {
+        free(pd);
+        return NULL;
+    }
+
     pd->buf_count = 0;
     pd->with_stack = with_stack;
-    return pd;
 
-fail:
-    ret = DO_SYSCALL(close, fd);
-    if (ret < 0)
-        log_error("pd_open: close failed: %s", unix_strerror(ret));
-    return NULL;
-};
+    return pd;
+}
 
 static int write_prologue_epilogue(struct perf_data* pd) {
     int ret;
@@ -266,9 +279,8 @@ static int write_prologue_epilogue(struct perf_data* pd) {
     return 0;
 }
 
-ssize_t pd_close(struct perf_data* pd) {
-    ssize_t ret = 0;
-    int close_ret;
+ssize_t pd_close_file(struct perf_data* pd) {
+    ssize_t ret;
 
     ret = pd_flush(pd);
     if (ret < 0)
@@ -282,12 +294,20 @@ ssize_t pd_close(struct perf_data* pd) {
     if (ret < 0)
         goto out;
 
-out:
-    close_ret = DO_SYSCALL(close, pd->fd);
+out:;
+    int close_ret = DO_SYSCALL(close, pd->fd);
+    pd->fd = -1;
     if (close_ret < 0)
-        log_error("pd_close: close failed: %s", unix_strerror(close_ret));
+        log_error("pd_close_file: close failed: %s", unix_strerror(close_ret));
 
+    /* Returns the size of the finalized perf-data file on success */
+    return ret;
+}
+
+ssize_t pd_close(struct perf_data* pd) {
+    ssize_t ret = pd_close_file(pd);
     free(pd);
+
     return ret;
 }
 

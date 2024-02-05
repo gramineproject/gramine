@@ -630,6 +630,14 @@ prematurely. Killing the application abruptly via SIGKILL will result in incorre
 perf data. Instead, add ``sys.enable_sigterm_injection = true`` to manifest and
 terminate the application using command ``kill <pid>`` (i.e. send SIGTERM).
 
+It is also possible to flush the collected profile data in a file interactively,
+using the ``SIGUSR1`` signal. This helps to collect profile data only for a
+particular period, e.g., skipping the Gramine startup and application
+initialization time and concentrating only on the actual application processing.
+Send ``SIGUSR1`` using command ``kill -SIGUSR1 -<PGID>`` (note the minus sign
+before <PGID>). Sending multiple ``SIGUSR1`` will create multiple files, each
+containing profile data collected after the previous ``SIGUSR1``.
+
 *Note*: The accuracy of this tool is unclear (though we had positive experiences
 using the tool so far). The SGX profiling works by measuring the value of
 instruction pointer on each asynchronous enclave exit (AEX), which happen on
