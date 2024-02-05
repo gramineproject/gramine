@@ -35,6 +35,10 @@ char* realpath(const char* path, char* resolved_path);
 
 #define NSEC_IN_SEC 1000000000
 
+/* Filenames for saved data */
+#define SGX_PROFILE_FILENAME "sgx-perf-%lu.data"
+#define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d-%lu.data"
+
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
 static struct perf_data* g_perf_data = NULL;
 
@@ -117,6 +121,21 @@ int sgx_profile_init(void) {
     }
     g_mem_fd = ret;
 
+    struct timespec ts;
+    ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
+    if (ret < 0) {
+        log_error("sgx_profile_sample: clock_gettime failed: %s", unix_strerror(ret));
+        return false;
+    }
+
+    if (g_pal_enclave.profile_append_pid_to_filename) {
+        snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
+                 SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
+    } else {
+        snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
+                 SGX_PROFILE_FILENAME, ts.tv_sec);
+    }
+
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
@@ -175,7 +194,7 @@ void sgx_profile_finish(void) {
         log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
     g_mem_fd = -1;
 
-    log_debug("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
+    log_always("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
 
     g_profile_enabled = false;
 }

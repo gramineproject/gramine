@@ -53,6 +53,7 @@ struct pal_enclave {
     char profile_filename[64];
     bool profile_with_stack;
     int profile_frequency;
+    bool profile_append_pid_to_filename;
 #endif
 };
 
@@ -143,10 +144,6 @@ enum {
     SGX_PROFILE_MODE_OCALL_INNER = 2,
     SGX_PROFILE_MODE_OCALL_OUTER = 3,
 };
-
-/* Filenames for saved data */
-#define SGX_PROFILE_FILENAME "sgx-perf.data"
-#define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d.data"
 
 /* Initialize based on g_pal_enclave settings */
 int sgx_profile_init(void);
