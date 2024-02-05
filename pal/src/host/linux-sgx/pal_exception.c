@@ -380,9 +380,9 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
         }
 
         /* propagate the unhandled memfaults to LibOS via upcall */
-propagate_memfault:;
     }
 
+propagate_memfault:
     pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);

@@ -860,7 +860,7 @@ class TC_30_Syscall(RegressionTestCase):
         finally:
             os.remove('testfile_map_noreserve')
         if HAS_EDMM:
-            self.assertIn('Got signal: 11', stdout)
+            self.assertIn('Got SIGSEGV', stdout)
 
     @unittest.skip('sigaltstack isn\'t correctly implemented')
     def test_060_sigaltstack(self):

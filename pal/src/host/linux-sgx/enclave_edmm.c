@@ -203,7 +203,7 @@ static enclave_page_tracker_t* create_enclave_page_tracker(uintptr_t base_addres
     enclave_page_tracker_t* tracker = malloc(sizeof(enclave_page_tracker_t));
     if (!tracker)
         INIT_FAIL("cannot allocate enclave page tracker");
-    tracker->data = (uint8_t*)calloc(ALIGN_UP(num_pages, 8) / 8, sizeof(uint8_t));
+    tracker->data = calloc(ALIGN_UP(num_pages, 8) / 8, sizeof(uint8_t));
     if (!tracker->data)
         INIT_FAIL("cannot allocate enclave page tracker data");
 
