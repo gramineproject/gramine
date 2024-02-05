@@ -13,6 +13,7 @@
 /* Host callbacks */
 static pf_read_f     g_cb_read     = NULL;
 static pf_write_f    g_cb_write    = NULL;
+static pf_fsync_f    g_cb_fsync    = NULL;
 static pf_truncate_f g_cb_truncate = NULL;
 static pf_debug_f    g_cb_debug    = NULL;
 
@@ -1170,12 +1171,14 @@ static bool ipf_close(pf_context_t* pf) {
 
 // public API
 
-void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_truncate_f truncate_f,
-                      pf_aes_cmac_f aes_cmac_f, pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
+void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
+                      pf_truncate_f truncate_f, pf_aes_cmac_f aes_cmac_f,
+                      pf_aes_gcm_encrypt_f aes_gcm_encrypt_f,
                       pf_aes_gcm_decrypt_f aes_gcm_decrypt_f, pf_random_f random_f,
                       pf_debug_f debug_f) {
     g_cb_read            = read_f;
     g_cb_write           = write_f;
+    g_cb_fsync           = fsync_f;
     g_cb_truncate        = truncate_f;
     g_cb_aes_cmac        = aes_cmac_f;
     g_cb_aes_gcm_encrypt = aes_gcm_encrypt_f;
@@ -1350,6 +1353,14 @@ pf_status_t pf_flush(pf_context_t* pf) {
 
     if (!ipf_internal_flush(pf))
         return pf->last_error;
+
+    /* perform a synchronous fsync only when explicitly asked for */
+    pf_status_t status = g_cb_fsync(pf->file);
+    if (PF_FAILURE(status)) {
+        pf->last_error = status;
+        return pf->last_error;
+    }
+
     return PF_STATUS_SUCCESS;
 }
 
