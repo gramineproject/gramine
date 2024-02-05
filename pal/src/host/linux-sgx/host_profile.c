@@ -19,6 +19,7 @@
 #include <stddef.h>
 
 #include "cpu.h"
+#include "debug_map.h"
 #include "elf/elf.h"
 #include "host_internal.h"
 #include "host_log.h"
@@ -35,13 +36,20 @@ char* realpath(const char* path, char* resolved_path);
 
 #define NSEC_IN_SEC 1000000000
 
+/* Filename for saved data */
+#define SGX_PROFILE_FILENAME_WITH_PID_AND_TIME "sgx-perf-%d-%lu.data"
+
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
 static struct perf_data* g_perf_data = NULL;
 
 static bool g_profile_enabled = false;
+bool g_trigger_profile_reinit;
 static int g_profile_mode;
 static uint64_t g_profile_period;
 static int g_mem_fd = -1;
+char g_profile_filename[128];
+
+static void _sgx_profile_report_elf(const char* filename, void* addr);
 
 /* Read memory from inside enclave (using /proc/self/mem). */
 static ssize_t debug_read(void* dest, void* addr, size_t size) {
@@ -117,7 +125,17 @@ int sgx_profile_init(void) {
     }
     g_mem_fd = ret;
 
-    struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
+    struct timespec ts;
+    ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
+    if (ret < 0) {
+        log_error("sgx_profile_init: clock_gettime failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    snprintf(g_profile_filename, ARRAY_SIZE(g_profile_filename),
+             SGX_PROFILE_FILENAME_WITH_PID_AND_TIME, (int)g_host_pid, ts.tv_sec);
+
+    struct perf_data* pd = pd_open(g_profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
         ret = -EINVAL;
@@ -135,7 +153,7 @@ int sgx_profile_init(void) {
     return 0;
 
 out:
-    if (g_mem_fd > 0) {
+    if (g_mem_fd >= 0) {
         int close_ret = DO_SYSCALL(close, g_mem_fd);
         if (close_ret < 0) {
             log_error("sgx_profile_init: closing /proc/self/mem failed: %s",
@@ -175,15 +193,63 @@ void sgx_profile_finish(void) {
         log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
     g_mem_fd = -1;
 
-    log_debug("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
+    log_error("[INFO] Profile data written to %s (%lu bytes)", g_profile_filename, size);
 
     g_profile_enabled = false;
+}
+
+static int sgx_profile_reinit(void) {
+    assert(spinlock_is_locked(&g_perf_data_lock));
+
+    int ret;
+    ssize_t size;
+
+    size = pd_close_file(g_perf_data);
+    if (size < 0) {
+        log_error("sgx_profile_reinit: pd_close_file failed: %s", unix_strerror(size));
+        return size;
+    }
+
+    log_error("[INFO] Profile data written to %s (%lu bytes)", g_profile_filename, size);
+
+    struct timespec ts;
+    ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
+    if (ret < 0) {
+        log_error("sgx_profile_reinit: clock_gettime failed: %s", unix_strerror(ret));
+        return ret;
+    }
+
+    snprintf(g_profile_filename, ARRAY_SIZE(g_profile_filename),
+             SGX_PROFILE_FILENAME_WITH_PID_AND_TIME, (int)g_host_pid, ts.tv_sec);
+
+    ret = pd_open_file(g_perf_data, g_profile_filename);
+    if (ret < 0) {
+        log_error("sgx_profile_reinit: pd_open_file failed");
+        return ret;
+    }
+
+    /* Report all ELFs already loaded */
+    struct debug_map* map = g_debug_map;
+    while (map) {
+        _sgx_profile_report_elf(map->name, map->addr);
+        map = map->next;
+    }
+
+    return 0;
 }
 
 static void sample_simple(uint64_t rip) {
     int ret;
 
     spinlock_lock(&g_perf_data_lock);
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
+        ret = sgx_profile_reinit();
+        if (ret < 0) {
+            /* No need to print error message since sgx_profile_init() already prints it */
+            BUG();
+        }
+    }
+
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_simple(g_perf_data, rip, g_host_pid, /*tid=*/g_host_pid,
                                  g_profile_period);
@@ -207,6 +273,14 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     stack_size = ret;
 
     spinlock_lock(&g_perf_data_lock);
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
+        ret = sgx_profile_reinit();
+        if (ret < 0) {
+            /* No need to print error message since sgx_profile_init() already prints it */
+            BUG();
+        }
+    }
+
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_stack(g_perf_data, gpr->rip, g_host_pid, /*tid=*/g_host_pid,
                                 g_profile_period, gpr, stack, stack_size);
@@ -305,7 +379,8 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
     sample_simple((uint64_t)ocall_func);
 }
 
-void sgx_profile_report_elf(const char* filename, void* addr) {
+static void _sgx_profile_report_elf(const char* filename, void* addr) {
+    assert(spinlock_is_locked(&g_perf_data_lock));
     int ret;
 
     if (!g_profile_enabled && !g_vtune_profile_enabled)
@@ -372,8 +447,6 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
-    spinlock_lock(&g_perf_data_lock);
-
     for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
             uint64_t mapstart = ALLOC_ALIGN_DOWN(phdr[i].p_vaddr);
@@ -392,8 +465,6 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
         }
     }
 
-    spinlock_unlock(&g_perf_data_lock);
-
     if (ret < 0) {
         log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %s", filename,
                   unix_strerror(ret));
@@ -410,6 +481,12 @@ out_close:
     ret = DO_SYSCALL(close, fd);
     if (ret < 0)
         log_error("sgx_profile_report_elf(%s): close failed: %s", filename, unix_strerror(ret));
+}
+
+void sgx_profile_report_elf(const char* filename, void* addr) {
+    spinlock_lock(&g_perf_data_lock);
+    _sgx_profile_report_elf(filename, addr);
+    spinlock_unlock(&g_perf_data_lock);
 }
 
 #endif /* DEBUG */
