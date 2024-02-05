@@ -613,7 +613,7 @@ variables and files with these secrets, and only then starts the main Gramine
 application. This "premain" executable together with the Gramine application is
 referred to as a Marble. For more details, see `Marblerun docs on Gramine
 integration
-<https://docs.edgeless.systems/marblerun/#/building-services/gramine>`__.
+<https://docs.edgeless.systems/marblerun/building-marbles/gramine>`__.
 
 The Coordinator serves as a centralized service for remote attestation of
 Marbles and provisioning of secrets to them. The Coordinator verifies the
