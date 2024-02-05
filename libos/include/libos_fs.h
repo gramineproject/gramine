@@ -504,10 +504,10 @@ struct libos_mount {
 
 extern struct libos_dentry* g_dentry_root;
 
-#define F_OK 0
-#define R_OK        001
-#define W_OK        002
-#define X_OK        004
+#define F_OK   0
+#define X_OK 001
+#define W_OK 002
+#define R_OK 004
 #define MAY_EXEC  001
 #define MAY_WRITE 002
 #define MAY_READ  004
