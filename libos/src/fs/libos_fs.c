@@ -67,16 +67,21 @@ int init_fs(void) {
 
     INIT_LISTP(&g_mount_list);
 
+    log_debug("init_encrypted_files");
     if ((ret = init_encrypted_files()) < 0)
         goto err;
 
+    log_debug("init_procfs");
     if ((ret = init_procfs()) < 0)
         goto err;
+    log_debug("init_devfs");
     if ((ret = init_devfs()) < 0)
         goto err;
+    log_debug("init_sysfs");
     if ((ret = init_sysfs()) < 0)
         goto err;
 
+    log_debug("init_etcfs");
     if ((ret = init_etcfs()) < 0)
         goto err;
 

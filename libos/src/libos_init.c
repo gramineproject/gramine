@@ -397,14 +397,23 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
         g_received_user_memory = true;
     }
 
+    log_debug("init_vma");
     RUN_INIT(init_vma);
+    log_debug("init_slab");
     RUN_INIT(init_slab);
+    log_debug("read env");
     RUN_INIT(read_environs, envp);
+    log_debug("init_rlimit");
     RUN_INIT(init_rlimit);
+    log_debug("init_fs");
     RUN_INIT(init_fs);
+    log_debug("init_fs_lock");
     RUN_INIT(init_fs_lock);
+    log_debug("init_dcache");
     RUN_INIT(init_dcache);
+    log_debug("init_handle");
     RUN_INIT(init_handle);
+    log_debug("init_r_debug");
     RUN_INIT(init_r_debug);
 
     log_debug("LibOS loaded at %p, ready to initialize", &__load_address);

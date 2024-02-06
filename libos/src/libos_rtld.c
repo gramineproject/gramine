@@ -724,6 +724,7 @@ err:
 int load_and_check_exec(const char* path, const char* const* argv, struct libos_handle** out_exec,
                         char*** out_new_argv) {
     int ret;
+    log_debug("load_and_check_exec: %s", path);
 
     struct libos_handle* file = NULL;
 
@@ -735,12 +736,14 @@ int load_and_check_exec(const char* path, const char* const* argv, struct libos_
         curr_argv_cnt++;
     }
 
+    log_debug("load_and_check_exec: calloc");
     char** curr_argv = calloc(curr_argv_cnt + 1, sizeof(*curr_argv));
     if (!curr_argv) {
         ret = -ENOMEM;
         goto err;
     }
 
+    log_debug("load_and_check_exec: malloc");
     char* curr_argv_ptr = malloc(curr_argv_bytes);
     if (!curr_argv_ptr) {
         ret = -ENOMEM;
@@ -763,6 +766,7 @@ int load_and_check_exec(const char* path, const char* const* argv, struct libos_
     }
 
     size_t depth = 0;
+    log_debug("load_and_check_exec: while true");
     while (true) {
         if (depth++ > 5) {
             ret = -ELOOP;
@@ -806,9 +810,11 @@ int load_and_check_exec(const char* path, const char* const* argv, struct libos_
 
     *out_exec = file;
     *out_new_argv = curr_argv;
+    log_debug("load_and_check_exec: return 0");
     return 0;
 
 err:
+    log_debug("load_and_check_exec: err");
     if (file)
         put_handle(file);
     if (curr_argv) {
