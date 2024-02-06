@@ -778,12 +778,14 @@ int load_and_check_exec(const char* path, const char* const* argv, struct libos_
             ret = -ENOMEM;
             goto err;
         }
-
+        log_debug("open executable: %s", file);
         ret = open_executable(file, depth > 1 ? curr_argv[0] : path);
         if (ret < 0) {
+            log_debug("open executable: %s ERROR", file);
             goto err;
         }
 
+        log_debug("check elf object: %s", file);
         ret = check_elf_object(file);
         if (ret == 0) {
             /* Success */
