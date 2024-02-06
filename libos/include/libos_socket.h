@@ -128,7 +128,7 @@ extern struct libos_sock_ops sock_ip_ops;
 
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,
-                   unsigned int* flags);
+                   unsigned int* flags, bool emulate_recv_error_semantics);
 ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t msg_controllen, void* addr, size_t addrlen,
                    unsigned int flags);

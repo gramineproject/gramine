@@ -846,7 +846,7 @@ out:
  * is called directly from syscall handlers, which return values in such a way. */
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,
-                   unsigned int* flags) {
+                   unsigned int* flags, bool emulate_recv_error_semantics) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
@@ -883,6 +883,22 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
         /* This cannot overflow - we have already checked that all of this memory is present so it
          * must fit in `size_t`. */
         total_size += iov[i].iov_len;
+    }
+
+    if (!total_size && !emulate_recv_error_semantics) {
+        /*
+         * In Linux, read() and readv() -- i.e. not recv*() syscalls -- have a "match SYS5 behavior"
+         * corner case: 0 is returned if the requested number of bytes to receive is 0. The
+         * rationale for this behavior is unclear and lost in history. The relevant Linux code:
+         * https://github.com/torvalds/linux/blob/99bd3cb0d12e85/net/socket.c#L1136-L1136
+         *
+         * Apparently some applications/libraries rely on this behavior. Without this corner case,
+         * these apps would hang (if the socket is blocking) or unexpectedly return -EAGAIN (if the
+         * socket is non-blocking). Note that the underlying PalSocketRecv() uses `recvmsg()`
+         * syscall, at least on Linux-based PALs, so a simple fall-through to PAL would change the
+         * semantics of `read()`/`readv()` issued by the app.
+         */
+        return 0;
     }
 
     /*
@@ -1027,7 +1043,7 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
         .iov_len = len,
     };
     ssize_t ret = do_recvmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen_ptr=*/NULL,
-                             addr, &addrlen, &flags);
+                             addr, &addrlen, &flags, /*emulate_recv_error_semantics=*/true);
     if (ret >= 0 && addr) {
         *_addrlen = addrlen;
     }
@@ -1048,7 +1064,7 @@ long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
     ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_control, &msg->msg_controllen,
-                     msg->msg_name, &addrlen, &flags);
+                     msg->msg_name, &addrlen, &flags, /*emulate_recv_error_semantics=*/true);
     if (ret >= 0) {
         if (msg->msg_name) {
             msg->msg_namelen = addrlen;
@@ -1094,7 +1110,8 @@ long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         size_t addrlen = hdr->msg_name ? hdr->msg_namelen : 0;
         unsigned int this_flags = flags;
         ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_control,
-                         &hdr->msg_controllen, hdr->msg_name, &addrlen, &this_flags);
+                         &hdr->msg_controllen, hdr->msg_name, &addrlen, &this_flags,
+                         /*emulate_recv_error_semantics=*/true);
         if (ret < 0) {
             if (i == 0) {
                 /* Return error directly. */
