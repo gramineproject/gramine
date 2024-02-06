@@ -72,8 +72,14 @@ static int unaddr_to_sockname(void* addr, size_t* addrlen_ptr, char* sock_name,
     if (ret < 0) {
         return -ENOMEM;
     }
-    assert(sock_name_size >= 2 * sizeof(hash) + 1);
-    bytes2hex(hash, sizeof(hash), sock_name, sock_name_size);
+
+    char hash_str[64 + 1] = {0};
+    bytes2hex(hash, sizeof(hash), hash_str, sizeof(hash_str));
+
+    size_t len = snprintf(sock_name, sock_name_size, "%lu/%s", g_pal_public_state->instance_id,
+                          hash_str);
+    if (len >= sock_name_size)
+        return -ERANGE;
     return 0;
 }
 
@@ -125,7 +131,7 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
-    char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
+    char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 96 + 1] = URI_PREFIX_PIPE_SRV;
     int ret = unaddr_to_sockname(addr, &addrlen,
                                  pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
@@ -222,7 +228,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
         return -EINVAL;
     }
 
-    char pipe_name[static_strlen(URI_PREFIX_PIPE) + 64 + 1] = URI_PREFIX_PIPE;
+    char pipe_name[static_strlen(URI_PREFIX_PIPE) + 96 + 1] = URI_PREFIX_PIPE;
     int ret = unaddr_to_sockname(addr, &addrlen,
                                  pipe_name + static_strlen(URI_PREFIX_PIPE),
                                  sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
