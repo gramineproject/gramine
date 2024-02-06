@@ -17,7 +17,12 @@ static int mem_file_resize(struct libos_mem_file* mem, size_t buf_size) {
     if (!buf)
         return -ENOMEM;
 
-    memcpy(buf, mem->buf, MIN(buf_size, (size_t)mem->size));
+    size_t min_size = MIN(buf_size, (size_t)mem->size);
+    memcpy(buf, mem->buf, min_size);
+
+    /* if the new buffer is larger, zero out the new portion */
+    if (buf_size > min_size)
+        memset(buf + min_size, 0, buf_size - min_size);
 
     free(mem->buf);
     mem->buf = buf;
