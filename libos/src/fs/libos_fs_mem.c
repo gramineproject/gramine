@@ -13,7 +13,7 @@
 static int mem_file_resize(struct libos_mem_file* mem, size_t buf_size) {
     assert(buf_size > 0);
 
-    char* buf = malloc(buf_size);
+    char* buf = calloc(1, buf_size);
     if (!buf)
         return -ENOMEM;
 
