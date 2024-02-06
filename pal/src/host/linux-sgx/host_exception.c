@@ -198,7 +198,7 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
         sgx_profile_finish();
         sgx_profile_init();
 
-        /* Report all ELFs already loaded (host part of PAL and dynamic libraries used by it) */
+        /* Report all ELFs already loaded */
         struct debug_map* map = g_debug_map;
         while (map) {
             sgx_profile_report_elf(map->name, map->addr);
