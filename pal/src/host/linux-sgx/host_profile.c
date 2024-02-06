@@ -124,8 +124,8 @@ int sgx_profile_init(void) {
     struct timespec ts;
     ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
     if (ret < 0) {
-        log_error("sgx_profile_sample: clock_gettime failed: %s", unix_strerror(ret));
-        return false;
+        log_error("sgx_profile_init: clock_gettime failed: %s", unix_strerror(ret));
+        goto out;
     }
 
     if (g_pal_enclave.profile_append_pid_to_filename) {

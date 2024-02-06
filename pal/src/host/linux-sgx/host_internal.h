@@ -50,7 +50,7 @@ struct pal_enclave {
     /* profiling */
     bool profile_enable;
     int profile_mode;
-    char profile_filename[64];
+    char profile_filename[128];
     bool profile_with_stack;
     int profile_frequency;
     bool profile_append_pid_to_filename;

@@ -633,7 +633,10 @@ terminate the application using command ``kill <pid>`` (i.e. send SIGTERM).
 It's also possible to flush the collected profile data anytime using ``SIGUSR1``
 signal which would help in cases where user would like to collect profile data
 only for a particular period (e.g., during benchmarks run). Send SIGUSR1 signal
-using command ``kill -SIGUSR1 <pid>``.
+using command ``kill -SIGUSR1 <pid>``. Sending multiple ``SIGUSR1`` will create
+multiple files, each containing profile data collected after the previous
+``SIGUSR1`` which is helpful when the application runs in clearly separated
+stages.
 
 *Note*: The accuracy of this tool is unclear (though we had positive experiences
 using the tool so far). The SGX profiling works by measuring the value of
