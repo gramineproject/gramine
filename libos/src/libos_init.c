@@ -548,8 +548,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     while (true) {
         if (use_vmid_for_name) {
-            len = snprintf(pipename, sizeof(pipename), "%lu/%u", g_pal_public_state->instance_id,
-                           g_process_ipc_ids.self_vmid);
+            len = snprintf(pipename, sizeof(pipename), "%u", g_process_ipc_ids.self_vmid);
             if (len >= sizeof(pipename))
                 return -ERANGE;
         } else {
@@ -560,8 +559,10 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
                 return ret;
         }
 
-        log_debug("Creating pipe: " URI_PREFIX_PIPE_SRV "%s", pipename);
-        len = snprintf(uri, size, URI_PREFIX_PIPE_SRV "%s", pipename);
+        log_debug("Creating pipe: " URI_PREFIX_PIPE_SRV "%lu/%s", g_pal_public_state->instance_id,
+                  pipename);
+        len = snprintf(uri, size, URI_PREFIX_PIPE_SRV "%lu/%s", g_pal_public_state->instance_id,
+                       pipename);
         if (len >= size)
             return -ERANGE;
 
@@ -580,7 +581,8 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
 
     /* output generated pipe handle, URI, and name */
     *hdl = pipe;
-    len = snprintf(uri, size, URI_PREFIX_PIPE "%s", pipename);
+    len = snprintf(uri, size, URI_PREFIX_PIPE "%lu/%s", g_pal_public_state->instance_id, pipename);
+    assert(len < size); /* must hold because above we did the same but with longer prefix */
     if (name)
         memcpy(name, pipename, sizeof(pipename));
     return 0;
