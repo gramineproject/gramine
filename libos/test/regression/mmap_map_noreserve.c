@@ -61,7 +61,7 @@ static unsigned long get_random_ulong(void) {
     return random_num;
 }
 
-/* To stress races between several threads on the same lazily-allocated page, we rpeatedly touch
+/* To stress races between several threads on the same lazily-allocated page, we repeatedly touch
  * different pages at random (with not too many pages, so that it has a reasonable chance of
  * collision).
  * TODO: Instead of mapping and unmapping before and after each test to move the pages back
@@ -106,7 +106,7 @@ int main(void) {
     }
 
     if (__atomic_load_n(&g_signum, __ATOMIC_RELAXED) == SIGSEGV)
-        printf("Got SIGSEGV\n");
+        puts("Got SIGSEGV");
 
     CHECK(mprotect(a, TEST_LENGTH, PROT_READ | PROT_WRITE));
 
