@@ -1,0 +1,25 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+
+  { type = "socket", path = "/tmp/dummy" },
+  { type = "socket", path = "/tmp/unix_socket" },
+]
+
+# for testing stat buf of named UNIX socket, see also unix.c
+loader.uid = 1338
+loader.gid = 1337
+
+sgx.nonpie_binary = true
+sgx.debug = true
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]

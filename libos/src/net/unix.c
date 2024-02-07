@@ -8,12 +8,6 @@
  * Currently only stream-oriented sockets are supported (i.e. `SOCK_STREAM`).
  */
 
-/*
- * TODO: Currently pathname UNIX domain sockets are not visible on the Gramine filesystem (they
- * do not have a corresponding dentry). This shouldn't be hard to implement, but leaving this as
- * a todo for now - nothing seemed to require it, at least so far.
- */
-
 #include "crypto.h"
 #include "hex.h"
 #include "libos_fs.h"
@@ -21,43 +15,9 @@
 #include "libos_socket.h"
 #include "linux_socket.h"
 #include "pal.h"
+#include "stat.h"
 
-/*!
- * \brief Verify UNIX socket address and convert it to a unique socket name.
- *
- * \param         addr            The socket address to convert.
- * \param[in,out] addrlen_ptr     Pointer to the size of \p addr. Always updated to the actual size
- *                                of the address (but it's never extended).
- * \param[out]    sock_name       Buffer for the output socket name. On success contains a null
- *                                terminated string.
- * \param         sock_name_size  Size of \p sock_name.
- */
-static int unaddr_to_sockname(void* addr, size_t* addrlen_ptr, char* sock_name,
-                              size_t sock_name_size) {
-    if (*addrlen_ptr > sizeof(struct sockaddr_un)) {
-        /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
-         * ignored. */
-        *addrlen_ptr = sizeof(struct sockaddr_un);
-    }
-    if (*addrlen_ptr < offsetof(struct sockaddr_un, sun_path) + 1) {
-        return -EINVAL;
-    }
-    static_assert(offsetof(struct sockaddr_un, sun_family) < offsetof(struct sockaddr_un, sun_path),
-                  "ops");
-    unsigned short family;
-    memcpy(&family, (char*)addr + offsetof(struct sockaddr_un, sun_family), sizeof(family));
-    if (family != AF_UNIX) {
-        return -EAFNOSUPPORT;
-    }
-
-    const char* path = (char*)addr + offsetof(struct sockaddr_un, sun_path);
-    size_t pathlen = *addrlen_ptr - offsetof(struct sockaddr_un, sun_path);
-    assert(pathlen >= 1);
-    if (path[0]) {
-        /* Named UNIX socket. */
-        pathlen = strnlen(path, pathlen);
-    }
-
+int path_to_sockname(const char* path, size_t pathlen, char* sock_name, size_t sock_name_size) {
     uint8_t hash[32];
     LIB_SHA256_CONTEXT hash_context;
     int ret = lib_SHA256Init(&hash_context);
@@ -74,6 +34,32 @@ static int unaddr_to_sockname(void* addr, size_t* addrlen_ptr, char* sock_name,
     }
     assert(sock_name_size >= 2 * sizeof(hash) + 1);
     bytes2hex(hash, sizeof(hash), sock_name, sock_name_size);
+    return 0;
+}
+
+/*!
+ * \brief Verify UNIX socket address.
+ *
+ * \param         addr            The socket address to convert.
+ * \param[in,out] addrlen_ptr     Pointer to the size of \p addr. Always updated to the actual size
+ *                                of the address (but it's never extended).
+ */
+static int verify_sockname(void* addr, size_t* addrlen_ptr) {
+    if (*addrlen_ptr > sizeof(struct sockaddr_un)) {
+        /* Cap the address at the maximal possible size - rest of the input buffer (if any) is
+         * ignored. */
+        *addrlen_ptr = sizeof(struct sockaddr_un);
+    }
+    if (*addrlen_ptr < offsetof(struct sockaddr_un, sun_path) + 1) {
+        return -EINVAL;
+    }
+    static_assert(offsetof(struct sockaddr_un, sun_family) < offsetof(struct sockaddr_un, sun_path),
+                  "ops");
+    unsigned short family;
+    memcpy(&family, (char*)addr + offsetof(struct sockaddr_un, sun_family), sizeof(family));
+    if (family != AF_UNIX) {
+        return -EAFNOSUPPORT;
+    }
     return 0;
 }
 
@@ -103,6 +89,41 @@ static void fixup_sockaddr_un_path(struct sockaddr_storage* ss_addr, size_t* add
     assert(*addrlen_ptr <= sizeof(*ss_addr));
 }
 
+static int bind_named_socket_to_fs(const char* pathname, struct libos_dentry** out_dent) {
+    lock(&g_dcache_lock);
+
+    struct libos_dentry* dent = NULL;
+    int ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW | LOOKUP_CREATE, &dent);
+    if (ret < 0) {
+        goto out;
+    }
+
+    if (strcmp(dent->mount->fs->name, socket_builtin_fs.name)) {
+        ret = -EACCES;
+        goto out;
+    }
+
+    if (dent->inode) {
+        ret = -EADDRINUSE;
+        goto out;
+    }
+
+    ret = unix_socket_setup_dentry(dent);
+    if (ret < 0) {
+        goto out;
+    }
+
+    *out_dent = dent;
+    get_dentry(dent);
+
+    ret = 0;
+out:
+    unlock(&g_dcache_lock);
+    if (dent)
+        put_dentry(dent);
+    return ret;
+}
+
 static int create(struct libos_handle* handle) {
     assert(handle->info.sock.domain == AF_UNIX);
     assert(handle->info.sock.type == SOCK_STREAM || handle->info.sock.type == SOCK_DGRAM);
@@ -125,12 +146,48 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     struct libos_sock_handle* sock = &handle->info.sock;
     assert(locked(&sock->lock));
 
-    char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
-    int ret = unaddr_to_sockname(addr, &addrlen,
-                                 pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
-                                 sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
+    int ret = verify_sockname(addr, &addrlen);
     if (ret < 0) {
         return ret;
+    }
+
+    size_t pathname_size = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path) + 1;
+    char pathname[pathname_size];
+    memset(pathname, 0, pathname_size);
+    memcpy(pathname, (char*)addr + offsetof(struct sockaddr_un, sun_path),
+           addrlen - offsetof(struct sockaddr_un, sun_path));
+
+    struct libos_dentry* dent = NULL;
+    char pipe_name[static_strlen(URI_PREFIX_PIPE_SRV) + 64 + 1] = URI_PREFIX_PIPE_SRV;
+
+    if (pathname[0] && g_use_named_sockets_fs) {
+        /* Named UNIX socket -- add pseudo entry to file system and use abs path for pipe name. */
+        ret = bind_named_socket_to_fs(pathname, &dent);
+        if (ret < 0) {
+            goto out;
+        }
+
+        char* abs_path;
+        ret = dentry_abs_path(dent, &abs_path, /*size=*/NULL);
+        if (ret < 0) {
+            goto out;
+        }
+
+        ret = path_to_sockname(abs_path, strlen(abs_path),
+                               pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
+                               sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
+        free(abs_path);
+        if (ret < 0) {
+            goto out;
+        }
+    } else {
+        /* Abstract UNIX socket -- use pathname as-is for pipe name. */
+        ret = path_to_sockname(pathname, pathname_size,
+                               pipe_name + static_strlen(URI_PREFIX_PIPE_SRV),
+                               sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE_SRV));
+        if (ret < 0) {
+            goto out;
+        }
     }
 
     lock(&handle->lock);
@@ -143,7 +200,8 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
                         &pal_handle);
     if (ret < 0) {
-        return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
+        ret = (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
+        goto out;
     }
 
     __atomic_store_n(&handle->info.sock.pal_handle, pal_handle, __ATOMIC_RELEASE);
@@ -152,11 +210,26 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
                   "need additional space for a nullbyte");
     sock->local_addrlen = addrlen;
     memcpy(&sock->local_addr, addr, sock->local_addrlen);
-    /* The address was verified in `unaddr_to_sockname`, so this is safe to call. */
+    /* The address was verified in `verify_sockname`, so this is safe to call. */
     fixup_sockaddr_un_path(&sock->local_addr, &sock->local_addrlen);
 
+    if (dent) {
+        /* Named UNIX socket -- bind created dentry to the socket handle. */
+        lock(&handle->lock);
+        handle->fs = dent->inode->fs;
+        handle->dentry = dent;
+        get_dentry(dent);
+        handle->inode = dent->inode;
+        get_inode(dent->inode);
+        unlock(&handle->lock);
+    }
+
     interrupt_epolls(handle);
-    return 0;
+    ret = 0;
+out:
+    if (dent)
+        put_dentry(dent);
+    return ret;
 }
 
 static int listen(struct libos_handle* handle, unsigned int backlog) {
@@ -222,12 +295,55 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
         return -EINVAL;
     }
 
-    char pipe_name[static_strlen(URI_PREFIX_PIPE) + 64 + 1] = URI_PREFIX_PIPE;
-    int ret = unaddr_to_sockname(addr, &addrlen,
-                                 pipe_name + static_strlen(URI_PREFIX_PIPE),
-                                 sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
+    int ret = verify_sockname(addr, &addrlen);
     if (ret < 0) {
         return ret;
+    }
+
+    size_t pathname_size = sizeof(struct sockaddr_un) - offsetof(struct sockaddr_un, sun_path) + 1;
+    char pathname[pathname_size];
+    memset(pathname, 0, pathname_size);
+    memcpy(pathname, (char*)addr + offsetof(struct sockaddr_un, sun_path),
+           addrlen - offsetof(struct sockaddr_un, sun_path));
+
+    char pipe_name[static_strlen(URI_PREFIX_PIPE) + 64 + 1] = URI_PREFIX_PIPE;
+    if (pathname[0] && g_use_named_sockets_fs) {
+        /* Named UNIX socket -- find pseudo entry in file system and use abs path for pipe name. */
+        struct libos_dentry* dent = NULL;
+        lock(&g_dcache_lock);
+        ret = path_lookupat(/*start=*/NULL, pathname, LOOKUP_NO_FOLLOW, &dent);
+        unlock(&g_dcache_lock);
+        if (ret < 0) {
+            return ret;
+        }
+
+        if (!dent->inode || dent->inode->type != S_IFSOCK) {
+            put_dentry(dent);
+            return -ENOTSOCK;
+        }
+
+        char* abs_path;
+        ret = dentry_abs_path(dent, &abs_path, /*size=*/NULL);
+        put_dentry(dent);
+        if (ret < 0) {
+            return ret;
+        }
+
+        ret = path_to_sockname(abs_path, strlen(abs_path),
+                               pipe_name + static_strlen(URI_PREFIX_PIPE),
+                               sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
+        free(abs_path);
+        if (ret < 0) {
+            return ret;
+        }
+    } else {
+        /* Abstract UNIX socket -- use pathname as-is for pipe name. */
+        ret = path_to_sockname(pathname, pathname_size,
+                               pipe_name + static_strlen(URI_PREFIX_PIPE),
+                               sizeof(pipe_name) - static_strlen(URI_PREFIX_PIPE));
+        if (ret < 0) {
+            return ret;
+        }
     }
 
     lock(&handle->lock);
@@ -250,7 +366,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
                   "need additional space for a nullbyte");
     sock->remote_addrlen = addrlen;
     memcpy(&sock->remote_addr, addr, sock->remote_addrlen);
-    /* The address was verified in `unaddr_to_sockname`, so this is safe to call. */
+    /* The address was verified in `verify_sockname`, so this is safe to call. */
     fixup_sockaddr_un_path(&sock->remote_addr, &sock->remote_addrlen);
 
     if (sock->state != SOCK_BOUND) {

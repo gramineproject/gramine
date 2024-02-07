@@ -466,9 +466,10 @@ static int mount_fs_at_dentry(struct libos_mount_params* params, struct libos_de
      * problem looking up the root, we want the mount operation to fail.
      *
      * We skip the lookup for the `encrypted` filesystem, because the key for encrypted files might
-     * not be set yet.
+     * not be set yet. We also skip the lookup for named UNIX sockets, because sockets are created
+     * only during runtime.
      */
-    if (strcmp(params->type, "encrypted") != 0) {
+    if (strcmp(params->type, "encrypted") != 0 && strcmp(params->type, "socket") != 0) {
         struct libos_dentry* root;
         if ((ret = path_lookupat(g_dentry_root, params->path, LOOKUP_NO_FOLLOW, &root))) {
             log_warning("Failed to look up mount root %s: %s", params->path, unix_strerror(ret));

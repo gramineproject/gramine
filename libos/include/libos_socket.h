@@ -10,6 +10,8 @@
 
 #define LIBOS_SOCK_MAX_PENDING_CONNS 4096
 
+extern bool g_use_named_sockets_fs;
+
 struct libos_sock_ops {
     /*!
      * \brief Verify the socket handle and initialize type specific fields.
@@ -132,3 +134,16 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
 ssize_t do_sendmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t msg_controllen, void* addr, size_t addrlen,
                    unsigned int flags);
+
+/*!
+ * \brief Convert socket path name to a unique socket name.
+ *
+ * \param       path            The socket path name to convert. Must be absolute for named sockets.
+ * \param       pathlen         Size of \p path.
+ * \param[out]  sock_name       Buffer for the output socket name. On success contains a null
+ *                              terminated string.
+ * \param       sock_name_size  Size of \p sock_name.
+ */
+int path_to_sockname(const char* path, size_t pathlen, char* sock_name, size_t sock_name_size);
+
+int unix_socket_setup_dentry(struct libos_dentry* dent);

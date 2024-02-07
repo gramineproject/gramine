@@ -17,7 +17,10 @@
 
 #define SRV_ADDR_NONEXISTING "/tmp/nonexisting/nonexisting"
 #define SRV_ADDR_DUMMY       "tmp/dummy"
-#define SRV_ADDR             "tmp/unix_socket"
+
+#define SRV_ADDR_DIR  "tmp"
+#define SRV_ADDR_FILE "unix_socket"
+#define SRV_ADDR      SRV_ADDR_DIR "/" SRV_ADDR_FILE
 
 static const char g_buffer[] = "Hello from UDS server!";
 
@@ -86,23 +89,22 @@ static void client(int pipefd) {
     }
     CHECK(close(pipefd));
 
-#if 0 /* FIXME: currently Gramine doesn't reflect named UNIX sockets in file system */
-    /* named UNIX domain sockets must create FS files, verify it */
+    CHECK(chdir(SRV_ADDR_DIR));
+
     struct stat statbuf;
-    CHECK(stat(SRV_ADDR, &statbuf));
+    CHECK(stat(SRV_ADDR_FILE, &statbuf));
     if (statbuf.st_uid != getuid() || statbuf.st_gid != getgid()) {
         errx(1, "unexpected UID/GID of file `%s`", SRV_ADDR);
     }
     if ((statbuf.st_mode & S_IFMT) != S_IFSOCK) {
         errx(1, "file `%s` is not a UNIX domain socket", SRV_ADDR);
     }
-#endif
 
     int s = CHECK(socket(AF_UNIX, SOCK_STREAM, 0));
 
     struct sockaddr_un sa = {
         .sun_family = AF_UNIX,
-        .sun_path = SRV_ADDR,
+        .sun_path = SRV_ADDR_FILE,
     };
     CHECK(connect(s, (void*)&sa, sizeof(sa)));
 
@@ -151,7 +153,12 @@ int main(void) {
         }
     }
 
-#if 0 /* FIXME: currently Gramine doesn't reflect named UNIX sockets in file system */
+#if 0
+    /*
+     * FIXME: Named UNIX sockets are defined as separate mount points (`fs.mounts` entries in the
+     *        manifest file), therefore they cannot be unlinked (only unmounted, which is not
+     *        implemented in Gramine anyway).
+     */
     CHECK(unlink(SRV_ADDR_DUMMY));
     CHECK(unlink(SRV_ADDR));
 #endif
