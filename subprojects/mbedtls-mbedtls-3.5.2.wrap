@@ -7,5 +7,5 @@ source_hash = eedecc468b3f8d052ef05a9d42bf63f04c8a1c50d1c5a94c251c681365a2c723
 
 patch_directory = mbedtls
 
-# this unpacks the sources to `mbedtls-mbedtls-3.5.0/mbedtls-mbedtls-3.5.0`
+# this unpacks the sources to `mbedtls-mbedtls-3.5.2/mbedtls-mbedtls-3.5.2`
 lead_directory_missing = true
