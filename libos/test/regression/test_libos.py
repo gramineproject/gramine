@@ -378,6 +378,10 @@ class TC_01_Bootstrap(RegressionTestCase):
         with self.expect_returncode(134):
             self.run_binary(['abort_multithread'])
 
+    def test_404_sigterm_multithread(self):
+        stdout, _ = self.run_binary(['sigterm_multithread'], prefix=['./test_sigterm.sh'])
+        self.assertIn('SHELL OK', stdout)
+
     def test_404_sigprocmask_pending(self):
         stdout, _ = self.run_binary(['sigprocmask_pending'], timeout=60)
         self.assertIn('Child OK', stdout)
