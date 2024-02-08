@@ -152,7 +152,7 @@ void get_all_pending_signals(__sigset_t* set) {
     __sigemptyset(set);
 
     int host_sig = __atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED);
-    if (host_sig && host_sig != 0xff) {
+    if (host_sig && host_sig != -1) {
         __sigaddset(set, host_sig);
     }
 
@@ -711,13 +711,12 @@ void pop_unblocked_signal(__sigset_t* mask, struct libos_signal* signal) {
         unlock(&g_process_signal_queue_lock);
         unlock(&current->lock);
     } else if (__atomic_load_n(&g_host_injected_signal, __ATOMIC_RELAXED) != 0) {
-        static_assert(SIGS_CNT < 0xff, "This code requires 0xff to be an invalid signal number");
         lock(&current->lock);
         bool sigterm_allowed_on_this_thread = false;
         if (!__sigismember(mask ? : &current->signal_mask, SIGTERM)) {
             sigterm_allowed_on_this_thread = true;
-            int sig = __atomic_exchange_n(&g_host_injected_signal, 0xff, __ATOMIC_RELAXED);
-            if (sig != 0xff) {
+            int sig = __atomic_exchange_n(&g_host_injected_signal, -1, __ATOMIC_RELAXED);
+            if (sig != -1) {
                 signal->siginfo.si_signo = sig;
                 signal->siginfo.si_code = SI_USER;
             }
