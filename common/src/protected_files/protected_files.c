@@ -1354,7 +1354,11 @@ pf_status_t pf_flush(pf_context_t* pf) {
     if (!ipf_internal_flush(pf))
         return pf->last_error;
 
-    /* perform a synchronous fsync only when explicitly asked for */
+    /* Perform a synchronous fsync in this "wrapper" function instead of `ipf_internal_flush()`.
+     * This is because we want to fsync only when explicitly asked for: `pf_flush()` is called when
+     * the app issues an actual fsync()/fdatasync() syscalls. The internal `ipf_internal_flush()` is
+     * more broadly used: it's called when file contents must be flushed to the host OS (e.g. during
+     * the rename operation). */
     pf_status_t status = g_cb_fsync(pf->file);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
