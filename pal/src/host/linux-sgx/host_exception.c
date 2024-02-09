@@ -195,15 +195,7 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
 
 #ifdef DEBUG
     if (g_pal_enclave.profile_enable) {
-        sgx_profile_finish();
-        sgx_profile_init();
-
-        /* Report all ELFs already loaded */
-        struct debug_map* map = g_debug_map;
-        while (map) {
-            sgx_profile_report_elf(map->name, map->addr);
-            map = map->next;
-        }
+        sgx_profile_reinit();
     }
 #endif /* DEBUG */
 }

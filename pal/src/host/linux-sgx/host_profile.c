@@ -19,6 +19,7 @@
 #include <stddef.h>
 
 #include "cpu.h"
+#include "debug_map.h"
 #include "elf/elf.h"
 #include "host_internal.h"
 #include "host_log.h"
@@ -104,7 +105,7 @@ static int get_sgx_gpr(sgx_pal_gpr_t* gpr, void* tcs) {
     return 0;
 }
 
-int sgx_profile_init(void) {
+int sgx_profile_init(bool already_locked) {
     int ret;
 
     assert(!g_profile_enabled);
@@ -128,6 +129,8 @@ int sgx_profile_init(void) {
         goto out;
     }
 
+    if (!already_locked)
+        spinlock_lock(&g_perf_data_lock);
     if (g_pal_enclave.profile_append_pid_to_filename) {
         snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
                  SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
@@ -151,6 +154,8 @@ int sgx_profile_init(void) {
     }
 
     g_profile_enabled = true;
+    if (!already_locked)
+        spinlock_unlock(&g_perf_data_lock);
     return 0;
 
 out:
@@ -170,24 +175,25 @@ out:
         }
         g_perf_data = NULL;
     }
+    if (!already_locked)
+        spinlock_unlock(&g_perf_data_lock);
     return ret;
 }
 
-void sgx_profile_finish(void) {
+void sgx_profile_finish(bool already_locked) {
     int ret;
     ssize_t size;
 
     if (!g_profile_enabled)
         return;
 
-    spinlock_lock(&g_perf_data_lock);
+    if (!already_locked)
+        spinlock_lock(&g_perf_data_lock);
 
     size = pd_close(g_perf_data);
     if (size < 0)
         log_error("sgx_profile_finish: pd_close failed: %s", unix_strerror(size));
     g_perf_data = NULL;
-
-    spinlock_unlock(&g_perf_data_lock);
 
     ret = DO_SYSCALL(close, g_mem_fd);
     if (ret < 0)
@@ -197,6 +203,9 @@ void sgx_profile_finish(void) {
     log_always("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
 
     g_profile_enabled = false;
+
+    if (!already_locked)
+        spinlock_unlock(&g_perf_data_lock);
 }
 
 static void sample_simple(uint64_t rip) {
@@ -324,7 +333,7 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
     sample_simple((uint64_t)ocall_func);
 }
 
-void sgx_profile_report_elf(const char* filename, void* addr) {
+void sgx_profile_report_elf(const char* filename, void* addr, bool already_locked) {
     int ret;
 
     if (!g_profile_enabled && !g_vtune_profile_enabled)
@@ -391,7 +400,8 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
     const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
     ret = 0;
 
-    spinlock_lock(&g_perf_data_lock);
+    if (!already_locked)
+        spinlock_lock(&g_perf_data_lock);
 
     for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
         if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
@@ -411,7 +421,8 @@ void sgx_profile_report_elf(const char* filename, void* addr) {
         }
     }
 
-    spinlock_unlock(&g_perf_data_lock);
+    if (!already_locked)
+        spinlock_unlock(&g_perf_data_lock);
 
     if (ret < 0) {
         log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %s", filename,
@@ -429,6 +440,31 @@ out_close:
     ret = DO_SYSCALL(close, fd);
     if (ret < 0)
         log_error("sgx_profile_report_elf(%s): close failed: %s", filename, unix_strerror(ret));
+}
+
+int sgx_profile_reinit(void) {
+    int ret;
+    spinlock_lock(&g_perf_data_lock);
+
+    sgx_profile_finish(/*already_locked=*/true);
+
+    ret = sgx_profile_init(/*already_locked=*/true);
+    if (ret < 0) {
+        log_error("sgx_profile_reinit: initializing again failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    /* Report all ELFs already loaded */
+    struct debug_map* map = g_debug_map;
+    while (map) {
+        sgx_profile_report_elf(map->name, map->addr, /*already_locked=*/true);
+        map = map->next;
+    }
+
+    ret = 0;
+out:
+    spinlock_unlock(&g_perf_data_lock);
+    return ret;
 }
 
 #endif /* DEBUG */

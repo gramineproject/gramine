@@ -146,10 +146,13 @@ enum {
 };
 
 /* Initialize based on g_pal_enclave settings */
-int sgx_profile_init(void);
+int sgx_profile_init(bool already_locked);
 
 /* Finalize and close file */
-void sgx_profile_finish(void);
+void sgx_profile_finish(bool already_locked);
+
+/* Re-initialize based on g_pal_enclave settings */
+int sgx_profile_reinit(void);
 
 /* Record a sample during AEX */
 void sgx_profile_sample_aex(void* tcs);
@@ -161,7 +164,7 @@ void sgx_profile_sample_ocall_inner(void* enclave_gpr);
 void sgx_profile_sample_ocall_outer(void* ocall_func);
 
 /* Record a new mapped ELF */
-void sgx_profile_report_elf(const char* filename, void* addr);
+void sgx_profile_report_elf(const char* filename, void* addr, bool already_locked);
 #endif
 
 /* perf.data output (sgx_perf_data.h) */
