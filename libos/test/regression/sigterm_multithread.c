@@ -2,14 +2,11 @@
 /* Copyright (C) 2024 Intel Corporation */
 
 #define _XOPEN_SOURCE 700
-#include <err.h>
-#include <errno.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <unistd.h>
 
 #include "common.h"
@@ -22,7 +19,7 @@ static void pthread_check(int x) {
     }
 }
 
-static void ignore_signal(void) {
+static void ignore_sigterm(void) {
     sigset_t blocked;
     sigemptyset(&blocked);
     sigaddset(&blocked, SIGTERM);
@@ -30,7 +27,7 @@ static void ignore_signal(void) {
 }
 
 static void* thread_func(void* arg) {
-    ignore_signal();
+    ignore_sigterm();
     __atomic_store_n(&thread_started, true, __ATOMIC_SEQ_CST);
 
     sigset_t waitset;
@@ -44,10 +41,7 @@ static void* thread_func(void* arg) {
 }
 
 int main(int argc, char** argv) {
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
-
-    ignore_signal();
+    ignore_sigterm();
 
     pthread_t th;
     pthread_check(pthread_create(&th, NULL, thread_func, NULL));
@@ -57,11 +51,14 @@ int main(int argc, char** argv) {
 
     /* helper thread started and waits for SIGTERM; inform the wrapper shell script */
     puts("READY");
+    fflush(stdout);
 
-    /* emulate some processing; note that we can't use `sleep(100)` because in this case, both
-     * threads would wait in blocking host syscalls indefinitely, and Gramine currently has a
+    /* emulate some processing; note that we can't use smth like `pause()` because in this case,
+     * both threads would wait in blocking host syscalls indefinitely, and Gramine currently has a
      * limitation that signals are delivered when some thread returns from syscall to the app */
-    for (int i = 0; i < 100; i++)
-        sleep(1);
+    while (true) {
+        struct timespec ts = { .tv_sec = 0, .tv_nsec = 1000 * 1000 }; /* 1ms */
+        nanosleep(&ts, NULL);
+    }
     return 0;
 }
