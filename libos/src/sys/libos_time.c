@@ -55,6 +55,28 @@ long libos_syscall_time(time_t* tloc) {
     return t;
 }
 
+long libos_syscall_times(struct tms* buf) {
+    // todo benl: dumb placeholder impl
+    if (buf && !is_user_memory_writable(buf, sizeof(*buf)))
+        return -EFAULT;
+
+    uint64_t time = 0;
+    int ret = PalSystemTimeQuery(&time);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+
+    if(!buf)
+        return 0;
+
+   buf->tms_cstime = time;
+   buf->tms_stime = time;
+   buf->tms_cutime = time;
+   buf->tms_cstime = time;
+
+   return 0;
+}
+
 long libos_syscall_clock_gettime(clockid_t which_clock, struct timespec* tp) {
     /* all clocks are the same */
     if (!(0 <= which_clock && which_clock < MAX_CLOCKS))
