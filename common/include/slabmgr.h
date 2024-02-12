@@ -88,14 +88,15 @@ static_assert(IS_ALIGNED(offsetof(struct slab_area, raw), 16),
              MIN_MALLOC_ALIGNMENT)
 
 #ifndef SLAB_LEVEL
-#define SLAB_LEVEL 8
+#define SLAB_LEVEL 10
 #endif
 
 #ifndef SLAB_LEVEL_SIZES
 #define SLAB_LEVEL_SIZES                                                       \
     16, 32, 64, 128 - SLAB_HDR_SIZE, 256 - SLAB_HDR_SIZE, 512 - SLAB_HDR_SIZE, \
-        1024 - SLAB_HDR_SIZE, 2048 - SLAB_HDR_SIZE
-#define SLAB_LEVELS_SUM (4080 - SLAB_HDR_SIZE * 5)
+        1024 - SLAB_HDR_SIZE, 2048 - SLAB_HDR_SIZE, 4096 - SLAB_HDR_SIZE,      \
+        8288 - SLAB_HDR_SIZE
+#define SLAB_LEVELS_SUM (16464 - SLAB_HDR_SIZE * 7)
 #else
 #ifndef SLAB_LEVELS_SUM
 #error "SLAB_LEVELS_SUM not defined"
