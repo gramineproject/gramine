@@ -19,5 +19,6 @@ int PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 }
 
 noreturn void PalProcessExit(int exitcode) {
+    dump_slab_stats();
     _PalProcessExit(exitcode);
 }

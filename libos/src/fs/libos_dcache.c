@@ -56,7 +56,7 @@ int init_dcache(void) {
         return -ENOMEM;
     }
 
-    dentry_mgr = create_mem_mgr(init_align_up(DCACHE_MGR_ALLOC));
+    dentry_mgr = create_mem_mgr(init_align_up(DCACHE_MGR_ALLOC), "FS dentries");
 
     if (g_pal_public_state->parent_process) {
         /* In a child process, `g_dentry_root` will be restored from a checkpoint. */
@@ -91,6 +91,10 @@ int init_dcache(void) {
     g_dentry_root->name_len = 0;
 
     return 0;
+}
+
+void dump_dentry_alloc_stats(void) {
+    dump_mem_mgr_stats(dentry_mgr);
 }
 
 /* Increment the reference count for a dentry */

@@ -291,3 +291,5 @@ int get_file_size(struct libos_handle* file, uint64_t* size);
 
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count);
 ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count);
+
+void dump_handle_alloc_stats(void);

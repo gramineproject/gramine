@@ -136,11 +136,15 @@ int init_handle(void) {
     if (!create_lock(&handle_mgr_lock)) {
         return -ENOMEM;
     }
-    handle_mgr = create_mem_mgr(init_align_up(HANDLE_MGR_ALLOC));
+    handle_mgr = create_mem_mgr(init_align_up(HANDLE_MGR_ALLOC), "libos handles");
     if (!handle_mgr) {
         return -ENOMEM;
     }
     return 0;
+}
+
+void dump_handle_alloc_stats(void) {
+    dump_mem_mgr_stats(handle_mgr);
 }
 
 int init_std_handles(void) {

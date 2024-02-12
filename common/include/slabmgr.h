@@ -115,6 +115,17 @@ typedef struct slab_mgr {
     void* addr[SLAB_LEVEL];
     void* addr_top[SLAB_LEVEL];
     SLAB_AREA active_area[SLAB_LEVEL];
+
+    size_t stat_obj_allocas[SLAB_LEVEL];
+    size_t stat_obj_allocas_from_free_list[SLAB_LEVEL];
+    size_t stat_obj_allocas_from_active_area[SLAB_LEVEL];
+    size_t stat_obj_allocas_large;
+    size_t stat_obj_allocas_large_min;
+    size_t stat_obj_allocas_large_max;
+    size_t stat_obj_allocas_large_total;
+    size_t stat_obj_frees[SLAB_LEVEL];
+    size_t stat_obj_frees_large;
+    size_t stat_areas[SLAB_LEVEL];
 } SLAB_MGR_TYPE, *SLAB_MGR;
 
 typedef struct __attribute__((packed)) large_mem_obj {
@@ -227,8 +238,20 @@ static inline SLAB_MGR create_slab_mgr(void) {
         mgr->size[i] = 0;
         __set_free_slab_area(area, mgr, i);
 
+        mgr->stat_obj_allocas[i] = 0;
+        mgr->stat_obj_allocas_from_free_list[i] = 0;
+        mgr->stat_obj_allocas_from_active_area[i] = 0;
+        mgr->stat_obj_frees[i] = 0;
+        mgr->stat_areas[i] = 1;
+
         addr += __MAX_MEM_SIZE(slab_levels[i], size);
     }
+
+    mgr->stat_obj_allocas_large = 0;
+    mgr->stat_obj_allocas_large_min = 1024UL * 1024 * 1024 * 1024;
+    mgr->stat_obj_allocas_large_max = 0;
+    mgr->stat_obj_allocas_large_total = 0;
+    mgr->stat_obj_frees_large = 0;
 
     return mgr;
 }
@@ -289,6 +312,7 @@ static inline int maybe_enlarge_slab_mgr(SLAB_MGR mgr, int level) {
         /* There can be concurrent operations to extend the SLAB manager. In case someone has
          * already enlarged the space, we just add the new area to the list for later use. */
         LISTP_ADD(area, &mgr->area_list[level], __list);
+        mgr->stat_areas[level]++;
     }
 
     return 0;
@@ -318,6 +342,14 @@ static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
 #ifdef ASAN
         asan_unpoison_region((uintptr_t)OBJ_RAW(mem), size);
 #endif
+        SYSTEM_LOCK();
+        mgr->stat_obj_allocas_large++;
+        mgr->stat_obj_allocas_large_total += size;
+        if (size < mgr->stat_obj_allocas_large_min)
+            mgr->stat_obj_allocas_large_min = size;
+        if (size > mgr->stat_obj_allocas_large_max)
+            mgr->stat_obj_allocas_large_max = size;
+        SYSTEM_UNLOCK();
         return OBJ_RAW(mem);
     }
 
@@ -344,12 +376,15 @@ static inline void* slab_alloc(SLAB_MGR mgr, size_t size) {
     if (use_free_list) {
         mobj = LISTP_FIRST_ENTRY(&mgr->free_list[level], SLAB_OBJ_TYPE, __list);
         LISTP_DEL(mobj, &mgr->free_list[level], __list);
+        mgr->stat_obj_allocas_from_free_list[level]++;
     } else {
         mobj = (void*)mgr->addr[level];
         mgr->addr[level] += slab_levels[level] + SLAB_HDR_SIZE;
+        mgr->stat_obj_allocas_from_active_area[level]++;
     }
     assert(mgr->addr[level] <= mgr->addr_top[level]);
     OBJ_LEVEL(mobj) = level;
+    mgr->stat_obj_allocas[level]++;
     SYSTEM_UNLOCK();
 
 #ifdef SLAB_CANARY
@@ -408,6 +443,9 @@ static inline void slab_free(SLAB_MGR mgr, void* obj) {
         asan_unpoison_region((uintptr_t)mem, mem->size + sizeof(LARGE_MEM_OBJ_TYPE));
 #endif
         system_free(mem, mem->size + sizeof(LARGE_MEM_OBJ_TYPE));
+        SYSTEM_LOCK();
+        mgr->stat_obj_frees_large++;
+        SYSTEM_UNLOCK();
         return;
     }
 
@@ -440,5 +478,31 @@ static inline void slab_free(SLAB_MGR mgr, void* obj) {
     SYSTEM_LOCK();
     INIT_LIST_HEAD(mobj, __list);
     LISTP_ADD_TAIL(mobj, &mgr->free_list[level], __list);
+    mgr->stat_obj_frees[level]++;
+    SYSTEM_UNLOCK();
+}
+
+__attribute_no_sanitize_address
+static inline void dump_slab_mgr_stats(SLAB_MGR mgr) {
+    SYSTEM_LOCK();
+#ifdef IN_LIBOS
+    log_always("---- STATS FOR SLAB MGR IN LIBOS -----");
+#else
+    log_always("---- STATS FOR SLAB MGR IN PAL -----");
+#endif
+    for (size_t i = 0; i < SLAB_LEVEL; i++) {
+        log_always("--------- level %lu (sizes less than %lu)", i, slab_levels[i]);
+        log_always(" A                    stat_obj_allocas = %lu", mgr->stat_obj_allocas[i]);
+        log_always("       stat_obj_allocas_from_free_list = %lu", mgr->stat_obj_allocas_from_free_list[i]);
+        log_always("     stat_obj_allocas_from_active_area = %lu", mgr->stat_obj_allocas_from_active_area[i]);
+        log_always(" F                      stat_obj_frees = %lu", mgr->stat_obj_frees[i]);
+        log_always(" AR                         stat_areas = %lu", mgr->stat_areas[i]);
+    }
+    log_always("--------- large objects");
+    log_always(" A       stat_obj_allocas_large = %lu", mgr->stat_obj_allocas_large);
+    log_always("     stat_obj_allocas_large_min = %lu B", mgr->stat_obj_allocas_large_min);
+    log_always("     stat_obj_allocas_large_max = %lu B", mgr->stat_obj_allocas_large_max);
+    log_always("   stat_obj_allocas_large_total = %lu B", mgr->stat_obj_allocas_large_total);
+    log_always(" F         stat_obj_frees_large = %lu", mgr->stat_obj_frees_large);
     SYSTEM_UNLOCK();
 }

@@ -11,6 +11,7 @@
 #include "asan.h"
 #include "assert.h"
 #include "list.h"
+#include "log.h"
 
 #ifndef OBJ_TYPE
 #error "OBJ_TYPE not defined"
@@ -60,6 +61,14 @@ typedef struct mem_mgr {
     MEM_OBJ_TYPE* obj;
     MEM_OBJ_TYPE* obj_top;
     MEM_AREA active_area;
+
+    char name[32];
+    size_t stat_obj_allocas;
+    size_t stat_obj_allocas_from_free_list;
+    size_t stat_obj_allocas_from_active_area;
+    size_t stat_obj_frees;
+    size_t stat_obj_frees_no_because_migrated;
+    size_t stat_areas;
 } MEM_MGR_TYPE, *MEM_MGR;
 
 #define __SUM_OBJ_SIZE(size) (sizeof(MEM_OBJ_TYPE) * (size))
@@ -111,7 +120,7 @@ static inline void __set_free_mem_area(MEM_AREA area, MEM_MGR mgr) {
 }
 
 __attribute_no_sanitize_address
-static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
+static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size, const char* name) {
     MEM_AREA area;
     MEM_MGR mgr;
 
@@ -119,6 +128,15 @@ static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
 
     mgr        = (MEM_MGR)mem;
     mgr->size  = 0;
+    memcpy(mgr->name, name, strlen(name) + 1);
+
+    mgr->stat_obj_allocas = 0;
+    mgr->stat_obj_allocas_from_free_list = 0;
+    mgr->stat_obj_allocas_from_active_area = 0;
+    mgr->stat_obj_frees = 0;
+    mgr->stat_obj_frees_no_because_migrated = 0;
+    mgr->stat_areas = 1;
+
     area       = (MEM_AREA)(mem + sizeof(MEM_MGR_TYPE));
     area->size = size;
 
@@ -133,12 +151,12 @@ static inline MEM_MGR create_mem_mgr_in_place(void* mem, size_t size) {
 }
 
 __attribute_no_sanitize_address
-static inline MEM_MGR create_mem_mgr(size_t size) {
+static inline MEM_MGR create_mem_mgr(size_t size, const char* name) {
     void* mem = system_malloc(__MAX_MEM_SIZE(size));
     if (!mem) {
         return NULL;
     }
-    return create_mem_mgr_in_place(mem, size);
+    return create_mem_mgr_in_place(mem, size, name);
 }
 
 __attribute_no_sanitize_address
@@ -153,6 +171,7 @@ static inline MEM_MGR enlarge_mem_mgr(MEM_MGR mgr, size_t size) {
     area->size = size;
     INIT_LIST_HEAD(area, __list);
     LISTP_ADD(area, &mgr->area_list, __list);
+    mgr->stat_areas++;
     SYSTEM_UNLOCK();
     return mgr;
 }
@@ -201,6 +220,7 @@ static inline OBJ_TYPE* get_mem_obj_from_mgr_enlarge(MEM_MGR mgr, size_t size) {
             return NULL;
 
         SYSTEM_LOCK();
+        mgr->stat_areas++;
         area->size = size;
         INIT_LIST_HEAD(area, __list);
 
@@ -228,10 +248,13 @@ alloc:;
         mobj = LISTP_FIRST_ENTRY(&mgr->free_list, MEM_OBJ_TYPE, __list);
         LISTP_DEL_INIT(mobj, &mgr->free_list, __list);
         CHECK_LIST_HEAD(MEM_OBJ, &mgr->free_list, __list);
+        mgr->stat_obj_allocas_from_free_list++;
     } else {
         mobj = mgr->obj++;
+        mgr->stat_obj_allocas_from_active_area++;
     }
     assert(mgr->obj <= mgr->obj_top);
+    mgr->stat_obj_allocas++;
     SYSTEM_UNLOCK();
 #ifdef ASAN
     asan_unpoison_region((uintptr_t)&mobj->obj, sizeof(mobj->obj));
@@ -247,6 +270,9 @@ static inline OBJ_TYPE* get_mem_obj_from_mgr(MEM_MGR mgr) {
 __attribute_no_sanitize_address
 static inline void free_mem_obj_to_mgr(MEM_MGR mgr, OBJ_TYPE* obj) {
     if (memory_migrated(obj)) {
+        SYSTEM_LOCK();
+        mgr->stat_obj_frees_no_because_migrated++;
+        SYSTEM_UNLOCK();
         return;
     }
 
@@ -261,6 +287,20 @@ static inline void free_mem_obj_to_mgr(MEM_MGR mgr, OBJ_TYPE* obj) {
     SYSTEM_LOCK();
     INIT_LIST_HEAD(mobj, __list);
     LISTP_ADD_TAIL(mobj, &mgr->free_list, __list);
+    mgr->stat_obj_frees++;
     CHECK_LIST_HEAD(MEM_OBJ, &mgr->free_list, __list);
+    SYSTEM_UNLOCK();
+}
+
+__attribute_no_sanitize_address
+static inline void dump_mem_mgr_stats(MEM_MGR mgr) {
+    SYSTEM_LOCK();
+    log_always("---- STATS FOR MEMMGR `%s` -----", mgr->name);
+    log_always(" A                    stat_obj_allocas = %lu", mgr->stat_obj_allocas);
+    log_always("       stat_obj_allocas_from_free_list = %lu", mgr->stat_obj_allocas_from_free_list);
+    log_always("     stat_obj_allocas_from_active_area = %lu", mgr->stat_obj_allocas_from_active_area);
+    log_always(" F                      stat_obj_frees = %lu", mgr->stat_obj_frees);
+    log_always("    stat_obj_frees_no_because_migrated = %lu", mgr->stat_obj_frees_no_because_migrated);
+    log_always(" AR                         stat_areas = %lu", mgr->stat_areas);
     SYSTEM_UNLOCK();
 }
