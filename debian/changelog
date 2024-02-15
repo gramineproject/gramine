@@ -1,8 +1,18 @@
-gramine (1.6post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.6.1) bookworm bullseye jammy focal; urgency=medium
 
-  *
+  * version 1.6.1
+  * updated mbedtls to 3.5.2
+    (fixes CVE-2024-23170 and CVE-2024-23775)
+  * updated curl to 8.5.0
+    (fixes CVE-2023-46218 and CVE-2023-46219)
+  * update glibc to 2.39
+    (fixes CVE-2023-6246, CVE-2023-6779 and CVE-2023-6780)
+  * added sgx.insecure__allow_memfaults_without_exinfo manifest option as
+    a workaround for usability regression (custom signal handlers not working
+    on older Intel CPUs) caused by recent security hardening
+  * added performance and correctness fixes for Encrypted Files
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Mon, 11 Dec 2023 10:00:01 +0100
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Tue, 20 Feb 2024 13:00:00 +0100
 
 gramine (1.6) bookworm bullseye jammy focal; urgency=medium
 
