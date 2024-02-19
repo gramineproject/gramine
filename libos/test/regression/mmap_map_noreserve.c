@@ -45,9 +45,6 @@
 
 static int g_urandom_fd;
 
-static void (*g_mem_exec_func)(void);
-
-static bool g_exec_failed;
 static bool g_write_failed;
 static bool g_read_failed;
 
@@ -82,10 +79,6 @@ static bool is_pc_at_func(uintptr_t pc, void (*func)(void)) {
     return pc == (uintptr_t)func;
 }
 
-static void fixup_context_after_exec(ucontext_t* context) {
-    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
-}
-
 static void fixup_context_after_write(ucontext_t* context) {
     context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
 }
@@ -103,11 +96,7 @@ static void memfault_handler(int signum, siginfo_t* info, void* context) {
     ucontext_t* uc = (ucontext_t*)context;
     uintptr_t pc = uc->uc_mcontext.gregs[REG_RIP];
 
-    if (is_pc_at_func(pc, g_mem_exec_func)) {
-        fixup_context_after_exec(uc);
-        g_exec_failed = true;
-        return;
-    } else if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
+    if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
         fixup_context_after_write(uc);
         g_write_failed = true;
         return;

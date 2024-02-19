@@ -28,7 +28,7 @@ typedef struct {
 extern enclave_page_tracker_t* g_enclave_page_tracker;
 
 int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave_base_address,
-                                    size_t encalve_size);
+                                    size_t enclave_size);
 void set_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 void unset_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);

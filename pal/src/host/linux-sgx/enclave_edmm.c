@@ -284,10 +284,7 @@ static void copy_bitvector_with_offset(uint8_t* dest_bitvector, size_t dest_bitv
     assert(dest_bitvector != NULL);
     assert(src_bitvector != NULL);
     assert(src_bitvector_size >= dest_bitvector_size);
-
-    if (src_bitvector_size == 0)
-        return;
-
+    assert(src_bitvector_size > 0);
     assert(src_offset < 8);
 
     if (src_offset == 0) {
