@@ -220,13 +220,6 @@ int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave
     if (ret < 0)
         return ret;
 
-    /* Note: the lock/unlock here is actually not needed since we have a single thread in the
-     * initialization phase of the SGX enclave; it's purely for satisfying the assertion in
-     * `set_enclave_addr_range()` */
-    spinlock_lock(&g_enclave_page_tracker_lock);
-    set_enclave_addr_range(tracker_address, /*num_pages=*/1);
-    spinlock_unlock(&g_enclave_page_tracker_lock);
-
     return 0;
 }
 
@@ -419,9 +412,7 @@ static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t coun
 
         if (is_bitmap_page) {
             spinlock_lock(&g_enclave_page_tracker_lock);
-            set_enclave_addr_range(
-                    (uintptr_t)g_enclave_page_tracker->data + bitmap_page_index * PAGE_SIZE,
-                    /*num_pages=*/1);
+            set_enclave_addr_range(start_addr, /*num_pages=*/1);
             spinlock_unlock(&g_enclave_page_tracker_lock);
         }
     }
