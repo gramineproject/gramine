@@ -99,8 +99,8 @@ static void fixup_context_after_read(ucontext_t* context) {
 #error Unsupported architecture
 #endif
 
-static void memfault_handler(int signum, siginfo_t *info, void *context) {
-    ucontext_t *uc = (ucontext_t *)context;
+static void memfault_handler(int signum, siginfo_t* info, void* context) {
+    ucontext_t* uc = (ucontext_t*)context;
     uintptr_t pc = uc->uc_mcontext.gregs[REG_RIP];
 
     if (is_pc_at_func(pc, g_mem_exec_func)) {

@@ -597,14 +597,14 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
          * tracker */
         ret = initial_mem_bkeep(ALIGN_UP(enclave_size / PAGE_SIZE / 8, 8) + PAGE_SIZE,
                                 &tracker_addr);
-        if (ret < 0){
+        if (ret < 0) {
             log_error("Reserve enclave page tracker memory failed");
             ocall_exit(1, /*is_exitgroup=*/true);
         }
 
         ret = initialize_enclave_page_tracker(tracker_addr, (uintptr_t)g_enclave_base,
                                               enclave_size);
-        if (ret < 0){
+        if (ret < 0) {
             log_error("Initialize enclave page tracker failed");
             ocall_exit(1, /*is_exitgroup=*/true);
         }

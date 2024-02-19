@@ -1302,8 +1302,6 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
-    uint8_t* bitvector;
-    size_t bitvector_size;
     int error;
 };
 
@@ -1358,7 +1356,6 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
 
     if (!is_continuous)
         return -ENOMEM;
-
     return ctx.error;
 }
 

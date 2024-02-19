@@ -194,17 +194,16 @@ int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
     return 0;
 }
 
-static int check_and_set_tracker_bitmap_pages(uintptr_t start_addr, size_t count,
-                                              bool is_bitmap_page);
+static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t count,
+                                               bool is_bitmap_page);
 
 /* initialize the enclave page tracker with the reserved tracker address, the specified enclave
  * memory base address and the enclave memory region size (in bytes) */
 int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave_base_address,
-                                    size_t memory_size) {
+                                    size_t enclave_size) {
     assert(!g_enclave_page_tracker);
-    assert(IS_ALIGNED(memory_size, PAGE_SIZE));
+    assert(IS_ALIGNED(enclave_size, PAGE_SIZE));
 
-    size_t num_pages = memory_size / PAGE_SIZE;
     /* use the first page of the reserved memory to store tracker metadata */
     int ret = sgx_edmm_add_pages(tracker_address, /*count=*/1,
                                  PAL_TO_SGX_PROT(PAL_PROT_READ | PAL_PROT_WRITE));
@@ -213,10 +212,11 @@ int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave
     memset((void*)tracker_address, 0, PAGE_SIZE);
     g_enclave_page_tracker = (enclave_page_tracker_t*)tracker_address;
     g_enclave_page_tracker->enclave_base_address = enclave_base_address;
-    g_enclave_page_tracker->enclave_pages = num_pages;
+    g_enclave_page_tracker->enclave_pages = enclave_size / PAGE_SIZE;
     g_enclave_page_tracker->data = (uint8_t*)(tracker_address + PAGE_SIZE);
 
-    ret = check_and_set_tracker_bitmap_pages(tracker_address, /*count=*/1, /*is_bitmap_page=*/0);
+    ret = maybe_allocate_bitmap_pages_eagerly(tracker_address, /*count=*/1,
+                                              /*is_bitmap_page=*/true);
     if (ret < 0)
         return ret;
 
@@ -281,6 +281,10 @@ void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
 static void copy_bitvector_with_offset(uint8_t* dest_bitvector, size_t dest_bitvector_size,
                                        const uint8_t* src_bitvector, size_t src_bitvector_size,
                                        size_t src_offset) {
+    assert(dest_bitvector != NULL);
+    assert(src_bitvector != NULL);
+    assert(src_bitvector_size >= dest_bitvector_size);
+
     if (src_bitvector_size == 0)
         return;
 
@@ -365,9 +369,9 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
     return ret;
 }
 
-/* allocate a bitmap page; returns 1 if the page was newly allocated, 0 if it was already allocated,
- * and negative value on error */
-static int allocate_bitmap_page(size_t bitmap_page_index) {
+/* allocate a bitmap page if not already allocated; returns 1 if the page was newly allocated, 0 if
+ * it was already allocated, and negative value on error */
+static int maybe_allocate_bitmap_page(size_t bitmap_page_index) {
     int ret = 0;
 
     spinlock_lock(&g_enclave_page_tracker_lock);
@@ -395,22 +399,21 @@ static int allocate_bitmap_page(size_t bitmap_page_index) {
  * bitmap page is allocated where we need to mark itself as committed in the enclave page tracker;
  * if false, it's a regular (non-bitmap) page being checked where we do not need to update the
  * allocation status since it will be updated later when the page is actually committed. */
-static int check_and_set_tracker_bitmap_pages(uintptr_t start_addr, size_t count,
-                                              bool is_bitmap_page) {
+static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t count,
+                                               bool is_bitmap_page) {
     size_t start_bitmap_index = address_to_index(start_addr);
     size_t end_bitmap_index = start_bitmap_index + count;
 
     for (size_t bitmap_index = start_bitmap_index; bitmap_index < end_bitmap_index;
          bitmap_index++) {
         size_t bitmap_page_index = bitmap_index / (PAGE_SIZE * 8);
-        size_t bitmap_bit_index = bitmap_index % (PAGE_SIZE * 8);
 
-        int ret = allocate_bitmap_page(bitmap_page_index);
+        int ret = maybe_allocate_bitmap_page(bitmap_page_index);
         if (ret < 0)
             return ret;
 
         if (ret == 1) {
-            ret = check_and_set_tracker_bitmap_pages(
+            ret = maybe_allocate_bitmap_pages_eagerly(
                     (uintptr_t)g_enclave_page_tracker->data + bitmap_page_index * PAGE_SIZE,
                     /*count=*/1, /*is_bitmap_page=*/true);
             if (ret < 0)
@@ -419,9 +422,9 @@ static int check_and_set_tracker_bitmap_pages(uintptr_t start_addr, size_t count
 
         if (is_bitmap_page) {
             spinlock_lock(&g_enclave_page_tracker_lock);
-            uint8_t* bitmap_page_addr = g_enclave_page_tracker->data +
-                                        bitmap_page_index * PAGE_SIZE;
-            bitmap_page_addr[bitmap_bit_index / 8] |= 1 << (bitmap_bit_index % 8);
+            set_enclave_addr_range(
+                    (uintptr_t)g_enclave_page_tracker->data + bitmap_page_index * PAGE_SIZE,
+                    /*num_pages=*/1);
             spinlock_unlock(&g_enclave_page_tracker_lock);
         }
     }
@@ -430,7 +433,7 @@ static int check_and_set_tracker_bitmap_pages(uintptr_t start_addr, size_t count
 }
 
 int uncommit_pages(uintptr_t start_addr, size_t count) {
-    int ret = check_and_set_tracker_bitmap_pages(start_addr, count, /*is_bitmap_page*/false);
+    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
     if (ret < 0)
         return ret;
 
@@ -439,7 +442,7 @@ int uncommit_pages(uintptr_t start_addr, size_t count) {
 }
 
 int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    int ret = check_and_set_tracker_bitmap_pages(start_addr, count, /*is_bitmap_page*/false);
+    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
     if (ret < 0)
         return ret;
 
@@ -448,7 +451,7 @@ int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
 }
 
 int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    int ret = check_and_set_tracker_bitmap_pages(start_addr, count, /*is_bitmap_page*/false);
+    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
     if (ret < 0)
         return ret;
 
