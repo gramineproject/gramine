@@ -37,3 +37,5 @@
 #define READ_ONCE(x) ({ __typeof__(x) y = *(volatile __typeof__(x)*)&(x); y;})
 
 #define WRITE_ONCE(x, y) do { *(volatile __typeof__(x)*)&(x) = (y); } while (0)
+
+#define COMPILER_BARRIER() ({ __asm__ __volatile__("" ::: "memory"); })

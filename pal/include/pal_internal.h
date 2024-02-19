@@ -282,6 +282,7 @@ int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr);
 int pal_internal_memory_alloc(size_t size, void** out_addr);
 int pal_internal_memory_free(void* addr, size_t size);
 void pal_disable_early_memory_bookkeeping(void);
+int initial_mem_bkeep(size_t size, uintptr_t* out_addr);
 
 void init_slab_mgr(void);
 void* malloc(size_t size);

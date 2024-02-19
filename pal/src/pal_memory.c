@@ -239,7 +239,7 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
 
 /* This function is called only in early init code which is single-threaded, hence it does not need
  * any locking. */
-static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
+int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
     if (g_initial_mem_disabled) {
         return -PAL_ERROR_INVAL;
     }

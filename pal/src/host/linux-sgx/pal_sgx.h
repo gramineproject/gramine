@@ -13,27 +13,22 @@ static inline uint64_t PAL_TO_SGX_PROT(pal_prot_flags_t pal_prot) {
            | (pal_prot & PAL_PROT_EXEC ? SGX_SECINFO_FLAGS_X : 0);
 }
 
-typedef struct {
-    uintptr_t addr;
-    size_t num_pages;
-} initial_page_alloc_t;
+/* For a 1TB enclave, the bitmap will contain 1024*1024*1024*1024 / 4096 / 8 = 33,554,432 bytes, or
+ * 32MB. So we pre-define 8192 pages in the bitmap memory space. */
+#define ENCLAVE_PAGE_TRACKER_BITMAP_PAGES 8192
 
-#define MAX_INITIAL_PAGE_ALLOCS 8
-extern initial_page_alloc_t g_initial_page_allocs[MAX_INITIAL_PAGE_ALLOCS];
-extern size_t g_initial_page_allocs_count;
-
-/* For a 1GB enclave, the bitmap will contain 1024*1024*1024 / 4096 / 8 = 32768 bytes, or 32KB.
- * Similarly, it will occupy 1048576 bytes (1MB) for a 32GB enclave and 32MB for a 1TB enclave.
- * So the memory overhead for the bitmap is 0.003%. */
 typedef struct {
-    uint8_t* data;          /* bit array to store page allocation status */
-    uintptr_t base_address; /* base address of the enclave memory space */
-    size_t size;            /* number of pages in the enclave memory space */
+    uint8_t* data;                  /* bit array to store enclave page allocation status */
+    uintptr_t enclave_base_address; /* base address of the enclave memory space */
+    size_t enclave_pages;           /* number of pages in the enclave memory space */
+    /* bit array to store bitmap page allocation status */
+    uint8_t bitmap_pages_status[ENCLAVE_PAGE_TRACKER_BITMAP_PAGES / 8];
 } enclave_page_tracker_t;
 
 extern enclave_page_tracker_t* g_enclave_page_tracker;
 
-void initialize_enclave_page_tracker(uintptr_t base_address, size_t memory_size);
+int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave_base_address,
+                                    size_t memory_size);
 void set_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 void unset_enclave_addr_range(uintptr_t start_address, size_t num_pages);
 int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);

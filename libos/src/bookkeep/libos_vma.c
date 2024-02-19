@@ -1333,51 +1333,22 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         return false;
     }
 
-    uintptr_t zero_start = MAX(ctx->begin, vma->begin);
-    uintptr_t zero_end = MIN(ctx->end, vma->end);
-    if (vma->flags & MAP_NORESERVE) {
-        /* Lazy allocation of pages, zero only the committed pages. Note that the uncommitted
-         * pages have to be skipped to avoid deadlocks. This is because we're holding the
-         * non-reentrant/recursive `vma_tree_lock` when we're in this visitor callback (which is
-         * invoked during VMA traversing). And if we hit page faults on accessing the uncommitted
-         * pages, our lazy allocation logic would also try to acquire the same lock for VMA lookup
-         * in g_mem_bkeep_get_vma_info_upcall (see `pal_mem_bkeep_get_vma_info()` for details). */
-        memset(ctx->bitvector, 0, ctx->bitvector_size);
-        size_t actual_bitvector_size = ctx->bitvector_size;
-        int ret = PalGetCommittedPages(zero_start, (zero_end - zero_start), ctx->bitvector,
-                                       &actual_bitvector_size);
-        if (ret < 0)
+    uintptr_t start = MAX(ctx->begin, vma->begin);
+    uintptr_t end = MIN(ctx->end, vma->end);
+    if (vma->flags & MAP_NORESERVE && g_pal_public_state->edmm_enabled) {
+        /* lazy allocation of pages, uncommit the committed pages */
+        if (PalVirtualMemoryFree((void*)start, end - start) < 0)
             return false;
-
-        for (size_t byte_idx = 0; byte_idx < actual_bitvector_size; byte_idx++) {
-            uint8_t byte = (ctx->bitvector)[byte_idx];
-            for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
-                if (byte & (1 << bit_idx)) {
-                    memset((void*)(zero_start + (byte_idx * 8 + bit_idx) * PAGE_SIZE), 0,
-                           PAGE_SIZE);
-                }
-            }
-        }
     } else {
-        memset((void*)zero_start, 0, zero_end - zero_start);
+        memset((void*)start, 0, end - start);
     }
     return true;
 }
 
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
-    /* allocate the bitvector for committed pages info outside the VMA traversing to avoid
-     * recursively holding `vma_tree_lock` */
-    size_t vma_length = end - begin;
-    size_t bitvector_size = ALIGN_UP(ALIGN_UP(vma_length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;
-    uint8_t* bitvector = calloc(1, bitvector_size);
-    if (!bitvector)
-        return -ENOMEM;
-
     struct madvise_dontneed_ctx ctx = {
         .begin = begin,
         .end = end,
-        .bitvector = bitvector,
-        .bitvector_size = bitvector_size,
         .error = 0,
     };
 
@@ -1386,9 +1357,8 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     spinlock_unlock(&vma_tree_lock);
 
     if (!is_continuous)
-        ctx.error = -ENOMEM;
+        return -ENOMEM;
 
-    free(bitvector);
     return ctx.error;
 }
 
@@ -1492,7 +1462,7 @@ BEGIN_CP_FUNC(vma) {
 
             if (!vma->file) {
                 /* Send anonymous memory region. */
-                if (vma->flags & MAP_NORESERVE) {
+                if (vma->flags & MAP_NORESERVE && g_pal_public_state->edmm_enabled) {
                     /* lazy allocation of pages, send only committed pages */
                     size_t bitvector_size =
                         ALIGN_UP(ALIGN_UP(vma->length, PAGE_SIZE) / PAGE_SIZE, 8) / 8;

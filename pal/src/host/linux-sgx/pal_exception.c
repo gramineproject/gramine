@@ -349,7 +349,7 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
             assert(ctx.err);
             if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
                 ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
-                 (ctx.err & ERRCD_PK)) {
+                 (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS) ) {
                 /* the memfault can be caused by e.g. insufficient access rights rather than page
                  * not existing, which should be propagated in this case */
                 goto propagate_memfault;
@@ -360,8 +360,8 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
              * See `walk_pages()` in "pal/src/host/linux-sgx/enclave_edmm.c" for details.
              *
              * This avoids a potential security issue where a malicious host could trick us into
-             * committing the page twice (which would effectively allow the host to replace a random
-             * page with 0s) by removing the page and forcing a page fault. */
+             * committing the page twice (which would effectively allow the host to replace a
+             * lazily-allocated page with 0s) by removing the page and forcing a page fault. */
             int ret = _PalVirtualMemoryAlloc((void*)ALLOC_ALIGN_DOWN_PTR(addr), g_page_size,
                                              prot_flags);
             if (ret < 0) {

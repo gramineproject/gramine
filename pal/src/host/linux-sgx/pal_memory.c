@@ -30,24 +30,10 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
         if (prot & PAL_PROT_LAZYALLOC)
             return 0;
 
-        int ret;
         uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
 
-        if (g_enclave_page_tracker) {
-            ret = commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
-        } else {
-            /* for enclave pages allocated when the tracker is not ready (on bootstrap) */
-            if (g_initial_page_allocs_count < MAX_INITIAL_PAGE_ALLOCS) {
-                g_initial_page_allocs[g_initial_page_allocs_count].addr = (uintptr_t)addr;
-                g_initial_page_allocs[g_initial_page_allocs_count].num_pages = size / PAGE_SIZE;
-                g_initial_page_allocs_count++;
-            } else {
-                log_error("initial page allocs buffer is full");
-                _PalProcessExit(1);
-            }
-            ret = sgx_edmm_add_pages((uint64_t)addr, size / PAGE_SIZE, prot_flags);
-        }
-
+        assert(g_enclave_page_tracker);
+        int ret = commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
         if (ret < 0)
             return ret;
     } else {

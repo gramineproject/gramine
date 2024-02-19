@@ -14,27 +14,27 @@
  *
  * Therefore, on EDMM-enabled platforms, the test is supposed to be significantly faster than on
  * non-EDMM-enabled platforms. But functionality-wise it will be the same. For example, on an ICX
- * machine, this test takes ~2s with EDMM enabled and ~14s with EDMM disabled.
+ * machine, this test takes ~0.9s with EDMM enabled and ~12.6s with EDMM disabled.
  */
 
 #define _GNU_SOURCE
 #include <err.h>
 #include <fcntl.h>
 #include <pthread.h>
-#include <setjmp.h>
 #include <signal.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <ucontext.h>
 #include <unistd.h>
 
 #include "common.h"
 
-#define EXPECTED_NUM_SIGSEGVS 1
-#define NUM_ITERATIONS 10
+#define NUM_ITERATIONS 100
 #define NUM_THREADS 5
 #define PAGE_SIZE (1ul << 12)
 #define TEST_FILE "testfile_map_noreserve"
@@ -43,13 +43,81 @@
 #define TEST_LENGTH3     0xA000
 #define TEST_STRESS_RACE_NUM_ITERATIONS 100
 
-static sigjmp_buf g_point;
 static int g_urandom_fd;
-static int g_signum;
 
-static void sigsegv_handler(int signum) {
-    __atomic_store_n(&g_signum, signum, __ATOMIC_RELAXED);
-    siglongjmp(g_point, 1);
+static void (*g_mem_exec_func)(void);
+
+static bool g_exec_failed;
+static bool g_write_failed;
+static bool g_read_failed;
+
+void mem_write(void* addr, uint8_t val) __attribute__((visibility("internal")));
+uint8_t mem_read(void* addr) __attribute__((visibility("internal")));
+static bool is_pc_at_func(uintptr_t pc, void (*func)(void));
+static void fixup_context_after_write(ucontext_t* context);
+static void fixup_context_after_read(ucontext_t* context);
+
+#ifdef __x86_64__
+void ret(void) __attribute__((visibility("internal")));
+void end_of_ret(void) __attribute__((visibility("internal")));
+__asm__ (
+".pushsection .text\n"
+".type mem_write, @function\n"
+".type mem_read, @function\n"
+".type ret, @function\n"
+".type end_of_ret, @function\n"
+"mem_write:\n"
+    "movb %sil, (%rdi)\n"
+    "ret\n"
+"mem_read:\n"
+    "movb (%rdi), %al\n"
+    "ret\n"
+"ret:\n"
+    "ret\n"
+"end_of_ret:\n"
+".popsection\n"
+);
+
+static bool is_pc_at_func(uintptr_t pc, void (*func)(void)) {
+    return pc == (uintptr_t)func;
+}
+
+static void fixup_context_after_exec(ucontext_t* context) {
+    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
+}
+
+static void fixup_context_after_write(ucontext_t* context) {
+    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
+}
+
+static void fixup_context_after_read(ucontext_t* context) {
+    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
+    context->uc_mcontext.gregs[REG_RAX] = 0;
+}
+
+#else
+#error Unsupported architecture
+#endif
+
+static void memfault_handler(int signum, siginfo_t *info, void *context) {
+    ucontext_t *uc = (ucontext_t *)context;
+    uintptr_t pc = uc->uc_mcontext.gregs[REG_RIP];
+
+    if (is_pc_at_func(pc, g_mem_exec_func)) {
+        fixup_context_after_exec(uc);
+        g_exec_failed = true;
+        return;
+    } else if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
+        fixup_context_after_write(uc);
+        g_write_failed = true;
+        return;
+    } else if (is_pc_at_func(pc, (void (*)(void))mem_read)) {
+        fixup_context_after_read(uc);
+        g_read_failed = true;
+        return;
+    }
+
+    errx(1, "unexpected memory fault at: %#lx (pc: %#lx)\n", (uintptr_t)info->si_addr, pc);
 }
 
 static unsigned long get_random_ulong(void) {
@@ -62,13 +130,10 @@ static unsigned long get_random_ulong(void) {
 }
 
 /* To stress races between several threads on the same lazily-allocated page, we repeatedly touch
- * different pages at random (with not too many pages, so that it has a reasonable chance of
- * collision).
- * TODO: Instead of mapping and unmapping before and after each test to move the pages back
- * to the to-be-lazy-alloc state, we can mix the above with `madvise(MADV_DONTNEED)` called from
- * time to time (if we implement it as uncommitting pages in the future -- now it's emulated as
- * zeroing pages) to achieve the same purpose. */
+ * different pages at random and mix with `madvise(MADV_DONTNEED)` called (with not too many pages,
+ * so that it has a reasonable chance of collision). */
 static void* thread_func(void* arg) {
+    int ret;
     char data;
     size_t num_pages = TEST_LENGTH3 / PAGE_SIZE;
 
@@ -76,6 +141,11 @@ static void* thread_func(void* arg) {
         size_t page = get_random_ulong() % num_pages;
         data = READ_ONCE(((char*)arg)[page * PAGE_SIZE]);
         if (data != 0)
+            return (void*)1;
+
+        page = get_random_ulong() % num_pages;
+        ret = madvise(arg + page * PAGE_SIZE, PAGE_SIZE, MADV_DONTNEED);
+        if (ret)
             return (void*)1;
     }
     return (void*)0;
@@ -85,7 +155,10 @@ int main(void) {
     setbuf(stdout, NULL);
     g_urandom_fd = CHECK(open("/dev/urandom", O_RDONLY));
 
-    struct sigaction action = { .sa_handler = sigsegv_handler };
+    struct sigaction action = {
+        .sa_sigaction = memfault_handler,
+        .sa_flags = SA_SIGINFO,
+    };
     CHECK(sigaction(SIGSEGV, &action, NULL));
 
     /* test anonymous mappings with `MAP_NORESERVE` */
@@ -101,12 +174,13 @@ int main(void) {
 
     const char expected_val = 0xff;
     offset = get_random_ulong() % TEST_LENGTH;
-    if (sigsetjmp(g_point, 1) == 0) {
-        WRITE_ONCE(a[offset], expected_val);
-    }
 
-    if (__atomic_load_n(&g_signum, __ATOMIC_RELAXED) == SIGSEGV)
-        puts("Got SIGSEGV");
+    g_write_failed = false;
+    COMPILER_BARRIER();
+    mem_write(&a[offset], expected_val);
+    COMPILER_BARRIER();
+    if (g_write_failed)
+        puts("write to R mem got SIGSEGV");
 
     CHECK(mprotect(a, TEST_LENGTH, PROT_READ | PROT_WRITE));
 
@@ -122,28 +196,26 @@ int main(void) {
     CHECK(munmap(a, TEST_LENGTH));
 
     /* test threads racing to access the same page in anonymous mappings with `MAP_NORESERVE` */
-    for (int i = 0; i < TEST_STRESS_RACE_NUM_ITERATIONS; i++) {
-        a = mmap(NULL, TEST_LENGTH3, PROT_READ | PROT_WRITE,
-                 MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
-        if (a == MAP_FAILED)
-            err(1, "mmap 2");
+    a = mmap(NULL, TEST_LENGTH3, PROT_READ | PROT_WRITE,
+             MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+    if (a == MAP_FAILED)
+        err(1, "mmap 2");
 
-        pthread_t threads[NUM_THREADS];
-        for (int i = 0; i < NUM_THREADS; i++) {
-            if (pthread_create(&threads[i], NULL, thread_func, a))
-                errx(1, "pthread_create failed");
-        }
-
-        for (int i = 0; i < NUM_THREADS; i++) {
-            void* ret;
-            if (pthread_join(threads[i], &ret))
-                errx(1, "pthread_join failed");
-            if (ret)
-                errx(1, "threads returned error");
-        }
-
-        CHECK(munmap(a, TEST_LENGTH3));
+    pthread_t threads[NUM_THREADS];
+    for (int i = 0; i < NUM_THREADS; i++) {
+        if (pthread_create(&threads[i], NULL, thread_func, a))
+            errx(1, "pthread_create failed");
     }
+
+    for (int i = 0; i < NUM_THREADS; i++) {
+        void* ret;
+        if (pthread_join(threads[i], &ret))
+            errx(1, "pthread_join failed");
+        if (ret)
+            errx(1, "threads returned error");
+    }
+
+    CHECK(munmap(a, TEST_LENGTH3));
 
     /* test anonymous mappings with `MAP_NORESERVE` accessed via file read/write
      *

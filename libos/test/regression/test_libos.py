@@ -859,8 +859,8 @@ class TC_30_Syscall(RegressionTestCase):
             self.assertIn('TEST OK', stdout)
         finally:
             os.remove('testfile_map_noreserve')
-        if HAS_EDMM:
-            self.assertIn('Got SIGSEGV', stdout)
+        if not HAS_SGX or HAS_EDMM:
+            self.assertIn('write to R mem got SIGSEGV', stdout)
 
     @unittest.skip('sigaltstack isn\'t correctly implemented')
     def test_060_sigaltstack(self):
