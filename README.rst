@@ -6,6 +6,10 @@ Gramine Library OS with Intel SGX Support
    :target: http://gramine.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
+.. image:: https://www.bestpractices.dev/projects/8380/badge
+   :target: https://www.bestpractices.dev/projects/8380
+   :alt: OpenSSF Best Practices
+
 *A Linux-compatible Library OS for Multi-Process Applications*
 
 .. This is not |~|, because that is in rst_prolog in conf.py, which GitHub cannot parse.
