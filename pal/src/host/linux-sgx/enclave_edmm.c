@@ -411,8 +411,9 @@ static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t coun
         }
 
         if (is_bitmap_page) {
+            assert(count == 1);
             spinlock_lock(&g_enclave_page_tracker_lock);
-            set_enclave_addr_range(start_addr, /*num_pages=*/1);
+            set_enclave_addr_range(start_addr, count);
             spinlock_unlock(&g_enclave_page_tracker_lock);
         }
     }
