@@ -34,14 +34,13 @@
 
 #include "common.h"
 
-#define NUM_ITERATIONS 100
 #define NUM_THREADS 5
 #define PAGE_SIZE (1ul << 12)
 #define TEST_FILE "testfile_map_noreserve"
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2  0xC000000
 #define TEST_LENGTH3     0xA000
-#define TEST_STRESS_RACE_NUM_ITERATIONS 100
+#define TEST_RACE_NUM_ITERATIONS 100
 
 static int g_urandom_fd;
 
@@ -126,7 +125,7 @@ static void* thread_func(void* arg) {
     char data;
     size_t num_pages = TEST_LENGTH3 / PAGE_SIZE;
 
-    for (int i = 0; i < NUM_ITERATIONS; i++) {
+    for (int i = 0; i < TEST_RACE_NUM_ITERATIONS; i++) {
         size_t page = get_random_ulong() % num_pages;
         data = READ_ONCE(((char*)arg)[page * PAGE_SIZE]);
         if (data != 0)
