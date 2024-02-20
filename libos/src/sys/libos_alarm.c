@@ -35,7 +35,7 @@ static void signal_alarm(IDTYPE caller, void* arg) {
 long libos_syscall_alarm(unsigned int seconds) {
     uint64_t usecs = 1000000ULL * seconds;
 
-    int64_t ret = install_async_event(NULL, usecs, &signal_alarm, NULL);
+    int64_t ret = install_async_event(NULL, usecs, /*absolute_time=*/false, &signal_alarm, NULL);
     if (ret < 0)
         return ret;
 
@@ -105,8 +105,8 @@ long libos_syscall_setitimer(int which, struct __kernel_itimerval* value,
                                : 0;
     uint64_t current_reset = g_real_itimer.reset;
 
-    int64_t install_ret = install_async_event(NULL, next_value, &signal_itimer,
-                                              (void*)(setup_time + next_value));
+    int64_t install_ret = install_async_event(NULL, next_value, /*absolute_time=*/false,
+                                              &signal_itimer, (void*)(setup_time + next_value));
 
     if (install_ret < 0) {
         spinlock_unlock(&g_real_itimer_lock);

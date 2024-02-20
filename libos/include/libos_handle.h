@@ -46,6 +46,7 @@ enum libos_handle_type {
     /* Special handles: */
     TYPE_EPOLL,      /* epoll handles, see `libos_epoll.c` */
     TYPE_EVENTFD,    /* eventfd handles, used by `eventfd` filesystem */
+    TYPE_TIMERFD,    /* timerfd handles, used by `timerfd` filesystem */
 };
 
 struct libos_pipe_handle {
@@ -134,6 +135,16 @@ struct libos_epoll_handle {
     size_t last_returned_index;
 };
 
+struct libos_timerfd_handle {
+    spinlock_t expiration_lock; /* protecting below fields */
+    uint64_t num_expirations;
+    uint64_t dummy_host_val;
+
+    spinlock_t timer_lock; /* protecting below fields */
+    uint64_t timeout;
+    uint64_t reset;
+};
+
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
@@ -204,6 +215,7 @@ struct libos_handle {
 
         struct libos_epoll_handle epoll;         /* TYPE_EPOLL */
         struct { bool is_semaphore; } eventfd;   /* TYPE_EVENTFD */
+        struct libos_timerfd_handle timerfd;     /* TYPE_TIMERFD */
     } info;
 
     struct libos_dir_handle dir_info;
@@ -217,7 +229,9 @@ struct libos_handle {
 
     /* Lock for handle position (`pos`). Intended for operations that change the position (e.g.
      * `read`, `seek` but not `pread`). This lock should be taken *before* `libos_handle.lock` and
-     * `libos_inode.lock`. */
+     * `libos_inode.lock`. Must be used *only* via lock_pos_handle() and unlock_pos_handle(); these
+     * functions make sure that the lock is acquired only on those handle types that can change the
+     * position (e.g. not on eventfds or pipes). */
     struct libos_lock pos_lock;
 };
 
@@ -291,3 +305,6 @@ int get_file_size(struct libos_handle* file, uint64_t* size);
 
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count);
 ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count);
+
+void lock_pos_handle(struct libos_handle* hdl);
+void unlock_pos_handle(struct libos_handle* hdl);

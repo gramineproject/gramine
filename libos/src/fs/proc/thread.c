@@ -287,6 +287,7 @@ static char* describe_handle(struct libos_handle* hdl) {
         case TYPE_EPOLL:   str = "epoll:[?]";   break;
         case TYPE_EVENTFD: str = "eventfd:[?]"; break;
         case TYPE_SHM:     str = "shm:[?]";     break;
+        case TYPE_TIMERFD: str = "timerfd:[?]"; break;
         default:           str = "unknown:[?]"; break;
     }
     return strdup(str);

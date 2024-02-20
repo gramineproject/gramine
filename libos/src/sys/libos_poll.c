@@ -200,6 +200,11 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
             continue;
         }
 
+        if (libos_handles[i]->fs && libos_handles[i]->fs->fs_ops
+                && libos_handles[i]->fs->fs_ops->post_poll) {
+            libos_handles[i]->fs->fs_ops->post_poll(libos_handles[i], &ret_events[i]);
+        }
+
         fds[i].revents = 0;
         if (ret_events[i] & PAL_WAIT_ERROR)
             fds[i].revents |= POLLERR;
