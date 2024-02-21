@@ -48,7 +48,7 @@ static int create_async_worker(void);
  * thread which registered the event (saved in `event->caller`).
  *
  * We distinguish between alarm/timer events and async IO events:
- *   - alarm/timer events set object = NULL and time = seconds
+ *   - alarm/timer events set object = NULL and time = microseconds
  *     (time = 0 cancels all pending alarms/timers).
  *   - async IO events set object = handle and time = 0.
  *
