@@ -382,7 +382,7 @@ class TC_01_Bootstrap(RegressionTestCase):
         stdout, _ = self.run_binary(['sigterm_multithread'], prefix=['./test_sigterm.sh'])
         self.assertIn('SHELL OK', stdout)
 
-    def test_404_sigprocmask_pending(self):
+    def test_405_sigprocmask_pending(self):
         stdout, _ = self.run_binary(['sigprocmask_pending'], timeout=60)
         self.assertIn('Child OK', stdout)
         self.assertIn('All tests OK', stdout)
