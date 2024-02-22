@@ -1715,8 +1715,8 @@ flag is used as a lazy-allocation heuristic/hint for anonymous mappings -- inste
 the region of enclave pages on mmap requests, the enclave pages are lazily accepted on page-fault
 events.
 
-`MAP_LOCKED`, MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags are
-ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
+`MAP_LOCKED`, `MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags
+are ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:

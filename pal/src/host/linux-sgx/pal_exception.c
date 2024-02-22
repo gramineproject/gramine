@@ -342,8 +342,7 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
 
         pal_prot_flags_t prot_flags;
 
-        if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) &&
-                                                   (prot_flags & PAL_PROT_LAZYALLOC)) {
+        if (!g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags)) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
 
             assert(ctx.err);
