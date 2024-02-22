@@ -1,14 +1,15 @@
 protected_files_inc = [
-    include_directories('.'),
+    include_directories('.',
+                        '../../../pal/include/pal',
+                        '../../../pal/include/arch' / host_machine.cpu_family(),
+                        '../../../pal/include/arch' / host_machine.cpu_family() / 'linux'),
     common_inc,
 ]
 
 protected_files_dep = declare_dependency(
     sources: [
-        'lru_cache.c',
         'protected_files.c',
 
-        'lru_cache.h',
         'protected_files_format.h',
         'protected_files.h',
         'protected_files_internal.h',
@@ -18,5 +19,6 @@ protected_files_dep = declare_dependency(
 
     dependencies: [
         uthash_dep,
+        common_dep,
     ]
 )

@@ -137,6 +137,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     /* we lazily update the size of the trusted file */
     tf->size = st.st_size;
+    tf->cache = lruc_create();
+    tf->times_first_chunk_loaded = 0;
     ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
     if (ret < 0)
         goto fail;

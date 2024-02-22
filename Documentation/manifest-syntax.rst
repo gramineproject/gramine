@@ -968,6 +968,20 @@ Marking files as trusted is especially useful for shared libraries: a |~|
 trusted library cannot be silently replaced by a malicious host because the hash
 verification will fail.
 
+.. _trusted-files-max-chunks-in-cache:
+
+Trusted files Page Cache optimization: maximum chunks in cache
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.tf_max_chunks_in_cache = [NUM]
+    (Default: 0)
+
+This syntax specifies a limit on the number of chunks in the cache for trusted
+files. By default, this optimization is disabled as the limit should be
+application-specific.
+
 .. _encrypted-files:
 
 Encrypted files

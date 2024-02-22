@@ -78,3 +78,15 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
 int init_trusted_files(void);
 int init_allowed_files(void);
+
+/*!
+ * \brief Add trusted file chunk to the cache
+ * \param tf            Trusted file structure.
+ * \param chunk         Trusted file chunk data.
+ * \param chunk_size    Trusted file chunk size.
+ * \param chunk_number  Trusted file chunk number.
+ *
+ * \returns 0 on success, negative error code on failure
+ */
+int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
+                    uint64_t chunk_size, uint64_t chunk_number);

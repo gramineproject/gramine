@@ -23,6 +23,7 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 uintptr_t g_enclave_base;
 uintptr_t g_enclave_top;
 bool g_allowed_files_warn = false;
+size_t g_tf_max_chunks_in_cache = 0;
 
 /*
  * SGX's EGETKEY(SEAL_KEY) uses three masks as key-derivation material:
@@ -624,6 +625,41 @@ static void set_file_check_policy(int policy) {
     g_file_check_policy = policy;
 }
 
+int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
+                    uint64_t chunk_size, uint64_t chunk_number) {
+    if (chunk_number == 0) {
+        tf->times_first_chunk_loaded++;
+    }
+
+    if (tf->times_first_chunk_loaded > 1) {
+        tf_chunk_t* new_chunk = calloc(1, sizeof(*new_chunk));
+        if (!new_chunk) {
+            return -PAL_ERROR_NOMEM;
+        }
+        new_chunk->chunk_number = chunk_number;
+        memcpy(new_chunk->data, chunk, chunk_size);
+
+        if (!lruc_add(tf->cache, chunk_number, new_chunk)) {
+            free(new_chunk);
+            return -PAL_ERROR_NOMEM;
+        }
+        if (lruc_size(tf->cache) > (size_t)g_tf_max_chunks_in_cache) {
+            free(lruc_get_last(tf->cache));
+            lruc_remove_last(tf->cache);
+#ifdef DEBUG
+            static int lcu_remove_count = 0;
+            if (g_tf_max_chunks_in_cache > 0 && ++lcu_remove_count == 100) {
+                log_always("High frequenty of this log indicates Trusted files chunks exceed the"
+                          " `tf_max_chunks_in_cache` limit. Please increase it in the manifest"
+                          " file to get the best performance.");
+                lcu_remove_count = 0;
+            }
+#endif /* DEBUG */
+        }
+    }
+    return 0;
+}
+
 int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* umem,
                                  off_t aligned_offset, off_t aligned_end, off_t offset, off_t end,
                                  sgx_chunk_hash_t* chunk_hashes, size_t file_size) {
@@ -642,59 +678,91 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
     uint8_t* buf_pos = buf;
     off_t chunk_offset = aligned_offset;
-    for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE, chunk_hashes_item++) {
+
+    struct trusted_file* tf = get_trusted_or_allowed_file(path);
+    int chunk_number = chunk_offset/TRUSTED_CHUNK_SIZE;
+
+    for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE, chunk_hashes_item++, chunk_number++) {
         size_t chunk_size = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         off_t chunk_end   = chunk_offset + chunk_size;
 
-        sgx_chunk_hash_t chunk_hash[2]; /* each chunk_hash is 128 bits in size but we need 256 */
+        if (lruc_find(tf->cache, chunk_number) != NULL) {
+            tf_chunk_t* chunk = lruc_get(tf->cache, chunk_number);
 
-        LIB_SHA256_CONTEXT chunk_sha;
-        ret = lib_SHA256Init(&chunk_sha);
-        if (ret < 0)
-            goto failed;
+            if (chunk_offset >= offset && chunk_end <= end) {
+                memcpy(buf_pos, chunk->data, chunk_size);
 
-        if (chunk_offset >= offset && chunk_end <= end) {
-            /* if current chunk-to-copy completely resides in the requested region-to-copy,
-             * directly copy into buf (without a scratch buffer) and hash in-place */
-            if (!sgx_copy_to_enclave(buf_pos, chunk_size, umem + chunk_offset, chunk_size)) {
-                goto failed;
+                buf_pos += chunk_size;
+            } else {
+                memcpy(tmp_chunk, chunk->data, chunk_size);
+
+                off_t copy_start = MAX(chunk_offset, offset);
+                off_t copy_end   = MIN(chunk_offset + (off_t)chunk_size, end);
+                assert(copy_end > copy_start);
+
+                memcpy(buf_pos, tmp_chunk + copy_start - chunk_offset, copy_end - copy_start);
+                buf_pos += copy_end - copy_start;
             }
-
-            ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
-            if (ret < 0)
-                goto failed;
-
-            buf_pos += chunk_size;
-        } else {
-            /* if current chunk-to-copy only partially overlaps with the requested region-to-copy,
-             * read the file contents into a scratch buffer, verify hash and then copy only the part
-             * needed by the caller */
-            if (!sgx_copy_to_enclave(tmp_chunk, chunk_size, umem + chunk_offset, chunk_size)) {
-                goto failed;
-            }
-
-            ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
-            if (ret < 0)
-                goto failed;
-
-            /* determine which part of the chunk is needed by the caller */
-            off_t copy_start = MAX(chunk_offset, offset);
-            off_t copy_end   = MIN(chunk_offset + (off_t)chunk_size, end);
-            assert(copy_end > copy_start);
-
-            memcpy(buf_pos, tmp_chunk + copy_start - chunk_offset, copy_end - copy_start);
-            buf_pos += copy_end - copy_start;
         }
+        else {
+            sgx_chunk_hash_t chunk_hash[2]; /* each chunk_hash is 128 bits in size but we need 256 */
 
-        ret = lib_SHA256Final(&chunk_sha, (uint8_t*)&chunk_hash[0]);
-        if (ret < 0)
-            goto failed;
+            LIB_SHA256_CONTEXT chunk_sha;
+            ret = lib_SHA256Init(&chunk_sha);
+            if (ret < 0)
+                goto failed;
 
-        if (memcmp(chunk_hashes_item, &chunk_hash[0], sizeof(*chunk_hashes_item))) {
-            log_error("Accessing file '%s' is denied: incorrect hash of file chunk at %lu-%lu.",
-                      path, chunk_offset, chunk_end);
-            ret = -PAL_ERROR_DENIED;
-            goto failed;
+            if (chunk_offset >= offset && chunk_end <= end) {
+                /* if current chunk-to-copy completely resides in the requested region-to-copy,
+                * directly copy into buf (without a scratch buffer) and hash in-place */
+                if (!sgx_copy_to_enclave(buf_pos, chunk_size, umem + chunk_offset, chunk_size)) {
+                    goto failed;
+                }
+
+                ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
+                if (ret < 0)
+                    goto failed;
+
+                ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
+                if (ret < 0)
+                    goto failed;
+
+                buf_pos += chunk_size;
+            } else {
+                /* if current chunk-to-copy only partially overlaps with the requested region-to-copy,
+                * read the file contents into a scratch buffer, verify hash and then copy only the part
+                * needed by the caller */
+                if (!sgx_copy_to_enclave(tmp_chunk, chunk_size, umem + chunk_offset, chunk_size)) {
+                    goto failed;
+                }
+
+                ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
+                if (ret < 0)
+                    goto failed;
+
+                ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
+                if (ret < 0)
+                    goto failed;
+
+                /* determine which part of the chunk is needed by the caller */
+                off_t copy_start = MAX(chunk_offset, offset);
+                off_t copy_end   = MIN(chunk_offset + (off_t)chunk_size, end);
+                assert(copy_end > copy_start);
+
+                memcpy(buf_pos, tmp_chunk + copy_start - chunk_offset, copy_end - copy_start);
+                buf_pos += copy_end - copy_start;
+            }
+
+            ret = lib_SHA256Final(&chunk_sha, (uint8_t*)&chunk_hash[0]);
+            if (ret < 0)
+                goto failed;
+
+            if (memcmp(chunk_hashes_item, &chunk_hash[0], sizeof(*chunk_hashes_item))) {
+                log_error("Accessing file '%s' is denied: incorrect hash of file chunk at %lu-%lu.",
+                          path, chunk_offset, chunk_end);
+                ret = -PAL_ERROR_DENIED;
+                goto failed;
+            }
         }
     }
 

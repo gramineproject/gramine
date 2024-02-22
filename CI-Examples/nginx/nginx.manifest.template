@@ -33,6 +33,9 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enclave_size = "512M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
+# Tune this parameters based on your application and system configuration for best performance
+sgx.tf_max_chunks_in_cache = 48
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ install_dir }}/sbin/nginx",

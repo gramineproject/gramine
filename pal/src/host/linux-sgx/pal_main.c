@@ -409,6 +409,7 @@ extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
+extern int64_t g_tf_max_chunks_in_cache;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     int ret;
@@ -861,6 +862,17 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     if ((ret = init_trusted_files()) < 0) {
         log_error("Failed to initialize trusted files: %s", pal_strerror(ret));
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
+    ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.tf_max_chunks_in_cache",
+            /*defaultval=*/0, &g_tf_max_chunks_in_cache);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.tf_max_chunks_in_cache'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+    if (g_tf_max_chunks_in_cache < 0) {
+        log_error("Invalid 'sgx.tf_max_chunks_in_cache' value");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
