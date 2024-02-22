@@ -459,38 +459,6 @@ bool is_user_string_readable(const char* addr) {
     }
 }
 
-static bool is_in_out(PAL_CONTEXT* context) {
-    uint8_t opcodes[] = {
-        /* INS opcodes */
-        0x6c,
-        0x6d,
-        /* OUTS opcodes */
-        0x6e,
-        0x6f,
-        /* IN immediate opcodes */
-        0xe4,
-        0xe5,
-        /* OUT immediate opcodes */
-        0xe6,
-        0xe7,
-        /* IN register opcodes */
-        0xec,
-        0xed,
-        /* OUT register opcodes */
-        0xee,
-        0xef,
-    };
-    uint8_t* rip = (uint8_t*)context->rip;
-    /* note that x86-64 instructions can have up to four legacy prefixes */
-    size_t idx = 0;
-    while (is_x86_instr_legacy_prefix(rip[idx]) && idx < 4)
-        idx++;
-    for (size_t i = 0; i < ARRAY_SIZE(opcodes); i++)
-        if (rip[idx] == opcodes[i])
-            return true;
-    return false;
-}
-
 static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
     __UNUSED(is_in_pal);
     assert(!is_in_pal);
@@ -514,20 +482,7 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
            .si_code = ILL_ILLOPC,
             .si_addr = (void*)addr,
         };
-        if (is_in_out(context)) {
-           /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
-            * Gramine's PAL tries to handle this exception and propagates it to LibOS/app as a
-            * SIGILL signal. However, I/O instructions result in a #GP fault (which raises a
-            * SIGSEGV signal) if I/O is not permitted. Let Gramine emulate these instructions as if
-            * they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
-            */
-            info.si_signo = SIGSEGV;
-            info.si_code = SEGV_MAPERR;
-            log_debug("Illegal instruction during app execution at %p, emulated as if "
-                      "throwing SIGSEGV; delivering to app", rip);
-        } else {
-            log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
-        }
+        log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
         force_signal(&info);
         handle_signal(context);
     }

@@ -53,6 +53,7 @@ enum extended_state_sub_leaf {
 #define INVARIANT_TSC_LEAF               0x80000007
 
 bool is_x86_instr_legacy_prefix(uint8_t op);
+bool is_in_out(uint8_t* rip);
 
 static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]) {
     __asm__("cpuid"

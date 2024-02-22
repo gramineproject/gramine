@@ -12,6 +12,7 @@
 
 #include "api.h"
 #include "asan.h"
+#include "cpu.h"
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
@@ -132,8 +133,9 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
 
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
  *               false if #UD was not handled and exception needs to be raised up to LibOS/app */
-static bool handle_ud(sgx_cpu_context_t* uc) {
+static bool handle_ud(sgx_cpu_context_t* uc, int *event_num_ptr) {
     uint8_t* instr = (uint8_t*)uc->rip;
+    *event_num_ptr = PAL_EVENT_ILLEGAL;
     if (instr[0] == 0x0f && instr[1] == 0xa2) {
         /* cpuid */
         unsigned int values[4];
@@ -170,6 +172,17 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
                        " patching your application to use Gramine syscall API.");
         }
         return false;
+    } else if (is_in_out(instr)) {
+        /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
+         * Gramine's PAL tries to handle this exception and propagates it to LibOS/app as a
+         * SIGILL signal. However, I/O instructions result in a #GP fault (which raises a
+         * SIGSEGV signal) if I/O is not permitted. Let Gramine emulate these instructions as if
+         * they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+         */
+        log_debug("Illegal instruction during app execution at %p, emulated as if "
+                  "throwing SIGSEGV; delivering to app", instr);
+        *event_num_ptr = PAL_EVENT_MEMFAULT;
+        return false;
     }
 
     char buf[LOCATION_BUF_SIZE];
@@ -203,11 +216,10 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                 _PalProcessExit(1);
                 break;
             case SGX_EXCEPTION_VECTOR_UD:
-                if (handle_ud(uc)) {
+                if (handle_ud(uc, &event_num)) {
                     restore_sgx_context(uc, xregs_state);
                     /* NOTREACHED */
                 }
-                event_num = PAL_EVENT_ILLEGAL;
                 break;
             case SGX_EXCEPTION_VECTOR_DE:
             case SGX_EXCEPTION_VECTOR_MF:

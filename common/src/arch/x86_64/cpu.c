@@ -36,3 +36,35 @@ bool is_x86_instr_legacy_prefix(uint8_t op) {
     }
     return false;
 }
+
+bool is_in_out(uint8_t* rip) {
+    uint8_t opcodes[] = {
+        /* INS opcodes */
+        0x6c,
+        0x6d,
+        /* OUTS opcodes */
+        0x6e,
+        0x6f,
+        /* IN immediate opcodes */
+        0xe4,
+        0xe5,
+        /* OUT immediate opcodes */
+        0xe6,
+        0xe7,
+        /* IN register opcodes */
+        0xec,
+        0xed,
+        /* OUT register opcodes */
+        0xee,
+        0xef,
+    };
+
+    /* note that x86-64 instructions can have up to four legacy prefixes */
+    size_t idx = 0;
+    while (is_x86_instr_legacy_prefix(rip[idx]) && idx < 4)
+        idx++;
+    for (size_t i = 0; i < ARRAY_SIZE(opcodes); i++)
+        if (rip[idx] == opcodes[i])
+            return true;
+    return false;
+}
