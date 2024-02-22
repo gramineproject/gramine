@@ -846,7 +846,7 @@ out:
  * is called directly from syscall handlers, which return values in such a way. */
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,
-                   unsigned int* flags, bool is_recv_syscall_family) {
+                   unsigned int* flags, bool emulate_recv_error_semantics) {
     ssize_t ret = 0;
     if (handle->type != TYPE_SOCK) {
         return -ENOTSOCK;
@@ -885,7 +885,7 @@ ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_le
         total_size += iov[i].iov_len;
     }
 
-    if (!total_size && !is_recv_syscall_family) {
+    if (!total_size && !emulate_recv_error_semantics) {
         /*
          * In Linux, read() and readv() -- i.e. not recv*() syscalls -- have a "match SYS5 behavior"
          * corner case: 0 is returned if the requested number of bytes to receive is 0. The
@@ -1043,7 +1043,7 @@ long libos_syscall_recvfrom(int fd, void* buf, size_t len, unsigned int flags, v
         .iov_len = len,
     };
     ssize_t ret = do_recvmsg(handle, &iov, 1, /*msg_control=*/NULL, /*msg_controllen_ptr=*/NULL,
-                             addr, &addrlen, &flags, /*is_recv_syscall_family=*/true);
+                             addr, &addrlen, &flags, /*emulate_recv_error_semantics=*/true);
     if (ret >= 0 && addr) {
         *_addrlen = addrlen;
     }
@@ -1064,7 +1064,7 @@ long libos_syscall_recvmsg(int fd, struct msghdr* msg, unsigned int flags) {
 
     size_t addrlen = msg->msg_name ? msg->msg_namelen : 0;
     ret = do_recvmsg(handle, msg->msg_iov, msg->msg_iovlen, msg->msg_control, &msg->msg_controllen,
-                     msg->msg_name, &addrlen, &flags, /*is_recv_syscall_family=*/true);
+                     msg->msg_name, &addrlen, &flags, /*emulate_recv_error_semantics=*/true);
     if (ret >= 0) {
         if (msg->msg_name) {
             msg->msg_namelen = addrlen;
@@ -1111,7 +1111,7 @@ long libos_syscall_recvmmsg(int fd, struct mmsghdr* msg, unsigned int vlen, unsi
         unsigned int this_flags = flags;
         ret = do_recvmsg(handle, hdr->msg_iov, hdr->msg_iovlen, hdr->msg_control,
                          &hdr->msg_controllen, hdr->msg_name, &addrlen, &this_flags,
-                         /*is_recv_syscall_family=*/true);
+                         /*emulate_recv_error_semantics=*/true);
         if (ret < 0) {
             if (i == 0) {
                 /* Return error directly. */

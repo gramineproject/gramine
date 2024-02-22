@@ -37,7 +37,7 @@ static ssize_t read(struct libos_handle* handle, void* buf, size_t size, file_of
     unsigned int flags = 0;
     return do_recvmsg(handle, &iov, /*iov_len=*/1, /*msg_control=*/NULL,
                       /*msg_controllen_ptr=*/NULL, /*addr=*/NULL, /*addrlen_ptr=*/NULL, &flags,
-                      /*is_recv_syscall_family=*/false);
+                      /*emulate_recv_error_semantics=*/false);
 }
 
 static ssize_t write(struct libos_handle* handle, const void* buf, size_t size, file_off_t* pos) {
@@ -56,7 +56,7 @@ static ssize_t readv(struct libos_handle* handle, struct iovec* iov, size_t iov_
     unsigned int flags = 0;
     return do_recvmsg(handle, iov, iov_len, /*msg_control=*/NULL, /*msg_controllen_ptr=*/NULL,
                       /*addr=*/NULL, /*addrlen_ptr=*/NULL, &flags,
-                      /*is_recv_syscall_family=*/false);
+                      /*emulate_recv_error_semantics=*/false);
 }
 
 static ssize_t writev(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
