@@ -22,6 +22,7 @@ fs.mounts = [
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.require_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }} # TODO: replace with `sgx.use_exinfo`
 sys.stack.size = "8M"
 sgx.enclave_size = "2048M"
 sgx.max_threads = 64
