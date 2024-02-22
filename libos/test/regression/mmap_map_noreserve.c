@@ -178,24 +178,10 @@ int main(void) {
     CHECK(madvise(a, TEST_LENGTH, MADV_DONTNEED));
     data = READ_ONCE(a[offset]);
     if (data != 0)
-        errx(1, "unexpected value read (on 'MAP_NORESERVE') after 'madvise(MADV_DONTNEED)' "
-                "(expected: %x, actual: %x)", 0, data);
+        errx(1, "unexpected value read after 'madvise(MADV_DONTNEED)' (expected: %x, actual: %x)",
+             0, data);
 
     CHECK(munmap(a, TEST_LENGTH));
-
-    /* test anonymous mappings without `MAP_NORESERVE` accessed after `madvise(MADV_DONTNEED)` */
-    a = mmap(NULL, TEST_LENGTH2, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-
-    offset = get_random_ulong() % TEST_LENGTH2;
-    WRITE_ONCE(a[offset], expected_val);
-
-    CHECK(madvise(a, TEST_LENGTH2, MADV_DONTNEED));
-    data = READ_ONCE(a[offset]);
-    if (data != 0)
-        errx(1, "unexpected value read (on non-'MAP_NORESERVE') after 'madvise(MADV_DONTNEED)' "
-                "(expected: %x, actual: %x)", 0, data);
-
-    CHECK(munmap(a, TEST_LENGTH2));
 
     /* test threads racing to access the same page in anonymous mappings with `MAP_NORESERVE` */
     a = mmap(NULL, TEST_LENGTH3, PROT_READ | PROT_WRITE,
