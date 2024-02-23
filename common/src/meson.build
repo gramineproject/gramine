@@ -3,6 +3,10 @@ common_src_utils = files(
     'string_utils.c',
 )
 
+common_src_lru_cache = files(
+    'lru_cache.c',
+)
+
 common_src_internal = files(
     'avl_tree.c',
     'init.c',
@@ -44,6 +48,16 @@ common_utils_dep = declare_dependency(
     sources: common_src_utils,
 
     include_directories: common_inc,
+)
+
+common_lru_cache_dep = declare_dependency(
+    sources: common_src_lru_cache,
+
+    include_directories: common_inc,
+
+    dependencies: [
+        uthash_dep,
+    ],
 )
 
 common_dep = declare_dependency(
