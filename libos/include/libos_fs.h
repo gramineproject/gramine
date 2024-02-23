@@ -296,14 +296,17 @@ struct libos_d_ops {
     /*
      * \brief Look up a file.
      *
-     * \param dent  Dentry, negative.
+     * \param dent              Dentry, negative.
+     * \param skip_inode_setup  Whether to skip additional setup (size, fs-specific data) of inode.
      *
      * Queries the underlying filesystem for a path described by a dentry (`dent->name` and
-     * `dent->parent`). On success, creates an inode and attaches it to the dentry.
+     * `dent->parent`). On success, creates an inode and attaches it to the dentry. If
+     * `skip_inode_setup` is true, a dummy inode is created, i.e. no additional setup of the inode
+     * is performed (see description of `LOOKUP_SKIP_INODE_SETUP` for details).
      *
      * The caller should hold `g_dcache_lock`.
      */
-    int (*lookup)(struct libos_dentry* dent);
+    int (*lookup)(struct libos_dentry* dent, bool skip_inode_setup);
 
     /*
      * \brief Open an existing file.
@@ -596,11 +599,12 @@ int check_permissions(struct libos_dentry* dent, mode_t mask);
  * This is modeled after Linux and BSD codebases, which define a positive FOLLOW flag, and a
  * negative pseudo-flag was introduced by FreeBSD.
  */
-#define LOOKUP_NO_FOLLOW       0
-#define LOOKUP_FOLLOW          0x1
-#define LOOKUP_CREATE          0x2
-#define LOOKUP_DIRECTORY       0x4
-#define LOOKUP_MAKE_SYNTHETIC  0x8
+#define LOOKUP_NO_FOLLOW        0x00
+#define LOOKUP_FOLLOW           0x01
+#define LOOKUP_CREATE           0x02
+#define LOOKUP_DIRECTORY        0x04
+#define LOOKUP_MAKE_SYNTHETIC   0x08
+#define LOOKUP_SKIP_INODE_SETUP 0x10
 
 /* Maximum number of nested symlinks that `path_lookupat` and related functions will follow */
 #define MAX_LINK_DEPTH 8
@@ -644,6 +648,12 @@ int check_permissions(struct libos_dentry* dent, mode_t mask);
  * - LOOKUP_MAKE_SYNTHETIC: for any components on the path that do not exist, create directories
  *   using the `synthetic` filesystem. This is intended for use when creating mountpoints specified
  *   in manifest.
+ *
+ * - LOOKUP_SKIP_INODE_SETUP: used for e.g. `unlink()`: there is no sense in eagerly setting up
+ *   dentry's inode on lookup, as it will be immediately deleted by file unlink logic. This is
+ *   particularly important for encrypted files (as they would otherwise open and decrypt the
+ *   underlying file on inode setup) and tmpfs files (as they would otherwise allocate an underlying
+ *   memory region for file contents on inode setup).
  *
  * Note that a path with trailing slash is always treated as a directory, and LOOKUP_FOLLOW /
  * LOOKUP_CREATE do not apply.

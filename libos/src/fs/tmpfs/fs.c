@@ -24,7 +24,8 @@
 
 #define USEC_IN_SEC 1000000
 
-static int tmpfs_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm) {
+static int tmpfs_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
+                              bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -32,23 +33,25 @@ static int tmpfs_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t per
     if (!inode)
         return -ENOMEM;
 
-    struct libos_mem_file* mem = malloc(sizeof(*mem));
-    if (!mem) {
-        put_inode(inode);
-        return -ENOMEM;
-    }
-    mem_file_init(mem, /*data=*/NULL, /*size=*/0);
-    inode->data = mem;
+    if (!skip_inode_setup) {
+        struct libos_mem_file* mem = malloc(sizeof(*mem));
+        if (!mem) {
+            put_inode(inode);
+            return -ENOMEM;
+        }
+        mem_file_init(mem, /*data=*/NULL, /*size=*/0);
+        inode->data = mem;
 
-    uint64_t time_us;
-    if (PalSystemTimeQuery(&time_us) < 0) {
-        put_inode(inode);
-        return -EPERM;
-    }
+        uint64_t time_us;
+        if (PalSystemTimeQuery(&time_us) < 0) {
+            put_inode(inode);
+            return -EPERM;
+        }
 
-    inode->ctime = time_us / USEC_IN_SEC;
-    inode->mtime = inode->ctime;
-    inode->atime = inode->ctime;
+        inode->ctime = time_us / USEC_IN_SEC;
+        inode->mtime = inode->ctime;
+        inode->atime = inode->ctime;
+    }
 
     dent->inode = inode;
     return 0;
@@ -116,13 +119,13 @@ static int tmpfs_flush(struct libos_handle* hdl) {
     return msync_handle(hdl);
 }
 
-static int tmpfs_lookup(struct libos_dentry* dent) {
+static int tmpfs_lookup(struct libos_dentry* dent, bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
     if (!dent->parent) {
         /* This is the root dentry, initialize it. */
-        return tmpfs_setup_dentry(dent, S_IFDIR, PERM_rwx______);
+        return tmpfs_setup_dentry(dent, S_IFDIR, PERM_rwx______, skip_inode_setup);
     }
     /* Looking up for other dentries should fail: if a dentry has not been already created by
      * `creat` or `mkdir`, the corresponding file does not exist. */
@@ -152,7 +155,7 @@ static int tmpfs_creat(struct libos_handle* hdl, struct libos_dentry* dent, int 
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    int ret = tmpfs_setup_dentry(dent, S_IFREG, perm);
+    int ret = tmpfs_setup_dentry(dent, S_IFREG, perm, /*skip_inode_setup=*/false);
     if (ret < 0)
         return ret;
 
@@ -164,7 +167,7 @@ static int tmpfs_mkdir(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
-    return tmpfs_setup_dentry(dent, S_IFDIR, perm);
+    return tmpfs_setup_dentry(dent, S_IFDIR, perm, /*skip_inode_setup=*/false);
 }
 
 static int tmpfs_unlink(struct libos_dentry* dent) {

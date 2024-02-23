@@ -50,7 +50,7 @@ long libos_syscall_unlinkat(int dfd, const char* pathname, int flag) {
         return ret;
 
     lock(&g_dcache_lock);
-    ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW, &dent);
+    ret = path_lookupat(dir, pathname, LOOKUP_NO_FOLLOW | LOOKUP_SKIP_INODE_SETUP, &dent);
     if (ret < 0)
         goto out;
 
