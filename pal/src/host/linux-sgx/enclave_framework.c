@@ -685,26 +685,21 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
     for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE, chunk_hashes_item++, chunk_number++) {
         size_t chunk_size = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         off_t chunk_end   = chunk_offset + chunk_size;
-
-        if (lruc_find(tf->cache, chunk_number) != NULL) {
-            tf_chunk_t* chunk = lruc_get(tf->cache, chunk_number);
-
+        tf_chunk_t* chunk;
+        if (g_tf_max_chunks_in_cache > 0 && (chunk = lruc_get(tf->cache, chunk_number)) != NULL) {
             if (chunk_offset >= offset && chunk_end <= end) {
                 memcpy(buf_pos, chunk->data, chunk_size);
 
                 buf_pos += chunk_size;
             } else {
-                memcpy(tmp_chunk, chunk->data, chunk_size);
-
                 off_t copy_start = MAX(chunk_offset, offset);
                 off_t copy_end   = MIN(chunk_offset + (off_t)chunk_size, end);
                 assert(copy_end > copy_start);
 
-                memcpy(buf_pos, tmp_chunk + copy_start - chunk_offset, copy_end - copy_start);
+                memcpy(buf_pos, chunk->data + copy_start - chunk_offset, copy_end - copy_start);
                 buf_pos += copy_end - copy_start;
             }
-        }
-        else {
+        } else {
             sgx_chunk_hash_t chunk_hash[2]; /* each chunk_hash is 128 bits in size but we need 256 */
 
             LIB_SHA256_CONTEXT chunk_sha;
@@ -719,9 +714,11 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
                     goto failed;
                 }
 
-                ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
-                if (ret < 0)
-                    goto failed;
+                if(g_tf_max_chunks_in_cache > 0) {
+                    ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
+                    if (ret < 0)
+                        goto failed;
+                }
 
                 ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
                 if (ret < 0)
@@ -736,9 +733,11 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
                     goto failed;
                 }
 
-                ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
-                if (ret < 0)
-                    goto failed;
+                if(g_tf_max_chunks_in_cache > 0) {
+                    ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
+                    if (ret < 0)
+                        goto failed;
+                }
 
                 ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
                 if (ret < 0)
