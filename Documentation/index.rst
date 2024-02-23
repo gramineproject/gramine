@@ -219,6 +219,7 @@ Indices and tables
    devel/setup
    devel/coding-style
    devel/howto-doc
+   devel/code-signing-and-releasing
    devel/charter
    devel/DCO/index
 

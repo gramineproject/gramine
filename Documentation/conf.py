@@ -19,7 +19,11 @@ os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 
 import pathlib
 import subprocess
+import urllib.parse
 
+import docutils.nodes
+import docutils.parsers.rst
+import docutils.parsers.rst.directives
 
 # -- Project information -----------------------------------------------------
 
@@ -222,6 +226,25 @@ else:
         '.markdown': 'markdown',
     })
 
+class NewIssueDirective(docutils.parsers.rst.Directive):
+    has_content = True
+    optional_arguments = float('inf')
+    option_spec = {
+        'url': docutils.parsers.rst.directives.uri,
+    }
+
+    def run(self):
+        url = self.options.get('url', 'https://github.com/gramineproject/gramine/issues/new')
+        qs = urllib.parse.urlencode([
+            ('title', ' '.join(self.arguments)),
+            ('body', '\n'.join(self.content.data)),
+        ])
+        refuri = f'{url}?{qs}'
+        para = docutils.nodes.paragraph()
+        para += docutils.nodes.reference('', refuri, refuri=refuri)
+        return [para]
+
 def setup(app):
     app.add_css_file('css/gramine.css')
     app.connect('builder-inited', generate_doxygen)
+    app.add_directive('new-issue', NewIssueDirective)
