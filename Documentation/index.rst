@@ -215,6 +215,7 @@ Indices and tables
    devel/contributing
    devel/onboarding
    devel/setup
+   devel/maintainer-manual
    devel/coding-style
    devel/howto-doc
    devel/charter
