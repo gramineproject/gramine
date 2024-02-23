@@ -650,7 +650,7 @@ int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
             static int lcu_remove_count = 0;
             if (g_tf_max_chunks_in_cache > 0 && ++lcu_remove_count == 100) {
                 log_always("High frequency of this log indicates trusted files chunks exceed the"
-                          " `tf_max_chunks_in_cache` limit. Please increase it in the manifest"
+                          " `sgx.tf_max_chunks_in_cache` limit. Please increase it in the manifest"
                           " file to get the best performance.");
                 lcu_remove_count = 0;
             }
