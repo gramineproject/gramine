@@ -158,7 +158,7 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
     return 0;
 }
 
-static int pseudo_lookup(struct libos_dentry* dent) {
+static int pseudo_lookup(struct libos_dentry* dent, bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
@@ -188,7 +188,9 @@ static int pseudo_lookup(struct libos_dentry* dent) {
     if (!inode)
         return -ENOMEM;
 
-    inode->data = node;
+    if (!skip_inode_setup) {
+        inode->data = node;
+    }
 
     dent->inode = inode;
     return 0;

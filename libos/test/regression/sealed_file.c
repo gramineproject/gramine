@@ -19,8 +19,8 @@ int main(int argc, char** argv) {
     int ret;
     ssize_t bytes;
 
-    if (argc != 2)
-        errx(EXIT_FAILURE, "Usage: %s <protected file to create/validate>", argv[0]);
+    if (argc != 3)
+        errx(EXIT_FAILURE, "Usage: %s <protected file to create/validate> <unlink?>", argv[0]);
 
     ret = access(argv[1], F_OK);
     if (ret < 0) {
@@ -38,7 +38,23 @@ int main(int argc, char** argv) {
             printf("CREATION OK\n");
             return 0;
         }
-        err(EXIT_FAILURE, "access failed");
+        if (errno != EACCES || strcmp(argv[2], "unlink") != 0) {
+            /* access() can legitimately return EACCES if we're testing the "modified-MRENCLAVE
+             * app wants to delete the previous-MRENCLAVE-sealed file" corner case */
+            err(EXIT_FAILURE, "access failed");
+        }
+    }
+
+    /* at this point, the file exists (either created by above or already existed on storage) */
+
+    if (strcmp(argv[2], "unlink") == 0) {
+        /* verify that removing the file always works, even with a mismatching MRENCLAVE */
+        ret = unlink(argv[1]);
+        if (ret < 0)
+            err(EXIT_FAILURE, "unlink failed");
+
+        printf("UNLINK OK");
+        return 0;
     }
 
     char buf[SECRETSTRING_LEN];

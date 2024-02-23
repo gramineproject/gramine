@@ -20,8 +20,8 @@ fs.mounts = [
 
   { type = "tmpfs", path = "/mnt/tmpfs" },
   { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
-  { type = "encrypted", path = "/encrypted_file_mrenclave.dat", uri = "file:encrypted_file_mrenclave.dat", key_name = "_sgx_mrenclave" },
-  { type = "encrypted", path = "/encrypted_file_mrsigner.dat", uri = "file:encrypted_file_mrsigner.dat", key_name = "_sgx_mrsigner" },
+  { type = "encrypted", path = "/tmp_enc/mrenclaves", uri = "file:tmp_enc/mrenclaves", key_name = "_sgx_mrenclave" },
+  { type = "encrypted", path = "/tmp_enc/mrsigners", uri = "file:tmp_enc/mrsigners", key_name = "_sgx_mrsigner" },
 ]
 
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
