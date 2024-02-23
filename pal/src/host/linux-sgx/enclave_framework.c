@@ -649,7 +649,7 @@ int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
 #ifdef DEBUG
             static int lcu_remove_count = 0;
             if (g_tf_max_chunks_in_cache > 0 && ++lcu_remove_count == 100) {
-                log_always("High frequenty of this log indicates Trusted files chunks exceed the"
+                log_always("High frequency of this log indicates trusted files chunks exceed the"
                           " `tf_max_chunks_in_cache` limit. Please increase it in the manifest"
                           " file to get the best performance.");
                 lcu_remove_count = 0;
@@ -711,6 +711,7 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
                 /* if current chunk-to-copy completely resides in the requested region-to-copy,
                 * directly copy into buf (without a scratch buffer) and hash in-place */
                 if (!sgx_copy_to_enclave(buf_pos, chunk_size, umem + chunk_offset, chunk_size)) {
+                    ret = -PAL_ERROR_DENIED;
                     goto failed;
                 }
 
@@ -730,6 +731,7 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
                 * read the file contents into a scratch buffer, verify hash and then copy only the part
                 * needed by the caller */
                 if (!sgx_copy_to_enclave(tmp_chunk, chunk_size, umem + chunk_offset, chunk_size)) {
+                    ret = -PAL_ERROR_DENIED;
                     goto failed;
                 }
 
