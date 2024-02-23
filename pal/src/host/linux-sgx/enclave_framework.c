@@ -115,9 +115,6 @@ void* sgx_alloc_on_ustack(size_t size) {
 }
 
 void* sgx_copy_to_ustack(const void* ptr, size_t size) {
-    if (!sgx_is_completely_within_enclave(ptr, size)) {
-        return NULL;
-    }
     void* uptr = sgx_alloc_on_ustack(size);
     if (uptr) {
         sgx_copy_from_enclave_verified(uptr, ptr, size);
@@ -202,11 +199,8 @@ void sgx_copy_to_enclave_verified(void* ptr, const void* uptr, size_t size) {
 }
 
 bool sgx_copy_to_enclave(void* ptr, size_t maxsize, const void* uptr, size_t usize) {
-    if (usize > maxsize ||
-        !sgx_is_valid_untrusted_ptr(uptr, usize, /*alignment=*/1) ||
-        !sgx_is_completely_within_enclave(ptr, maxsize)) {
+    if (usize > maxsize)
         return false;
-    }
 
     sgx_copy_to_enclave_verified(ptr, uptr, usize);
     return true;
@@ -266,11 +260,6 @@ void sgx_copy_from_enclave_verified(void* uptr, const void* ptr, size_t size) {
 }
 
 bool sgx_copy_from_enclave(void* uptr, const void* ptr, size_t size) {
-    if (!sgx_is_valid_untrusted_ptr(uptr, size, /*alignment=*/1)
-            || !sgx_is_completely_within_enclave(ptr, size)) {
-        return false;
-    }
-
     sgx_copy_from_enclave_verified(uptr, ptr, size);
     return true;
 }
