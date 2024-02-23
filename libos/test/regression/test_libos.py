@@ -807,10 +807,10 @@ class TC_30_Syscall(RegressionTestCase):
     @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
     def test_053_mmap_file_backed_protected(self):
         # create the protected file
-        pf_path = 'encrypted_file_mrsigner.dat'
+        pf_path = 'tmp_enc/mrsigners/mmap_file_backed.dat'
         if os.path.exists(pf_path):
             os.remove(pf_path)
-        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
         self.assertIn('CREATION OK', stdout)
 
         try:
@@ -1214,45 +1214,58 @@ class TC_40_FileSystem(RegressionTestCase):
 
     @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
     def test_050_sealed_file_mrenclave(self):
-        pf_path = 'encrypted_file_mrenclave.dat'
+        pf_path = 'tmp_enc/mrenclaves/test_050.dat'
         if os.path.exists(pf_path):
             os.remove(pf_path)
 
-        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
         self.assertIn('CREATION OK', stdout)
-        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
         self.assertIn('READING OK', stdout)
 
     @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
     def test_051_sealed_file_mrsigner(self):
-        pf_path = 'encrypted_file_mrsigner.dat'
+        pf_path = 'tmp_enc/mrsigners/test_051.dat'
         if os.path.exists(pf_path):
             os.remove(pf_path)
 
-        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
         self.assertIn('CREATION OK', stdout)
-        stdout, _ = self.run_binary(['sealed_file_mod', pf_path])
+        stdout, _ = self.run_binary(['sealed_file_mod', pf_path, 'nounlink'])
         self.assertIn('READING FROM MODIFIED ENCLAVE OK', stdout)
 
     @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
     def test_052_sealed_file_mrenclave_bad(self):
-        pf_path = 'encrypted_file_mrenclave.dat'
+        pf_path = 'tmp_enc/mrenclaves/test_052.dat'
         # Negative test: Seal MRENCLAVE-bound file in one enclave -> opening this file in
         # another enclave (with different MRENCLAVE) should fail
         if os.path.exists(pf_path):
             os.remove(pf_path)
 
-        stdout, _ = self.run_binary(['sealed_file', pf_path])
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
         self.assertIn('CREATION OK', stdout)
 
         try:
-            self.run_binary(['sealed_file_mod', pf_path])
+            self.run_binary(['sealed_file_mod', pf_path, 'nounlink'])
             self.fail('expected to return nonzero')
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 1)
             stdout = e.stdout.decode()
             self.assertNotIn('READING FROM MODIFIED ENCLAVE OK', stdout)
             self.assertIn('Permission denied', stdout)
+
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
+    def test_053_sealed_file_mrenclave_unlink(self):
+        pf_path = 'tmp_enc/mrenclaves/test_053.dat'
+        # Unlinking test: Seal MRENCLAVE-bound file in one enclave -> unlinking this file in
+        # another enclave (with different MRENCLAVE) should still work
+        if os.path.exists(pf_path):
+            os.remove(pf_path)
+
+        stdout, _ = self.run_binary(['sealed_file', pf_path, 'nounlink'])
+        self.assertIn('CREATION OK', stdout)
+        stdout, _ = self.run_binary(['sealed_file_mod', pf_path, 'unlink'])
+        self.assertIn('UNLINK OK', stdout)
 
     def test_060_synthetic(self):
         stdout, _ = self.run_binary(['synthetic'])

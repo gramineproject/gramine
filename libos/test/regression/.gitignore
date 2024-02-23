@@ -3,6 +3,6 @@
 /trusted_testfile
 
 /tmp/*
-!/tmp/.dummy
+!/tmp/.gitkeep
 /tmp_enc/*
-!/tmp_enc/.dummy
+!/tmp_enc/.gitkeep

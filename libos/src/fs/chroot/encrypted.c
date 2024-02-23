@@ -12,9 +12,15 @@
  *   key for files. Multiple mounts can use the same key. The list of keys is managed in
  *   `libos_fs_encrypted.c`.
  *
- * - Inodes (`libos_inode`, for regular files) hold a `libos_encrypted_file` object. This object
- *   lives as long as the inode, but is kept *open* only as long as there are `libos_handle` objects
- *   corresponding to it. We use `encrypted_file_{get,put}` operations to maintain that invariant.
+ * - Inodes (`libos_inode`, for regular files) hold a `libos_encrypted_file` object in `inode->data`
+ *   field. This object lives as long as the inode, but is kept *open* only as long as there are
+ *   `libos_handle` objects corresponding to it. We use `encrypted_file_{get,put}` operations to
+ *   maintain that invariant.
+ *
+ *   It is possible that inode has no corresponding `libos_encrypted_file` object, i.e.
+ *   `inode->data` is NULL. This happens if the encrypted file is corrupted; in this case we want to
+ *   allow at least some operations on the file (currently only `unlink()`), but all other
+ *   operations return -EACCES.
  *
  *   An open `libos_encrypted_file` object keeps an open PAL handle and associated data
  *   (`pf_context_t`), so that operations (read, write, truncate...) can be performed on the file.
@@ -152,18 +158,25 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         struct libos_encrypted_files_key* key = dent->mount->data;
         ret = encrypted_file_open(uri, key, &enc);
         if (ret < 0) {
-            goto out;
-        }
+            if (ret == -EACCES) {
+                /* allow the inode to be created even if the underlying encrypted file is corrupted;
+                 * this is useful for unlinking a corrupted file */
+                inode->data = NULL;
+            } else {
+                goto out;
+            }
+        } else {
+            ret = encrypted_file_get_size(enc, &size);
+            encrypted_file_put(enc);
 
-        ret = encrypted_file_get_size(enc, &size);
-        encrypted_file_put(enc);
+            if (ret < 0) {
+                encrypted_file_destroy(enc);
+                goto out;
+            }
 
-        if (ret < 0) {
-            encrypted_file_destroy(enc);
-            goto out;
+            inode->data = enc;
+            inode->size = size;
         }
-        inode->data = enc;
-        inode->size = size;
     }
     dent->inode = inode;
     get_inode(inode);
@@ -185,6 +198,8 @@ static int chroot_encrypted_open(struct libos_handle* hdl, struct libos_dentry* 
 
     if (dent->inode->type == S_IFREG) {
         struct libos_encrypted_file* enc = dent->inode->data;
+        if (!enc)
+            return -EACCES;
 
         lock(&dent->inode->lock);
         ret = encrypted_file_get(enc);
@@ -325,6 +340,10 @@ static int chroot_encrypted_rename(struct libos_dentry* old, struct libos_dentry
     lock(&old->inode->lock);
 
     struct libos_encrypted_file* enc = old->inode->data;
+    if (!enc) {
+        ret = -EACCES;
+        goto out;
+    }
 
     ret = encrypted_file_get(enc);
     if (ret < 0)
@@ -341,6 +360,9 @@ out:
 static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
+
+    if (!dent->inode->data)
+        return -EACCES;
 
     char* uri = NULL;
 
@@ -374,6 +396,8 @@ static int chroot_encrypted_fchmod(struct libos_handle* hdl, mode_t perm) {
     assert(hdl->inode);
 
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
+
     mode_t host_perm = HOST_PERM(perm);
     PAL_STREAM_ATTR attr = {.share_flags = host_perm};
     int ret = PalStreamAttributesSetByHandle(enc->pal_handle, &attr);
@@ -389,6 +413,7 @@ static int chroot_encrypted_flush(struct libos_handle* hdl) {
         return 0;
 
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
 
     /* If there are any MAP_SHARED mappings for the file, this will write data to `enc` */
     int ret = msync_handle(hdl);
@@ -408,6 +433,7 @@ static int chroot_encrypted_close(struct libos_handle* hdl) {
         return 0;
 
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
 
     lock(&hdl->inode->lock);
     encrypted_file_put(enc);
@@ -425,6 +451,8 @@ static ssize_t chroot_encrypted_read(struct libos_handle* hdl, void* buf, size_t
     }
 
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
+
     size_t actual_count;
 
     lock(&hdl->inode->lock);
@@ -447,6 +475,8 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
     }
 
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
+
     size_t actual_count;
 
     lock(&hdl->inode->lock);
@@ -485,6 +515,7 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
 
     int ret;
     struct libos_encrypted_file* enc = hdl->inode->data;
+    assert(enc);
 
     lock(&hdl->inode->lock);
     ret = encrypted_file_set_size(enc, size);
@@ -493,6 +524,16 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
     unlock(&hdl->inode->lock);
 
     return ret;
+}
+
+static int chroot_encrypted_stat(struct libos_dentry* dent, struct stat* buf) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
+    if (!dent->inode->data)
+        return -EACCES;
+
+    return generic_inode_stat(dent, buf);
 }
 
 struct libos_fs_ops chroot_encrypted_fs_ops = {
@@ -517,7 +558,7 @@ struct libos_d_ops chroot_encrypted_d_ops = {
     .lookup        = &chroot_encrypted_lookup,
     .creat         = &chroot_encrypted_creat,
     .mkdir         = &chroot_encrypted_mkdir,
-    .stat          = &generic_inode_stat,
+    .stat          = &chroot_encrypted_stat,
     .readdir       = &chroot_readdir, /* same as in `chroot` filesystem */
     .unlink        = &chroot_encrypted_unlink,
     .rename        = &chroot_encrypted_rename,
