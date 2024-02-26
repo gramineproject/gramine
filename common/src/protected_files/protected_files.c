@@ -1220,7 +1220,6 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     return PF_STATUS_SUCCESS;
 }
 
-// TODO: File truncation to arbitrary size.
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
@@ -1275,7 +1274,43 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
     }
 
-    return PF_STATUS_NOT_IMPLEMENTED;
+    // Arbitrary truncation.
+
+    // The structure of the protected file is such that we can simply truncate
+    // the file after the last data block belonging to still-used data.
+    // Some MHT entries will be left with dangling data describing the truncated
+    // nodes, but this is not a problem since they will be unused, and will be
+    // overwritten with new data when the relevant nodes get allocated again.
+
+    // First, ensure any nodes that will be truncated are not in cache. We do it
+    // by simply flushing the entire thing.
+    if (!ipf_internal_flush(pf))
+        return pf->last_error;
+    void* data;
+    while ((data = lruc_get_last(pf->cache)) != NULL) {
+        file_node_t* file_node = (file_node_t*)data;
+        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
+        free(file_node);
+        lruc_remove_last(pf->cache);
+    }
+
+    // Calculate new file size.
+    uint64_t new_file_size;
+    if (size <= MD_USER_DATA_SIZE) {
+        new_file_size = PF_NODE_SIZE;
+    } else {
+        uint64_t physical_node_number;
+        get_node_numbers(size - 1, NULL, NULL, NULL, &physical_node_number);
+        new_file_size = (physical_node_number + 1) * PF_NODE_SIZE;
+    }
+    pf_status_t status = g_cb_truncate(pf->file, new_file_size);
+    if (PF_FAILURE(status))
+        return status;
+    // If successfully truncated, update our bookkeeping.
+    pf->encrypted_part_plain.size = size;
+    pf->need_writing              = true;
+    pf->real_file_size            = new_file_size;
+    return PF_STATUS_SUCCESS;
 }
 
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
