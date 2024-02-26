@@ -24,4 +24,7 @@ RUN mkdir /debian
 COPY debian/control /debian
 RUN apt-get update && apt-get -y build-dep --no-install-recommends --no-install-suggests /
 
+# for HTML docs build, which is not done in packages, so not in Build-Depends:
+RUN apt-get update && apt-get install python3-myst-parser
+
 CMD ["bash"]
