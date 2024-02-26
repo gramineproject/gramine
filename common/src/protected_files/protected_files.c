@@ -1123,8 +1123,17 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
     return data_attempted_to_read - data_left_to_read;
 }
 
-static bool ipf_close(pf_context_t* pf) {
+static void ipf_delete_cache(pf_context_t* pf) {
     void* data;
+    while ((data = lruc_get_last(pf->cache)) != NULL) {
+        file_node_t* file_node = (file_node_t*)data;
+        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
+        free(file_node);
+        lruc_remove_last(pf->cache);
+    }
+}
+
+static bool ipf_close(pf_context_t* pf) {
     bool retval = true;
 
     if (pf->file_status != PF_STATUS_SUCCESS) {
@@ -1140,12 +1149,7 @@ static bool ipf_close(pf_context_t* pf) {
     // omeg: fs close is done by Gramine handler
     pf->file_status = PF_STATUS_UNINITIALIZED;
 
-    while ((data = lruc_get_last(pf->cache)) != NULL) {
-        file_node_t* file_node = (file_node_t*)data;
-        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-        free(file_node);
-        lruc_remove_last(pf->cache);
-    }
+    ipf_delete_cache(pf);
 
     // scrub first MD_USER_DATA_SIZE of file data and the gmac_key
     erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
@@ -1211,7 +1215,6 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     return PF_STATUS_SUCCESS;
 }
 
-// TODO: File truncation to arbitrary size.
 pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
@@ -1232,40 +1235,36 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
     }
 
-    if (size == 0) {
-        // Shrink the file to zero.
-        void* data;
-        char path[PATH_MAX_SIZE];
-        size_t path_len;
-        pf_status_t status = g_cb_truncate(pf->file, 0);
-        if (PF_FAILURE(status))
-            return status;
+    // Truncation.
 
-        path_len = strlen(pf->encrypted_part_plain.path);
-        memcpy(path, pf->encrypted_part_plain.path, path_len);
-        erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
-        memcpy(pf->encrypted_part_plain.path, path, path_len);
+    // The structure of the protected file is such that we can simply truncate
+    // the file after the last data block belonging to still-used data.
+    // Some MHT entries will be left with dangling data describing the truncated
+    // nodes, but this is not a problem since they will be unused, and will be
+    // overwritten with new data when the relevant nodes get allocated again.
 
-        memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
-        pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
-        pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
-        pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
+    // First, ensure any nodes that will be truncated are not in cache. We do it
+    // by simply flushing and then emptying the entire cache.
+    if (!ipf_internal_flush(pf))
+        return pf->last_error;
+    ipf_delete_cache(pf);
 
-        ipf_init_root_mht(&pf->root_mht);
-
-        pf->need_writing = true;
-
-        while ((data = lruc_get_last(pf->cache)) != NULL) {
-            file_node_t* file_node = (file_node_t*)data;
-            erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-            free(file_node);
-            lruc_remove_last(pf->cache);
-        }
-
-        return PF_STATUS_SUCCESS;
+    // Calculate new file size.
+    uint64_t new_file_size;
+    if (size <= MD_USER_DATA_SIZE) {
+        new_file_size = PF_NODE_SIZE;
+    } else {
+        uint64_t physical_node_number;
+        get_node_numbers(size - 1, NULL, NULL, NULL, &physical_node_number);
+        new_file_size = (physical_node_number + 1) * PF_NODE_SIZE;
     }
-
-    return PF_STATUS_NOT_IMPLEMENTED;
+    pf_status_t status = g_cb_truncate(pf->file, new_file_size);
+    if (PF_FAILURE(status))
+        return status;
+    // If successfully truncated, update our bookkeeping.
+    pf->encrypted_part_plain.size = size;
+    pf->need_writing              = true;
+    return PF_STATUS_SUCCESS;
 }
 
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
