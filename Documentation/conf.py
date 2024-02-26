@@ -20,7 +20,6 @@ os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 import pathlib
 import subprocess
 
-import recommonmark.parser
 
 # -- Project information -----------------------------------------------------
 
@@ -44,7 +43,6 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'recommonmark',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
@@ -52,15 +50,22 @@ extensions = [
     'sphinx_rtd_theme',
 ]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
-
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': 'restructuredtext',
-    '.md': 'markdown',
-    '.markdown': 'markdown',
 }
+
+# myst is not available in older repos, but we don't care, manpages are
+# rendered from rst and we don't ship html docs
+if not tags.has('pkg_only'):
+    extensions.append('myst_parser')
+    source_suffix.update({
+        '.md': 'markdown',
+        '.markdown': 'markdown',
+    })
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ['_templates']
 
 # The master toctree document.
 master_doc = 'index'
