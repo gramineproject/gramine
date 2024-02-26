@@ -50,7 +50,7 @@ override_dh_auto_configure:
 
 override_dh_auto_build:
 	dh_auto_build
-	$(MAKE) -C Documentation man
+	$(MAKE) -C Documentation SPHINXOPTS=-tpkg_only man
 
 override_dh_strip override_dh_makeshlibs override_dh_shlibdeps override_dh_dwz:
 
