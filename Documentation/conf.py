@@ -20,7 +20,6 @@ os.environ['GRAMINE_IMPORT_FOR_SPHINX_ANYWAY'] = '1'
 import pathlib
 import subprocess
 
-import recommonmark.parser
 
 # -- Project information -----------------------------------------------------
 
@@ -44,7 +43,6 @@ release = ''
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'recommonmark',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
@@ -52,15 +50,13 @@ extensions = [
     'sphinx_rtd_theme',
 ]
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
-
 # The suffix(es) of source filenames.
 source_suffix = {
     '.rst': 'restructuredtext',
-    '.md': 'markdown',
-    '.markdown': 'markdown',
 }
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ['_templates']
 
 # The master toctree document.
 master_doc = 'index'
@@ -70,7 +66,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -114,44 +110,34 @@ breathe_domain_by_extension = {
     'h': 'c',
 }
 
-try:
-    import breathe
-except ImportError:
-    def generate_doxygen(app):
-        pass
-else:
-    extensions.append('breathe')
-    def generate_doxygen(app):
-        for p in breathe_projects:
-            subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
-
-def setup(app):
-    app.add_css_file('css/gramine.css')
-    app.connect('builder-inited', generate_doxygen)
-
 todo_include_todos = True
+
+myst_heading_anchors = 4
 
 nitpicky = True
 nitpick_ignore = [
-    ('c:type', 'bool'),
-    ('c:type', 'toml_table_t'),
-    ('c:type', 'uint8_t'),
-    ('c:type', 'uint16_t'),
-    ('c:type', 'uint32_t'),
-    ('c:type', 'uint64_t'),
-    ('c:type', 'int8_t'),
-    ('c:type', 'int16_t'),
-    ('c:type', 'int32_t'),
-    ('c:type', 'int64_t'),
-    ('c:type', 'uintptr_t'),
-    # parsing of this seems to be broken - this is not even a type, yet it
-    # errors: "WARNING: c:type reference target not found: reserved_mem_ranges"
-    ('c:type', 'reserved_mem_ranges'),
-    ('c:type', 'union'),
-    ('c:type', 'enum'), # parsing of these seems to be broken:
-                        #     WARNING: c:type reference target not found: enum
+    ('c:identifier', 'bool'),
+    ('c:identifier', 'int16_t'),
+    ('c:identifier', 'int32_t'),
+    ('c:identifier', 'int64_t'),
+    ('c:identifier', 'int8_t'),
+    ('c:identifier', 'size_t'),
+    ('c:identifier', 'toml_table_t'),
+    ('c:identifier', 'uint16_t'),
+    ('c:identifier', 'uint32_t'),
+    ('c:identifier', 'uint64_t'),
+    ('c:identifier', 'uint8_t'),
+    ('c:identifier', 'uintptr_t'),
+
+    ('c:identifier', 'CPUID_WORD_NUM'), # TODO
+
     # `PAL_HANDLE` has a non complete definition outside of PAL
-    ('c:type', 'PAL_HANDLE'),
+    ('c:identifier', 'PAL_HANDLE'),
+
+    # parsing of these seems to be broken:
+    ('c:identifier', 'enum'),
+    ('c:identifier', 'union'),
+    ('c:identifier', 'reserved_mem_ranges'), # this is not even a type
 ]
 
 manpages_url = 'https://manpages.debian.org/{path}'
@@ -215,3 +201,27 @@ assert (set(str(p.with_suffix(''))
         if not p.stem == 'index')
     == set(source
         for source, *_ in man_pages))
+
+
+# - myst is not available in older repos,
+# - breathe is not available on RHEL,
+# but we don't care, manpages are rendered from rst and we don't ship html docs
+if tags.has('pkg_only'):
+    def generate_doxygen(app):
+        pass
+else:
+    def generate_doxygen(app):
+        for p in breathe_projects:
+            subprocess.check_call(['doxygen', 'Doxyfile-{}'.format(p)])
+    extensions.extend([
+        'breathe',
+        'myst_parser',
+    ])
+    source_suffix.update({
+        '.md': 'markdown',
+        '.markdown': 'markdown',
+    })
+
+def setup(app):
+    app.add_css_file('css/gramine.css')
+    app.connect('builder-inited', generate_doxygen)
