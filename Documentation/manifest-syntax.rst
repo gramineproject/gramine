@@ -437,9 +437,8 @@ Gramine currently supports the following types of mount points:
 
   ``tmpfs`` is especially useful in trusted environments (like Intel SGX) for
   securely storing temporary files. This concept is similar to Linux's tmpfs.
-  Files under ``tmpfs`` mount points currently do *not* support mmap and each
-  process has its own, non-shared tmpfs (i.e., processes don't see each other's
-  files).
+  Currently there is a limitation that each process has its own, non-shared
+  tmpfs (i.e., processes don't see each other's files).
 
 Start (current working) directory
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
