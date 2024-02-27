@@ -54,6 +54,7 @@ struct pal_enclave {
     bool profile_with_stack;
     int profile_frequency;
     bool profile_append_pid_to_filename;
+    bool profile_delayed_reinit;
 #endif
 };
 
@@ -130,6 +131,7 @@ int block_async_signals(bool block);
 int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count);
 
 #ifdef DEBUG
+#include "elf/elf.h"
 /* SGX profiling (sgx_profile.c) */
 
 /*
@@ -146,10 +148,11 @@ enum {
 };
 
 /* Initialize based on g_pal_enclave settings */
-int sgx_profile_init(bool already_locked);
+int sgx_profile_init(void);
 
 /* Finalize and close file */
-void sgx_profile_finish(bool already_locked);
+void sgx_profile_finish(void);
+void sgx_profile_finish_thread_unsafe(void);
 
 /* Re-initialize based on g_pal_enclave settings */
 int sgx_profile_reinit(void);
@@ -162,9 +165,15 @@ void sgx_profile_sample_ocall_inner(void* enclave_gpr);
 
 /* Record a sample during OCALL (function to be executed) */
 void sgx_profile_sample_ocall_outer(void* ocall_func);
-
+int sgx_profile_mmap_events(const char* filename, void* addr, char** path, elf_ehdr_t** elf_addr,
+                            off_t* elf_length, int* fd);
+void sgx_profile_record_mmap_events(const char* filename, void* addr, char** path,
+                                    elf_ehdr_t** elf_addr);
+void sgx_profile_report_elf_cleanup(const char* filename, elf_ehdr_t** elf_addr, off_t elf_length,
+                                    int fd);
 /* Record a new mapped ELF */
-void sgx_profile_report_elf(const char* filename, void* addr, bool already_locked);
+void sgx_profile_report_elf(const char* filename, void* addr);
+void sgx_profile_report_elf_thread_unsafe(const char* filename, void* addr);
 #endif
 
 /* perf.data output (sgx_perf_data.h) */

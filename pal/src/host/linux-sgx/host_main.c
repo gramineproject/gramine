@@ -307,14 +307,14 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             goto out;
         }
 
-        ret = sgx_profile_init(/*already_locked=*/false);
+        ret = sgx_profile_init();
         if (ret < 0)
             goto out;
 
         /* Report all ELFs already loaded (host part of PAL and dynamic libraries used by it) */
         struct debug_map* map = g_debug_map;
         while (map) {
-            sgx_profile_report_elf(map->name, map->addr, /*already_locked=*/false);
+            sgx_profile_report_elf(map->name, map->addr);
             map = map->next;
         }
     }
@@ -610,8 +610,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
      * both GDB integration and profiling to be active from the very beginning of enclave execution.
      */
     debug_map_add(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
-    sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr,
-                           /*already_locked=*/false);
+    sgx_profile_report_elf(enclave->libpal_uri + URI_PREFIX_FILE_LEN, (void*)pal_area->addr);
 #endif
 
 #ifdef ASAN

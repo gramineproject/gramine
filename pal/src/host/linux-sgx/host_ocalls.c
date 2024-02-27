@@ -43,7 +43,7 @@ static long sgx_ocall_exit(void* args) {
     if (ocall_exit_args->is_exitgroup) {
         update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
-        sgx_profile_finish(/*already_locked=*/false);
+        sgx_profile_finish();
 #endif
 
 #ifdef SGX_VTUNE_PROFILE
@@ -66,7 +66,7 @@ static long sgx_ocall_exit(void* args) {
         /* no enclave threads left, kill the whole process */
         update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
-        sgx_profile_finish(/*already_locked=*/false);
+        sgx_profile_finish();
 #endif
 #ifdef SGX_VTUNE_PROFILE
         if (g_vtune_profile_enabled) {
@@ -675,8 +675,7 @@ static long sgx_ocall_debug_map_add(void* args) {
                   ocall_debug_args->addr, unix_strerror(ret));
     }
 
-    sgx_profile_report_elf(ocall_debug_args->name, ocall_debug_args->addr,
-                           /*already_locked=*/false);
+    sgx_profile_report_elf(ocall_debug_args->name, ocall_debug_args->addr);
 #else
     __UNUSED(ocall_debug_args);
 #endif
