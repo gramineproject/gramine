@@ -1328,6 +1328,28 @@ class TC_50_GDB(RegressionTestCase):
         xmm0_result = self.find('XMM0 result', stdout)
         self.assertEqual(xmm0_result, '$4 = 0x4000400040004000')
 
+    @unittest.skipUnless(HAS_SGX, 'Trusted files bug was SGX-specific')
+    def test_020_gdb_fork_and_access_file_bug(self):
+        # To run this test manually, use:
+        # GDB=1 GDB_SCRIPT=fork_and_access_file.gdb gramine-sgx fork_and_access_file
+        #
+        # This test checks that the bug of trusted files was fixed. The bug effectively degenerated
+        # opened trusted files to allowed files after fork. This test starts a program that forks
+        # and then reads the trusted file. The GDB script stops the program after fork, modifies the
+        # trusted file, and then lets the program continue execution. The child process must see the
+        # modified trusted file, and Gramine's verification logic must fail the whole program.
+        try:
+            stdout, _ = self.run_gdb(['fork_and_access_file'], 'fork_and_access_file.gdb')
+            self.assertIn('BREAK ON FORK', stdout)
+            self.assertIn('EXITING GDB WITH A GRAMINE ERROR', stdout)
+            # below message must NOT be printed; it means Gramine didn't fail but the program itself
+            self.assertNotIn('EXITING GDB WITHOUT A GRAMINE ERROR', stdout)
+            # below message from program must NOT be printed; Gramine must fail before it
+            self.assertNotIn('child read data different from what parent read', stdout)
+        finally:
+            # restore the trusted file contents (modified by the GDB script in this test)
+            with open('fork_and_access_file_testfile', 'w') as f:
+                f.write('fork_and_access_file_testfile')
 
 class TC_80_Socket(RegressionTestCase):
     def test_000_getsockopt(self):

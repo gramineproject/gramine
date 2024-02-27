@@ -24,6 +24,42 @@
  * GBs in size, and a pread OCALL could fail with -ENOMEM, so we cap to reasonably small size) */
 #define MAX_READ_SIZE (PRESET_PAGESIZE * 1024 * 32)
 
+void fixup_file_handle_after_deserialization(PAL_HANDLE handle) {
+    int ret;
+
+    assert(handle->hdr.type == PAL_TYPE_FILE);
+    assert(!handle->file.chunk_hashes);
+    assert(!handle->file.umem);
+    assert(handle->file.realpath);
+
+    if (!handle->file.trusted) {
+        /* unknown (if file check policy allows) or encrypted or allowed file, no need to fix */
+        return;
+    }
+
+    struct trusted_file* tf = get_trusted_or_allowed_file(handle->file.realpath);
+    if (!tf || tf->allowed) {
+        log_error("cannot find checkpointed trusted file '%s' in manifest", handle->file.realpath);
+        die_or_inf_loop();
+    }
+
+    tf->size = handle->file.size; /* tf size is required for load_trusted_or_allowed_file() below */
+
+    sgx_chunk_hash_t* chunk_hashes;
+    uint64_t file_size;
+    void* umem;
+    ret = load_trusted_or_allowed_file(tf, handle, /*create=*/false, &chunk_hashes, &file_size,
+                                       &umem);
+    if (ret < 0) {
+        log_error("cannot load checkpointed trusted file '%s'", handle->file.realpath);
+        die_or_inf_loop();
+    }
+
+    assert(file_size == handle->file.size);
+    handle->file.chunk_hashes = chunk_hashes;
+    handle->file.umem = umem;
+}
+
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
                      enum pal_access pal_access, pal_share_flags_t pal_share,
                      enum pal_create_mode pal_create, pal_stream_options_t pal_options) {
@@ -122,6 +158,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     hdl->file.chunk_hashes = chunk_hashes;
     hdl->file.size = file_size;
     hdl->file.umem = umem;
+    hdl->file.trusted = !tf->allowed;
 
     *handle = hdl;
     return 0;
@@ -135,9 +172,9 @@ fail:
 
 static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
     int64_t ret;
-    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
 
-    if (!chunk_hashes) {
+    if (!handle->file.trusted) {
+        assert(!handle->file.chunk_hashes);
         if (handle->file.seekable) {
             ret = ocall_pread(handle->file.fd, buffer, count, offset);
         } else {
@@ -147,6 +184,8 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
     }
 
     /* case of trusted file: already mmaped in umem, copy from there and verify hash */
+    assert(handle->file.chunk_hashes);
+
     if (offset >= handle->file.size)
         return 0;
 
@@ -154,9 +193,10 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
     off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
     off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
 
+    assert(handle->file.size && handle->file.umem);
     ret = copy_and_verify_trusted_file(handle->file.realpath, buffer, handle->file.umem,
-                                       aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                       handle->file.size);
+                                       aligned_offset, aligned_end, offset, end,
+                                       handle->file.chunk_hashes, handle->file.size);
     if (ret < 0)
         return ret;
 
@@ -165,9 +205,9 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
 
 static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
     int64_t ret;
-    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
 
-    if (!chunk_hashes) {
+    if (!handle->file.trusted) {
+        assert(!handle->file.chunk_hashes);
         if (handle->file.seekable) {
             ret = ocall_pwrite(handle->file.fd, buffer, count, offset);
         } else {
@@ -177,6 +217,7 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
     }
 
     /* case of trusted file: disallow writing completely */
+    assert(handle->file.chunk_hashes);
     log_warning("Writing to a trusted file (%s) is disallowed!", handle->file.realpath);
     return -PAL_ERROR_DENIED;
 }
@@ -184,8 +225,10 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 static void file_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_FILE);
 
-    if (handle->file.chunk_hashes && handle->file.size) {
+    if (handle->file.trusted && handle->file.size) {
         /* case of trusted file: the whole file was mmapped in untrusted memory */
+        assert(handle->file.chunk_hashes);
+        assert(handle->file.umem);
         ocall_munmap_untrusted(handle->file.umem, handle->file.size);
     }
 
@@ -249,10 +292,11 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 #endif
     }
 
-    sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
-    if (chunk_hashes) {
+    if (handle->file.trusted) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
+        assert(handle->file.chunk_hashes);
+
         off_t end = MIN(offset + size, handle->file.size);
         size_t bytes_filled;
         if ((off_t)offset >= end) {
@@ -271,9 +315,10 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
                 goto out;
             }
 
+            assert(handle->file.size && handle->file.umem);
             ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
-                                               aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                               handle->file.size);
+                                               aligned_offset, aligned_end, offset, end,
+                                               handle->file.chunk_hashes, handle->file.size);
             if (ret < 0) {
                 log_error("file_map - copy & verify on trusted file: %s", pal_strerror(ret));
                 goto out;
@@ -288,6 +333,8 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
         }
     } else {
         /* case of allowed file: simply read from underlying file descriptor into enclave memory */
+        assert(!handle->file.chunk_hashes);
+
         size_t bytes_read = 0;
         while (bytes_read < size) {
             size_t read_size = MIN(size - bytes_read, MAX_READ_SIZE);
