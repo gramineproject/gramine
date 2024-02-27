@@ -208,5 +208,6 @@ int _PalStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t l
 int _PalStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen);
 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
+void fixup_file_handle_after_deserialization(PAL_HANDLE handle);
 
 #endif /* IN_ENCLAVE */

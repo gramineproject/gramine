@@ -54,6 +54,7 @@ typedef struct {
             /* below fields are used only for trusted files */
             sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
             void* umem;                     /* valid only when chunk_hashes != NULL */
+            bool trusted;                   /* is this a Trusted File? */
         } file;
 
         struct {

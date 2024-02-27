@@ -164,7 +164,9 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                 free(hdl);
                 return -PAL_ERROR_NOMEM;
             }
-            hdl->file.chunk_hashes = hdl->file.umem = NULL;
+            hdl->file.chunk_hashes = hdl->file.umem = NULL; /* set up in below fixup function */
+            hdl->file.fd = host_fd;   /* correct host FD must be set for below fixup function */
+            fixup_file_handle_after_deserialization(hdl);
             break;
         }
         case PAL_TYPE_DIR: {
