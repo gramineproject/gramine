@@ -65,8 +65,16 @@ static void signal_itimer(IDTYPE caller, void* arg) {
 
     spinlock_unlock(&g_real_itimer_lock);
 
-    if (next_reset)
-        install_async_event(/*object=*/NULL, next_reset, &signal_itimer, /*arg=*/NULL);
+    if (next_reset) {
+        int64_t ret = install_async_event(/*object=*/NULL, next_reset, &signal_itimer,
+                                          /*arg=*/NULL);
+        if (ret < 0) {
+            log_error(
+                "failed to re-enqueue the next timer event initially set up by 'setitimer()': %s",
+                unix_strerror(ret));
+            die_or_inf_loop();
+        }
+    }
 
     signal_current_proc(SIGALRM);
 }
