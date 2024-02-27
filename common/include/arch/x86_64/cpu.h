@@ -102,7 +102,10 @@ static inline void wrfsbase(uint64_t addr) {
         :: "D"(addr) : "memory");
 }
 
-static inline noreturn void die_or_inf_loop(void) {
+/* This function must be breakable for debugging and GDB integration scripts (e.g. see
+ * `fork_and_access_file.gdb` in LibOS regression tests). */
+__attribute__((__noinline__)) __attribute__((unused))
+static noreturn void die_or_inf_loop(void) {
     __asm__ volatile (
         "1: \n"
         "ud2 \n"
