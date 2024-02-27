@@ -105,7 +105,7 @@ static int get_sgx_gpr(sgx_pal_gpr_t* gpr, void* tcs) {
     return 0;
 }
 
-int sgx_profile_init() {
+int sgx_profile_init(void) {
     int ret;
 
     assert(!g_profile_enabled);
@@ -177,6 +177,7 @@ out:
 void sgx_profile_finish_thread_unsafe(void) {
     int ret;
     ssize_t size;
+
     if (!g_profile_enabled)
         return;
 
