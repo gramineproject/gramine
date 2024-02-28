@@ -16,50 +16,50 @@
 #include "path_utils.h"
 #include "stat.h"
 
-/* 'open' operation for file streams */
 static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                      pal_share_flags_t share, enum pal_create_mode create,
                      pal_stream_options_t options) {
+    int ret;
+    int fd = -1;
+    PAL_HANDLE hdl = NULL;
+    char* path = NULL;
+
     if (strcmp(type, URI_TYPE_FILE))
         return -PAL_ERROR_INVAL;
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
-    /* try to do the real open */
-    int ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
-                                    PAL_CREATE_TO_LINUX_OPEN(create)  |
-                                    PAL_OPTION_TO_LINUX_OPEN(options) |
-                                    O_CLOEXEC,
-                         share);
-
+    ret = DO_SYSCALL(open, uri, PAL_ACCESS_TO_LINUX_OPEN(access)  |
+                                PAL_CREATE_TO_LINUX_OPEN(create)  |
+                                PAL_OPTION_TO_LINUX_OPEN(options) |
+                                O_CLOEXEC,
+                     share);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    /* if try_create_path succeeded, prepare for the file handle */
+    fd = ret;
+
     size_t uri_size = strlen(uri) + 1;
-    PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(file));
+    hdl = calloc(1, HANDLE_SIZE(file));
     if (!hdl) {
-        DO_SYSCALL(close, ret);
-        return -PAL_ERROR_NOMEM;
+        ret = -PAL_ERROR_NOMEM;
+        goto fail;
     }
 
     init_handle_hdr(hdl, PAL_TYPE_FILE);
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
-    hdl->file.fd = ret;
+    hdl->file.fd = fd;
 
-    char* path = malloc(uri_size);
+    path = malloc(uri_size);
     if (!path) {
-        DO_SYSCALL(close, hdl->file.fd);
-        free(hdl);
-        return -PAL_ERROR_NOMEM;
+        ret = -PAL_ERROR_NOMEM;
+        goto fail;
     }
 
     if (!get_norm_path(uri, path, &uri_size)) {
-        DO_SYSCALL(close, hdl->file.fd);
-        free(hdl);
-        free(path);
-        return -PAL_ERROR_INVAL;
+        ret = -PAL_ERROR_INVAL;
+        goto fail;
     }
 
     hdl->file.realpath = path;
@@ -67,50 +67,40 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     struct stat st;
     ret = DO_SYSCALL(fstat, hdl->file.fd, &st);
     if (ret < 0) {
-        DO_SYSCALL(close, hdl->file.fd);
-        free(hdl);
-        free(path);
-        return unix_to_pal_error(ret);
+        ret = unix_to_pal_error(ret);
+        goto fail;
     }
 
     hdl->file.seekable = !S_ISFIFO(st.st_mode);
 
     *handle = hdl;
     return 0;
+fail:
+    if (fd >= 0)
+        DO_SYSCALL(close, fd);
+    free(path);
+    free(hdl);
+    return ret;
 }
 
-/* 'read' operation for file streams. */
 static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
-    int fd = handle->file.fd;
     int64_t ret;
-
     if (handle->file.seekable) {
-        ret = DO_SYSCALL(pread64, fd, buffer, count, offset);
+        ret = DO_SYSCALL(pread64, handle->file.fd, buffer, count, offset);
     } else {
-        ret = DO_SYSCALL(read, fd, buffer, count);
+        ret = DO_SYSCALL(read, handle->file.fd, buffer, count);
     }
-
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return ret;
+    return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
-/* 'write' operation for file streams. */
 static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
-    int fd = handle->file.fd;
     int64_t ret;
-
     if (handle->file.seekable) {
-        ret = DO_SYSCALL(pwrite64, fd, buffer, count, offset);
+        ret = DO_SYSCALL(pwrite64, handle->file.fd, buffer, count, offset);
     } else {
-        ret = DO_SYSCALL(write, fd, buffer, count);
+        ret = DO_SYSCALL(write, handle->file.fd, buffer, count);
     }
-
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return ret;
+    return ret < 0 ? unix_to_pal_error(ret) : ret;
 }
 
 static void file_destroy(PAL_HANDLE handle) {
@@ -126,7 +116,6 @@ static void file_destroy(PAL_HANDLE handle) {
     free(handle);
 }
 
-/* 'delete' operation for file streams */
 static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
@@ -135,54 +124,34 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return 0;
 }
 
-/* 'map' operation for file stream. */
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                     uint64_t size) {
-    int fd = handle->file.fd;
     int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED_NOREPLACE : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
-    /* The memory will always be allocated with flag MAP_PRIVATE. */
-    // TODO: except it will not since `assert(flags & MAP_PRIVATE)` fails on LTP
-    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, fd, offset);
-
+    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, handle->file.fd, offset);
     if (IS_PTR_ERR(addr))
         return unix_to_pal_error(PTR_TO_ERR(addr));
 
     return 0;
 }
 
-/* 'setlength' operation for file stream. */
 static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = DO_SYSCALL(ftruncate, handle->file.fd, length);
-
-    if (ret < 0)
-        return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
-                                                 : -PAL_ERROR_DENIED;
-
-    return 0;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-/* 'flush' operation for file stream. */
 static int file_flush(PAL_HANDLE handle) {
     int ret = DO_SYSCALL(fsync, handle->file.fd);
-
-    if (ret < 0)
-        return (ret == -EINVAL || ret == -EBADF) ? -PAL_ERROR_BADHANDLE
-                                                 : -PAL_ERROR_DENIED;
-
-    return 0;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-/* 'attrquery' operation for file streams */
 static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     if (strcmp(type, URI_TYPE_FILE) && strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
 
     struct stat stat_buf;
     int ret = DO_SYSCALL(stat, uri, &stat_buf);
-
-    /* if it failed, return the right error code */
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -190,13 +159,9 @@ static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* at
     return 0;
 }
 
-/* 'attrquerybyhdl' operation for file streams */
 static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->file.fd;
     struct stat stat_buf;
-
-    int ret = DO_SYSCALL(fstat, fd, &stat_buf);
-
+    int ret = DO_SYSCALL(fstat, handle->file.fd, &stat_buf);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -205,14 +170,8 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int ret;
-    int fd = handle->file.fd;
-
-    ret = DO_SYSCALL(fchmod, fd, attr->share_flags);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
+    int ret = DO_SYSCALL(fchmod, handle->file.fd, attr->share_flags);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -234,29 +193,12 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-struct handle_ops g_file_ops = {
-    .open           = &file_open,
-    .read           = &file_read,
-    .write          = &file_write,
-    .destroy        = &file_destroy,
-    .delete         = &file_delete,
-    .map            = &file_map,
-    .setlength      = &file_setlength,
-    .flush          = &file_flush,
-    .attrquery      = &file_attrquery,
-    .attrquerybyhdl = &file_attrquerybyhdl,
-    .attrsetbyhdl   = &file_attrsetbyhdl,
-    .rename         = &file_rename,
-};
-
-/* 'open' operation for directory stream. Directory stream does not have a
-   specific type prefix, its URI looks the same file streams, plus it
-   ended with slashes. dir_open will be called by file_open. */
 static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
     __UNUSED(access);
     assert(create != PAL_CREATE_IGNORED);
+
     if (strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
 
@@ -304,8 +246,8 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     return 0;
 }
 
-/* 'read' operation for directory stream. Directory stream will not
-   need a 'write' operation. */
+#define DIRBUF_SIZE 1024
+
 static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* _buf) {
     size_t bytes_written = 0;
     char* buf = (char*)_buf;
@@ -395,14 +337,12 @@ static void dir_destroy(PAL_HANDLE handle) {
     free(handle);
 }
 
-/* 'delete' operation of directory streams */
 static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     int ret = DO_SYSCALL(rmdir, handle->dir.realpath);
-
-    return (ret < 0 && ret != -ENOENT) ? -PAL_ERROR_DENIED : 0;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -423,6 +363,21 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     handle->dir.realpath = tmp;
     return 0;
 }
+
+struct handle_ops g_file_ops = {
+    .open           = &file_open,
+    .read           = &file_read,
+    .write          = &file_write,
+    .destroy        = &file_destroy,
+    .delete         = &file_delete,
+    .map            = &file_map,
+    .setlength      = &file_setlength,
+    .flush          = &file_flush,
+    .attrquery      = &file_attrquery,
+    .attrquerybyhdl = &file_attrquerybyhdl,
+    .attrsetbyhdl   = &file_attrsetbyhdl,
+    .rename         = &file_rename,
+};
 
 struct handle_ops g_dir_ops = {
     .open           = &dir_open,
