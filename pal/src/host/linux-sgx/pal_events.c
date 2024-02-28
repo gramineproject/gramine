@@ -134,6 +134,10 @@ void _PalEventSet(PAL_HANDLE handle) {
     bool need_wake = handle->event.waiters_cnt > 0;
     spinlock_unlock(&handle->event.lock);
 
+#if 1
+    (void)need_wake;
+    return;
+#endif
     if (need_wake) {
         int ret = 0;
         do {
@@ -182,6 +186,15 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
             added_to_count = true;
         }
         spinlock_unlock(&handle->event.lock);
+
+#if 1
+        /* futex() and nanosleep() end up here, but we want to no-op only the futex() syscall; to
+         * distinguish between the two, we assume that futex() doesn't set the timeout */
+        if (!timeout_us) {
+            CPU_RELAX();
+            continue;
+        }
+#endif
 
         /* We use 8-byte ints instead of classic 4-byte ints for futexes. This is to mitigate
          * CVE-2022-21166 (INTEL-SA-00615) which requires all writes to untrusted memory from within
