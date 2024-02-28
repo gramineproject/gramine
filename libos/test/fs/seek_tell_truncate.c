@@ -2,7 +2,7 @@
 
 #define CHUNK_SIZE 512
 
-static void setup_file(const char* path, size_t size, void *check_buf, size_t check_size) {
+static void setup_file(const char* path, size_t size, void* check_buf, size_t check_size) {
     int fd = open_output_fd(path, /*rdwr=*/false);
 
     void* buf = alloc_buffer(size);

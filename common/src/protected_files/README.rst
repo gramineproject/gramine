@@ -66,7 +66,6 @@ Some tests in ``libos/test/regression`` also work with encrypted files.
 TODO
 ====
 
-- Shrinking protected files via truncate(2) to arbitrary size is not yet implemented.
 - The recovery file feature is disabled, this needs to be discussed if it's
   needed in Gramine.
 - Tests for invalid/malformed/corrupted files need to be ported to the new

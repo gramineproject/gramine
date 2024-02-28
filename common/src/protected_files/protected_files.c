@@ -1283,7 +1283,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     // overwritten with new data when the relevant nodes get allocated again.
 
     // First, ensure any nodes that will be truncated are not in cache. We do it
-    // by simply flushing the entire thing.
+    // by simply flushing and then emptying the entire cache.
     if (!ipf_internal_flush(pf))
         return pf->last_error;
     void* data;

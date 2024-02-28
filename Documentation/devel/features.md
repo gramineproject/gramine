@@ -2087,9 +2087,7 @@ Gramine supports file flushes (via `fsync()` and `fdatasync()`). However, flushi
 metadata (`sync()` and `syncfs()`) is not supported. Similarly, `sync_file_range()` system call is
 currently not supported.
 
-Gramine supports file truncation (via `truncate()` and `ftruncate()`). There is one exception
-currently: shrinking encrypted files to arbitrary size is not supported (only shrink-to-zero is
-supported).
+Gramine supports file truncation (via `truncate()` and `ftruncate()`).
 
 Gramine has very limited support of `fallocate()` system call. Only mode 0 is supported ("allocating
 disk space"). The emulation of this mode simply extends the file size if applicable, otherwise does
