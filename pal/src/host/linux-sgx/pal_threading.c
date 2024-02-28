@@ -220,7 +220,9 @@ out_err:
 
 /* PAL call PalThreadYieldExecution. Yield the execution of the current thread. */
 void _PalThreadYieldExecution(void) {
+#if 0
     ocall_sched_yield();
+#endif
 }
 
 /* _PalThreadExit for internal use: Thread exiting */

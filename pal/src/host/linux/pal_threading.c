@@ -185,7 +185,9 @@ err:
 
 /* Yield the execution of the current thread. */
 void _PalThreadYieldExecution(void) {
+#if 0
     DO_SYSCALL(sched_yield);
+#endif
 }
 
 /* _PalThreadExit for internal use: Thread exiting */
