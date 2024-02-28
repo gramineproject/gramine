@@ -1132,8 +1132,17 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
     return data_attempted_to_read - data_left_to_read;
 }
 
-static bool ipf_close(pf_context_t* pf) {
+static void ipf_delete_cache(pf_context_t* pf) {
     void* data;
+    while ((data = lruc_get_last(pf->cache)) != NULL) {
+        file_node_t* file_node = (file_node_t*)data;
+        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
+        free(file_node);
+        lruc_remove_last(pf->cache);
+    }
+}
+
+static bool ipf_close(pf_context_t* pf) {
     bool retval = true;
 
     if (pf->file_status != PF_STATUS_SUCCESS) {
@@ -1149,12 +1158,7 @@ static bool ipf_close(pf_context_t* pf) {
     // omeg: fs close is done by Gramine handler
     pf->file_status = PF_STATUS_UNINITIALIZED;
 
-    while ((data = lruc_get_last(pf->cache)) != NULL) {
-        file_node_t* file_node = (file_node_t*)data;
-        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-        free(file_node);
-        lruc_remove_last(pf->cache);
-    }
+    ipf_delete_cache(pf);
 
     // scrub first MD_USER_DATA_SIZE of file data and the gmac_key
     erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
@@ -1264,12 +1268,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         pf->need_writing = true;
         pf->real_file_size = 0;
 
-        while ((data = lruc_get_last(pf->cache)) != NULL) {
-            file_node_t* file_node = (file_node_t*)data;
-            erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-            free(file_node);
-            lruc_remove_last(pf->cache);
-        }
+        ipf_delete_cache(pf);
 
         return PF_STATUS_SUCCESS;
     }
@@ -1286,13 +1285,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     // by simply flushing and then emptying the entire cache.
     if (!ipf_internal_flush(pf))
         return pf->last_error;
-    void* data;
-    while ((data = lruc_get_last(pf->cache)) != NULL) {
-        file_node_t* file_node = (file_node_t*)data;
-        erase_memory(&file_node->decrypted, sizeof(file_node->decrypted));
-        free(file_node);
-        lruc_remove_last(pf->cache);
-    }
+    ipf_delete_cache(pf);
 
     // Calculate new file size.
     uint64_t new_file_size;
