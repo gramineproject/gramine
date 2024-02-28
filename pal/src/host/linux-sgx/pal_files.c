@@ -5,10 +5,6 @@
  * This file contains operands to handle streams with URIs that start with "file:" or "dir:".
  */
 
-#include <asm/fcntl.h>
-#include <asm/stat.h>
-#include <linux/types.h>
-
 #include "api.h"
 #include "asan.h"
 #include "enclave_tf.h"
@@ -37,7 +33,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     PAL_HANDLE hdl = NULL;
     bool do_create = (pal_create == PAL_CREATE_ALWAYS) || (pal_create == PAL_CREATE_TRY);
 
-    struct stat st;
     int flags = PAL_ACCESS_TO_LINUX_OPEN(pal_access) | PAL_CREATE_TO_LINUX_OPEN(pal_create)
                 | PAL_OPTION_TO_LINUX_OPEN(pal_options) | O_CLOEXEC;
 
@@ -84,32 +79,9 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         }
     }
 
-    if (!tf) {
-        fd = ocall_open(uri, flags, pal_share);
-        if (fd < 0) {
-            ret = unix_to_pal_error(fd);
-            goto fail;
-        }
-
-        ret = ocall_fstat(fd, &st);
-        if (ret < 0) {
-            ret = unix_to_pal_error(ret);
-            goto fail;
-        }
-
-        hdl->file.fd = fd;
-        hdl->file.seekable = !S_ISFIFO(st.st_mode);
-        hdl->file.total = st.st_size;
-
-        *handle = hdl;
-        return 0;
-    }
-
-    assert(tf); /* at this point, we want to open a trusted or allowed file */
-
-    if (!tf->allowed && (do_create
-                         || (pal_access == PAL_ACCESS_RDWR)
-                         || (pal_access == PAL_ACCESS_WRONLY))) {
+    if (tf && !tf->allowed && (do_create
+                               || (pal_access == PAL_ACCESS_RDWR)
+                               || (pal_access == PAL_ACCESS_WRONLY))) {
         log_error("Disallowing create/write/append to a trusted file '%s'", hdl->file.realpath);
         ret = -PAL_ERROR_DENIED;
         goto fail;
@@ -121,6 +93,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         goto fail;
     }
 
+    struct stat st;
     ret = ocall_fstat(fd, &st);
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
@@ -129,36 +102,37 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     hdl->file.fd = fd;
     hdl->file.seekable = !S_ISFIFO(st.st_mode);
-    hdl->file.total = st.st_size;
+    hdl->file.size = st.st_size;
+
+    if (!tf) {
+        *handle = hdl;
+        return 0;
+    }
+
+    /* at this point, we work with a trusted or allowed file */
+    tf->size = st.st_size;
 
     sgx_chunk_hash_t* chunk_hashes;
-    uint64_t total;
+    uint64_t file_size;
     void* umem;
-
-    /* we lazily update the size of the trusted file */
-    tf->size = st.st_size;
-    ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
+    ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &file_size, &umem);
     if (ret < 0)
         goto fail;
 
     hdl->file.chunk_hashes = chunk_hashes;
-    hdl->file.total = total;
-    hdl->file.umem  = umem;
+    hdl->file.size = file_size;
+    hdl->file.umem = umem;
 
     *handle = hdl;
     return 0;
-
 fail:
     if (fd >= 0)
         ocall_close(fd);
-
     free(hdl->file.realpath);
-
     free(hdl);
     return ret;
 }
 
-/* 'read' operation for file streams. */
 static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
     int64_t ret;
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
@@ -169,32 +143,26 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
         } else {
             ret = ocall_read(handle->file.fd, buffer, count);
         }
-
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        return ret;
+        return ret < 0 ? unix_to_pal_error(ret) : ret;
     }
 
     /* case of trusted file: already mmaped in umem, copy from there and verify hash */
-    uint64_t total = handle->file.total;
-    if (offset >= total)
+    if (offset >= handle->file.size)
         return 0;
 
-    off_t end = MIN(offset + count, total);
+    off_t end = MIN(offset + count, handle->file.size);
     off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
     off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
 
     ret = copy_and_verify_trusted_file(handle->file.realpath, buffer, handle->file.umem,
                                        aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                       total);
+                                       handle->file.size);
     if (ret < 0)
         return ret;
 
     return end - offset;
 }
 
-/* 'write' operation for file streams. */
 static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
     int64_t ret;
     sgx_chunk_hash_t* chunk_hashes = handle->file.chunk_hashes;
@@ -205,11 +173,7 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
         } else {
             ret = ocall_write(handle->file.fd, buffer, count);
         }
-
-        if (ret < 0)
-            return unix_to_pal_error(ret);
-
-        return ret;
+        return ret < 0 ? unix_to_pal_error(ret) : ret;
     }
 
     /* case of trusted file: disallow writing completely */
@@ -220,9 +184,9 @@ static int64_t file_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, co
 static void file_destroy(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_FILE);
 
-    if (handle->file.chunk_hashes && handle->file.total) {
+    if (handle->file.chunk_hashes && handle->file.size) {
         /* case of trusted file: the whole file was mmapped in untrusted memory */
-        ocall_munmap_untrusted(handle->file.umem, handle->file.total);
+        ocall_munmap_untrusted(handle->file.umem, handle->file.size);
     }
 
     int ret = ocall_close(handle->file.fd);
@@ -235,16 +199,14 @@ static void file_destroy(PAL_HANDLE handle) {
     free(handle);
 }
 
-/* 'delete' operation for file streams */
 static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     int ret = ocall_delete(handle->file.realpath);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
-/* 'map' operation for file stream. */
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                     uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset) && IS_ALLOC_ALIGNED(size));
@@ -291,7 +253,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
     if (chunk_hashes) {
         /* case of trusted file: already mmaped in umem, copy from there into enclave memory and
          * verify hashes along the way */
-        off_t end = MIN(offset + size, handle->file.total);
+        off_t end = MIN(offset + size, handle->file.size);
         size_t bytes_filled;
         if ((off_t)offset >= end) {
             /* file is mmapped at offset beyond file size, there are no trusted-file contents to
@@ -311,7 +273,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 
             ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
                                                aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                               handle->file.total);
+                                               handle->file.size);
             if (ret < 0) {
                 log_error("file_map - copy & verify on trusted file: %s", pal_strerror(ret));
                 goto out;
@@ -381,87 +343,57 @@ out:
     return ret;
 }
 
-/* 'setlength' operation for file stream. */
 static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = ocall_ftruncate(handle->file.fd, length);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
-    handle->file.total = length;
+    handle->file.size = length;
     return 0;
 }
 
-/* 'flush' operation for file stream. */
 static int file_flush(PAL_HANDLE handle) {
-    int fd = handle->file.fd;
-    ocall_fsync(fd);
+    ocall_fsync(handle->file.fd);
     return 0;
 }
 
-/* 'attrquery' operation for file streams */
 static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     if (strcmp(type, URI_TYPE_FILE) && strcmp(type, URI_TYPE_DIR))
         return -PAL_ERROR_INVAL;
 
-    /* open the file with O_NONBLOCK to avoid blocking the current thread if it is actually a FIFO
-     * pipe; O_NONBLOCK will be reset below if it is a regular file */
-    int fd = ocall_open(uri, O_NONBLOCK | O_CLOEXEC, 0);
+    /* open with O_NONBLOCK to avoid blocking the current thread if it is actually a FIFO pipe */
+    int fd = ocall_open(uri, O_NONBLOCK, 0);
     if (fd < 0)
         return unix_to_pal_error(fd);
 
-    char* path = NULL;
     struct stat stat_buf;
     int ret = ocall_fstat(fd, &stat_buf);
-
-    /* if it failed, return the right error code */
     if (ret < 0) {
         ret = unix_to_pal_error(ret);
         goto out;
     }
 
     file_attrcopy(attr, &stat_buf);
-
-    size_t path_size = strlen(uri) + 1;
-    path = malloc(path_size);
-    if (!path) {
-        ret = -PAL_ERROR_NOMEM;
-        goto out;
-    }
-    if (!get_norm_path(uri, path, &path_size)) {
-        log_warning("Could not normalize path (%s)", uri);
-        ret = -PAL_ERROR_INVAL;
-        goto out;
-    }
-
     ret = 0;
-
 out:
-    free(path);
     ocall_close(fd);
     return ret;
 }
 
-/* 'attrquerybyhdl' operation for file streams */
 static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->file.fd;
     struct stat stat_buf;
 
-    int ret = ocall_fstat(fd, &stat_buf);
+    int ret = ocall_fstat(handle->file.fd, &stat_buf);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
     file_attrcopy(attr, &stat_buf);
-
     return 0;
 }
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd  = handle->file.fd;
-    int ret = ocall_fchmod(fd, attr->share_flags);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
+    int ret = ocall_fchmod(handle->file.fd, attr->share_flags);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -483,24 +415,6 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-struct handle_ops g_file_ops = {
-    .open           = &file_open,
-    .read           = &file_read,
-    .write          = &file_write,
-    .destroy        = &file_destroy,
-    .delete         = &file_delete,
-    .map            = &file_map,
-    .setlength      = &file_setlength,
-    .flush          = &file_flush,
-    .attrquery      = &file_attrquery,
-    .attrquerybyhdl = &file_attrquerybyhdl,
-    .attrsetbyhdl   = &file_attrsetbyhdl,
-    .rename         = &file_rename,
-};
-
-/* 'open' operation for directory stream. Directory stream does not have a
- * specific type prefix, its URI looks the same file streams, plus it
- * ended with slashes. dir_open will be called by file_open. */
 static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
                     pal_share_flags_t share, enum pal_create_mode create,
                     pal_stream_options_t options) {
@@ -554,8 +468,6 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
 
 #define DIRBUF_SIZE 1024
 
-/* 'read' operation for directory stream. Directory stream will not
-   need a 'write' operation. */
 static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* _buf) {
     size_t bytes_written = 0;
     char* buf            = (char*)_buf;
@@ -647,14 +559,12 @@ static void dir_destroy(PAL_HANDLE handle) {
     free(handle);
 }
 
-/* 'delete' operation of directory streams */
 static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
         return -PAL_ERROR_INVAL;
 
     int ret = ocall_delete(handle->dir.realpath);
-
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -675,6 +585,21 @@ static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     handle->dir.realpath = tmp;
     return 0;
 }
+
+struct handle_ops g_file_ops = {
+    .open           = &file_open,
+    .read           = &file_read,
+    .write          = &file_write,
+    .destroy        = &file_destroy,
+    .delete         = &file_delete,
+    .map            = &file_map,
+    .setlength      = &file_setlength,
+    .flush          = &file_flush,
+    .attrquery      = &file_attrquery,
+    .attrquerybyhdl = &file_attrquerybyhdl,
+    .attrsetbyhdl   = &file_attrsetbyhdl,
+    .rename         = &file_rename,
+};
 
 struct handle_ops g_dir_ops = {
     .open           = &dir_open,
