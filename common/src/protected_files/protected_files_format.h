@@ -118,7 +118,6 @@ typedef struct _file_node {
     uint64_t node_number;
     struct _file_node* parent;
     bool need_writing;
-    bool new_node;
     struct {
         uint64_t physical_node_number;
         encrypted_node_t encrypted; // the actual data from the disk

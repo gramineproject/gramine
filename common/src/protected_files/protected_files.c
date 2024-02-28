@@ -197,7 +197,6 @@ static void ipf_init_root_mht(file_node_t* mht) {
     mht->type                 = FILE_MHT_NODE_TYPE;
     mht->physical_node_number = 1;
     mht->node_number          = 0;
-    mht->new_node             = true;
     mht->need_writing         = false;
 }
 
@@ -414,7 +413,6 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
             }
 
             file_node->need_writing = false;
-            file_node->new_node = false;
         }
 
         if (!ipf_write_node(pf, pf->file, /*node_number=*/1, &pf->root_mht.encrypted,
@@ -423,7 +421,6 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
         }
 
         pf->root_mht.need_writing = false;
-        pf->root_mht.new_node = false;
     }
 
     if (!ipf_write_node(pf, pf->file, /*node_number=*/0, &pf->file_metadata, PF_NODE_SIZE)) {
@@ -538,7 +535,6 @@ static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_numb
     }
 
     new_file_mht_node->type = FILE_MHT_NODE_TYPE;
-    new_file_mht_node->new_node = true;
     new_file_mht_node->parent = parent_file_mht_node;
     new_file_mht_node->node_number = mht_node_number;
     new_file_mht_node->physical_node_number = physical_node_number;
@@ -628,7 +624,6 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset) {
     get_node_numbers(offset, NULL, &node_number, NULL, &physical_node_number);
 
     new_file_data_node->type = FILE_DATA_NODE_TYPE;
-    new_file_data_node->new_node = true;
     new_file_data_node->parent = file_mht_node;
     new_file_data_node->node_number = node_number;
     new_file_data_node->physical_node_number = physical_node_number;
@@ -801,7 +796,6 @@ static bool ipf_init_fields(pf_context_t* pf) {
     pf->need_writing   = false;
     pf->file_status    = PF_STATUS_UNINITIALIZED;
     pf->last_error     = PF_STATUS_SUCCESS;
-    pf->real_file_size = 0;
 
     pf->cache = lruc_create();
     return true;
@@ -870,8 +864,6 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
             pf->last_error = status;
             return false;
         }
-
-        pf->root_mht.new_node = false;
     }
 
     return true;
@@ -950,7 +942,6 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     }
 
     pf->file = file;
-    pf->real_file_size = real_size;
     pf->mode = mode;
 
     if (!create) {
@@ -1263,7 +1254,6 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         ipf_init_root_mht(&pf->root_mht);
 
         pf->need_writing = true;
-        pf->real_file_size = 0;
 
         while ((data = lruc_get_last(pf->cache)) != NULL) {
             file_node_t* file_node = (file_node_t*)data;

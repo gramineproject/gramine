@@ -20,7 +20,6 @@ struct pf_context {
     file_node_t root_mht; // the root of the mht is always needed (for files bigger than 3KB)
     pf_handle_t file;
     pf_file_mode_t mode;
-    uint64_t real_file_size;
     bool need_writing;
     pf_status_t file_status;
     pf_key_t user_kdk_key;
