@@ -27,6 +27,7 @@
 #include "pal.h"
 #include "pal_linux_types.h"
 
+extern spinlock_t g_trusted_file_lock;
 int init_seal_key_material(void);
 
 int init_file_check_policy(void);
@@ -72,9 +73,10 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
  *
  * \returns 0 on success, negative error code on failure
  */
-int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* umem,
-                                 off_t aligned_offset, off_t aligned_end, off_t offset, off_t end,
-                                 sgx_chunk_hash_t* chunk_hashes, size_t file_size);
+int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint8_t* buf,
+                                 const void* umem, off_t aligned_offset, off_t aligned_end,
+                                 off_t offset, off_t end,sgx_chunk_hash_t* chunk_hashes,
+                                 size_t file_size);
 
 int init_trusted_files(void);
 int init_allowed_files(void);

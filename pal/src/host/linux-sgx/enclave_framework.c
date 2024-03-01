@@ -403,7 +403,7 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
 
 DEFINE_LISTP(trusted_file);
 static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
-static spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;
+spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;
 static int g_file_check_policy = FILE_CHECK_POLICY_STRICT;
 
 static void find_path_in_uri(const char* uri, size_t uri_len, const char** out_path,
@@ -519,6 +519,10 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     }
 
     spinlock_lock(&g_trusted_file_lock);
+    if (!(tf->cache = lruc_create()))
+        return -PAL_ERROR_NOMEM;
+    tf->usage_count = 0;
+
     if (tf->chunk_hashes) {
         *out_chunk_hashes = tf->chunk_hashes;
         spinlock_unlock(&g_trusted_file_lock);
@@ -626,41 +630,52 @@ static void set_file_check_policy(int policy) {
 }
 
 static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
-                    uint64_t chunk_size, uint64_t chunk_number) {
-    if (chunk_number == 0) {
-        tf->times_first_chunk_loaded++;
+                           uint64_t chunk_size, uint64_t chunk_number) {
+    if (g_tf_max_chunks_in_cache == 0)
+        return 0;
+
+    // Counts the number of times a file is open and reused
+    if (chunk_number == 0 && tf->usage_count <= 10) {
+        spinlock_lock(&g_trusted_file_lock);
+        tf->usage_count++;
+        spinlock_unlock(&g_trusted_file_lock);
     }
 
-    if (tf->times_first_chunk_loaded > 1) {
-        tf_chunk_t* new_chunk = calloc(1, sizeof(*new_chunk));
+    // Add file chunks to cache only if the file is reused for 10 times or more
+    if (tf->usage_count > 10) {
+        struct tf_chunk* new_chunk = (struct tf_chunk*)malloc(sizeof(struct tf_chunk));
         if (!new_chunk) {
             return -PAL_ERROR_NOMEM;
         }
         new_chunk->chunk_number = chunk_number;
         memcpy(new_chunk->data, chunk, chunk_size);
 
+        spinlock_lock(&g_trusted_file_lock);
         if (!lruc_add(tf->cache, chunk_number, new_chunk)) {
             free(new_chunk);
             return -PAL_ERROR_NOMEM;
         }
-        if (lruc_size(tf->cache) > (size_t)g_tf_max_chunks_in_cache) {
+
+        if (lruc_size(tf->cache) > g_tf_max_chunks_in_cache) {
             free(lruc_get_last(tf->cache));
             lruc_remove_last(tf->cache);
 #ifdef DEBUG
-            static int lcu_remove_count = 0;
-            if (g_tf_max_chunks_in_cache > 0 && ++lcu_remove_count == 100) {
+            static int tf_cache_log_throttler = 0;
+            if (++tf_cache_log_throttler == 100) {
                 log_always("High frequency of this log indicates trusted files chunks exceed the"
                           " `sgx.tf_max_chunks_in_cache` limit. Please increase it in the manifest"
                           " file to get the best performance.");
-                lcu_remove_count = 0;
+                tf_cache_log_throttler = 0;
             }
 #endif /* DEBUG */
         }
+        spinlock_unlock(&g_trusted_file_lock);
+
     }
     return 0;
 }
 
-int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* umem,
+int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint8_t* buf, const void* umem,
                                  off_t aligned_offset, off_t aligned_end, off_t offset, off_t end,
                                  sgx_chunk_hash_t* chunk_hashes, size_t file_size) {
     int ret = 0;
@@ -679,14 +694,18 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
     uint8_t* buf_pos = buf;
     off_t chunk_offset = aligned_offset;
 
-    struct trusted_file* tf = get_trusted_or_allowed_file(path);
     int chunk_number = chunk_offset/TRUSTED_CHUNK_SIZE;
 
     for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE, chunk_hashes_item++, chunk_number++) {
         size_t chunk_size = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         off_t chunk_end   = chunk_offset + chunk_size;
-        tf_chunk_t* chunk;
-        if (g_tf_max_chunks_in_cache > 0 && (chunk = lruc_get(tf->cache, chunk_number)) != NULL) {
+        struct tf_chunk *chunk;
+
+        spinlock_lock(&g_trusted_file_lock);
+        chunk = (struct tf_chunk*)lruc_get(tf->cache, chunk_number);
+        spinlock_unlock(&g_trusted_file_lock);
+
+        if (g_tf_max_chunks_in_cache > 0 && chunk != NULL) {
             if (chunk_offset >= offset && chunk_end <= end) {
                 memcpy(buf_pos, chunk->data, chunk_size);
 
@@ -701,6 +720,9 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
             }
             continue;
         }
+
+        /* we didn't find the chunk in the trusted-file cache, must copy into enclave and add to*/
+        /* the trusted-file cache */
         sgx_chunk_hash_t chunk_hash[2]; /* each chunk_hash is 128 bits in size but we need 256 */
 
         LIB_SHA256_CONTEXT chunk_sha;
@@ -710,17 +732,15 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
         if (chunk_offset >= offset && chunk_end <= end) {
             /* if current chunk-to-copy completely resides in the requested region-to-copy,
-            * directly copy into buf (without a scratch buffer) and hash in-place */
+             * directly copy into buf (without a scratch buffer) and hash in-place */
             if (!sgx_copy_to_enclave(buf_pos, chunk_size, umem + chunk_offset, chunk_size)) {
                 ret = -PAL_ERROR_DENIED;
                 goto failed;
             }
 
-            if(g_tf_max_chunks_in_cache > 0) {
-                ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
-                if (ret < 0)
-                    goto failed;
-            }
+            ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
+            if (ret < 0)
+                goto failed;
 
             ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
             if (ret < 0)
@@ -736,11 +756,9 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
                 goto failed;
             }
 
-            if(g_tf_max_chunks_in_cache > 0) {
-                ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
-                if (ret < 0)
-                    goto failed;
-            }
+            ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
+            if (ret < 0)
+                goto failed;
 
             ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
             if (ret < 0)
@@ -761,7 +779,7 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
         if (memcmp(chunk_hashes_item, &chunk_hash[0], sizeof(*chunk_hashes_item))) {
             log_error("Accessing file '%s' is denied: incorrect hash of file chunk at %lu-%lu.",
-                        path, chunk_offset, chunk_end);
+                      path, chunk_offset, chunk_end);
             ret = -PAL_ERROR_DENIED;
             goto failed;
         }

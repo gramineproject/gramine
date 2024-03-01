@@ -137,8 +137,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     /* we lazily update the size of the trusted file */
     tf->size = st.st_size;
-    tf->cache = lruc_create();
-    tf->times_first_chunk_loaded = 0;
     ret = load_trusted_or_allowed_file(tf, hdl, do_create, &chunk_hashes, &total, &umem);
     if (ret < 0)
         goto fail;
@@ -146,7 +144,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     hdl->file.chunk_hashes = chunk_hashes;
     hdl->file.total = total;
     hdl->file.umem  = umem;
-
+    hdl->file.tf = tf;
     *handle = hdl;
     return 0;
 
@@ -187,9 +185,9 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
     off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
     off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
 
-    ret = copy_and_verify_trusted_file(handle->file.realpath, buffer, handle->file.umem,
-                                       aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                       total);
+    ret = copy_and_verify_trusted_file(handle->file.tf, handle->file.realpath, buffer,
+                                       handle->file.umem, aligned_offset, aligned_end, offset, end,
+                                       chunk_hashes, total);
     if (ret < 0)
         return ret;
 
@@ -226,6 +224,17 @@ static void file_destroy(PAL_HANDLE handle) {
         /* case of trusted file: the whole file was mmapped in untrusted memory */
         ocall_munmap_untrusted(handle->file.umem, handle->file.total);
     }
+
+    spinlock_lock(&g_trusted_file_lock);
+    if (handle->file.tf->cache) {
+        struct tf_chunk *chunk;
+        while ((chunk = lruc_get_last(handle->file.tf->cache)) != NULL) {
+            free(chunk);
+            lruc_remove_last(handle->file.tf->cache);
+        }
+        lruc_destroy(handle->file.tf->cache);
+    }
+    spinlock_unlock(&g_trusted_file_lock);
 
     int ret = ocall_close(handle->file.fd);
     if (ret < 0) {
@@ -311,9 +320,9 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
                 goto out;
             }
 
-            ret = copy_and_verify_trusted_file(handle->file.realpath, addr, handle->file.umem,
-                                               aligned_offset, aligned_end, offset, end, chunk_hashes,
-                                               handle->file.total);
+            ret = copy_and_verify_trusted_file(handle->file.tf, handle->file.realpath, addr,
+                                               handle->file.umem, aligned_offset, aligned_end,
+                                               offset, end, chunk_hashes, handle->file.total);
             if (ret < 0) {
                 log_error("file_map - copy & verify on trusted file: %s", pal_strerror(ret));
                 goto out;

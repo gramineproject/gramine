@@ -33,8 +33,9 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enclave_size = "512M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
-# Tune this parameters based on your application and system configuration for best performance
-sgx.tf_max_chunks_in_cache = 48
+# One trusted-file chunk of 16k size is enough to cover common Nginx static HTTP file of 10k size
+# which will be cached by Gramine
+sgx.tf_max_chunks_in_cache = 1
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

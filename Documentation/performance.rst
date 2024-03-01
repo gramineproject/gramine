@@ -309,14 +309,14 @@ Cache optimization for trusted files
 ------------------------------------
 
 As the trusted file is read, it is split into chunks, and we compute SHA256
-hash for each chunk. Gramine doesn't implement a Page Cache feature, so it
-doesn't have the optimization of keeping the trusted file in enclave memory.
-To address this performance bottleneck, instead of loading file chunks in the
-enclave each time the file is read, the file chunks are kept in cache. This
-optimization is by default disabled, but can be enabled and tuned according to
-the needs of the application via the manifest option
-``sgx.tf_max_chunks_in_cache``. See :ref:`trusted-files-max-chunks-in-cache`
-for more information.
+hash for each chunk. Gramine doesn't have an optimization of keeping the trusted
+file's content in enclave memory, which implies re-reading and re-hashing the
+same file contents every time the file is read at the same offset. To address
+this performance bottleneck, instead of loading file chunks in the enclave each
+time the file is read, the file chunks are kept in cache. This optimization is
+by default disabled, but can be enabled and tuned according to the needs of the
+application via the manifest option ``sgx.tf_max_chunks_in_cache``.
+See :ref:`trusted-files-max-chunks-in-cache` for more information.
 
 .. _choice_of_sgx_machine:
 

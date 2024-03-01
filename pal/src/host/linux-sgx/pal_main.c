@@ -866,7 +866,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.tf_max_chunks_in_cache",
-            /*defaultval=*/0, &g_tf_max_chunks_in_cache);
+                      /*defaultval=*/0, &g_tf_max_chunks_in_cache);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.tf_max_chunks_in_cache'");
         ocall_exit(1, /*is_exitgroup=*/true);

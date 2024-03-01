@@ -38,11 +38,11 @@ struct trusted_file {
     sgx_chunk_hash_t* chunk_hashes; /* array of hashes over separate file chunks */
     size_t uri_len;
     lruc_context_t* cache;
-    uint64_t times_first_chunk_loaded; /* gives a hint how many times a file's content was used */
+    uint64_t usage_count; /* gives a hint on how many times a file was used */
     char uri[]; /* must be NULL-terminated */
 };
 
-typedef struct _tf_chunk {
+struct tf_chunk {
     uint64_t chunk_number;
     uint8_t data[TRUSTED_CHUNK_SIZE];
-} tf_chunk_t;
+};

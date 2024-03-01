@@ -11,7 +11,6 @@ common_src_internal = files(
     'avl_tree.c',
     'init.c',
     'location.c',
-    'lru_cache.c',
     'pal_error.c',
     'printf.c',
     'socket_utils.c',

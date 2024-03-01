@@ -125,6 +125,7 @@ libpal_sgx = shared_library('pal',
     ],
 
     dependencies: [
+        common_lru_cache_dep,
         common_dep,
         cryptoadapter_dep,
         ioctls_dep,
