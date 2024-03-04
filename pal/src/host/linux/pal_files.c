@@ -126,11 +126,10 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                     uint64_t size) {
-    int fd = handle->file.fd;
     int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED_NOREPLACE : 0);
     int linux_prot = PAL_PROT_TO_LINUX(prot);
 
-    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, fd, offset);
+    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, handle->file.fd, offset);
     if (IS_PTR_ERR(addr))
         return unix_to_pal_error(PTR_TO_ERR(addr));
 
@@ -139,12 +138,12 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
 
 static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = DO_SYSCALL(ftruncate, handle->file.fd, length);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_flush(PAL_HANDLE handle) {
     int ret = DO_SYSCALL(fsync, handle->file.fd);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
@@ -172,7 +171,7 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     int ret = DO_SYSCALL(fchmod, handle->file.fd, attr->share_flags);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -343,7 +342,7 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
         return -PAL_ERROR_INVAL;
 
     int ret = DO_SYSCALL(rmdir, handle->dir.realpath);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {

@@ -204,7 +204,7 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
         return -PAL_ERROR_INVAL;
 
     int ret = ocall_delete(handle->file.realpath);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
@@ -381,10 +381,9 @@ out:
 }
 
 static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd = handle->file.fd;
     struct stat stat_buf;
 
-    int ret = ocall_fstat(fd, &stat_buf);
+    int ret = ocall_fstat(handle->file.fd, &stat_buf);
     if (ret < 0)
         return unix_to_pal_error(ret);
 
@@ -393,9 +392,8 @@ static int file_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 }
 
 static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    int fd  = handle->file.fd;
-    int ret = ocall_fchmod(fd, attr->share_flags);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    int ret = ocall_fchmod(handle->file.fd, attr->share_flags);
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
@@ -566,7 +564,7 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
         return -PAL_ERROR_INVAL;
 
     int ret = ocall_delete(handle->dir.realpath);
-    return ret < 0 ? unix_to_pal_error(ret) : ret;
+    return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
 
 static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
