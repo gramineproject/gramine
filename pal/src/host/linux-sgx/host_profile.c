@@ -321,7 +321,7 @@ static int sgx_profile_reinit(void) {
     ret = sgx_profile_init();
     if (ret < 0) {
         log_error("sgx_profile_reinit failed: %s", unix_strerror(ret));
-        goto out;
+        return ret;
     }
 
     /* Report all ELFs already loaded */
@@ -331,9 +331,7 @@ static int sgx_profile_reinit(void) {
         map = map->next;
     }
 
-    ret = 0;
-out:
-    return ret;
+    return 0;
 }
 
 static void sample_simple(uint64_t rip) {

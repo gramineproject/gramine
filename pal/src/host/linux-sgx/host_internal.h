@@ -160,6 +160,7 @@ void sgx_profile_sample_ocall_inner(void* enclave_gpr);
 
 /* Record a sample during OCALL (function to be executed) */
 void sgx_profile_sample_ocall_outer(void* ocall_func);
+
 /* Record a new mapped ELF */
 void sgx_profile_report_elf(const char* filename, void* addr);
 #endif
