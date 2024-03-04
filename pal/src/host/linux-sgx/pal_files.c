@@ -70,18 +70,44 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     struct trusted_file* tf = NULL;
 
-    if (!(pal_options & PAL_OPTION_PASSTHROUGH)) {
-        tf = get_trusted_or_allowed_file(hdl->file.realpath);
-        if (!tf) {
-            if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
-                log_warning("Disallowing access to file '%s'; file is not trusted or allowed.",
-                            hdl->file.realpath);
-                ret = -PAL_ERROR_DENIED;
-                goto fail;
-            }
-            log_warning("Allowing access to unknown file '%s' due to file_check_policy settings.",
-                        hdl->file.realpath);
+    /*
+     * We distinguish among the following types of files:
+     *
+     * - allowed files (no protection)
+     *   - exist in the `sgx.allowed_files` list
+     *   - `tf != NULL`
+     *   - `handle->file.chunk_hashes == NULL`
+     *
+     * - trusted files (integrity via sha256 hash)
+     *   - exist in the `sgx.trusted_files` list
+     *   - `tf != NULL`
+     *   - `handle->file.chunk_hashes != NULL`
+     *
+     * - protected files (encrypted at LibOS level)
+     *   - do not exist in any of `sgx.allowed_files` and `sgx.trusted_files` lists
+     *   - `tf == NULL`
+     *   - PAL_OPTION_PASSTHROUGH is set
+     *
+     * - protected-and-trusted files (sha256 hash is taken over the encrypted file)
+     *   - exist in the `sgx.trusted_files` list
+     *   - `tf != NULL`
+     *   - `handle->file.chunk_hashes != NULL`
+     *   - PAL_OPTION_PASSTHROUGH is set
+     *
+     * Allowed and trusted files are affected by the `file_check_policy` manifest option, whereas
+     * protected and protected-and-trusted files are not.
+     */
+    tf = get_trusted_or_allowed_file(hdl->file.realpath);
+    bool protected_file = pal_options & PAL_OPTION_PASSTHROUGH;
+    if (!tf && !protected_file) {
+        if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
+            log_warning("Disallowing access to file '%s'; file is not trusted or allowed.",
+                    hdl->file.realpath);
+            ret = -PAL_ERROR_DENIED;
+            goto fail;
         }
+        log_warning("Allowing access to unknown file '%s' due to file_check_policy settings.",
+                hdl->file.realpath);
     }
 
     if (!tf) {
@@ -107,8 +133,12 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
 
     assert(tf); /* at this point, we want to open a trusted or allowed file */
 
+    /* note that we don't disallow PAL_ACCESS_RDWR on protected-and-trusted files because LibOS
+     * always opens protected files in this mode; it's safe to ignore RDWR in this case because
+     * LibOS controls the permissions of protected files, and also because `file_write()` and
+     * `file_map()` PAL callbacks won't allow writing on protected-and-trusted files */
     if (!tf->allowed && (do_create
-                         || (pal_access == PAL_ACCESS_RDWR)
+                         || (!protected_file && pal_access == PAL_ACCESS_RDWR)
                          || (pal_access == PAL_ACCESS_WRONLY))) {
         log_error("Disallowing create/write/append to a trusted file '%s'", hdl->file.realpath);
         ret = -PAL_ERROR_DENIED;
