@@ -54,6 +54,7 @@ typedef struct {
             sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
             void* umem;                     /* valid only when chunk_hashes != NULL */
             bool seekable;                  /* regular files are seekable, FIFO pipes are not */
+            struct trusted_file* tf;
         } file;
 
         struct {
