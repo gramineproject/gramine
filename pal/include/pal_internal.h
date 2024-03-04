@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <asm/stat.h>
 
 #include "api.h"
 #include "log.h"
@@ -41,7 +42,8 @@ struct handle_ops {
      * normalized prefix, 'uri' is the remaining string of uri. access, share, create, and options
      * follow the same flags defined for PalStreamOpen in pal.h. */
     int (*open)(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options);
+                pal_share_flags_t share, enum pal_create_mode create, pal_stream_options_t options,
+                bool create_delete_handle);
 
     /* 'read' and 'write' is used by PalStreamRead and PalStreamWrite, so they have exactly same
      * prototype as them. */
@@ -92,6 +94,12 @@ struct handle_ops {
 };
 
 extern const struct handle_ops* g_pal_handle_ops[];
+
+static inline const struct handle_ops* handle_ops_by_type(PAL_IDX type) {
+    if (type >= PAL_HANDLE_TYPE_BOUND)
+        return NULL;
+    return g_pal_handle_ops[type];
+}
 
 static inline const struct handle_ops* HANDLE_OPS(PAL_HANDLE handle) {
     int _type = handle->hdr.type;
@@ -169,7 +177,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* info);
 /* PalStream calls */
 int _PalStreamOpen(PAL_HANDLE* handle, const char* uri, enum pal_access access,
                    pal_share_flags_t share, enum pal_create_mode create,
-                   pal_stream_options_t options);
+                   pal_stream_options_t options, bool create_delete_handle);
 int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf);
 int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);

@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     if (argc == 1) {
         PAL_HANDLE pipe_srv = NULL;
         int ret = PalStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
+                                PAL_CREATE_IGNORED, /*options=*/0, false, &pipe_srv);
         if (ret < 0) {
             pal_printf("PalStreamOpen(\"pipe.srv\", ...) failed: %d\n", ret);
             return 1;
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
             PAL_HANDLE pipe = NULL;
             int ret = PalStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                    PAL_CREATE_IGNORED, /*options=*/0, &pipe);
+                                    PAL_CREATE_IGNORED, /*options=*/0, false, &pipe);
             if (ret < 0) {
                 pal_printf("Failed to open pipe: %d\n", ret);
                 return 1;

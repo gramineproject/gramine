@@ -94,12 +94,12 @@ static void do_parent(void) {
 
     /* pipe.srv handle */
     CHECK(PalStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                        /*options=*/0, &handle));
+                        /*options=*/0, false, &handle));
     CHECK(PalSendHandle(child_process, handle));
     PalObjectDestroy(handle);
 
     CHECK(PalStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                        /*options=*/0, &handle));
+                        /*options=*/0, false, &handle));
     recv_and_check(handle, PAL_TYPE_PIPE);
     PalObjectDestroy(handle);
 
@@ -145,7 +145,7 @@ static void do_parent(void) {
 
     /* file handle */
     CHECK(PalStreamOpen("file:to_send.tmp", PAL_ACCESS_RDWR, /*share_flags=*/0600, PAL_CREATE_TRY,
-                        /*options=*/0, &handle));
+                        /*options=*/0, false, &handle));
     write_msg(handle, PAL_TYPE_FILE);
     CHECK(PalSendHandle(child_process, handle));
     PalObjectDestroy(handle);

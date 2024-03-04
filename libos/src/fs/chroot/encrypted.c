@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2022 Intel Corporation
+ * Copyright (C) 2024 Fortanix, Inc.
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
  */
 
 /*
@@ -39,6 +41,8 @@
 #include "perm.h"
 #include "stat.h"
 #include "toml_utils.h"
+
+#define USEC_IN_SEC 1000000
 
 /*
  * Always add read and write permissions to files created on host. PAL requires opening the file
@@ -258,7 +262,7 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
     /* This opens a "dir:..." URI */
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        PAL_OPTION_PASSTHROUGH, false, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -290,7 +294,7 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
 
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        PAL_OPTION_PASSTHROUGH, false, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -306,6 +310,147 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
 out:
     free(uri);
     return ret;
+}
+
+static int chroot_encrypted_create_symlink_file(struct libos_dentry* link_dent,
+                                                const char* targetpath) {
+    assert(locked(&g_dcache_lock));
+    assert(link_dent->mount != NULL);
+
+    if (link_dent->inode != NULL)
+        return -EEXIST;
+
+    uint64_t time_us;
+    if (PalSystemTimeQuery(&time_us) < 0)
+        return -EPERM;
+
+    bool do_unlock = false;
+    char* uri;
+    int ret = chroot_dentry_uri(link_dent, S_IFREG, &uri);
+    if (ret < 0)
+        return ret;
+
+    mode_t perm = 0755;
+    if ((link_dent->parent != NULL) && (link_dent->parent->inode != NULL))
+        perm = link_dent->parent->inode->perm;
+
+    struct libos_encrypted_file* enc = NULL;
+    struct libos_inode* inode = get_new_inode(link_dent->mount, S_IFLNK, HOST_PERM(perm));
+    if (inode == NULL) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    lock(&inode->lock);
+    do_unlock = true;
+
+    struct libos_encrypted_files_key* key = link_dent->mount->data;
+    ret = encrypted_file_create(uri, HOST_PERM(perm), key, &enc);
+    if (ret < 0)
+        goto out;
+    inode->type = S_IFLNK;
+
+    inode->data = enc;
+    link_dent->inode = inode;
+    get_inode(inode);
+
+    file_off_t pos = 0;
+    size_t out_count = 0;
+    size_t target_len = strlen(targetpath);
+    ret = encrypted_file_write(enc, targetpath, target_len, pos, &out_count);
+    if (ret < 0)
+        goto out;
+    assert(out_count <= target_len);
+
+    inode->size = target_len;
+    inode->mtime = time_us / USEC_IN_SEC;
+
+out:
+    if (enc != NULL)
+        encrypted_file_put(enc);
+    if (inode != NULL) {
+        if (do_unlock)
+            unlock(&inode->lock);
+        put_inode(inode);
+    }
+    free(uri);
+    return ret;
+}
+
+static int chroot_encrypted_set_link(struct libos_dentry* link_dent, const char* targetpath,
+                                     bool is_soft_link) {
+    assert(locked(&g_dcache_lock));
+
+    int ret;
+    if (is_soft_link)
+        ret = chroot_encrypted_create_symlink_file(link_dent, targetpath);
+    else
+        ret = -EPERM;
+    if (ret < 0)
+        goto out;
+    ret = 0;
+
+out:
+    return ret;
+}
+
+static int chroot_encrypted_follow_symlink(struct libos_dentry* link_dent, char** out_target) {
+    assert(locked(&g_dcache_lock));
+
+    if (link_dent->inode == NULL)
+        return -ENOENT;
+    struct libos_inode* inode = link_dent->inode;
+    bool put_required = false;
+    char* targetpath = NULL;
+    int ret = 0;
+
+    lock(&inode->lock);
+
+    /* open file, if not opened yet */
+    struct libos_encrypted_file* enc = inode->data;
+    ret = encrypted_file_get(enc);
+    if (ret < 0)
+        goto out;
+    put_required = true;
+
+    file_off_t file_sz = 0;
+    ret = encrypted_file_get_size(enc, &file_sz);
+    if (ret < 0)
+        goto out;
+    if (file_sz > PATH_MAX) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    targetpath = malloc(file_sz + 1);
+    if (targetpath == NULL) {
+        ret =  -ENOMEM;
+        goto out;
+    }
+
+    size_t out_count = 0;
+    ret = encrypted_file_read(enc, targetpath, file_sz, 0, &out_count);
+    if (ret < 0)
+        goto out;
+    static_assert(sizeof(out_count) >= sizeof(file_sz));
+    assert(out_count <= (size_t)file_sz);
+    *(targetpath + out_count) = '\x00';
+
+    *out_target = targetpath;
+    targetpath = NULL; /* to skip freeing it below */
+
+out:
+    if (put_required)
+        encrypted_file_put(enc);
+    unlock(&inode->lock);
+    free(targetpath);
+    return ret;
+}
+
+static int chroot_encrypted_follow_link(struct libos_dentry* link_dent, char** out_target) {
+    assert(locked(&g_dcache_lock));
+
+    return chroot_encrypted_follow_symlink(link_dent, out_target);
 }
 
 static int chroot_encrypted_rename(struct libos_dentry* old, struct libos_dentry* new) {
@@ -348,7 +493,7 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
 
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        PAL_OPTION_PASSTHROUGH, false, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -518,6 +663,8 @@ struct libos_d_ops chroot_encrypted_d_ops = {
     .stat          = &generic_inode_stat,
     .readdir       = &chroot_readdir, /* same as in `chroot` filesystem */
     .unlink        = &chroot_encrypted_unlink,
+    .follow_link   = &chroot_encrypted_follow_link,
+    .set_link      = &chroot_encrypted_set_link,
     .rename        = &chroot_encrypted_rename,
     .chmod         = &chroot_encrypted_chmod,
     .idrop         = &chroot_encrypted_idrop,

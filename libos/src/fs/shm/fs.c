@@ -66,7 +66,7 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    ret = PalStreamOpen(uri, access, host_perm, create, options, false, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

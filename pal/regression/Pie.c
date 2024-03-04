@@ -8,7 +8,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE out = NULL;
     int ret = PalStreamOpen("console:", PAL_ACCESS_WRONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                            /*options=*/0, &out);
+                            /*options=*/0, false, &out);
 
     if (ret < 0) {
         pal_printf("PalStreamOpen failed\n");

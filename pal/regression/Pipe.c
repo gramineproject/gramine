@@ -11,7 +11,7 @@ int main(int argc, char** argv, char** envp) {
 
     PAL_HANDLE pipe1 = NULL;
     ret = PalStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                        /*options=*/0, &pipe1);
+                        /*options=*/0, false, &pipe1);
 
     if (ret >= 0 && pipe1) {
         pal_printf("Pipe Creation 1 OK\n");
@@ -30,7 +30,7 @@ int main(int argc, char** argv, char** envp) {
 
         PAL_HANDLE pipe2 = NULL;
         ret = PalStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            /*options=*/0, &pipe2);
+                            /*options=*/0, false, &pipe2);
 
         if (ret >= 0 && pipe2) {
             PAL_HANDLE pipe3 = NULL;

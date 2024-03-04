@@ -67,6 +67,7 @@ manifests = [
   "large_dir_read",
   "large_file",
   "large_mmap",
+  "link_symlink",
   "madvise",
   "mkfifo",
   "mmap_file",

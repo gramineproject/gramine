@@ -67,6 +67,8 @@ static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT + 1] = {
     [PAL_ERROR_CONNFAILED]      = ECONNRESET,
     [PAL_ERROR_ADDRNOTEXIST]    = EADDRNOTAVAIL,
     [PAL_ERROR_AFNOSUPPORT]     = EAFNOSUPPORT,
+    [PAL_ERROR_LOOP]            = ELOOP,
+    [PAL_ERROR_NO_PERMISSION]   = EPERM,
     [PAL_ERROR_CONNFAILED_PIPE] = EPIPE,
 };
 
@@ -564,7 +566,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
             return -ERANGE;
 
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            /*options=*/0, &pipe);
+                            /*options=*/0, false, &pipe);
         if (ret < 0) {
             if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */

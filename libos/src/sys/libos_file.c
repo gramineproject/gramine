@@ -1,9 +1,13 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Fortanix, Inc.
+ *                    Bobby Marinov <bobby.marinov@fortanix.com>
+ */
 
 /*
  * Implementation of system calls "unlink", "unlinkat", "mkdir", "mkdirat", "rmdir", "umask",
- * "chmod", "fchmod", "fchmodat", "rename", "renameat" and "sendfile".
+ * "chmod", "fchmod", "fchmodat", "rename", "renameat", "sendfile", "link", "linkat", "symlink"
+ * and "symlinkat".
  */
 
 #include "libos_fs.h"
@@ -589,4 +593,182 @@ long libos_syscall_chroot(const char* filename) {
     unlock(&g_process.fs_lock);
 out:
     return ret;
+}
+
+static const char* strip_prefix(const char* uri) {
+    const char* s = strchr(uri, ':');
+    assert(s);
+    return s + 1;
+}
+
+static int get_dentry_uri_no_pfix(struct libos_dentry* dent, char** out_uri) {
+    assert(dent->mount);
+    assert(dent->mount->uri);
+
+    const char* root = strip_prefix(dent->mount->uri);
+
+    char* rel_path = NULL;
+    size_t rel_path_size = 0;
+    int ret = dentry_rel_path(dent, &rel_path, &rel_path_size);
+    if (ret < 0)
+        return ret;
+
+    /* Treat empty path as "." */
+    if (*root == '\0')
+        root = ".";
+
+    size_t root_len = strlen(root);
+
+    /* Allocate buffer for "<root>/<rel_path>" (if `rel_path` is empty, we don't need the
+     * space for `/`, but overallocating 1 byte doesn't hurt us, and keeps the code simple) */
+    char* uri = malloc(root_len + 1 + rel_path_size);
+    if (!uri) {
+        ret = -ENOMEM;
+        goto out;
+    }
+    memcpy(uri, root, root_len);
+    if (rel_path_size == 1) {
+        /* this is the mount root, the stripped URI is "<root>"*/
+        uri[root_len] = '\0';
+    } else {
+        /* this is not the mount root, the stripped URI is "<root>/<rel_path>" */
+        uri[root_len] = '/';
+        memcpy(uri + root_len + 1, rel_path, rel_path_size);
+    }
+    *out_uri = uri;
+    ret = 0;
+
+out:
+    free(rel_path);
+    return ret;
+}
+
+static long do_linkat(int targetfd, const char* target, int newdirfd, const char* linkpath,
+                      int flags, bool is_soft_link) {
+    assert(!locked(&g_dcache_lock));
+    __UNUSED(targetfd);
+    __UNUSED(flags);
+
+    if (!is_user_string_readable(target))
+        return -EFAULT;
+    if (!is_user_string_readable(linkpath))
+        return -EFAULT;
+
+    struct libos_dentry *link_dir = NULL;
+    struct libos_dentry *link_dent = NULL;
+
+    struct libos_dentry *target_dir = NULL;
+    struct libos_dentry *target_dent = NULL;
+    char* target_path = NULL;
+    bool is_locked = false;
+
+    int ret = 0;
+
+    if (!*target || !*linkpath) {
+        ret = -ENOENT;  
+        goto out;
+    }
+
+    if (*target != '/') {
+        if ((ret = get_dirfd_dentry(targetfd, &target_dir)) < 0)
+            goto out;
+        assert(target_dir != NULL);
+    }
+
+    if (*linkpath != '/') {
+        if ((ret = get_dirfd_dentry(newdirfd, &link_dir)) < 0)
+            goto out;
+        assert(link_dir != NULL);
+    }
+
+    lock(&g_dcache_lock);
+    is_locked = true;
+
+    if (!is_soft_link) {
+        ret = path_lookupat(target_dir, target, LOOKUP_NO_FOLLOW, &target_dent);
+        if (ret < 0)
+            goto out;
+        assert(target_dent != NULL);
+    }
+
+    ret = path_lookupat(link_dir, linkpath, LOOKUP_CREATE, &link_dent);
+    if ((ret == -ENOENT) || (ret == 0)) {
+        if (link_dent == NULL) {
+            /* Some parent directory did not exist. */
+            goto out;
+        }
+
+        /* We don't care if the symlink target exists or not. And since we
+         * resolve symlinks inside the libOS, we don't have to translate the
+         * symlink target to a real path on the host file system. This means
+         * we can end up with symlinks that are broken on the host but work
+         * inside the libOS (or the reverse) if the filesystem isn't
+         * identity mapped.
+         */
+        if (link_dent->mount) {
+
+            struct libos_fs* fs = link_dent->mount->fs;
+            if (fs == NULL || fs->d_ops == NULL || fs->d_ops->set_link == NULL) {
+                ret = -EPERM;
+                goto out;
+            }
+
+            /* If it is a soft link we directly pass the guest path of the 
+            * target and for hardlink we pass the host uri. The symlink’s value 
+            * is read from the host, but then we do a directory walk on the 
+            * symlink’s path using the guest’s view of the filesystem. 
+            * Relative symlinks start from the parent directory of where the 
+            * symlink is stored.
+            */
+
+            if (is_soft_link || (*target == '/'))
+                ret = fs->d_ops->set_link(link_dent, target, is_soft_link);
+            else {
+                assert(target_dent != NULL);
+                ret = get_dentry_uri_no_pfix(target_dent, &target_path);
+                if (ret != 0)
+                    goto out;
+                assert(target_path != NULL);
+                ret = fs->d_ops->set_link(link_dent, target_path, is_soft_link);
+            }
+        } else
+            ret = -EPERM;
+    }
+
+    /* If path_lookupat() returned anything other than ENOENT or 0, we'll
+     * fall through and return its return value here.
+     */
+out:
+    if (is_locked)
+        unlock(&g_dcache_lock);
+
+    if (target_path != NULL)
+        free(target_path);
+    if (link_dent != NULL)
+        put_dentry(link_dent);
+    if (target_dent != NULL)
+        put_dentry(target_dent);
+    if (link_dir != NULL)
+        put_dentry(link_dir);
+    if (target_dir != NULL)
+        put_dentry(target_dir);
+
+    return ret;
+}
+
+long libos_syscall_symlink(const char* target, const char* linkpath) {
+    return libos_syscall_symlinkat(target, AT_FDCWD, linkpath);
+}
+
+long libos_syscall_symlinkat(const char* target, int newdirfd, const char* linkpath) {
+    return do_linkat(AT_FDCWD, target, newdirfd, linkpath, 0, true);
+}
+
+long libos_syscall_link(const char* target, const char* linkpath) {
+    return libos_syscall_linkat(AT_FDCWD, target, AT_FDCWD, linkpath, 0);
+}
+
+long libos_syscall_linkat(int olddirfd, const char* target, int newdirfd, const char* linkpath,
+                          int flags) {
+    return do_linkat(olddirfd, target, newdirfd, linkpath, flags, false);
 }

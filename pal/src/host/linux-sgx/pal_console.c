@@ -23,11 +23,13 @@
 
 static int console_open(PAL_HANDLE* handle, const char* type, const char* uri,
                         enum pal_access access, pal_share_flags_t share,
-                        enum pal_create_mode create, pal_stream_options_t options) {
+                        enum pal_create_mode create, pal_stream_options_t options,
+                            bool create_delete_handle) {
     __UNUSED(uri);
     __UNUSED(share);
     __UNUSED(create);
     __UNUSED(options);
+    __UNUSED(create_delete_handle);
 
     if (strcmp(type, URI_TYPE_CONSOLE))
         return -PAL_ERROR_INVAL;
