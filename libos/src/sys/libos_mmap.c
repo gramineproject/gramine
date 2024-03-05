@@ -9,6 +9,7 @@
  * Implementation of system calls "mmap", "munmap" and "mprotect".
  */
 
+#include "libos_checkpoint.h"
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_handle.h"
@@ -66,6 +67,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                          unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
+    bool unlock = false;
 
     ret = check_prot(prot);
     if (ret < 0)
@@ -164,6 +166,10 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         memory_range_start = g_pal_public_state->memory_address_start;
         memory_range_end = g_pal_public_state->memory_address_end;
     }
+
+    rwlock_read_lock(&checkpoint_lock);
+    unlock = true;
+
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
         if (addr < memory_range_start || (uintptr_t)memory_range_end < (uintptr_t)addr + length) {
@@ -269,6 +275,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     }
 
 out_handle:
+    if (unlock)
+        rwlock_read_unlock(&checkpoint_lock);
+
     if (hdl) {
         put_handle(hdl);
     }
@@ -305,9 +314,11 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
     /* `bkeep_mprotect` and then `PalVirtualMemoryProtect` is racy, but it's hard to do it properly.
      * On the other hand if this race happens, it means user app is buggy, so not a huge problem. */
 
+    rwlock_read_lock(&checkpoint_lock);
+
     ret = bkeep_mprotect(addr, length, prot, /*is_internal=*/false);
     if (ret < 0) {
-        return ret;
+        goto error;
     }
 
     if (prot & PROT_GROWSDOWN) {
@@ -322,16 +333,25 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         } else {
             log_warning("Memory that was about to be mprotected was unmapped, your program is "
                         "buggy!");
-            return -ENOTRECOVERABLE;
+            ret = -ENOTRECOVERABLE;
+            goto error;
         }
     }
 
     ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
+
+    rwlock_read_unlock(&checkpoint_lock);
+
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
     return 0;
+
+error:
+    rwlock_read_unlock(&checkpoint_lock);
+
+    return ret;
 }
 
 long libos_syscall_munmap(void* _addr, size_t length) {
@@ -376,14 +396,19 @@ long libos_syscall_munmap(void* _addr, size_t length) {
             BUG();
         }
 
+        rwlock_read_lock(&checkpoint_lock);
+
         if (PalVirtualMemoryFree((void*)begin, end - begin) < 0) {
             BUG();
         }
+
+        rwlock_read_unlock(&checkpoint_lock);
 
         bkeep_remove_tmp_vma(tmp_vma);
     }
 
     free_vma_info_array(vmas, vmas_length);
+
     return 0;
 }
 

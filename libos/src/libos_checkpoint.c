@@ -24,6 +24,8 @@
 #define CP_MAP_ENTRY_NUM 64
 #define CP_HASH_SIZE     256
 
+struct libos_rwlock checkpoint_lock;
+
 DEFINE_LIST(cp_map_entry);
 struct cp_map_entry {
     LIST_TYPE(cp_map_entry) hlist;

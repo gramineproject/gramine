@@ -1000,6 +1000,36 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['itimer'])
         self.assertIn("TEST OK", stdout)
 
+    def test_160_fork_and_close(self):
+        stdout, _ = self.run_binary(['fork_and_close'])
+        self.assertIn("TEST OK", stdout)
+
+    def test_161_fork_and_munmap(self):
+        stdout, _ = self.run_binary(['fork_and_munmap'])
+        self.assertIn("TEST OK", stdout)
+
+    def test_162_fork_and_mprotect(self):
+        for _ in range(0, 10):
+            stdout, _ = self.run_binary(['fork_and_mprotect'])
+            self.assertIn("TEST OK", stdout)
+
+    def test_163_fork_and_pthread_create(self):
+        for _ in range(0, 10):
+            stdout, _ = self.run_binary(['fork_and_pthread_create'])
+            self.assertIn("TEST OK", stdout)
+
+    def test_164_fork_and_sbrk(self):
+        for _ in range(0, 10):
+            stdout, _ = self.run_binary(['fork_and_sbrk'])
+            self.assertIn("TEST OK", stdout)
+
+    def test_165_fork_and_mmap(self):
+        for _ in range(0, 10):
+            stdout, _ = self.run_binary(['fork_and_mmap'])
+            self.assertIn("TEST OK", stdout)
+            # error: Sending IPC process-exit notification failed: Connection reset by peer (ECONNRESET)
+            self.assertNotIn("ECONNRESET", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])

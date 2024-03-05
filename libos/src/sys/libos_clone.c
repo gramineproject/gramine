@@ -194,8 +194,13 @@ static long do_clone_new_vm(IDTYPE child_vmid, unsigned long flags, struct libos
     child_process->uid = thread->uid;
     child_process->vmid = child_vmid;
 
+    /* protect file descriptors from close and memory from munmap */
+    rwlock_write_lock(&checkpoint_lock);
+
     long ret = create_process_and_send_checkpoint(&migrate_fork, child_process,
                                                   &process_description, thread);
+
+    rwlock_write_unlock(&checkpoint_lock);
 
     if (parent_stack) {
         pal_context_set_sp(self->libos_tcb->context.regs, parent_stack);
