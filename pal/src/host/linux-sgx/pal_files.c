@@ -24,6 +24,8 @@
 #include "path_utils.h"
 #include "stat.h"
 
+extern int64_t g_tf_max_chunks_in_cache;
+
 /* this macro is used to emulate mmap() via pread() in chunks of 128MB (mmapped files may be many
  * GBs in size, and a pread OCALL could fail with -ENOMEM, so we cap to reasonably small size) */
 #define MAX_READ_SIZE (PRESET_PAGESIZE * 1024 * 32)
@@ -100,7 +102,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         hdl->file.fd = fd;
         hdl->file.seekable = !S_ISFIFO(st.st_mode);
         hdl->file.total = st.st_size;
-
         *handle = hdl;
         return 0;
     }
@@ -225,16 +226,17 @@ static void file_destroy(PAL_HANDLE handle) {
         ocall_munmap_untrusted(handle->file.umem, handle->file.total);
     }
 
-    spinlock_lock(&g_trusted_file_lock);
-    if (handle->file.tf->cache) {
+    if (g_tf_max_chunks_in_cache > 0 && handle->file.tf->cache) {
+        spinlock_lock(&g_trusted_file_lock);
         struct tf_chunk *chunk;
         while ((chunk = lruc_get_last(handle->file.tf->cache)) != NULL) {
             free(chunk);
             lruc_remove_last(handle->file.tf->cache);
         }
         lruc_destroy(handle->file.tf->cache);
+        handle->file.tf->cache = NULL;
+        spinlock_unlock(&g_trusted_file_lock);
     }
-    spinlock_unlock(&g_trusted_file_lock);
 
     int ret = ocall_close(handle->file.fd);
     if (ret < 0) {

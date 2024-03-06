@@ -23,7 +23,7 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 uintptr_t g_enclave_base;
 uintptr_t g_enclave_top;
 bool g_allowed_files_warn = false;
-size_t g_tf_max_chunks_in_cache = 0;
+extern int64_t g_tf_max_chunks_in_cache;
 
 /*
  * SGX's EGETKEY(SEAL_KEY) uses three masks as key-derivation material:
@@ -519,9 +519,8 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     }
 
     spinlock_lock(&g_trusted_file_lock);
-    if (!(tf->cache = lruc_create()))
+    if (g_tf_max_chunks_in_cache > 0 && !(tf->cache = lruc_create()))
         return -PAL_ERROR_NOMEM;
-    tf->usage_count = 0;
 
     if (tf->chunk_hashes) {
         *out_chunk_hashes = tf->chunk_hashes;
@@ -631,7 +630,7 @@ static void set_file_check_policy(int policy) {
 
 static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
                            uint64_t chunk_size, uint64_t chunk_number) {
-    if (g_tf_max_chunks_in_cache == 0)
+    if (g_tf_max_chunks_in_cache == 0 || !tf->cache)
         return 0;
 
     // Counts the number of times a file is open and reused
@@ -656,7 +655,7 @@ static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
             return -PAL_ERROR_NOMEM;
         }
 
-        if (lruc_size(tf->cache) > g_tf_max_chunks_in_cache) {
+        if (lruc_size(tf->cache) > (size_t) g_tf_max_chunks_in_cache) {
             free(lruc_get_last(tf->cache));
             lruc_remove_last(tf->cache);
 #ifdef DEBUG
@@ -699,13 +698,15 @@ int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint
     for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE, chunk_hashes_item++, chunk_number++) {
         size_t chunk_size = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         off_t chunk_end   = chunk_offset + chunk_size;
-        struct tf_chunk *chunk;
+        struct tf_chunk *chunk = NULL;
 
-        spinlock_lock(&g_trusted_file_lock);
-        chunk = (struct tf_chunk*)lruc_get(tf->cache, chunk_number);
-        spinlock_unlock(&g_trusted_file_lock);
+        if (g_tf_max_chunks_in_cache > 0 && tf->cache) {
+            spinlock_lock(&g_trusted_file_lock);
+            chunk = (struct tf_chunk*)lruc_get(tf->cache, chunk_number);
+            spinlock_unlock(&g_trusted_file_lock);
+        }
 
-        if (g_tf_max_chunks_in_cache > 0 && chunk != NULL) {
+        if (chunk != NULL) {
             if (chunk_offset >= offset && chunk_end <= end) {
                 memcpy(buf_pos, chunk->data, chunk_size);
 
@@ -749,8 +750,8 @@ int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint
             buf_pos += chunk_size;
         } else {
             /* if current chunk-to-copy only partially overlaps with the requested region-to-copy,
-            * read the file contents into a scratch buffer, verify hash and then copy only the part
-            * needed by the caller */
+             * read the file contents into a scratch buffer, verify hash and then copy only the part
+             * needed by the caller */
             if (!sgx_copy_to_enclave(tmp_chunk, chunk_size, umem + chunk_offset, chunk_size)) {
                 ret = -PAL_ERROR_DENIED;
                 goto failed;
@@ -831,6 +832,8 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
     new->chunk_hashes = NULL;
     new->allowed = false;
     new->uri_len = uri_len;
+    new->cache = NULL;
+    new->usage_count = 0;
     memcpy(new->uri, uri, uri_len + 1);
 
     if (hash_str) {

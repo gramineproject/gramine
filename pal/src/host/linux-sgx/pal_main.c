@@ -409,7 +409,7 @@ extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
-extern int64_t g_tf_max_chunks_in_cache;
+int64_t g_tf_max_chunks_in_cache = 0;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     int ret;
