@@ -389,10 +389,10 @@ The below list is generated from the [syscall table of Linux
 - ☑ `fdatasync()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ▣ `truncate()`
+- ☑ `truncate()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ▣ `ftruncate()`
+- ☑ `ftruncate()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `getdents()`
@@ -2162,8 +2162,8 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ▣ `ppoll()`: dummy
 - ☑ `fsync()`
 - ☑ `fdatasync()`
-- ▣ `truncate()`: see note above
-- ▣ `ftruncate()`: see note above
+- ☑ `truncate()`: see note above
+- ☑ `ftruncate()`: see note above
 - ▣ `fallocate()`: dummy
 - ▣ `fadvise64()`: dummy
 
