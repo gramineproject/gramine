@@ -61,6 +61,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
 /*!
  * \brief Copy and check file contents from untrusted outside buffer to in-enclave buffer
  *
+ * \param tf              Trusted file struct corresponding to this file.
  * \param path            File path (currently only for a log message).
  * \param buf             In-enclave buffer where contents of the file are copied.
  * \param umem            Start of untrusted file memory mapped outside the enclave.

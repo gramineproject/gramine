@@ -102,6 +102,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
         hdl->file.fd = fd;
         hdl->file.seekable = !S_ISFIFO(st.st_mode);
         hdl->file.total = st.st_size;
+
         *handle = hdl;
         return 0;
     }
@@ -146,6 +147,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     hdl->file.total = total;
     hdl->file.umem  = umem;
     hdl->file.tf = tf;
+
     *handle = hdl;
     return 0;
 
