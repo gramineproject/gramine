@@ -2162,8 +2162,8 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ▣ `ppoll()`: dummy
 - ☑ `fsync()`
 - ☑ `fdatasync()`
-- ☑ `truncate()`: see note above
-- ☑ `ftruncate()`: see note above
+- ☑ `truncate()`
+- ☑ `ftruncate()`
 - ▣ `fallocate()`: dummy
 - ▣ `fadvise64()`: dummy
 
