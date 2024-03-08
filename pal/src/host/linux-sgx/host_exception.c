@@ -18,7 +18,6 @@
 
 #include <linux/signal.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #include "api.h"
 #include "cpu.h"
@@ -197,17 +196,6 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
 #ifdef DEBUG
     if (g_pal_enclave.profile_enable) {
         __atomic_store_n(&g_pal_enclave.profile_delayed_reinit, true, __ATOMIC_RELEASE);
-
-        // Propagate the signal to the children
-        char children_path[255] = {0};
-        snprintf(children_path, sizeof(children_path), "/proc/%d/task/%d/children", g_host_pid,
-                 g_host_pid);
-        pid_t child_pid = 0;
-        FILE* fp = fopen(children_path, "r");
-        if (fp) {
-            while(fscanf(fp, "%d", &child_pid) > 0)
-                DO_SYSCALL(kill, child_pid, SIGUSR1);
-        }
     }
 #endif /* DEBUG */
 }
