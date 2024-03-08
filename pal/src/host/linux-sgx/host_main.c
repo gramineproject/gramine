@@ -784,11 +784,9 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     } else if (!strcmp(profile_str, "main")) {
         if (enclave_info->is_first_process) {
             enclave_info->profile_enable = true;
-            enclave_info->profile_append_pid_to_filename = false;
         }
     } else if (!strcmp(profile_str, "all")) {
         enclave_info->profile_enable = true;
-        enclave_info->profile_append_pid_to_filename = true;
     } else {
         log_error("Invalid 'sgx.profile.enable' "
                   "(the value must be \"none\", \"main\" or \"all\")");

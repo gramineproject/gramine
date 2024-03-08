@@ -37,7 +37,6 @@ char* realpath(const char* path, char* resolved_path);
 #define NSEC_IN_SEC 1000000000
 
 /* Filenames for saved data */
-#define SGX_PROFILE_FILENAME "sgx-perf-%lu.data"
 #define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d-%lu.data"
 
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
@@ -129,13 +128,8 @@ int sgx_profile_init(void) {
         goto out;
     }
 
-    if (g_pal_enclave.profile_append_pid_to_filename) {
-        snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
-                 SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
-    } else {
-        snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
-                 SGX_PROFILE_FILENAME, ts.tv_sec);
-    }
+    snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
+             SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
 
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {

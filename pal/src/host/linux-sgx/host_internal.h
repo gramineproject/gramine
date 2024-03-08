@@ -53,7 +53,6 @@ struct pal_enclave {
     char profile_filename[128];
     bool profile_with_stack;
     int profile_frequency;
-    bool profile_append_pid_to_filename;
     bool profile_delayed_reinit;
 #endif
 };
