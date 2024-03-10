@@ -72,6 +72,8 @@ In general, a |nbsp| PR should:
 #. Address a single problem.
 #. Clearly explain the problem and solution in the PR and commit messages, using
    grammatically correct American English.
+#. Usually it should contain only a single commit. Multiple commits are allowed
+   only if they are tightly coupled and should be reviewed and merged together.
 #. Include unit tests for the new behavior or bugfix, except in special
    circumstances, namely: when designing a unit test is difficult (e.g., the
    code is deep enough in Gramine that it would require extra hooks for
@@ -141,8 +143,8 @@ Reviewing Guidelines
    formatting fixes mixed with features, no moving files and changing them at
    the same time).
 #. Meaningful commit messages (it's much easier to get them right if commits are
-   really atomic). Should include which component was changed (PAL-{Linux,SGX}
-   / LibOS / Docs / CI) in the format "[component] change description".
+   really atomic). Commit messages should follow `commit message style guidelines
+   <coding-style.html#commit-message-formatting>`__.
 #. Every PR description should include: what's the purpose of the changes, what
    is changed (and how, in case of redesigning a component), and how to test the
    changes.
