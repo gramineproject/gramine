@@ -66,6 +66,8 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     }
 
     init_handle_hdr(hdl, PAL_TYPE_FILE);
+    hdl->file.cache = NULL;
+    hdl->file.usage_count = 0;
     hdl->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
 
     hdl->file.realpath = normpath;
@@ -147,7 +149,6 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri,
     hdl->file.total = total;
     hdl->file.umem  = umem;
     hdl->file.tf = tf;
-
     *handle = hdl;
     return 0;
 
@@ -188,7 +189,7 @@ static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
     off_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
     off_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
 
-    ret = copy_and_verify_trusted_file(handle->file.tf, handle->file.realpath, buffer,
+    ret = copy_and_verify_trusted_file(handle, handle->file.realpath, buffer,
                                        handle->file.umem, aligned_offset, aligned_end, offset, end,
                                        chunk_hashes, total);
     if (ret < 0)
@@ -228,15 +229,14 @@ static void file_destroy(PAL_HANDLE handle) {
         ocall_munmap_untrusted(handle->file.umem, handle->file.total);
     }
 
-    if (g_tf_max_chunks_in_cache > 0 && handle->file.tf->cache) {
+    if (g_tf_max_chunks_in_cache > 0 && handle->file.cache) {
         spinlock_lock(&g_trusted_file_lock);
-        struct tf_chunk *chunk;
-        while ((chunk = lruc_get_last(handle->file.tf->cache)) != NULL) {
+        struct tf_chunk* chunk;
+        while ((chunk = lruc_get_last(handle->file.cache)) != NULL) {
             free(chunk);
-            lruc_remove_last(handle->file.tf->cache);
+            lruc_remove_last(handle->file.cache);
         }
-        lruc_destroy(handle->file.tf->cache);
-        handle->file.tf->cache = NULL;
+        lruc_destroy(handle->file.cache);
         spinlock_unlock(&g_trusted_file_lock);
     }
 
@@ -324,7 +324,7 @@ static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64
                 goto out;
             }
 
-            ret = copy_and_verify_trusted_file(handle->file.tf, handle->file.realpath, addr,
+            ret = copy_and_verify_trusted_file(handle, handle->file.realpath, addr,
                                                handle->file.umem, aligned_offset, aligned_end,
                                                offset, end, chunk_hashes, handle->file.total);
             if (ret < 0) {

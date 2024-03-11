@@ -15,6 +15,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "lru_cache.h"
+#include "pal_linux_defs.h"
 #include "enclave_tf_structs.h"
 #include "list.h"
 #include "spinlock.h"
@@ -25,6 +27,11 @@ struct pal_handle_thread {
     void* tcs;
     LIST_TYPE(pal_handle_thread) list;
     void* param;
+};
+
+struct tf_chunk {
+    uint64_t chunk_number;
+    uint8_t data[TRUSTED_CHUNK_SIZE];
 };
 
 /* RPC streams are encrypted with 256-bit AES keys */
@@ -55,6 +62,8 @@ typedef struct {
             void* umem;                     /* valid only when chunk_hashes != NULL */
             bool seekable;                  /* regular files are seekable, FIFO pipes are not */
             struct trusted_file* tf;
+            lruc_context_t* cache;
+            uint64_t usage_count; /* gives a hint on how many times a file was used */
         } file;
 
         struct {

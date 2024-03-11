@@ -517,9 +517,9 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
             goto fail;
         }
     }
-
+    assert(!(file->file.cache));
     spinlock_lock(&g_trusted_file_lock);
-    if (g_tf_max_chunks_in_cache > 0 && !(tf->cache = lruc_create()))
+    if (g_tf_max_chunks_in_cache > 0 && !(file->file.cache = lruc_create()))
         return -PAL_ERROR_NOMEM;
 
     if (tf->chunk_hashes) {
@@ -628,20 +628,20 @@ static void set_file_check_policy(int policy) {
     g_file_check_policy = policy;
 }
 
-static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
+static int tf_append_chunk(PAL_HANDLE handle, uint8_t* chunk,
                            uint64_t chunk_size, uint64_t chunk_number) {
-    if (g_tf_max_chunks_in_cache == 0 || !tf->cache)
+    if (g_tf_max_chunks_in_cache == 0)
         return 0;
 
     // Counts the number of times a file is open and reused
-    if (chunk_number == 0 && tf->usage_count <= 10) {
+    if (chunk_number == 0 && handle->file.usage_count <= 10) {
         spinlock_lock(&g_trusted_file_lock);
-        tf->usage_count++;
+        handle->file.usage_count++;
         spinlock_unlock(&g_trusted_file_lock);
     }
 
     // Add file chunks to cache only if the file is reused for 10 times or more
-    if (tf->usage_count > 10) {
+    if (handle->file.usage_count > 10) {
         struct tf_chunk* new_chunk = (struct tf_chunk*)malloc(sizeof(struct tf_chunk));
         if (!new_chunk) {
             return -PAL_ERROR_NOMEM;
@@ -650,14 +650,14 @@ static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
         memcpy(new_chunk->data, chunk, chunk_size);
 
         spinlock_lock(&g_trusted_file_lock);
-        if (!lruc_add(tf->cache, chunk_number, new_chunk)) {
+        if (!lruc_add(handle->file.cache, chunk_number, new_chunk)) {
             free(new_chunk);
             return -PAL_ERROR_NOMEM;
         }
 
-        if (lruc_size(tf->cache) > (size_t) g_tf_max_chunks_in_cache) {
-            free(lruc_get_last(tf->cache));
-            lruc_remove_last(tf->cache);
+        if (lruc_size(handle->file.cache) > (size_t) g_tf_max_chunks_in_cache) {
+            free(lruc_get_last(handle->file.cache));
+            lruc_remove_last(handle->file.cache);
 #ifdef DEBUG
             static int tf_cache_log_throttler = 0;
             if (++tf_cache_log_throttler == 100) {
@@ -674,7 +674,7 @@ static int tf_append_chunk(struct trusted_file* tf, uint8_t* chunk,
     return 0;
 }
 
-int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint8_t* buf, const void* umem,
+int copy_and_verify_trusted_file(PAL_HANDLE handle, const char* path, uint8_t* buf, const void* umem,
                                  off_t aligned_offset, off_t aligned_end, off_t offset, off_t end,
                                  sgx_chunk_hash_t* chunk_hashes, size_t file_size) {
     int ret = 0;
@@ -700,9 +700,9 @@ int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint
         off_t chunk_end   = chunk_offset + chunk_size;
         struct tf_chunk *chunk = NULL;
 
-        if (g_tf_max_chunks_in_cache > 0 && tf->cache) {
+        if (g_tf_max_chunks_in_cache > 0) {
             spinlock_lock(&g_trusted_file_lock);
-            chunk = (struct tf_chunk*)lruc_get(tf->cache, chunk_number);
+            chunk = (struct tf_chunk*)lruc_get(handle->file.cache, chunk_number);
             spinlock_unlock(&g_trusted_file_lock);
         }
 
@@ -739,7 +739,7 @@ int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint
                 goto failed;
             }
 
-            ret = tf_append_chunk(tf, buf_pos, chunk_size, chunk_number);
+            ret = tf_append_chunk(handle, buf_pos, chunk_size, chunk_number);
             if (ret < 0)
                 goto failed;
 
@@ -757,7 +757,7 @@ int copy_and_verify_trusted_file(struct trusted_file* tf, const char* path, uint
                 goto failed;
             }
 
-            ret = tf_append_chunk(tf, tmp_chunk, chunk_size, chunk_number);
+            ret = tf_append_chunk(handle, tmp_chunk, chunk_size, chunk_number);
             if (ret < 0)
                 goto failed;
 
@@ -832,8 +832,6 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
     new->chunk_hashes = NULL;
     new->allowed = false;
     new->uri_len = uri_len;
-    new->cache = NULL;
-    new->usage_count = 0;
     memcpy(new->uri, uri, uri_len + 1);
 
     if (hash_str) {

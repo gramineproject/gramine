@@ -8,8 +8,6 @@
 #include <stdint.h>
 
 #include "list.h"
-#include "lru_cache.h"
-#include "pal_linux_defs.h"
 
 enum {
     FILE_CHECK_POLICY_STRICT = 0,
@@ -37,12 +35,5 @@ struct trusted_file {
     sgx_file_hash_t file_hash;      /* hash over the whole file, retrieved from the manifest */
     sgx_chunk_hash_t* chunk_hashes; /* array of hashes over separate file chunks */
     size_t uri_len;
-    lruc_context_t* cache;
-    uint64_t usage_count; /* gives a hint on how many times a file was used */
     char uri[]; /* must be NULL-terminated */
-};
-
-struct tf_chunk {
-    uint64_t chunk_number;
-    uint8_t data[TRUSTED_CHUNK_SIZE];
 };
