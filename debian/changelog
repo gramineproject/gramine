@@ -1,7 +1,9 @@
-gramine (1.6.1post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.6.2~rc1) unstable-bookworm unstable-bullseye unstable-jammy unstable-focal; urgency=medium
 
+  * version 1.6.2
+  * fixed security bug degenerating trusted_files to protected_files on fork
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Tue, 20 Feb 2024 13:00:01 +0100
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Mon, 11 Mar 2024 10:25:34 +0100
 
 gramine (1.6.1) bookworm bullseye jammy focal; urgency=medium
 
