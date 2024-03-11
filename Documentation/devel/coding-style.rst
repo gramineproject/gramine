@@ -43,8 +43,8 @@ Commit message formatting
 TL;DR: we follow https://commit.style/.
 
 Additionally, commit message one-liner should include which component was
-changed (PAL-{Linux,SGX} / LibOS / Docs / CI) in the format
-"[component] change description". The one-liner should be
+changed (``PAL-{Linux,SGX}`` / ``LibOS`` / ``Docs`` / ``CI``) in the format
+"[component] Change description". The one-liner should be
 written in imperative mood and say what this particular commit changes.
 
 We aim for our repository and commit history to be self-contained and still
