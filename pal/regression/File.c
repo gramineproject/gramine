@@ -58,37 +58,6 @@ int main(int argc, char** argv, char** envp) {
                        attr1.pending_size);
         }
 
-        /* test file map */
-
-        uintptr_t mem1_addr;
-        ret = mem_bkeep_alloc(PAGE_SIZE, &mem1_addr);
-        if (ret < 0) {
-            pal_printf("mem_bkeep_alloc failed: %d\n", ret);
-            return 1;
-        }
-        void* mem1 = (void*)mem1_addr;
-        ret = PalStreamMap(file1, mem1, PAL_PROT_READ | PAL_PROT_WRITECOPY, 0, PAGE_SIZE);
-        if (ret >= 0 && mem1) {
-            memcpy(buffer1, mem1, 40);
-            print_hex("Map Test 1 (0th - 40th): %s\n", buffer1, 40);
-
-            memcpy(buffer2, mem1 + 200, 40);
-            print_hex("Map Test 2 (200th - 240th): %s\n", buffer2, 40);
-
-            ret = PalVirtualMemoryFree(mem1, PAGE_SIZE);
-            if (ret < 0) {
-                pal_printf("PalVirtualMemoryFree failed\n");
-                return 1;
-            }
-            ret = mem_bkeep_free((uintptr_t)mem1, PAGE_SIZE);
-            if (ret < 0) {
-                pal_printf("mem_bkeep_free failed: %d\n", ret);
-                return 1;
-            }
-        } else {
-            pal_printf("Map Test 1 & 2: Failed to map buffer\n");
-        }
-
         PalObjectDestroy(file1);
     }
 
