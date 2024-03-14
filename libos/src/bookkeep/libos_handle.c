@@ -548,27 +548,6 @@ void put_handle(struct libos_handle* hdl) {
     }
 }
 
-int get_file_size(struct libos_handle* hdl, uint64_t* size) {
-    if (!hdl->fs || !hdl->fs->fs_ops)
-        return -EINVAL;
-
-    if (hdl->fs->fs_ops->hstat) {
-        struct stat stat;
-        int ret = hdl->fs->fs_ops->hstat(hdl, &stat);
-        if (ret < 0) {
-            return ret;
-        }
-        if (stat.st_size < 0) {
-            return -EINVAL;
-        }
-        *size = (uint64_t)stat.st_size;
-        return 0;
-    }
-
-    *size = 0;
-    return 0;
-}
-
 static struct libos_handle_map* get_new_handle_map(uint32_t size) {
     struct libos_handle_map* handle_map = calloc(1, sizeof(struct libos_handle_map));
 

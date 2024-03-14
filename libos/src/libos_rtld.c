@@ -257,16 +257,24 @@ static int execute_loadcmd(const struct loadcmd* c, elf_addr_t base_diff,
         void* map_start = (void*)(c->start + base_diff);
         size_t map_size = c->map_end - c->start;
 
-        if ((ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
-                                    /*comment=*/NULL)) < 0) {
+        ret = bkeep_mmap_fixed(map_start, map_size, c->prot, map_flags, file, c->map_off,
+                               /*comment=*/NULL);
+        if (ret < 0) {
             log_debug("failed to bookkeep address of segment");
             return ret;
         }
 
-        if ((ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags,
-                                          c->map_off)) < 0) {
+        size_t valid_size;
+        ret = file->fs->fs_ops->mmap(file, map_start, map_size, c->prot, map_flags, c->map_off,
+                                     &valid_size);
+        if (ret < 0) {
             log_debug("failed to map segment: %s", unix_strerror(ret));
             return ret;
+        }
+        if (valid_size != map_size) {
+            log_debug("failed to map segment: expected to map %lu bytes but mapped only %lu bytes",
+                      map_size, valid_size);
+            return -EACCES;
         }
     }
 
