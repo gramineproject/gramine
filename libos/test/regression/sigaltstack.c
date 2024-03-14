@@ -7,9 +7,11 @@
 #include <string.h>
 #include <unistd.h>
 
+/* default SIGSTKSZ is 8KB which is too small to hold e.g. XSAVE area (always stored by Gramine) */
+size_t sig_stack_size = 64 * 1024;
 uint8_t* sig_stack;
-size_t sig_stack_size = SIGSTKSZ;
-_Atomic int count     = 0;
+
+_Atomic int count = 0;
 
 static void handler(int signal, siginfo_t* info, void* ucontext) {
     int ret;

@@ -869,7 +869,6 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['munmap'])
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skip('sigaltstack isn\'t correctly implemented')
     def test_060_sigaltstack(self):
         stdout, _ = self.run_binary(['sigaltstack'])
 
