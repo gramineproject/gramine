@@ -11,7 +11,6 @@
  */
 
 #include "api.h"
-#include "enclave_tf.h"
 #include "ioctls.h"
 #include "pal.h"
 #include "pal_error.h"
@@ -70,18 +69,6 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         goto fail;
     }
     hdl->dev.realpath = normpath;
-
-    struct trusted_file* tf = get_trusted_or_allowed_file(hdl->dev.realpath);
-    if (!tf || !tf->allowed) {
-        if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
-            log_warning("Disallowing access to device '%s'; device is not allowed.",
-                        hdl->dev.realpath);
-            ret = -PAL_ERROR_DENIED;
-            goto fail;
-        }
-        log_warning("Allowing access to unknown device '%s' due to file_check_policy settings.",
-                    hdl->dev.realpath);
-    }
 
     if (access == PAL_ACCESS_RDONLY) {
         hdl->flags |= PAL_HANDLE_FD_READABLE;
