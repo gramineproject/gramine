@@ -333,7 +333,7 @@ out:
     return ret;
 }
 
-int chroot_unlink(struct libos_dentry* dent) {
+static int chroot_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 

@@ -978,4 +978,3 @@ int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm);
 int fifo_setup_dentry(struct libos_dentry* dent, mode_t perm, int fd_read, int fd_write);
 
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg);
-int chroot_unlink(struct libos_dentry* dent);
