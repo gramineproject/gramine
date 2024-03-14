@@ -20,6 +20,33 @@
 #include "list.h"
 #include "pal.h"
 
+enum {
+    FILE_CHECK_POLICY_STRICT = 0,
+    FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG,
+};
+extern int g_file_check_policy;
+
+struct trusted_file_hash {
+    uint8_t bytes[32];
+};
+struct trusted_chunk_hash {
+    uint8_t bytes[16];
+};
+struct trusted_file;
+struct allowed_file;
+
+struct trusted_file* get_trusted_file(const char* path);
+struct allowed_file* get_allowed_file(const char* path);
+size_t get_chunk_hashes_size(size_t file_size);
+int load_trusted_file(struct trusted_file* tf, size_t file_size,
+                      struct trusted_chunk_hash** out_chunk_hashes);
+int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t count, uint8_t* buf,
+                                 size_t file_size, struct trusted_chunk_hash* chunk_hashes);
+int register_allowed_file(const char* path);
+int init_trusted_files(void);
+int init_allowed_files(void);
+int init_file_check_policy(void);
+
 struct libos_handle;
 
 /* Describes mount parameters. Passed to `mount_fs`, and to the `mount` callback. */
