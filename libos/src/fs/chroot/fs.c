@@ -182,9 +182,9 @@ out:
 }
 
 /* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
-static int chroot_temp_open(struct libos_dentry* dent, mode_t type, PAL_HANDLE* out_palhdl) {
+static int chroot_temp_open(struct libos_dentry* dent, PAL_HANDLE* out_palhdl) {
     char* uri;
-    int ret = chroot_dentry_uri(dent, type, &uri);
+    int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
         return ret;
 
@@ -347,7 +347,8 @@ int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void*
     char* buf = NULL;
     size_t buf_size = READDIR_BUF_SIZE;
 
-    ret = chroot_temp_open(dent, S_IFDIR, &palhdl);
+    assert(dent->inode->type == S_IFDIR);
+    ret = chroot_temp_open(dent, &palhdl);
     if (ret < 0)
         return ret;
 
@@ -408,7 +409,7 @@ int chroot_unlink(struct libos_dentry* dent) {
     int ret;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
+    ret = chroot_temp_open(dent, &palhdl);
     if (ret < 0)
         return ret;
 
@@ -432,7 +433,7 @@ static int chroot_rename(struct libos_dentry* old, struct libos_dentry* new) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(old, old->inode->type, &palhdl);
+    ret = chroot_temp_open(old, &palhdl);
     if (ret < 0)
         goto out;
 
@@ -456,7 +457,7 @@ static int chroot_chmod(struct libos_dentry* dent, mode_t perm) {
     int ret;
 
     PAL_HANDLE palhdl;
-    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
+    ret = chroot_temp_open(dent, &palhdl);
     if (ret < 0)
         return ret;
 
