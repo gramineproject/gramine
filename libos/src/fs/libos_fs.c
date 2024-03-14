@@ -93,6 +93,19 @@ err:
     return ret;
 }
 
+int init_trusted_allowed_files(void) {
+    int ret;
+
+    if ((ret = init_file_check_policy()) < 0)
+        return ret;
+    if ((ret = init_allowed_files()) < 0)
+        return ret;
+    if ((ret = init_trusted_files()) < 0)
+        return ret;
+
+    return 0;
+}
+
 static struct libos_mount* alloc_mount(void) {
     return get_mem_obj_from_mgr_enlarge(g_mount_mgr, size_align_up(MOUNT_MGR_ALLOC));
 }

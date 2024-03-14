@@ -50,7 +50,10 @@ $(NGINX_SRC).tar.gz:
 	../common_tools/download --output $@ --sha256 $(NGINX_SHA256) \
 		$(foreach mirror,$(NGINX_MIRRORS),--url $(mirror)/$(NGINX_SRC).tar.gz)
 
-nginx.manifest: nginx.manifest.template
+nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx \
+		$(INSTALL_DIR)/conf/nginx-gramine.conf \
+		$(TEST_DATA) nginx_args \
+		$(INSTALL_DIR)/conf/server.crt
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -64,10 +67,7 @@ nginx.manifest.sgx nginx.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: nginx.manifest $(INSTALL_DIR)/sbin/nginx \
-		$(INSTALL_DIR)/conf/nginx-gramine.conf \
-		$(TEST_DATA) \
-		$(INSTALL_DIR)/conf/server.crt
+sgx_sign: nginx.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

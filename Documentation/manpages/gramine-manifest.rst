@@ -40,6 +40,17 @@ Command line arguments
 
    Disable schema validation, as described above in :option:`--check`.
 
+.. option:: --chroot <path>
+
+    When calculating cryptographic hashes of trusted files, measure files inside
+    a |~| chroot instead of paths in root of the file system. Requires that all
+    paths in manifest are absolute, and those will be interpreted as relative to
+    the directory specified as the value of the option.
+
+    Note you need to be very careful that the Gramine runtime binaries are
+    exactly the same inside chroot as the ones used to execute
+    :program:`gramine-manifest`.
+
 Functions and constants available in templates
 ==============================================
 
