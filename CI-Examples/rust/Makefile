@@ -25,7 +25,7 @@ endif
 $(SELF_EXE): Cargo.toml
 	cargo build --release
 
-rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template
+rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template $(SELF_EXE)
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -38,7 +38,7 @@ rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: rust-hyper-http-server.manifest $(SELF_EXE)
+sgx_sign: rust-hyper-http-server.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

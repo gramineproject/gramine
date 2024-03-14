@@ -76,7 +76,8 @@ secret_prov_pf/client: secret_prov_pf/client.c
 
 # TODO: Simplify after https://github.com/gramineproject/gramine/issues/878 is fixed (manifest paths
 #       should be relative to the manifest, not to current dir) - drop `cd` and `notdir`.
-secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.template
+secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.template \
+	                                 secret_prov_minimal/client
 	cd secret_prov_minimal && \
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
@@ -92,7 +93,7 @@ secret_prov_minimal/client.manifest.sgx secret_prov_minimal/client.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign_secret_prov_minimal_client
-sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest secret_prov_minimal/client
+sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest
 	cd secret_prov_minimal && \
 	gramine-sgx-sign \
 		--manifest $(notdir $<) \
@@ -100,7 +101,7 @@ sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest secret_
 
 ############################### CLIENT MANIFEST ###############################
 
-secret_prov/client.manifest: secret_prov/client.manifest.template
+secret_prov/client.manifest: secret_prov/client.manifest.template secret_prov/client
 	cd secret_prov && \
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
@@ -114,7 +115,7 @@ secret_prov/client.manifest.sgx secret_prov/client.sig: sgx_sign_secret_prov_cli
 	@:
 
 .INTERMEDIATE: sgx_sign_secret_prov_client
-sgx_sign_secret_prov_client: secret_prov/client.manifest secret_prov/client
+sgx_sign_secret_prov_client: secret_prov/client.manifest
 	cd secret_prov && \
 	gramine-sgx-sign \
 		--manifest $(notdir $<) \
@@ -122,7 +123,7 @@ sgx_sign_secret_prov_client: secret_prov/client.manifest secret_prov/client
 
 ############################## PF CLIENT MANIFEST #############################
 
-secret_prov_pf/client.manifest: secret_prov_pf/client.manifest.template
+secret_prov_pf/client.manifest: secret_prov_pf/client.manifest.template secret_prov_pf/client
 	cd secret_prov_pf && \
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
@@ -136,7 +137,7 @@ secret_prov_pf/client.manifest.sgx secret_prov_pf/client.sig: sgx_sign_secret_pr
 	@:
 
 .INTERMEDIATE: sgx_sign_secret_prov_pf_client
-sgx_sign_secret_prov_pf_client: secret_prov_pf/client.manifest secret_prov_pf/client
+sgx_sign_secret_prov_pf_client: secret_prov_pf/client.manifest
 	cd secret_prov_pf && \
 	gramine-sgx-sign \
 		--manifest $(notdir $<) \

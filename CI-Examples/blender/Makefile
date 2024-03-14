@@ -41,7 +41,7 @@ $(BLENDER_DIR)/blender:
 $(RUN_DIR):
 	mkdir -p $@
 
-blender.manifest: blender.manifest.template | $(RUN_DIR)
+blender.manifest: blender.manifest.template $(BLENDER_DIR)/blender | $(RUN_DIR)
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -56,7 +56,7 @@ blender.sig blender.manifest.sgx: sgx_outputs
 	@:
 
 .INTERMEDIATE: sgx_outputs
-sgx_outputs: $(BLENDER_DIR)/blender blender.manifest | $(RUN_DIR)
+sgx_outputs: blender.manifest | $(RUN_DIR)
 	gramine-sgx-sign \
 		--output blender.manifest.sgx \
 		--manifest blender.manifest

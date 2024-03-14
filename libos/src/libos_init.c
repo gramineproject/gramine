@@ -429,6 +429,16 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
         g_process_ipc_ids.self_vmid = STARTING_VMID;
     }
 
+    /*
+     * Must be after receiving the checkpoint (if in child process) and before initializing the
+     * mount points. The former is because trusted/allowed files' lists are allocated from heap as
+     * "internal VMAs" in potentially large sizes, but early LibOS init code (before receiving the
+     * checkpoint) is limited in its size. See libos_vma.c:bkeep_mmap_any_in_range(). The latter is
+     * because mount points can be separate files (e.g., the main executable), and their
+     * meta-information (including trusted/allowed info) is initialized during mounting.
+     */
+    RUN_INIT(init_trusted_allowed_files);
+
     RUN_INIT(init_ipc);
     RUN_INIT(init_process);
     RUN_INIT(init_threading);
