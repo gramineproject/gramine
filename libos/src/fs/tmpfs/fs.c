@@ -295,16 +295,23 @@ static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
     struct libos_mem_file* mem = hdl->inode->data;
 
     ret = mem_file_truncate(mem, size);
-    if (ret < 0)
-        goto out;
+    if (ret < 0) {
+        unlock(&hdl->inode->lock);
+        return ret;
+    }
 
     hdl->inode->mtime = time_us / USEC_IN_SEC;
     hdl->inode->size = size;
-    ret = 0;
-
-out:
     unlock(&hdl->inode->lock);
-    return ret;
+
+    ret = prot_refresh_mmaped_from_file_handle(hdl);
+    if (ret < 0) {
+        log_error("refresh of page protections of mmapped regions of file failed: %s",
+                  unix_strerror(ret));
+        BUG();
+    }
+
+    return 0;
 }
 
 struct libos_fs_ops tmp_fs_ops = {
