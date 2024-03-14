@@ -124,18 +124,6 @@ static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     return 0;
 }
 
-static int file_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                    uint64_t size) {
-    int flags = PAL_MEM_FLAGS_TO_LINUX(prot) | (addr ? MAP_FIXED_NOREPLACE : 0);
-    int linux_prot = PAL_PROT_TO_LINUX(prot);
-
-    addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, handle->file.fd, offset);
-    if (IS_PTR_ERR(addr))
-        return unix_to_pal_error(PTR_TO_ERR(addr));
-
-    return 0;
-}
-
 static int file_setlength(PAL_HANDLE handle, uint64_t length) {
     int ret = DO_SYSCALL(ftruncate, handle->file.fd, length);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
@@ -370,7 +358,6 @@ struct handle_ops g_file_ops = {
     .write          = &file_write,
     .destroy        = &file_destroy,
     .delete         = &file_delete,
-    .map            = &file_map,
     .setlength      = &file_setlength,
     .flush          = &file_flush,
     .attrquery      = &file_attrquery,

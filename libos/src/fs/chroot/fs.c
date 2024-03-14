@@ -324,23 +324,6 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     return (ssize_t)actual_count;
 }
 
-static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                       uint64_t offset) {
-    assert(hdl->type == TYPE_CHROOT);
-    assert(addr);
-
-    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
-
-    if (flags & MAP_ANONYMOUS)
-        return -EINVAL;
-
-    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
-    if (ret < 0)
-        return pal_to_unix_errno(ret);
-
-    return 0;
-}
-
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     int ret;
     PAL_HANDLE palhdl;
@@ -487,7 +470,8 @@ struct libos_fs_ops chroot_fs_ops = {
     .flush      = &chroot_flush,
     .read       = &chroot_read,
     .write      = &chroot_write,
-    .mmap       = &chroot_mmap,
+    .mmap       = &generic_emulated_mmap,
+    .msync      = &generic_emulated_msync,
     /* TODO: this function emulates lseek() completely inside the LibOS, but some device files may
      * report size == 0 during fstat() and may provide device-specific lseek() logic; this emulation
      * breaks for such device-specific cases */

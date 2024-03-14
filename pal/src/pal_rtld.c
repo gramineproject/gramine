@@ -430,7 +430,7 @@ static int perform_relocations(struct link_map* map) {
 }
 
 /* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
- * we don't bother undoing _PalStreamMap() and _PalVirtualMemoryAlloc() in case of failure. */
+ * we don't bother undoing _PalVirtualMemoryAlloc() in case of failure. */
 static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
                                           const char* elf_file_buf) {
     int ret;
@@ -547,9 +547,19 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
         size_t map_size = c->map_end - c->start;
 
-        ret = _PalStreamMap(handle, map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
+        ret = _PalVirtualMemoryAlloc(map_addr, map_size, c->prot | PAL_PROT_WRITE);
         if (ret < 0) {
-            log_error("Failed to map segment from ELF file");
+            log_error("Failed to prepare mapping for segment from ELF file");
+            goto out;
+        }
+        ret = _PalStreamRead(handle, c->map_off, map_size, map_addr);
+        if (ret < 0) {
+            log_error("Failed to read segment from ELF file");
+            goto out;
+        }
+        ret = _PalVirtualMemoryProtect(map_addr, map_size, c->prot);
+        if (ret < 0) {
+            log_error("Failed to remove write memory protection off the segment from ELF file");
             goto out;
         }
 
