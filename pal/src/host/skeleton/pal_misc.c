@@ -59,6 +59,12 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
+int _PalValidateEntrypoint(const void* buf, size_t size) {
+    __UNUSED(buf);
+    __UNUSED(size);
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
 double _PalGetBogomips(void) {
     /* this has to be implemented */
     return 0.0;

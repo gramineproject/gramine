@@ -95,11 +95,6 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('compare(' + file_path + ') RW OK', stdout)
         self.assertIn('close(' + file_path + ') RW OK', stdout)
 
-    # Gramine's implementation of file_map doesn't currently support shared memory-mapped regular
-    # chroot files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
-    # Below test requires it, so skip it. We decided not to implement it as we don't know any
-    # workload using it.
-    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_111_read_write_mmap(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_111') # new file to be created
         stdout, stderr = self.run_binary(['read_write_mmap', file_path])
@@ -317,19 +312,12 @@ class TC_00_FileSystem(RegressionTestCase):
     def test_203_copy_dir_sendfile(self):
         self.do_copy_test('copy_sendfile', 60)
 
-    # Gramine's implementation of file_map doesn't currently support shared memory-mapped
-    # files with write permission in PAL/Linux-SGX (like mmap(PROT_WRITE, MAP_SHARED, fd)).
-    # These tests require it, so skip them. We decided not to implement it as we don't
-    # know any workload using it.
-    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_204_copy_dir_mmap_whole(self):
         self.do_copy_test('copy_mmap_whole', 30)
 
-    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_205_copy_dir_mmap_seq(self):
         self.do_copy_test('copy_mmap_seq', 60)
 
-    @unittest.skipIf(HAS_SGX, 'mmap(PROT_WRITE, MAP_SHARED, fd) not implemented in Linux-SGX PAL')
     def test_206_copy_dir_mmap_rev(self):
         self.do_copy_test('copy_mmap_rev', 60)
 

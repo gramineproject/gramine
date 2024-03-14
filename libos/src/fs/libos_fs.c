@@ -67,6 +67,12 @@ int init_fs(void) {
 
     INIT_LISTP(&g_mount_list);
 
+    if ((ret = init_file_check_policy()) < 0)
+        goto err;
+    if ((ret = init_allowed_files()) < 0)
+        goto err;
+    if ((ret = init_trusted_files()) < 0)
+        goto err;
     if ((ret = init_encrypted_files()) < 0)
         goto err;
 

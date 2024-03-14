@@ -108,6 +108,8 @@ int init_enclave(void);
 
 int init_reserved_ranges(void* urts_ptr, size_t urts_size);
 
+int init_seal_key_material(void);
+
 /* master key for all enclaves of one application, populated by the first enclave and inherited by
  * all other enclaves (children, their children, etc.); used as master key in pipes' encryption */
 extern PAL_SESSION_KEY g_master_key;
@@ -208,6 +210,5 @@ int _PalStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t l
 int _PalStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t* olen);
 
 void fixup_socket_handle_after_deserialization(PAL_HANDLE handle);
-void fixup_file_handle_after_deserialization(PAL_HANDLE handle);
 
 #endif /* IN_ENCLAVE */

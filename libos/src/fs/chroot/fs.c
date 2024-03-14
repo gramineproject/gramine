@@ -7,6 +7,9 @@
 /*
  * This file contains code for implementation of 'chroot' filesystem.
  *
+ * This filesystem works on `file:` files and `dev:` devices (pseudo-files) on the host. Files can
+ * be trusted (measured, integrity-protected via hash) or allowed (passthrough, not protected).
+ *
  * TODO: reintroduce the file position sync (using libos_fs_sync.h) after the migration to inodes is
  * finished.
  */
@@ -36,18 +39,157 @@
  */
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
-static int chroot_mount(struct libos_mount_params* params, void** mount_data) {
-    __UNUSED(mount_data);
-    if (!params->uri || (!strstartswith(params->uri, URI_PREFIX_FILE) &&
-                         !strstartswith(params->uri, URI_PREFIX_DEV)))
-        return -EINVAL;
-    return 0;
+/* this data is set up only once (at inode creation or restore), so doesn't require locking */
+struct chroot_inode_data {
+    bool is_trusted;
+    bool is_allowed;
+    /* used only if `is_trusted = true`: array of hashes over separate file chunks */
+    struct trusted_chunk_hash* chunk_hashes;
+};
+
+static bool is_allowed_from_inode_data(struct libos_inode* inode) {
+    if (!inode->data)
+        die_or_inf_loop();
+    assert(inode->data);
+    return ((struct chroot_inode_data*)inode->data)->is_allowed;
+}
+
+static bool is_trusted_from_inode_data(struct libos_inode* inode) {
+    assert(inode->data);
+    return ((struct chroot_inode_data*)inode->data)->is_trusted;
 }
 
 static const char* strip_prefix(const char* uri) {
     const char* s = strchr(uri, ':');
     assert(s);
     return s + 1;
+}
+
+static int setup_inode_data_created_file(const char* uri, struct libos_inode* inode) {
+    assert(inode->type == S_IFREG);
+
+    struct chroot_inode_data* data = calloc(1, sizeof(*data));
+    if (!data)
+        return -ENOMEM;
+
+    /* can be only allowed file or unknown file (allowed via file check policy),
+     * guaranteed to not be a trusted file */
+    data->is_allowed = !!get_allowed_file(strip_prefix(uri));
+    inode->data = data;
+    return 0;
+}
+
+static int setup_inode_data_created_dir(struct libos_inode* inode) {
+    assert(inode->type == S_IFDIR);
+
+    struct chroot_inode_data* data = calloc(1, sizeof(*data));
+    if (!data)
+        return -ENOMEM;
+
+    data->is_allowed = true; /* dirs are always allowed */
+    inode->data = data;
+    return 0;
+}
+
+static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
+                            struct libos_inode* inode) {
+    struct chroot_inode_data* data = calloc(1, sizeof(*data));
+    if (!data)
+        return -ENOMEM;
+
+    struct allowed_file* af = get_allowed_file(strip_prefix(uri));
+    if (af || type == S_IFDIR) {
+        data->is_allowed = true;
+        inode->data = data;
+        return 0;
+    }
+
+    struct trusted_file* tf = get_trusted_file(strip_prefix(uri));
+    if (tf) {
+        struct trusted_chunk_hash* out_chunk_hashes;
+        int ret = load_trusted_file(tf, file_size, &out_chunk_hashes);
+        if (ret < 0) {
+            free(data);
+            return ret;
+        }
+        data->is_trusted = true;
+        data->chunk_hashes = out_chunk_hashes;
+        inode->data = data;
+        return 0;
+    }
+
+    /* not an allowed or trusted file, may be still allowed via file check policy */
+    inode->data = data;
+    return 0;
+}
+
+static void chroot_idrop(struct libos_inode* inode) {
+    assert(locked(&inode->lock));
+    if (inode->data) {
+        struct chroot_inode_data* data = inode->data;
+        free(data->chunk_hashes);
+        free(data);
+    }
+}
+
+struct chroot_checkpoint {
+    size_t size;
+    char data[];
+};
+
+static int chroot_icheckpoint(struct libos_inode* inode, void** out_data, size_t* out_size) {
+    assert(locked(&inode->lock));
+    assert(inode->data);
+
+    struct chroot_inode_data* idata = inode->data;
+    size_t chunk_hashes_size = idata->is_trusted ? get_chunk_hashes_size(inode->size) : 0;
+
+    struct chroot_checkpoint* cp;
+    size_t cp_size = sizeof(*cp) + sizeof(*idata) + chunk_hashes_size;
+    cp = malloc(cp_size);
+    if (!cp)
+        return -ENOMEM;
+
+    cp->size = sizeof(*idata) + chunk_hashes_size;
+    memcpy(cp->data, idata, sizeof(*idata));
+    if (chunk_hashes_size)
+        memcpy(cp->data + sizeof(*idata), idata->chunk_hashes, chunk_hashes_size);
+
+    *out_data = cp;
+    *out_size = cp_size;
+    return 0;
+}
+
+static int chroot_irestore(struct libos_inode* inode, void* data) {
+    struct chroot_checkpoint* cp = data;
+
+    struct chroot_inode_data* idata = malloc(sizeof(*idata));
+    if (!idata)
+        return -ENOMEM;
+
+    memcpy(idata, cp->data, sizeof(*idata));
+    if (idata->is_trusted) {
+        size_t chunk_hashes_size = cp->size - sizeof(*idata);
+        idata->chunk_hashes = malloc(chunk_hashes_size);
+        if (!idata->chunk_hashes) {
+            free(idata);
+            return -ENOMEM;
+        }
+        memcpy(idata->chunk_hashes, cp->data + sizeof(*idata), chunk_hashes_size);
+    } else {
+        idata->chunk_hashes = NULL;
+    }
+
+    inode->data = idata;
+    return 0;
+}
+
+static int chroot_mount(struct libos_mount_params* params, void** mount_data) {
+    __UNUSED(mount_data);
+    if (!params->uri || (!strstartswith(params->uri, URI_PREFIX_FILE) &&
+                         !strstartswith(params->uri, URI_PREFIX_DEV)))
+        return -EINVAL;
+    return 0;
 }
 
 int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri) {
@@ -114,30 +256,18 @@ out:
     return ret;
 }
 
-static int chroot_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
-                               file_off_t size) {
-    assert(locked(&g_dcache_lock));
-    assert(!dent->inode);
-
-    struct libos_inode* inode = get_new_inode(dent->mount, type, perm);
-    if (!inode)
-        return -ENOMEM;
-    inode->size = size;
-    dent->inode = inode;
-    return 0;
-}
-
 static int chroot_lookup(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
 
     int ret;
+    struct libos_inode* inode = NULL;
+    char* uri = NULL;
 
     /*
      * We don't know the file type yet, so we can't construct a PAL URI with the right prefix. In
      * most cases, a "file:" prefix is good enough: `PalStreamAttributesQuery` will access the file
      * and report the right file type.
      */
-    char* uri = NULL;
     ret = chroot_dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         goto out;
@@ -172,13 +302,53 @@ static int chroot_lookup(struct libos_dentry* dent) {
     }
 
     mode_t perm = pal_attr.share_flags;
+    size_t file_size = (type == S_IFREG ? pal_attr.pending_size : 0);
 
-    file_off_t size = (type == S_IFREG ? pal_attr.pending_size : 0);
+    inode = get_new_inode(dent->mount, type, perm);
+    if (!inode) {
+        ret = -ENOMEM;
+        goto out;
+    }
 
-    ret = chroot_setup_dentry(dent, type, perm, size);
+    ret = setup_inode_data(type, uri, file_size, inode);
+    if (ret < 0)
+        goto out;
+
+    inode->size = file_size;
+    dent->inode = inode;
+    ret = 0;
 out:
+    if (ret < 0)
+        free(inode);
     free(uri);
     return ret;
+}
+
+static bool is_open_allowed(struct libos_dentry* dent, enum pal_access access) {
+    if (dent->inode->type == S_IFDIR) {
+        /* directories have no protections, always allowed to be opened */
+        return true;
+    }
+    assert(dent->inode->type == S_IFREG || dent->inode->type == S_IFCHR);
+
+    if (is_allowed_from_inode_data(dent->inode))
+        return true;
+
+    if (is_trusted_from_inode_data(dent->inode)) {
+        if (access == PAL_ACCESS_RDWR || access == PAL_ACCESS_WRONLY) {
+            log_error("Disallowing write/append to a trusted file '%s'", dent->name);
+            return false;
+        }
+        return true;
+    }
+
+    if (g_file_check_policy != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
+        log_warning("Disallowing access to file '%s'; file is not allowed.", dent->name);
+        return false;
+    }
+
+    log_warning("Allowing access to unknown file '%s' due to file_check_policy.", dent->name);
+    return true;
 }
 
 /* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
@@ -188,10 +358,22 @@ static int chroot_temp_open(struct libos_dentry* dent, mode_t type, PAL_HANDLE* 
     if (ret < 0)
         return ret;
 
+    if (!is_open_allowed(dent, PAL_ACCESS_RDONLY)) {
+        ret = -EPERM;
+        goto out;
+    }
+
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, out_palhdl);
+                        PAL_OPTION_PASSTHROUGH, out_palhdl);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    ret = 0;
+out:
     free(uri);
-    return pal_to_unix_errno(ret);
+    return ret;
 }
 
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
@@ -211,7 +393,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    ret = PalStreamOpen(uri, access, host_perm, create, options | PAL_OPTION_PASSTHROUGH, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -238,22 +420,76 @@ static int chroot_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
+    if (!is_open_allowed(dent, LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags)))
+        return -EPERM;
+
     return chroot_do_open(hdl, dent, dent->inode->type, flags, /*perm=*/0);
 }
 
-static int chroot_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags, mode_t perm) {
+static bool is_create_allowed(const char* uri) {
+    assert(strstartswith(uri, URI_PREFIX_FILE));
+    const char* path = strip_prefix(uri);
+
+    if (get_allowed_file(path))
+        return true;
+
+    if (get_trusted_file(path)) {
+        log_error("Disallowing creating a trusted file '%s'", path);
+        return false;
+    }
+
+    if (g_file_check_policy != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
+        log_warning("Disallowing creating file '%s'; file is not trusted or allowed.", path);
+        return false;
+    }
+
+    log_warning("Allowing creating unknown file '%s' due to file_check_policy.", path);
+    return true;
+}
+
+static int chroot_creat(struct libos_handle* hdl, struct libos_dentry* dent, int flags,
+                        mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
     int ret;
+    struct libos_inode* inode = NULL;
+    char* uri = NULL;
 
-    mode_t type = S_IFREG;
-
-    ret = chroot_do_open(hdl, dent, type, flags | O_CREAT | O_EXCL, perm);
+    ret = chroot_dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
-        return ret;
+        goto out;
 
-    return chroot_setup_dentry(dent, type, perm, /*size=*/0);
+    if (!is_create_allowed(uri)) {
+        ret = -EPERM;
+        goto out;
+    }
+
+    ret = chroot_do_open(hdl, dent, S_IFREG, flags | O_CREAT | O_EXCL, perm);
+    if (ret < 0)
+        goto out;
+
+    ret = register_allowed_file(strip_prefix(uri));
+    if (ret < 0)
+        goto out;
+
+    inode = get_new_inode(dent->mount, S_IFREG, perm);
+    if (!inode) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    ret = setup_inode_data_created_file(uri, inode);
+    if (ret < 0)
+        goto out;
+
+    dent->inode = inode;
+    ret = 0;
+out:
+    if (ret < 0)
+        free(inode);
+    free(uri);
+    return ret;
 }
 
 static int chroot_mkdir(struct libos_dentry* dent, mode_t perm) {
@@ -261,14 +497,28 @@ static int chroot_mkdir(struct libos_dentry* dent, mode_t perm) {
     assert(!dent->inode);
 
     int ret;
+    struct libos_inode* inode = NULL;
 
-    mode_t type = S_IFDIR;
-
-    ret = chroot_do_open(/*hdl=*/NULL, dent, type, O_CREAT | O_EXCL, perm);
+    ret = chroot_do_open(/*hdl=*/NULL, dent, S_IFDIR, O_CREAT | O_EXCL, perm);
     if (ret < 0)
-        return ret;
+        goto out;
 
-    return chroot_setup_dentry(dent, type, perm, /*size=*/0);
+    inode = get_new_inode(dent->mount, S_IFDIR, perm);
+    if (!inode) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    ret = setup_inode_data_created_dir(inode);
+    if (ret < 0)
+        goto out;
+
+    dent->inode = inode;
+    ret = 0;
+out:
+    if (ret < 0)
+        free(inode);
+    return ret;
 }
 
 static int chroot_flush(struct libos_handle* hdl) {
@@ -281,11 +531,23 @@ static int chroot_flush(struct libos_handle* hdl) {
 static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
+    int ret;
     size_t actual_count = count;
-    int ret = PalStreamRead(hdl->pal_handle, *pos, &actual_count, buf);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
+    uint64_t offset = *pos;
+
+    if (is_trusted_from_inode_data(hdl->inode)) {
+        struct chroot_inode_data* data = hdl->inode->data;
+        ret = copy_and_verify_trusted_file(hdl->pal_handle, offset, actual_count, buf,
+                                           hdl->inode->size, data->chunk_hashes);
+        if (ret < 0)
+            return ret;
+        actual_count = MIN(offset + count, (size_t)hdl->inode->size) - offset;
+    } else {
+        ret = PalStreamRead(hdl->pal_handle, offset, &actual_count, buf);
+        if (ret < 0)
+            return pal_to_unix_errno(ret);
     }
+
     assert(actual_count <= count);
     if (hdl->inode->type == S_IFREG) {
         *pos += actual_count;
@@ -296,6 +558,11 @@ static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, fi
 static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t count,
                             file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
+
+    if (is_trusted_from_inode_data(hdl->inode)) {
+        log_warning("Writing to a trusted file is disallowed!");
+        return -EPERM;
+    }
 
     size_t actual_count = count;
     int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf);
@@ -322,23 +589,6 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     }
 
     return (ssize_t)actual_count;
-}
-
-static int chroot_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                       uint64_t offset) {
-    assert(hdl->type == TYPE_CHROOT);
-    assert(addr);
-
-    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(prot, flags);
-
-    if (flags & MAP_ANONYMOUS)
-        return -EINVAL;
-
-    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
-    if (ret < 0)
-        return pal_to_unix_errno(ret);
-
-    return 0;
 }
 
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
@@ -487,7 +737,8 @@ struct libos_fs_ops chroot_fs_ops = {
     .flush      = &chroot_flush,
     .read       = &chroot_read,
     .write      = &chroot_write,
-    .mmap       = &chroot_mmap,
+    .mmap       = &generic_emulated_mmap,
+    .msync      = &generic_emulated_msync,
     /* TODO: this function emulates lseek() completely inside the LibOS, but some device files may
      * report size == 0 during fstat() and may provide device-specific lseek() logic; this emulation
      * breaks for such device-specific cases */
@@ -499,15 +750,18 @@ struct libos_fs_ops chroot_fs_ops = {
 };
 
 struct libos_d_ops chroot_d_ops = {
-    .open    = &chroot_open,
-    .lookup  = &chroot_lookup,
-    .creat   = &chroot_creat,
-    .mkdir   = &chroot_mkdir,
-    .stat    = &generic_inode_stat,
-    .readdir = &chroot_readdir,
-    .unlink  = &chroot_unlink,
-    .rename  = &chroot_rename,
-    .chmod   = &chroot_chmod,
+    .open        = &chroot_open,
+    .lookup      = &chroot_lookup,
+    .creat       = &chroot_creat,
+    .mkdir       = &chroot_mkdir,
+    .stat        = &generic_inode_stat,
+    .readdir     = &chroot_readdir,
+    .unlink      = &chroot_unlink,
+    .rename      = &chroot_rename,
+    .chmod       = &chroot_chmod,
+    .idrop       = &chroot_idrop,
+    .icheckpoint = &chroot_icheckpoint,
+    .irestore    = &chroot_irestore,
 };
 
 struct libos_fs chroot_builtin_fs = {

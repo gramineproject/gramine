@@ -14,15 +14,15 @@ commands
 
   shell echo "WRITING NEW CONTENT IN FORK_AND_ACCESS_FILE_TESTFILE" > fork_and_access_file_testfile
 
-  tbreak die_or_inf_loop
+  tbreak die_on_wrong_file_contents
   commands
-    echo EXITING GDB WITH A GRAMINE ERROR\n
+    echo EXITING GDB WITH AN ERROR\n
     quit
   end
 
   tbreak exit
   commands
-    echo EXITING GDB WITHOUT A GRAMINE ERROR\n
+    echo EXITING GDB WITHOUT AN ERROR\n
     quit
   end
 
