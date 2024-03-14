@@ -14,7 +14,8 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr", uri = "file:/usr" },
   { path = "/tmp", uri = "file:/tmp" },
-  # for tests that require POSIX shared memory support
+
+  # many LTP multi-process tests rely on shared-memory IPC via `mmap(MAP_SHARED, </dev/shm fd>)`
   { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
@@ -31,7 +32,7 @@ sgx.use_exinfo = true
 
 sgx.allowed_files = [
   "file:/tmp",
-  "dev:/dev/shm/", # for tests that require POSIX shared memory support
+  "dev:/dev/shm/", # for tests that rely on shared-memory IPC, see note above
 ]
 
 sgx.trusted_files = [

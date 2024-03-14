@@ -35,7 +35,7 @@ static int shm_mount(struct libos_mount_params* params, void** mount_data) {
 }
 
 static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                    uint64_t offset) {
+                    uint64_t offset, size_t* out_valid_size) {
     assert(hdl->type == TYPE_SHM);
     assert(addr);
 
@@ -44,10 +44,11 @@ static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot,
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
 
-    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
+    int ret = PalDeviceMap(hdl->pal_handle, addr, pal_prot, offset, size);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
+    *out_valid_size = size;
     return 0;
 }
 

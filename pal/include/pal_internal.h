@@ -58,8 +58,7 @@ struct handle_ops {
     void (*destroy)(PAL_HANDLE handle);
 
     /*
-     * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
-     * by mmap, so unmap also needs 'handle' to deal with special cases.
+     * 'map' will map the handle (currently only device handles) into memory space.
      *
      * Common PAL code will ensure that address, offset, and size are page-aligned. 'address'
      * should not be NULL.
@@ -175,8 +174,6 @@ int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void*
 int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buf);
 int _PalStreamAttributesQuery(const char* uri, PAL_STREAM_ATTR* attr);
 int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr);
-int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
-                  uint64_t size);
 int _PalStreamSetLength(PAL_HANDLE handle, uint64_t length);
 int _PalStreamFlush(PAL_HANDLE handle);
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
@@ -195,6 +192,9 @@ int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t*
                    struct pal_socket_addr* addr, bool force_nonblocking);
 int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                    struct pal_socket_addr* addr, bool force_nonblocking);
+
+int _PalDeviceMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+                  uint64_t size);
 
 /* PalProcess and PalThread calls */
 int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param);

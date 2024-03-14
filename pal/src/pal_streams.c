@@ -268,7 +268,7 @@ int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     return ops->attrsetbyhdl(handle, attr);
 }
 
-int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+int _PalDeviceMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                   uint64_t size) {
     assert(IS_ALLOC_ALIGNED(offset));
     int ret;
@@ -289,7 +289,7 @@ int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t
     return 0;
 }
 
-int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
+int PalDeviceMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size) {
     if (!handle) {
         return -PAL_ERROR_INVAL;
@@ -307,7 +307,7 @@ int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t 
         return -PAL_ERROR_INVAL;
     }
 
-    return _PalStreamMap(handle, addr, prot, offset, size);
+    return _PalDeviceMap(handle, addr, prot, offset, size);
 }
 
 int _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
