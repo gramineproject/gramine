@@ -18,7 +18,6 @@
 #include "api.h"
 #include "asan.h"
 #include "assert.h"
-#include "enclave_tf.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "init.h"
 #include "pal.h"
@@ -407,7 +406,6 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
 
 extern void* g_enclave_base;
 extern void* g_enclave_top;
-extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
 
@@ -713,21 +711,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_file_check_policy()) < 0) {
-        log_error("Failed to load the file check policy: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_allowed_files()) < 0) {
-        log_error("Failed to initialize allowed files: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_trusted_files()) < 0) {
-        log_error("Failed to initialize trusted files: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 

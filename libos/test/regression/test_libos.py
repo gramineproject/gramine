@@ -483,9 +483,6 @@ class TC_02_OpenMP(RegressionTestCase):
         # OpenMP simple for loop
         self.assertIn('first: 0, last: 9', stdout)
 
-@unittest.skipUnless(HAS_SGX,
-    'This test is only meaningful on SGX PAL because file-check-policy is '
-    'only relevant to SGX.')
 class TC_03_FileCheckPolicy(RegressionTestCase):
     @classmethod
     def setUpClass(cls):
@@ -497,8 +494,13 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         os.remove('trusted_testfile')
 
     def test_000_strict_success(self):
-        stdout, _ = self.run_binary(['file_check_policy_strict', 'read', 'trusted_testfile'])
+        stdout, stderr = self.run_binary(['file_check_policy_strict', 'read', 'trusted_testfile'])
         self.assertIn('file_check_policy succeeded', stdout)
+
+        # verify that Gramine-SGX does not print a warning on file_check_policy = "strict"
+        if HAS_SGX:
+            self.assertIn('Gramine detected the following insecure configurations', stderr)
+            self.assertNotIn('- sgx.file_check_policy = ', stderr)
 
     def test_001_strict_fail(self):
         try:
@@ -519,7 +521,7 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 2)
             stderr = e.stderr.decode()
-            self.assertIn('Disallowing access to file \'nonexisting_testfile\'', stderr)
+            self.assertIn('Disallowing creating file \'./nonexisting_testfile\'', stderr)
             if os.path.exists('nonexisting_testfile'):
                 self.fail('test created a file unexpectedly')
 
@@ -531,15 +533,19 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 2)
             stderr = e.stderr.decode()
-            self.assertIn('Disallowing create/write/append to a trusted file \'trusted_testfile\'',
-                          stderr)
+            self.assertIn('Disallowing write/append to a trusted file \'trusted_testfile\'', stderr)
 
     def test_004_allow_all_but_log_unknown(self):
         stdout, stderr = self.run_binary(['file_check_policy_allow_all_but_log', 'read',
                                           'unknown_testfile'])
         self.assertIn('Allowing access to unknown file \'unknown_testfile\' due to '
-                      'file_check_policy settings.', stderr)
+                      'file_check_policy', stderr)
         self.assertIn('file_check_policy succeeded', stdout)
+
+        # verify that Gramine-SGX prints a warning on file_check_policy = "allow_all_bug_log"
+        if HAS_SGX:
+            self.assertIn('Gramine detected the following insecure configurations', stderr)
+            self.assertIn('- sgx.file_check_policy = allow_all_but_log', stderr)
 
     def test_005_allow_all_but_log_trusted(self):
         stdout, stderr = self.run_binary(['file_check_policy_allow_all_but_log', 'read',
@@ -556,8 +562,7 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         except subprocess.CalledProcessError as e:
             self.assertEqual(e.returncode, 2)
             stderr = e.stderr.decode()
-            self.assertIn('Disallowing create/write/append to a trusted file \'trusted_testfile\'',
-                          stderr)
+            self.assertIn('Disallowing write/append to a trusted file \'trusted_testfile\'', stderr)
 
     def test_007_allow_all_but_log_unknown_create(self):
         if os.path.exists('nonexisting_testfile'):
@@ -565,8 +570,8 @@ class TC_03_FileCheckPolicy(RegressionTestCase):
         try:
             stdout, stderr = self.run_binary(['file_check_policy_allow_all_but_log', 'append',
                                               'nonexisting_testfile'])
-            self.assertIn('Allowing access to unknown file \'nonexisting_testfile\' due to '
-                          'file_check_policy settings.', stderr)
+            self.assertIn('Allowing creating unknown file \'./nonexisting_testfile\' due to '
+                          'file_check_policy', stderr)
             self.assertIn('file_check_policy succeeded', stdout)
             if not os.path.exists('nonexisting_testfile'):
                 self.fail('test did not create a file')
@@ -844,8 +849,6 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('CHILD OK', stdout)
         self.assertIn('TEST OK', stdout)
 
-    @unittest.skipUnless(HAS_SGX,
-        'Trusted files are only available with SGX')
     def test_052_mmap_file_backed_trusted(self):
         stdout, _ = self.run_binary(['mmap_file_backed', 'mmap_file_backed'], timeout=60)
         self.assertIn('Child process done', stdout)
@@ -1174,8 +1177,13 @@ class TC_40_FileSystem(RegressionTestCase):
         self.assertIn('TEST OK', stdout)
 
     def test_002_device_passthrough(self):
-        stdout, _ = self.run_binary(['device_passthrough'])
+        stdout, stderr = self.run_binary(['device_passthrough'])
         self.assertIn('TEST OK', stdout)
+
+        # verify that Gramine-SGX prints a warning on allowed_files (test uses /dev/zero)
+        if HAS_SGX:
+            self.assertIn('Gramine detected the following insecure configurations', stderr)
+            self.assertIn('- sgx.allowed_files = [ ... ]', stderr)
 
     @unittest.skipUnless(IS_VM, '/dev/gramine_test_dev is available only on some Jenkins machines')
     def test_003_device_ioctl(self):
@@ -1450,7 +1458,6 @@ class TC_50_GDB(RegressionTestCase):
         xmm0_result = self.find('XMM0 result', stdout)
         self.assertEqual(xmm0_result, '$4 = 0x4000400040004000')
 
-    @unittest.skipUnless(HAS_SGX, 'Trusted files bug was SGX-specific')
     def test_020_gdb_fork_and_access_file_bug(self):
         # To run this test manually, use:
         # GDB=1 GDB_SCRIPT=fork_and_access_file.gdb gramine-sgx fork_and_access_file
@@ -1463,9 +1470,9 @@ class TC_50_GDB(RegressionTestCase):
         try:
             stdout, _ = self.run_gdb(['fork_and_access_file'], 'fork_and_access_file.gdb')
             self.assertIn('BREAK ON FORK', stdout)
-            self.assertIn('EXITING GDB WITH A GRAMINE ERROR', stdout)
+            self.assertIn('EXITING GDB WITH AN ERROR', stdout)
             # below message must NOT be printed; it means Gramine didn't fail but the program itself
-            self.assertNotIn('EXITING GDB WITHOUT A GRAMINE ERROR', stdout)
+            self.assertNotIn('EXITING GDB WITHOUT AN ERROR', stdout)
             # below message from program must NOT be printed; Gramine must fail before it
             self.assertNotIn('child read data different from what parent read', stdout)
         finally:

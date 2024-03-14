@@ -42,7 +42,7 @@ $(SRCDIR)/.config: $(SRCDIR)/Makefile
 $(SRCDIR)/busybox: $(SRCDIR)/.config
 	$(MAKE) -C $(SRCDIR)
 
-busybox.manifest: busybox.manifest.template
+busybox.manifest: busybox.manifest.template busybox
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -57,7 +57,7 @@ busybox.manifest.sgx busybox.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: busybox.manifest busybox
+sgx_sign: busybox.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

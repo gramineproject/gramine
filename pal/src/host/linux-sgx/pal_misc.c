@@ -23,6 +23,7 @@
 #include "pal_linux_error.h"
 #include "pal_sgx.h"
 #include "seqlock.h"
+#include "sgx_arch.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
 #include "toml_utils.h"

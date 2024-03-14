@@ -47,7 +47,7 @@ $(LIGHTTPD_SRC).tar.gz:
 	../common_tools/download --output $@ --sha256 $(LIGHTTPD_HASH) \
 		$(foreach mirror,$(LIGHTTPD_MIRRORS),--url $(mirror)/$(LIGHTTPD_SRC).tar.gz)
 
-lighttpd.manifest: lighttpd.manifest.template
+lighttpd.manifest: lighttpd.manifest.template $(INSTALL_DIR)/sbin/lighttpd
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -60,7 +60,7 @@ lighttpd.manifest.sgx lighttpd.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: lighttpd.manifest $(INSTALL_DIR)/sbin/lighttpd
+sgx_sign: lighttpd.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

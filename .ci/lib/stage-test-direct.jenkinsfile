@@ -7,7 +7,7 @@ stage('test-direct') {
     '''
 
     try {
-        timeout(time: 20, unit: 'MINUTES') {
+        timeout(time: 30, unit: 'MINUTES') {
             sh '''
                 cd libos/test/ltp
                 make ${MAKEOPTS} all

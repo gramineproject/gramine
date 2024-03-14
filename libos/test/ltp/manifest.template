@@ -31,18 +31,21 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.use_exinfo = true
 
 sgx.allowed_files = [
+  "file:/etc",
   "file:/tmp",
+  "file:/usr",
+
   "dev:/dev/shm/", # for tests that rely on shared-memory IPC, see note above
+
+  "file:install/testcases/bin/execl01_child",   # for execl01 test
+  "file:install/testcases/bin/execlp01_child",  # for execlp01 test
+  "file:install/testcases/bin/execv01_child",   # for execv01 test
+  "file:install/testcases/bin/execvp01_child",  # for execvp01 test
 ]
 
 sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
-  "file:{{ gramine.runtimedir() }}/ld-linux-x86-64.so.2",
-  "file:{{ gramine.runtimedir() }}/libc.so.6",
-  "file:{{ gramine.runtimedir() }}/libdl.so.2",
-  "file:{{ gramine.runtimedir() }}/libm.so.6",
-  "file:{{ gramine.runtimedir() }}/libpthread.so.0",
-  "file:{{ gramine.runtimedir() }}/librt.so.1",
+  "file:{{ gramine.runtimedir() }}/",
   "file:{{ coreutils_libdir }}/libstdbuf.so",
 ]
 
