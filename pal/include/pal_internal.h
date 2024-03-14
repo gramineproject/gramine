@@ -58,8 +58,7 @@ struct handle_ops {
     void (*destroy)(PAL_HANDLE handle);
 
     /*
-     * 'map' and 'unmap' will map or unmap the handle into memory space, it's not necessary mapped
-     * by mmap, so unmap also needs 'handle' to deal with special cases.
+     * 'map' will map the handle (currently only device handles) into memory space.
      *
      * Common PAL code will ensure that address, offset, and size are page-aligned. 'address'
      * should not be NULL.

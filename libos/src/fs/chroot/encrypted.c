@@ -517,11 +517,22 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
 
     lock(&hdl->inode->lock);
     ret = encrypted_file_set_size(enc, size);
-    if (ret == 0)
-        hdl->inode->size = size;
+    if (ret < 0) {
+        unlock(&hdl->inode->lock);
+        return ret;
+    }
+
+    hdl->inode->size = size;
     unlock(&hdl->inode->lock);
 
-    return ret;
+    ret = prot_refresh_mmaped_from_file_handle(hdl);
+    if (ret < 0) {
+        log_error("refresh of page protections of mmapped regions of file failed: %s",
+                  unix_strerror(ret));
+        BUG();
+    }
+
+    return 0;
 }
 
 static int chroot_encrypted_stat(struct libos_dentry* dent, struct stat* buf) {

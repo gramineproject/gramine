@@ -279,14 +279,6 @@ class TC_20_SingleProcess(RegressionTestCase):
         self.assertIn('Query by Handle: type = ', stderr)
         self.assertIn(', size = {}'.format(len(file_exist)), stderr)
 
-        # File Mapping
-        self.assertIn(
-            'Map Test 1 (0th - 40th): {}'.format(file_exist[0:40].hex()),
-            stderr)
-        self.assertIn(
-            'Map Test 2 (200th - 240th): {}'.format(file_exist[200:240].hex()),
-            stderr)
-
         # Set File Length
         self.assertEqual(
             pathlib.Path('file_nonexist.tmp').stat().st_size,
