@@ -1,10 +1,8 @@
 {% set entrypoint = "Bootstrap" -%}
 
-loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
 
 sgx.enclave_size = "8192M"
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-
-sgx.trusted_files = [ "file:{{ binary_dir }}/{{ entrypoint }}" ]

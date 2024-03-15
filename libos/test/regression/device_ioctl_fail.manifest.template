@@ -1,6 +1,5 @@
 {% set entrypoint = "device_ioctl" -%}
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
@@ -14,7 +13,6 @@ fs.mounts = [
 sgx.debug = true
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

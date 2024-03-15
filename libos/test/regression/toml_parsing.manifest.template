@@ -2,7 +2,9 @@
 
 {% set entrypoint = "helloworld" -%}
 
+# test deprecated loader.entrypoint syntax, TODO: remove in v1.9
 loader.entrypoint = "file:{{ gramine.libos }}"
+
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
@@ -24,9 +26,6 @@ sgx.seal_key.xfrm_mask  = "0xfffffffffff9ff1b"
 sgx.seal_key.misc_mask  = "0xffffffff"
 
 # below format of sgx.trusted_files is to test TOML-table syntax without `sha256`
-[[sgx.trusted_files]]
-uri = "file:{{ gramine.libos }}"
-
 [[sgx.trusted_files]]
 uri = "file:{{ gramine.runtimedir(libc) }}/"
 

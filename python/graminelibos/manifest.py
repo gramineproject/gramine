@@ -336,12 +336,28 @@ class Manifest:
             else:
                 raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
-        # for convenience, users are not required to specify `loader.entrypoint` and
-        # `sgx.trusted_files = [ <loader.entrypoint file name> ]`; replace with the default LibOS
+        # for convenience, users are not required to specify `loader.entrypoint.uri` and
+        # `loader.entrypoint.sha256`; replace with the default LibOS
+        loader_entrypoint_uri = f'file:{_env.globals["gramine"]["libos"]}'
+
         loader = manifest.setdefault('loader', {})
-        if 'entrypoint' not in loader:
-            loader['entrypoint'] = f'file:{_env.globals["gramine"]["libos"]}'
-            trusted_files.append({'uri': loader['entrypoint']})
+        loader_entrypoint = loader.setdefault('entrypoint', {})
+
+        # found deprecated `loader.entrypoint = "file:..."`; replace with loader.entrypoint.uri
+        # TODO: remove this in Gramine v1.9
+        if isinstance(loader_entrypoint, str):
+            print(f'WARNING: `loader.entrypoint = "file:..."` manifest syntax is deprecated, '
+                   'please switch to `loader.entrypoint.uri = "file:..."`')
+            loader_entrypoint = { 'uri': loader_entrypoint }
+            loader['entrypoint'] = loader_entrypoint
+
+        if 'uri' not in loader_entrypoint:
+            loader_entrypoint['uri'] = loader_entrypoint_uri
+        if 'sha256' not in loader_entrypoint:
+            entrypoint_tf = TrustedFile.from_realpath(uri2path(loader_entrypoint['uri']))
+            loader_entrypoint['sha256'] = entrypoint_tf.ensure_hash().sha256
+            # TODO: remove append to TFs after sgx.trusted_files is moved to LibOS layer
+            trusted_files.append({'uri': loader_entrypoint['uri']})
 
         sgx['trusted_files'] = trusted_files
 

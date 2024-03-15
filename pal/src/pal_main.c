@@ -389,8 +389,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     toml_table_t* manifest_loader = toml_table_in(g_pal_public_state.manifest_root, "loader");
     if (manifest_loader == NULL) {
-        INIT_FAIL("'loader' section wasn't configured in the manifest, at least 'loader.entrypoint' "
-                  "needs to be defined");
+        INIT_FAIL("'loader' section wasn't configured in the manifest, at least "
+                  "'loader.entrypoint.uri' needs to be defined");
     }
 
     char* dummy_exec_str = NULL;
@@ -445,13 +445,20 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         INIT_FAIL_MANIFEST("Cannot parse 'libos.entrypoint'");
 
     if (!argv0_override) {
-        /* possible in e.g. PAL regression tests, in this case use loader.entrypoint */
-        ret = toml_string_in(manifest_loader, "entrypoint", &argv0_override);
-        if (ret < 0)
-            INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
+        /* possible in e.g. PAL regression tests, in this case use loader.entrypoint.uri */
+        ret = toml_string_in(manifest_loader, "entrypoint.uri", &argv0_override);
+        if (ret < 0 || !argv0_override) {
+            /* didn't find `loader.entrypoint.uri`, try deprecated `loader.entrypoint`;
+             * TODO: remove this in Gramine v1.9 */
+            ret = toml_string_in(manifest_loader, "entrypoint", &argv0_override);
+            if (ret < 0) {
+                INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint.uri'");
+            }
+        }
 
         if (!argv0_override)
-            INIT_FAIL("'libos.entrypoint' and 'loader.entrypoint' are not specified in manifest");
+            INIT_FAIL("'libos.entrypoint' and 'loader.entrypoint.uri' are not specified in "
+                      "the manifest");
     }
     assert(argv0_override);
 
@@ -558,15 +565,23 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     free(env_src_file);
 
     char* entrypoint_name = NULL;
-    ret = toml_string_in(manifest_loader, "entrypoint", &entrypoint_name);
-    if (ret < 0)
-        INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint'");
+    ret = toml_string_in(manifest_loader, "entrypoint.uri", &entrypoint_name);
+    if (ret < 0 || !entrypoint_name) {
+        /* didn't find `loader.entrypoint.uri`, try deprecated `loader.entrypoint`;
+         * TODO: remove this in Gramine v1.9 */
+        ret = toml_string_in(manifest_loader, "entrypoint", &entrypoint_name);
+        if (ret < 0) {
+            INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint.uri'");
+        }
+        log_warning("Detected deprecated manifest option 'loader.entrypoint'. Please switch to "
+                    "'loader.entrypoint.uri'.");
+    }
 
     if (!entrypoint_name)
-        INIT_FAIL("No 'loader.entrypoint' is specified in the manifest");
+        INIT_FAIL("No 'loader.entrypoint.uri' is specified in the manifest");
 
     if (!strstartswith(entrypoint_name, URI_PREFIX_FILE))
-        INIT_FAIL("'loader.entrypoint' is missing the 'file:' prefix");
+        INIT_FAIL("'loader.entrypoint.uri' is missing the 'file:' prefix");
 
     g_pal_public_state.host_type       = XSTRINGIFY(HOST_TYPE);
     g_pal_public_state.parent_process  = parent_process;
@@ -580,7 +595,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     ret = load_entrypoint(entrypoint_name);
     if (ret < 0)
-        INIT_FAIL("Unable to load loader.entrypoint: %ld", ret);
+        INIT_FAIL("Unable to load loader entrypoint: %ld", ret);
     free(entrypoint_name);
 
     if (post_callback)
