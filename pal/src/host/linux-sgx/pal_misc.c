@@ -19,7 +19,6 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 #include "seqlock.h"
-#include "sgx_arch.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
 #include "toml_utils.h"
@@ -816,6 +815,8 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
 
 int _PalValidateEntrypoint(const void* buf, size_t size) {
     int ret;
+    uint8_t manifest_sha256_bytes[32];
+    uint8_t computed_sha256_bytes[32];
 
     char* entrypoint_sha256_str = NULL;
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.entrypoint_sha256",
@@ -831,13 +832,12 @@ int _PalValidateEntrypoint(const void* buf, size_t size) {
         goto out;
     }
 
-    if (!entrypoint_sha256_str || strlen(entrypoint_sha256_str) != sizeof(sgx_file_hash_t) * 2) {
+    if (strlen(entrypoint_sha256_str) != sizeof(manifest_sha256_bytes) * 2) {
         log_error("Hash of an entrypoint is not a SHA256 hash");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
-    uint8_t manifest_sha256_bytes[32];
     char* bytes = hex2bytes(entrypoint_sha256_str, strlen(entrypoint_sha256_str),
                             manifest_sha256_bytes, sizeof(manifest_sha256_bytes));
     if (!bytes) {
@@ -846,7 +846,6 @@ int _PalValidateEntrypoint(const void* buf, size_t size) {
         goto out;
     }
 
-    uint8_t computed_sha256_bytes[32];
     LIB_SHA256_CONTEXT entrypoint_sha;
     ret = lib_SHA256Init(&entrypoint_sha);
     if (ret < 0)
