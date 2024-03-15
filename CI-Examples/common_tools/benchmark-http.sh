@@ -21,7 +21,7 @@ CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64 128 256"}
 RESULT=result-$(date +%y%m%d-%H%M%S)
 
 touch "$RESULT"
-throughput_in_bytes() {
+convert_throughput() {
     local THROUGHPUT_VAL=0
     local THROUGHPUT_UNIT=""
     if [[ "$1" =~ ^([0-9]*)(\.[0-9]*)?([kMG]?)$ ]]; then
@@ -79,7 +79,7 @@ do
         wrk -c "$CONNECTIONS" -d "$DURATION" -t "$CONCURRENCY" -R "$REQUESTS" "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
 
         THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
-        THROUGHPUT=$(throughput_in_bytes "$THROUGHPUT_STR")
+        THROUGHPUT=$(convert_throughput "$THROUGHPUT_STR")
         if [ "$THROUGHPUT" = "0" ]; then
             echo "Throughput is zero!"; exit 1;
         fi
@@ -97,7 +97,7 @@ do
             THROUGHPUTS[$CONCURRENCY]="${THROUGHPUTS[$CONCURRENCY]} $THROUGHPUT"
             LATENCIES[$CONCURRENCY]="${LATENCIES[$CONCURRENCY]} $LATENCY"
         fi
-        echo "Run = $((RUN+1)) Concurrency = $CONCURRENCY Per thread Throughput (bytes) = $THROUGHPUT, Latency (ms) = $LATENCY"
+        echo "Run = $((RUN+1)) Concurrency = $CONCURRENCY Per thread Throughput (req/sec) = $THROUGHPUT, Latency (ms) = $LATENCY"
 
     done
     (( RUN++ ))
@@ -107,7 +107,7 @@ for CONCURRENCY in $CONCURRENCY_LIST
 do
     THROUGHPUT=$(echo "${THROUGHPUTS[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
     LATENCY=$(echo "${LATENCIES[$CONCURRENCY]}" | tr " " "\n" | sort -n | awk '{a[NR]=$0}END{if(NR%2==1)print a[(NR + 1)/2];else print (a[NR/2]+a[NR/2 + 1])/2}')
-    printf "Concurrency = %3d: Per Thread Median Througput (bytes) = %9.3f, Latency (ms) = %9.3f\n" \
+    printf "Concurrency = %3d: Per Thread Median Througput (req/sec) = %9.3f, Latency (ms) = %9.3f\n" \
         "$CONCURRENCY" "$THROUGHPUT" "$LATENCY" | tee -a "$RESULT"
 done
 

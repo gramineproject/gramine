@@ -9,6 +9,9 @@ The bind address and port are hardcoded in `src/main.rs`.
 
 # Quick Start
 
+NOTE: The "benchmark-http.sh" script uses the wrk benchmark (wrk2) under the
+hood. Please refer to https://github.com/giltene/wrk2.
+
 ```sh
 # build the program and the final manifest
 make SGX=1
