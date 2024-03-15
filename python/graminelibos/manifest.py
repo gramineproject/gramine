@@ -336,12 +336,17 @@ class Manifest:
             else:
                 raise ManifestError(f'Unknown trusted file format: {tf!r}')
 
-        # for convenience, users are not required to specify `loader.entrypoint` and
-        # `sgx.trusted_files = [ <loader.entrypoint file name> ]`; replace with the default LibOS
+        # for convenience, users are not required to specify `loader.entrypoint.uri` and
+        # `loader.entrypoint.sha256`; replace with the default LibOS
         loader = manifest.setdefault('loader', {})
-        if 'entrypoint' not in loader:
-            loader['entrypoint'] = f'file:{_env.globals["gramine"]["libos"]}'
-            trusted_files.append({'uri': loader['entrypoint']})
+        loader_entrypoint = loader.setdefault('entrypoint', {})
+        if 'uri' not in loader_entrypoint:
+            loader_entrypoint['uri'] = f'file:{_env.globals["gramine"]["libos"]}'
+        if 'sha256' not in loader_entrypoint:
+            entrypoint_tf = TrustedFile.from_realpath(uri2path(loader_entrypoint['uri']))
+            loader_entrypoint['sha256'] = entrypoint_tf.ensure_hash().sha256
+            # TODO: remove append to TFs after sgx.trusted_files is moved to LibOS layer
+            trusted_files.append({'uri': loader_entrypoint['uri']})
 
         sgx['trusted_files'] = trusted_files
 

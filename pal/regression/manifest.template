@@ -1,4 +1,4 @@
-loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
 loader.insecure__use_cmdline_argv = true
 
@@ -11,8 +11,4 @@ sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.allowed_files = [
   "file:test.txt", # for File2 test
   "file:to_send.tmp", # for PalSendHandle test
-]
-
-sgx.trusted_files = [
-  "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

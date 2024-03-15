@@ -294,6 +294,8 @@ void free(void* mem);
 int _PalInitDebugStream(const char* path);
 int _PalDebugLog(const void* buf, size_t size);
 
+int _PalValidateEntrypoint(const void* buf, size_t size);
+
 // TODO(mkow): We should make it cross-object-inlinable, ideally by enabling LTO, less ideally by
 // pasting it here and making `inline`, but our current linker scripts prevent both.
 void pal_log(int level, const char* file, const char* func, uint64_t line,

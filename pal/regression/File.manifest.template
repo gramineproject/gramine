@@ -1,11 +1,10 @@
-loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 loader.log_level = "debug"
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
-  "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ entrypoint }}.manifest",
   "file:../regression/{{ entrypoint }}.manifest",
   "file:file_nonexist.tmp",

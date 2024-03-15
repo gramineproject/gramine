@@ -1,9 +1,7 @@
 {% set entrypoint = "Thread2" -%}
 
-loader.entrypoint = "file:{{ binary_dir }}/{{ entrypoint }}"
+loader.entrypoint.uri = "file:{{ binary_dir }}/{{ entrypoint }}"
 
 sgx.max_threads = 1
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-
-sgx.trusted_files = [ "file:{{ binary_dir }}/{{ entrypoint }}" ]
