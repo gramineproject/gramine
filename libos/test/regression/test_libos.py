@@ -11,6 +11,7 @@ import tomli
 
 from graminelibos.regression import (
     HAS_AVX,
+    HAS_EDMM,
     HAS_SGX,
     IS_VM,
     ON_X86,
@@ -787,9 +788,8 @@ class TC_30_Syscall(RegressionTestCase):
 
         # "test 5" and "test 8" are checked below, in test_051_mmap_sgx
 
-    @unittest.skipIf(HAS_SGX,
-        'On SGX, SIGBUS isn\'t always implemented correctly, for lack '
-        'of memory protection. For now, some of these cases won\'t work.')
+    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
+        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
     def test_051_mmap_sgx(self):
         stdout, _ = self.run_binary(['mmap_file'], timeout=60)
 
