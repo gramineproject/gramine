@@ -369,5 +369,8 @@ random bits, to obtain an attestation report and quote, etc.
 .. doxygenfunction:: PalGetSpecialKey
    :project: pal
 
-.. doxygenfunction:: PalGetCommittedPages
+.. doxygenfunction:: PalGetLazyCommitPages
+   :project: pal
+
+.. doxygenfunction:: PalFreeThenLazyReallocCommittedPages
    :project: pal

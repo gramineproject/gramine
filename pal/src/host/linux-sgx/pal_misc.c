@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Intel Corporation
+ *                    Kailun Qin <kailun.qin@intel.com>
+ */
 
 /*
  * This file contains APIs for miscellaneous use.
@@ -813,28 +816,60 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     }
 }
 
-/* Get the committed pages of a given memory area; return a populated bitvector slice if EDMM is
- * enabled for the SGX PAL and all-ones if it's not. */
-int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
+/* Get the to-be-lazily-committed pages of a given memory area; return a populated bitvector slice
+ * if EDMM is enabled for the SGX PAL and all-zeros if it's not. */
+int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector,
+                           size_t* bitvector_size) {
+    assert(addr && IS_ALIGNED_PTR(addr, PAGE_SIZE));
+    assert(size && IS_ALIGNED(size, PAGE_SIZE));
     assert(bitvector);
     assert(bitvector_size);
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        return get_bitvector_slice(addr, size, bitvector, bitvector_size);
+        return get_lazy_commit_bitvector_slice(addr, size, bitvector, bitvector_size);
     } else {
-        size_t num_pages = ALIGN_UP(size, g_page_size) / g_page_size;
-        size_t num_bytes = ALIGN_UP(num_pages, 8) / 8;
+        size_t num_pages = size / g_page_size;
+        size_t num_bytes = UDIV_ROUND_UP(num_pages, 8);
         if (num_bytes > *bitvector_size) {
             return -PAL_ERROR_NOMEM;
         }
         *bitvector_size = num_bytes;
 
-        memset(bitvector, 0xFF, num_bytes);
+        memset(bitvector, 0, num_bytes);
 
         size_t leftover_pages = num_pages % 8;
         if (leftover_pages)
-            bitvector[num_bytes - 1] = (1 << leftover_pages) - 1;
+            bitvector[num_bytes - 1] = ~((1 << leftover_pages) - 1);
 
         return 0;
     }
+}
+
+int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
+    assert(IS_ALIGNED_PTR(addr, PAGE_SIZE) && IS_ALIGNED(size, PAGE_SIZE));
+    assert(access_ok(addr, size));
+
+    if (sgx_is_completely_within_enclave(addr, size)) {
+        assert(g_pal_linuxsgx_state.heap_min <= addr
+               && addr + size <= g_pal_linuxsgx_state.heap_max);
+
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            int ret = uncommit_then_lazy_realloc_pages((uintptr_t)addr, size / PAGE_SIZE);
+            if (ret < 0)
+                return ret;
+        } else {
+#ifdef ASAN
+            asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
+#endif
+            /*
+             * In SGX1 the memory is mapped only at the enclave initialization and cannot be
+             * unmapped; we simiply `memset()` to have zero-filled pages on subsequent accesses.
+             */
+            memset(addr, 0, size);
+        }
+    } else {
+        return -PAL_ERROR_DENIED;
+    }
+
+    return 0;
 }

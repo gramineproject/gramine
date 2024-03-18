@@ -589,27 +589,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
-    /* initialize the enclave page tracker as early as possible */
-    if (edmm_enabled) {
-        size_t enclave_size = GET_ENCLAVE_TCB(enclave_size);
-        uintptr_t tracker_addr;
-        /* we reserve an addional page (the first page) to hold the metadata of the enclave page
-         * tracker */
-        ret = initial_mem_bkeep(ALIGN_UP(enclave_size / PAGE_SIZE / 8, 8) + PAGE_SIZE,
-                                &tracker_addr);
-        if (ret < 0) {
-            log_error("Reserve enclave page tracker memory failed");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-
-        ret = initialize_enclave_page_tracker(tracker_addr, (uintptr_t)g_enclave_base,
-                                              enclave_size);
-        if (ret < 0) {
-            log_error("Initialize enclave page tracker failed");
-            ocall_exit(1, /*is_exitgroup=*/true);
-        }
-    }
-
     if (parent_stream_fd < 0) {
         /* First process does not have reserved memory ranges. */
         urts_reserved_mem_ranges = NULL;
@@ -648,6 +627,17 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     init_slab_mgr();
+
+    /* initialize the enclave lazy commit page tracker as soon as we initialized the slab memory
+     * allocator */
+    if (edmm_enabled) {
+        ret = initialize_enclave_lazy_commit_page_tracker((uintptr_t)g_enclave_base,
+                                                          GET_ENCLAVE_TCB(enclave_size));
+        if (ret < 0) {
+            log_error("Initializing enclave lazy alloc page tracker failed");
+            ocall_exit(1, /*is_exitgroup=*/true);
+        }
+    }
 
     /* initialize enclave properties */
     ret = init_enclave();
@@ -731,7 +721,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
                   edmm_enabled);
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-    g_pal_public_state.edmm_enabled = edmm_enabled;
 
     int64_t rpc_thread_num;
     ret = toml_int_in(g_pal_public_state.manifest_root, "sgx.insecure__rpc_thread_num",

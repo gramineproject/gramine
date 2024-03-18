@@ -131,10 +131,7 @@ struct pal_dns_host_conf {
 struct pal_public_state {
     uint64_t instance_id;
     const char* host_type;
-
-    /* currently only for Linux-SGX */
-    const char* attestation_type;
-    bool edmm_enabled;
+    const char* attestation_type; /* currently only for Linux-SGX */
 
     /*
      * Handles and executables
@@ -1008,7 +1005,7 @@ void PalDebugMapRemove(void* start_addr);
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 /*!
- * \brief Get the committed pages of a given memory area via a bitvector.
+ * \brief Get the to-be-lazily-committed pages of a given memory area via a bitvector.
  *
  * \param         addr           Starting address of the memory area.
  * \param         size           Size of the memory area.
@@ -1019,6 +1016,21 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
  * be sent to the child process, as a perf optimization specific for SGX EDMM).
  */
-int PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
+int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
+
+/*!
+ * \brief Free the committed pages within a given memory area but automatically recommit them on
+ *        subsequent accesses.
+ *
+ * \param addr Starting address of the memory area.
+ * \param size Size of the memory area.
+ *
+ * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
+ * `[addr; addr+size)` must be a continuous memory range without any holes.
+ *
+ * This API is currently used for `madvise(MADV_DONTNEED)` logic to turn the pages into
+ * "lazy-alloc-on-access" states.
+ */
+int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size);
 
 #undef INSIDE_PAL_H

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Corporation
+/* Copyright (C) 2024 Intel Corporation
  *                    Borys Popławski <borysp@invisiblethingslab.com>
  *                    Kailun Qin <kailun.qin@intel.com>
  */
@@ -10,13 +10,15 @@
 #include "cpu.h"
 #include "enclave_ocalls.h"
 #include "pal_error.h"
+#include "pal_internal.h"
 #include "pal_linux_error.h"
 #include "pal_sgx.h"
 #include "sgx_arch.h"
 #include "spinlock.h"
 
 /*
- * Global enclave page tracker used for EDMM lazy allocation (based on a bitmap vector).
+ * Global enclave lazy commit page tracker (based on a two-level bit vector) used for EDMM lazy
+ * allocation.
  *
  * This is required for the memory free() flows, where we have to know whether the to-be-freed pages
  * were already EACCEPTed (so that we need to remove them) or not (so that we can simply skip them).
@@ -24,13 +26,13 @@
  * they're not trusted under the threat model of SGX; also no user-space SGX instruction is
  * currently giving such info.
  *
- * We don't use this page tracker to store info required in the #PF flows (e.g. enclave-page
- * permissions). Instead, we get this info from the LibOS VMA subsystem, for which we use a special
- * upcall, see g_mem_bkeep_get_vma_info_upcall.
+ * We don't use this lazy commit page tracker to store info required in the #PF flows (e.g.
+ * enclave-page permissions). Instead, we get this info from the LibOS VMA subsystem, for which we
+ * use a special upcall, see g_mem_bkeep_get_vma_info_upcall.
  */
-enclave_page_tracker_t* g_enclave_page_tracker = NULL;
+enclave_lazy_commit_page_tracker_t* g_enclave_lazy_commit_page_tracker = NULL;
 
-static spinlock_t g_enclave_page_tracker_lock = INIT_SPINLOCK_UNLOCKED;
+static spinlock_t g_enclave_lazy_commit_page_tracker_lock = INIT_SPINLOCK_UNLOCKED;
 
 static int sgx_eaccept(uint64_t addr, uint64_t flags) {
     alignas(64) sgx_arch_sec_info_t secinfo = {
@@ -138,17 +140,27 @@ static int sgx_edmm_add_pages_callback(uintptr_t addr, size_t count, void* prot)
     if (ret < 0)
         return ret;
 
-    set_enclave_addr_range(addr, count);
+    unset_enclave_lazy_commit_addr_range(addr, count);
     return 0;
 }
 
 static int sgx_edmm_remove_pages_callback(uintptr_t addr, size_t count,
-                                   void* unused __attribute__((unused))) {
+                                          void* unused __attribute__((unused))) {
     int ret = sgx_edmm_remove_pages(addr, count);
     if (ret < 0)
         return ret;
 
-    unset_enclave_addr_range(addr, count);
+    unset_enclave_lazy_commit_addr_range(addr, count);
+    return 0;
+}
+
+static int sgx_edmm_remove_then_lazy_realloc_pages_callback(uintptr_t addr, size_t count,
+                                                            void* unused __attribute__((unused))) {
+    int ret = sgx_edmm_remove_pages(addr, count);
+    if (ret < 0)
+        return ret;
+
+    set_enclave_lazy_commit_addr_range(addr, count);
     return 0;
 }
 
@@ -194,80 +206,96 @@ int sgx_edmm_set_page_permissions(uint64_t addr, size_t count, uint64_t prot) {
     return 0;
 }
 
-static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t count,
-                                               bool is_bitmap_page);
-
-/* initialize the enclave page tracker with the reserved tracker address, the specified enclave
- * memory base address and the enclave memory region size (in bytes) */
-int initialize_enclave_page_tracker(uintptr_t tracker_address, uintptr_t enclave_base_address,
-                                    size_t enclave_size) {
-    assert(!g_enclave_page_tracker);
+/* initialize the enclave lazy commit page tracker with the the specified enclave memory base
+ * address and the enclave memory region size (in bytes) */
+int initialize_enclave_lazy_commit_page_tracker(uintptr_t enclave_base_address,
+                                                size_t enclave_size) {
+    assert(!g_enclave_lazy_commit_page_tracker);
     assert(IS_ALIGNED(enclave_size, PAGE_SIZE));
 
-    /* use the first page of the reserved memory to store tracker metadata */
-    int ret = sgx_edmm_add_pages(tracker_address, /*count=*/1,
-                                 PAL_TO_SGX_PROT(PAL_PROT_READ | PAL_PROT_WRITE));
-    if (ret < 0)
-        return ret;
-    memset((void*)tracker_address, 0, PAGE_SIZE);
-    g_enclave_page_tracker = (enclave_page_tracker_t*)tracker_address;
-    g_enclave_page_tracker->enclave_base_address = enclave_base_address;
-    g_enclave_page_tracker->enclave_pages = enclave_size / PAGE_SIZE;
-    g_enclave_page_tracker->data = (uint8_t*)(tracker_address + PAGE_SIZE);
+    size_t num_enclave_pages = UDIV_ROUND_UP(enclave_size, PAGE_SIZE);
+    enclave_lazy_commit_page_tracker_t* tracker = malloc(sizeof(*tracker));
+    if (!tracker)
+        return -PAL_ERROR_NOMEM;
+    tracker->enclave_base_address = enclave_base_address;
+    tracker->enclave_pages = enclave_size / PAGE_SIZE;
 
-    ret = maybe_allocate_bitmap_pages_eagerly(tracker_address, /*count=*/1,
-                                              /*is_bitmap_page=*/true);
-    if (ret < 0)
-        return ret;
+    size_t lazy_commit_status_size = UDIV_ROUND_UP(num_enclave_pages, 8);
+    uintptr_t lazy_commit_status_addr;
+    int ret = initial_mem_bkeep(lazy_commit_status_size, &lazy_commit_status_addr);
+    if (ret < 0) {
+        log_error("Reserving the bitvector for lazy commit pages status failed");
+        goto out;
+    }
+    tracker->lazy_commit_status = (uint8_t*)(lazy_commit_status_addr);
 
-    return 0;
+    size_t bitvector_alloc_status_pages = UDIV_ROUND_UP(lazy_commit_status_size, PAGE_SIZE);
+    size_t bitvector_alloc_status_size = UDIV_ROUND_UP(bitvector_alloc_status_pages, 8);
+    tracker->bitvector_alloc_status = calloc(1, bitvector_alloc_status_size);
+    if (!tracker->bitvector_alloc_status) {
+        ret = -PAL_ERROR_NOMEM;
+        goto out;
+    }
+
+    g_enclave_lazy_commit_page_tracker = tracker;
+    ret = 0;
+out:
+    if (ret < 0) {
+        free(tracker->bitvector_alloc_status);
+        free(tracker);
+    }
+
+    return ret;
 }
 
 /* convert an address to an index in the page tracker */
 static inline size_t address_to_index(uintptr_t address) {
-    return (address - g_enclave_page_tracker->enclave_base_address) / PAGE_SIZE;
+    return (address - g_enclave_lazy_commit_page_tracker->enclave_base_address) / PAGE_SIZE;
 }
 
 /* convert an index in the page tracker to an address */
 static inline uintptr_t index_to_address(size_t index) {
-    return g_enclave_page_tracker->enclave_base_address + index * PAGE_SIZE;
+    return g_enclave_lazy_commit_page_tracker->enclave_base_address + index * PAGE_SIZE;
 }
 
-/* set an enclave page as allocated in the page tracker */
-static inline void set_enclave_page(size_t index) {
-    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
-    g_enclave_page_tracker->data[index / 8] |= 1 << (index % 8);
+/* set an enclave page as to-be-lazily-committed in the tracker */
+static inline void set_enclave_lazy_commit_page(size_t index) {
+    assert(spinlock_is_locked(&g_enclave_lazy_commit_page_tracker_lock));
+    g_enclave_lazy_commit_page_tracker->lazy_commit_status[index / 8] |= 1 << (index % 8);
 }
 
-/* set an enclave page as free in the page tracker */
-static inline void unset_enclave_page(size_t index) {
-    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
-    g_enclave_page_tracker->data[index / 8] &= ~(1 << (index % 8));
+/* unset a to-be-lazily-committed enclave page in the tracker */
+static inline void unset_enclave_lazy_commit_page(size_t index) {
+    assert(spinlock_is_locked(&g_enclave_lazy_commit_page_tracker_lock));
+    g_enclave_lazy_commit_page_tracker->lazy_commit_status[index / 8] &= ~(1 << (index % 8));
 }
 
-/* check if an enclave page is allocated in the page tracker */
-static inline bool is_enclave_page_set(size_t index) {
-    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
-    return (g_enclave_page_tracker->data[index / 8] & (1 << (index % 8))) != 0;
+/* check if an enclave page is to-be-lazily-committed in the tracker */
+static inline bool is_enclave_lazy_commit_page_set(size_t index) {
+    assert(spinlock_is_locked(&g_enclave_lazy_commit_page_tracker_lock));
+    return (g_enclave_lazy_commit_page_tracker->lazy_commit_status[index / 8] &
+            (1 << (index % 8))) != 0;
 }
 
-/* set a range of enclave pages as allocated according to the memory address and number of pages */
-void set_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
+/* set a range of enclave pages as to-be-lazily-committed according to the memory address and number
+ * of pages */
+void set_enclave_lazy_commit_addr_range(uintptr_t start_addr, size_t num_pages) {
+    assert(spinlock_is_locked(&g_enclave_lazy_commit_page_tracker_lock));
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * PAGE_SIZE;
         size_t index = address_to_index(address);
-        set_enclave_page(index);
+        set_enclave_lazy_commit_page(index);
     }
 }
 
-/* set a range of enclave pages as free according to the memory address and number of pages */
-void unset_enclave_addr_range(uintptr_t start_addr, size_t num_pages) {
-    assert(spinlock_is_locked(&g_enclave_page_tracker_lock));
+/* unset a range of to-be-lazily-committed enclave pages according to the memory address and number
+ * of pages */
+void unset_enclave_lazy_commit_addr_range(uintptr_t start_addr, size_t num_pages) {
+    assert(spinlock_is_locked(&g_enclave_lazy_commit_page_tracker_lock));
     for (size_t i = 0; i < num_pages; i++) {
         uintptr_t address = start_addr + i * PAGE_SIZE;
         size_t index = address_to_index(address);
-        unset_enclave_page(index);
+        unset_enclave_lazy_commit_page(index);
     }
 }
 
@@ -277,8 +305,10 @@ static void copy_bitvector_with_offset(uint8_t* dest_bitvector, size_t dest_bitv
     assert(dest_bitvector != NULL);
     assert(src_bitvector != NULL);
     assert(src_bitvector_size >= dest_bitvector_size);
-    assert(src_bitvector_size > 0);
     assert(src_offset < 8);
+
+    if (src_bitvector_size == 0)
+        return;
 
     if (src_offset == 0) {
         memcpy((void*)dest_bitvector, (void*)src_bitvector, dest_bitvector_size);
@@ -292,26 +322,28 @@ static void copy_bitvector_with_offset(uint8_t* dest_bitvector, size_t dest_bitv
     }
 }
 
-/* get a copy of bitvector slice reflecting pages starting from `addr` and with `size` in length;
- * on success, also give the actual size of the bitvector slice */
-int get_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
+/* get a copy of bitvector slice reflecting the to-be-lazily-committed pages starting from `addr`
+ * and with `size` in length; on success, also give the actual size of the bitvector slice */
+int get_lazy_commit_bitvector_slice(uintptr_t addr, size_t size, uint8_t* bitvector,
+                                    size_t* bitvector_size) {
     size_t start_page = address_to_index(addr);
-    size_t num_pages = ALIGN_UP(size, PAGE_SIZE) / PAGE_SIZE;
 
+    size_t num_pages = size / PAGE_SIZE;
     size_t num_bytes = ALIGN_UP(num_pages, 8) / 8;
     if (num_bytes > *bitvector_size)
         return -PAL_ERROR_NOMEM;
 
     size_t start_byte = start_page / 8;
     size_t start_offset = start_page % 8;
-    size_t src_bitvector_size = ALIGN_UP(g_enclave_page_tracker->enclave_pages, 8) / 8 - start_byte;
+    size_t src_bitvector_size =
+        UDIV_ROUND_UP(g_enclave_lazy_commit_page_tracker->enclave_pages, 8) - start_byte;
     *bitvector_size = MIN(num_bytes, src_bitvector_size);
 
-    spinlock_lock(&g_enclave_page_tracker_lock);
+    spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
     copy_bitvector_with_offset(bitvector, *bitvector_size,
-                               &g_enclave_page_tracker->data[start_byte], src_bitvector_size,
-                               start_offset);
-    spinlock_unlock(&g_enclave_page_tracker_lock);
+                               &g_enclave_lazy_commit_page_tracker->lazy_commit_status[start_byte],
+                               src_bitvector_size, start_offset);
+    spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
 
     size_t leftover_pages = num_pages % 8;
     if (leftover_pages)
@@ -330,17 +362,17 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
     size_t start = address_to_index(start_addr);
     size_t end = start + count;
 
-    spinlock_lock(&g_enclave_page_tracker_lock);
+    spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
 
     size_t i = start;
-    while (i < end && i < g_enclave_page_tracker->enclave_pages) {
+    while (i < end && i < g_enclave_lazy_commit_page_tracker->enclave_pages) {
         /* find consecutive set/unset pages */
-        bool is_page_set = is_enclave_page_set(i);
+        bool is_page_set = is_enclave_lazy_commit_page_set(i);
         if (is_page_set == walk_set_pages) {
             uintptr_t consecutive_start_addr = index_to_address(i);
             size_t consecutive_count = 0;
-            while (i < end && i < g_enclave_page_tracker->enclave_pages
-                           && is_enclave_page_set(i) == walk_set_pages) {
+            while (i < end && i < g_enclave_lazy_commit_page_tracker->enclave_pages
+                           && is_enclave_lazy_commit_page_set(i) == walk_set_pages) {
                 consecutive_count++;
                 i++;
             }
@@ -354,96 +386,117 @@ static int walk_pages(uintptr_t start_addr, size_t count, bool walk_set_pages,
         }
     }
 
-    spinlock_unlock(&g_enclave_page_tracker_lock);
+    spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
 
     return ret;
 }
 
-/* allocate a bitmap page if not already allocated; returns 1 if the page was newly allocated, 0 if
- * it was already allocated, and negative value on error */
-static int maybe_allocate_bitmap_page(size_t bitmap_page_index) {
-    int ret = 0;
+static int maybe_alloc_bitvector_pages_eagerly(uintptr_t start_addr, size_t count) {
+    size_t start_bitvector_index = address_to_index(start_addr);
+    size_t end_bitvector_index = start_bitvector_index + count;
 
-    spinlock_lock(&g_enclave_page_tracker_lock);
+    for (size_t bitvector_index = start_bitvector_index; bitvector_index < end_bitvector_index;
+         bitvector_index++) {
+        size_t bitvector_page_index = bitvector_index / (PAGE_SIZE * 8);
 
-    if ((g_enclave_page_tracker->bitmap_pages_status[bitmap_page_index / 8]
-            & (1 << (bitmap_page_index % 8))) == 0) {
-        ret = sgx_edmm_add_pages(
-                (uintptr_t)g_enclave_page_tracker->data + bitmap_page_index * PAGE_SIZE,
+        spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
+
+        if ((g_enclave_lazy_commit_page_tracker->bitvector_alloc_status[bitvector_page_index / 8]
+                & (1 << (bitvector_page_index % 8))) == 0) {
+            int ret = sgx_edmm_add_pages(
+                (uintptr_t)g_enclave_lazy_commit_page_tracker->lazy_commit_status +
+                bitvector_page_index * PAGE_SIZE,
                 /*count=*/1, PAL_TO_SGX_PROT(PAL_PROT_READ | PAL_PROT_WRITE));
-        if (ret < 0) {
-            spinlock_unlock(&g_enclave_page_tracker_lock);
-            return ret;
-        }
-
-        g_enclave_page_tracker->bitmap_pages_status[bitmap_page_index / 8]
-                                |= 1 << (bitmap_page_index % 8);
-        ret = 1;
-    }
-
-    spinlock_unlock(&g_enclave_page_tracker_lock);
-    return ret;
-}
-
-/* `is_bitmap_page` indicates whether the pages being checked are bitmap pages -- if true, a new
- * bitmap page is allocated where we need to mark itself as committed in the enclave page tracker;
- * if false, it's a regular (non-bitmap) page being checked where we do not need to update the
- * allocation status since it will be updated later when the page is actually committed. */
-static int maybe_allocate_bitmap_pages_eagerly(uintptr_t start_addr, size_t count,
-                                               bool is_bitmap_page) {
-    size_t start_bitmap_index = address_to_index(start_addr);
-    size_t end_bitmap_index = start_bitmap_index + count;
-
-    for (size_t bitmap_index = start_bitmap_index; bitmap_index < end_bitmap_index;
-         bitmap_index++) {
-        size_t bitmap_page_index = bitmap_index / (PAGE_SIZE * 8);
-
-        int ret = maybe_allocate_bitmap_page(bitmap_page_index);
-        if (ret < 0)
-            return ret;
-
-        if (ret == 1) {
-            ret = maybe_allocate_bitmap_pages_eagerly(
-                    (uintptr_t)g_enclave_page_tracker->data + bitmap_page_index * PAGE_SIZE,
-                    /*count=*/1, /*is_bitmap_page=*/true);
-            if (ret < 0)
+            if (ret < 0) {
+                spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
                 return ret;
+            }
+
+            g_enclave_lazy_commit_page_tracker->bitvector_alloc_status[bitvector_page_index / 8]
+                                                |= 1 << (bitvector_page_index % 8);
         }
 
-        if (is_bitmap_page) {
-            assert(count == 1);
-            spinlock_lock(&g_enclave_page_tracker_lock);
-            set_enclave_addr_range(start_addr, count);
-            spinlock_unlock(&g_enclave_page_tracker_lock);
-        }
+        spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
     }
 
     return 0;
 }
 
 int uncommit_pages(uintptr_t start_addr, size_t count) {
-    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
+    assert(g_enclave_lazy_commit_page_tracker);
+
+    int ret = maybe_alloc_bitvector_pages_eagerly(start_addr, count);
     if (ret < 0)
         return ret;
 
-    return walk_pages(start_addr, count, /*walk_set_pages=*/true, sgx_edmm_remove_pages_callback,
+    return walk_pages(start_addr, count, /*walk_set_pages=*/false, sgx_edmm_remove_pages_callback,
                       NULL);
 }
 
-int commit_pages(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
+int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t count) {
+    assert(g_enclave_lazy_commit_page_tracker);
+
+    int ret = maybe_alloc_bitvector_pages_eagerly(start_addr, count);
     if (ret < 0)
         return ret;
 
-    return walk_pages(start_addr, count, /*walk_set_pages=*/false, sgx_edmm_add_pages_callback,
-                      &prot_flags);
+    return walk_pages(start_addr, count, /*walk_set_pages=*/false,
+                      sgx_edmm_remove_then_lazy_realloc_pages_callback, NULL);
 }
 
-int set_committed_page_permissions(uintptr_t start_addr, size_t count, uint64_t prot_flags) {
-    int ret = maybe_allocate_bitmap_pages_eagerly(start_addr, count, /*is_bitmap_page=*/false);
+int maybe_commit_pages(uintptr_t start_addr, size_t count, pal_prot_flags_t prot) {
+    int ret;
+    uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
+
+    if (g_enclave_lazy_commit_page_tracker) {
+        ret = maybe_alloc_bitvector_pages_eagerly(start_addr, count);
+        if (ret < 0)
+            return ret;
+
+        if (prot & PAL_PROT_LAZYALLOC) {
+            /* defer page accepts to page-fault events when `PAL_PROT_LAZYALLOC` is set */
+            assert(g_enclave_lazy_commit_page_tracker);
+
+            spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
+            set_enclave_lazy_commit_addr_range(start_addr, count);
+            spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
+            return 0;
+        }
+
+        ret = walk_pages(start_addr, count, /*walk_set_pages=*/false, sgx_edmm_add_pages_callback,
+                         &prot_flags);
+    } else {
+        /* for enclave pages allocated when the tracker is not ready (on bootstrap) */
+        ret = sgx_edmm_add_pages(start_addr, count, prot_flags);
+    }
+
+    return ret;
+}
+
+int commit_lazy_alloc_pages(uintptr_t start_addr, size_t count, pal_prot_flags_t prot) {
+    assert(g_enclave_lazy_commit_page_tracker);
+
+    int ret = maybe_alloc_bitvector_pages_eagerly(start_addr, count);
     if (ret < 0)
         return ret;
 
-    return walk_pages(start_addr, count, /*walk_set_pages=*/true,
+    uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
+    ret = walk_pages(start_addr, count, /*walk_set_pages=*/true, sgx_edmm_add_pages_callback,
+                     &prot_flags);
+    if (ret < 0)
+        return ret;
+
+    return 0;
+}
+
+int set_committed_page_permissions(uintptr_t start_addr, size_t count, pal_prot_flags_t prot) {
+    assert(g_enclave_lazy_commit_page_tracker);
+
+    int ret = maybe_alloc_bitvector_pages_eagerly(start_addr, count);
+    if (ret < 0)
+        return ret;
+
+    uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
+    return walk_pages(start_addr, count, /*walk_set_pages=*/false,
                       sgx_edmm_set_page_permissions_callback, &prot_flags);
 }

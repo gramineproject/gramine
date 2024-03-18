@@ -80,24 +80,32 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-/* Get the committed pages of a given memory area; return all-ones on Linux PAL. */
-int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
+/* Get the to-be-lazily committed pages of a given memory area; return all-zeros on Linux PAL. */
+int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector,
+                           size_t* bitvector_size) {
     __UNUSED(addr);
+    assert(size && IS_ALIGNED(size, PAGE_SIZE));
     assert(bitvector);
     assert(bitvector_size);
 
-    size_t num_pages = ALIGN_UP(size, g_page_size) / g_page_size;
-    size_t num_bytes = ALIGN_UP(num_pages, 8) / 8;
+    size_t num_pages = size / g_page_size;
+    size_t num_bytes = UDIV_ROUND_UP(num_pages, 8);
     if (num_bytes > *bitvector_size) {
         return -PAL_ERROR_NOMEM;
     }
     *bitvector_size = num_bytes;
 
-    memset(bitvector, 0xFF, num_bytes);
+    memset(bitvector, 0, num_bytes);
 
     size_t leftover_pages = num_pages % 8;
     if (leftover_pages)
-        bitvector[num_bytes - 1] = (1 << leftover_pages) - 1;
+        bitvector[num_bytes - 1] &= ~((1 << leftover_pages) - 1);
 
+    return 0;
+}
+
+int _PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
+    /* We simiply `memset()` to have zero-filled pages on subsequent accesses. */
+    memset(addr, 0, size);
     return 0;
 }

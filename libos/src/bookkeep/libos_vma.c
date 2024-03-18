@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  * Copyright (C) 2020 Invisible Things Lab
+ * Copyright (C) 2024 Intel Corporation
+ *                    Kailun Qin <kailun.qin@intel.com>
  */
 
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
@@ -1333,12 +1335,9 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 
     uintptr_t start = MAX(ctx->begin, vma->begin);
     uintptr_t end = MIN(ctx->end, vma->end);
-    if (g_pal_public_state->edmm_enabled) {
-        if (PalVirtualMemoryFree((void*)start, end - start) < 0)
-            return false;
-    } else {
-        memset((void*)start, 0, end - start);
-    }
+    if (PalFreeThenLazyReallocCommittedPages((void*)start, end - start) < 0)
+        return false;
+
     return true;
 }
 
@@ -1461,27 +1460,33 @@ BEGIN_CP_FUNC(vma) {
                 assert(IS_ALLOC_ALIGNED_PTR(vma->addr));
                 assert(IS_ALLOC_ALIGNED(vma->length));
 
-                size_t bitvector_size = ALIGN_UP(vma->length / PAGE_SIZE, 8) / 8;
+                size_t vma_pages = vma->length / PAGE_SIZE;
+                size_t bitvector_size = UDIV_ROUND_UP(vma_pages, 8);
                 uint8_t* bitvector = calloc(1, bitvector_size);
                 if (!bitvector)
                     return -ENOMEM;
 
-                int ret = PalGetCommittedPages((uintptr_t)vma->addr, vma->length, bitvector,
-                                               &bitvector_size);
+                int ret = PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector,
+                                                &bitvector_size);
                 if (ret < 0) {
                     free(bitvector);
                     return pal_to_unix_errno(ret);
                 }
 
+                size_t last_byte_max_bit_idx = (vma_pages % 8) ? (vma_pages % 8) : 8;
                 for (size_t byte_idx = 0; byte_idx < bitvector_size; byte_idx++) {
                     uint8_t byte = bitvector[byte_idx];
-                    for (size_t bit_idx = 0; bit_idx < 8; bit_idx++) {
-                        if (byte & (1 << bit_idx)) {
-                            struct libos_mem_entry* mem;
-                            DO_CP_SIZE(memory, vma->addr + (byte_idx * 8 + bit_idx) * PAGE_SIZE,
-                                       PAGE_SIZE, &mem);
-                            mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
-                        }
+                    size_t max_bit_idx = (byte_idx == bitvector_size - 1) ?
+                                         last_byte_max_bit_idx : 8;
+                    for (size_t bit_idx = 0; bit_idx < max_bit_idx; bit_idx++) {
+                        /* skip the to-be-lazily-committed pages */
+                        if ((byte & (1 << bit_idx)))
+                            continue;
+
+                        struct libos_mem_entry* mem;
+                        DO_CP_SIZE(memory, vma->addr + (byte_idx * 8 + bit_idx) * PAGE_SIZE,
+                                   PAGE_SIZE, &mem);
+                        mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                     }
                 }
                 free(bitvector);

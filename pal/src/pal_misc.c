@@ -52,6 +52,19 @@ int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
 
-int PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
-    return _PalGetCommittedPages(addr, size, bitvector, bitvector_size);
+int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size) ||
+        !bitvector || !bitvector_size) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    return _PalGetLazyCommitPages(addr, size, bitvector, bitvector_size);
+}
+
+int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
+    if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    return _PalFreeThenLazyReallocCommittedPages(addr, size);
 }

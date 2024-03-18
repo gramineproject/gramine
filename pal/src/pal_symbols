@@ -52,4 +52,5 @@ PalAttestationQuote
 PalGetSpecialKey
 PalDebugLog
 PalGetPalPublicState
-PalGetCommittedPages
+PalGetLazyCommitPages
+PalFreeThenLazyReallocCommittedPages

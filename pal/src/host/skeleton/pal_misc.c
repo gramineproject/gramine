@@ -64,10 +64,15 @@ double _PalGetBogomips(void) {
     return 0.0;
 }
 
-int _PalGetCommittedPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size) {
+int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector,
+                           size_t* bitvector_size) {
     __UNUSED(addr);
     __UNUSED(size);
     __UNUSED(bitvector);
     __UNUSED(bitvector_size);
+    return -PAL_ERROR_NOTIMPLEMENTED;
+}
+
+int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }

@@ -26,14 +26,7 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        /* defer page accepts to page-fault events when `PAL_PROT_LAZYALLOC` is set */
-        if (prot & PAL_PROT_LAZYALLOC)
-            return 0;
-
-        uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
-
-        assert(g_enclave_page_tracker);
-        int ret = commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot_flags);
+        int ret = maybe_commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot);
         if (ret < 0)
             return ret;
     } else {
@@ -59,7 +52,6 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
                && addr + size <= g_pal_linuxsgx_state.heap_max);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
-            assert(g_enclave_page_tracker);
             int ret = uncommit_pages((uintptr_t)addr, size / PAGE_SIZE);
             if (ret < 0)
                 return ret;
@@ -87,7 +79,6 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        assert(g_enclave_page_tracker);
         int ret = set_committed_page_permissions((uintptr_t)addr, size / PAGE_SIZE,
                                                  PAL_TO_SGX_PROT(prot));
         if (ret < 0)

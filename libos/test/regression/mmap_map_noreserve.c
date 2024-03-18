@@ -12,9 +12,9 @@
  * actually-accessed enclave pages will be copied to the child enclave). This test also stresses
  * races between several threads on the same lazily-allocated page.
  *
- * Therefore, on EDMM-enabled platforms, the test is supposed to be significantly faster than on
- * non-EDMM-enabled platforms. But functionality-wise it will be the same. For example, on an ICX
- * machine, this test takes ~0.9s with EDMM enabled and ~12.6s with EDMM disabled.
+ * Therefore, on platforms with EDMM support, the test is supposed to be significantly faster than
+ * on platforms without EDMM support. But functionality-wise it will be the same. For example, on an
+ * ICX machine, this test takes ~0.6s with EDMM enabled and ~13s with EDMM disabled.
  */
 
 #define _GNU_SOURCE
@@ -35,7 +35,6 @@
 #include "common.h"
 
 #define NUM_THREADS 5
-#define PAGE_SIZE (1ul << 12)
 #define TEST_FILE "testfile_map_noreserve"
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2  0xC000000
@@ -43,25 +42,21 @@
 #define TEST_RACE_NUM_ITERATIONS 100
 
 static int g_urandom_fd;
+static size_t g_page_size;
 
 static bool g_write_failed;
 static bool g_read_failed;
 
 void mem_write(void* addr, uint8_t val) __attribute__((visibility("internal")));
 uint8_t mem_read(void* addr) __attribute__((visibility("internal")));
-static bool is_pc_at_func(uintptr_t pc, void (*func)(void));
-static void fixup_context_after_write(ucontext_t* context);
-static void fixup_context_after_read(ucontext_t* context);
 
 #ifdef __x86_64__
 void ret(void) __attribute__((visibility("internal")));
-void end_of_ret(void) __attribute__((visibility("internal")));
 __asm__ (
 ".pushsection .text\n"
 ".type mem_write, @function\n"
 ".type mem_read, @function\n"
 ".type ret, @function\n"
-".type end_of_ret, @function\n"
 "mem_write:\n"
     "movb %sil, (%rdi)\n"
     "ret\n"
@@ -70,43 +65,30 @@ __asm__ (
     "ret\n"
 "ret:\n"
     "ret\n"
-"end_of_ret:\n"
 ".popsection\n"
 );
-
-static bool is_pc_at_func(uintptr_t pc, void (*func)(void)) {
-    return pc == (uintptr_t)func;
-}
-
-static void fixup_context_after_write(ucontext_t* context) {
-    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
-}
-
-static void fixup_context_after_read(ucontext_t* context) {
-    context->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
-    context->uc_mcontext.gregs[REG_RAX] = 0;
-}
-
-#else
-#error Unsupported architecture
-#endif
 
 static void memfault_handler(int signum, siginfo_t* info, void* context) {
     ucontext_t* uc = (ucontext_t*)context;
     uintptr_t pc = uc->uc_mcontext.gregs[REG_RIP];
 
-    if (is_pc_at_func(pc, (void (*)(void))mem_write)) {
-        fixup_context_after_write(uc);
+    if (pc == (uintptr_t)mem_write) {
+        uc->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
         g_write_failed = true;
         return;
-    } else if (is_pc_at_func(pc, (void (*)(void))mem_read)) {
-        fixup_context_after_read(uc);
+    } else if (pc == (uintptr_t)mem_read) {
+        uc->uc_mcontext.gregs[REG_RIP] = (greg_t)ret;
+        uc->uc_mcontext.gregs[REG_RAX] = 0;
         g_read_failed = true;
         return;
     }
 
     errx(1, "unexpected memory fault at: %#lx (pc: %#lx)\n", (uintptr_t)info->si_addr, pc);
 }
+
+#else
+#error Unsupported architecture
+#endif
 
 static unsigned long get_random_ulong(void) {
     unsigned long random_num;
@@ -123,16 +105,16 @@ static unsigned long get_random_ulong(void) {
 static void* thread_func(void* arg) {
     int ret;
     char data;
-    size_t num_pages = TEST_LENGTH3 / PAGE_SIZE;
+    size_t num_pages = TEST_LENGTH3 / g_page_size;
 
     for (int i = 0; i < TEST_RACE_NUM_ITERATIONS; i++) {
         size_t page = get_random_ulong() % num_pages;
-        data = READ_ONCE(((char*)arg)[page * PAGE_SIZE]);
+        data = READ_ONCE(((char*)arg)[page * g_page_size]);
         if (data != 0)
             return (void*)1;
 
         page = get_random_ulong() % num_pages;
-        ret = madvise(arg + page * PAGE_SIZE, PAGE_SIZE, MADV_DONTNEED);
+        ret = madvise(arg + page * g_page_size, g_page_size, MADV_DONTNEED);
         if (ret)
             return (void*)1;
     }
@@ -142,6 +124,7 @@ static void* thread_func(void* arg) {
 int main(void) {
     setbuf(stdout, NULL);
     g_urandom_fd = CHECK(open("/dev/urandom", O_RDONLY));
+    g_page_size = getpagesize();
 
     struct sigaction action = {
         .sa_sigaction = memfault_handler,
