@@ -132,10 +132,6 @@ static void* allocate_stack(size_t size, size_t protect_size, bool user) {
         goto out_fail;
     }
 
-    if (PalVirtualMemoryProtect(stack + protect_size, size, PAL_PROT_READ | PAL_PROT_WRITE) < 0) {
-        goto out_fail;
-    }
-
     return stack + protect_size;
 
 out_fail:;

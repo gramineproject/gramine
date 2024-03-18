@@ -97,7 +97,7 @@ int alloc_thread_libos_stack(struct libos_thread* thread) {
     need_mem_free = true;
 
     /* Create a stack guard page. */
-    ret = PalVirtualMemoryProtect(addr, PAGE_SIZE, /*prot=*/0);
+    ret = bkeep_mprotect(addr, PAGE_SIZE, /*prot=*/0, /*is_internal=*/true);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto unmap;
