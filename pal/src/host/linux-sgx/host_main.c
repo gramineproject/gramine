@@ -274,6 +274,27 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     enclave->baseaddr = DEFAULT_ENCLAVE_BASE;
     enclave_heap_min  = MMAP_MIN_ADDR;
 
+    /* Print a user-friendly error if enclave range overlaps with some hardcoded regions in
+     * untrusted memory. */
+    if (ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
+                       SHARED_ADDR_MIN, SHARED_ADDR_MIN + SHARED_MEM_SIZE)
+        || ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
+                          DBGINFO_ADDR, DBGINFO_ADDR + sizeof(struct enclave_dbginfo))) {
+        log_error("Enclave range collides with shared memory or debug range. Consider reducing "
+                  "enclave size.");
+        ret = -EINVAL;
+        goto out;
+
+    }
+#ifdef ASAN
+    if (ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
+                       ASAN_SHADOW_START, ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)) {
+        log_error("Enclave range collides with ASan range. Consider reducing enclave size.");
+        ret = -EINVAL;
+        goto out;
+    }
+#endif
+
     sig_path = alloc_concat(g_pal_enclave.application_path, -1, ".sig", -1);
     if (!sig_path) {
         ret = -ENOMEM;

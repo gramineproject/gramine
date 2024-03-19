@@ -637,6 +637,14 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     g_pal_public_state.memory_address_start = g_pal_linuxsgx_state.heap_min;
     g_pal_public_state.memory_address_end = g_pal_linuxsgx_state.heap_max;
 
+    if (ranges_overlap((uintptr_t)g_enclave_base, (uintptr_t)g_enclave_top,
+                       SHARED_ADDR_MIN, SHARED_ADDR_MIN + SHARED_MEM_SIZE)
+        || ranges_overlap((uintptr_t)g_enclave_base, (uintptr_t)g_enclave_top,
+                       DBGINFO_ADDR, DBGINFO_ADDR + sizeof(struct enclave_dbginfo))) {
+        /* This should have been already checked by untrusted PAL with a more descriptive error */
+        log_error("Enclave overlaps with some hardcoded regions");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
     static_assert(SHARED_ADDR_MIN >= DBGINFO_ADDR + sizeof(struct enclave_dbginfo)
                       || DBGINFO_ADDR >= SHARED_ADDR_MIN + SHARED_MEM_SIZE,
                   "SHARED_ADDR overlaps with DBGINFO_ADDR");
