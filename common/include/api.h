@@ -407,6 +407,16 @@ int buf_flush(struct print_buf* buf);
 #define TIME_NS_IN_US 1000ul
 #define TIME_NS_IN_S (TIME_NS_IN_US * TIME_US_IN_S)
 
+/* ranges are inclusive-exclusive - [start, end) */
+static inline bool ranges_overlap(uintptr_t a_start, uintptr_t a_end,
+                                  uintptr_t b_start, uintptr_t b_end) {
+    assert(a_start <= a_end);
+    assert(b_start <= b_end);
+    if (a_start == a_end || b_start == b_end)
+        return false; // an empty range doesn't overlap with anything
+    return !(a_end <= b_start || b_end <= a_start);
+}
+
 #ifdef __x86_64__
 static inline bool __range_not_ok(uintptr_t addr, size_t size) {
     addr += size;
