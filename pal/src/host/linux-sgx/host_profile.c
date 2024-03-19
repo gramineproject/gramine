@@ -108,24 +108,26 @@ int sgx_profile_init(void) {
     int ret;
 
     assert(!g_profile_enabled);
-    assert(g_mem_fd == -1);
     assert(!g_perf_data);
 
     g_profile_period = NSEC_IN_SEC / g_pal_enclave.profile_frequency;
     g_profile_mode = g_pal_enclave.profile_mode;
 
-    ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
-    if (ret < 0) {
-        log_error("sgx_profile_init: opening /proc/self/mem failed: %s", unix_strerror(ret));
-        goto out;
+    // File `/proc/self/mem` is open once and remain open during the lifecycle of the process
+    if (g_mem_fd < 0) {
+        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
+        if (ret < 0) {
+            log_error("sgx_profile_init: opening /proc/self/mem failed: %s", unix_strerror(ret));
+            return ret;
+        }
+        g_mem_fd = ret;
     }
-    g_mem_fd = ret;
 
     struct timespec ts;
     ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
     if (ret < 0) {
         log_error("sgx_profile_init: clock_gettime failed: %s", unix_strerror(ret));
-        goto out;
+        return ret;
     }
 
     snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
@@ -134,8 +136,7 @@ int sgx_profile_init(void) {
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
-        ret = -EINVAL;
-        goto out;
+        return -EINVAL;
     }
     g_perf_data = pd;
 
@@ -149,15 +150,6 @@ int sgx_profile_init(void) {
     return 0;
 
 out:
-    if (g_mem_fd > 0) {
-        int close_ret = DO_SYSCALL(close, g_mem_fd);
-        if (close_ret < 0) {
-            log_error("sgx_profile_init: closing /proc/self/mem failed: %s",
-                      unix_strerror(close_ret));
-        }
-        g_mem_fd = -1;
-    }
-
     if (g_perf_data) {
         ssize_t close_ret = pd_close(g_perf_data);
         if (close_ret < 0) {
@@ -169,7 +161,6 @@ out:
 }
 
 static void sgx_profile_finish_thread_unsafe(void) {
-    int ret;
     ssize_t size;
 
     if (!g_profile_enabled)
@@ -179,11 +170,6 @@ static void sgx_profile_finish_thread_unsafe(void) {
     if (size < 0)
         log_error("sgx_profile_finish: pd_close failed: %s", unix_strerror(size));
     g_perf_data = NULL;
-
-    ret = DO_SYSCALL(close, g_mem_fd);
-    if (ret < 0)
-        log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
-    g_mem_fd = -1;
 
     log_always("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
 
