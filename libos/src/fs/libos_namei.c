@@ -47,7 +47,7 @@ static struct libos_dentry* lookup_dcache_or_create(struct libos_dentry* parent,
 
 /* Performs lookup operation in the underlying filesystem. Treats -ENOENT from lookup operation as
  * success (but leaves the dentry negative). */
-static int lookup_dentry(struct libos_dentry* dent) {
+static int lookup_dentry(struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
 
     if (dent->inode)
@@ -56,7 +56,7 @@ static int lookup_dentry(struct libos_dentry* dent) {
     assert(dent->mount);
     assert(dent->mount->fs->d_ops);
     assert(dent->mount->fs->d_ops->lookup);
-    int ret = dent->mount->fs->d_ops->lookup(dent);
+    int ret = dent->mount->fs->d_ops->lookup(dent, flags & LOOKUP_SKIP_INODE_SETUP);
     if (ret < 0) {
         assert(!dent->inode);
         /* Treat -ENOENT as successful lookup (but leave the dentry negative) */
@@ -98,7 +98,8 @@ out:
 /*!
  * \brief Traverse mountpoints and look up a dentry.
  *
- * \param[in,out] dent  The dentry.
+ * \param[in,out] dent   The dentry.
+ * \param[in]     flags  Lookup flags (currently only LOOKUP_SKIP_INODE_SETUP is used).
  *
  * \returns 0 on success, negative error code otherwise.
  *
@@ -112,7 +113,7 @@ out:
  *
  * The caller should hold `g_dcache_lock`.
  */
-static int traverse_mount_and_lookup(struct libos_dentry** dent) {
+static int traverse_mount_and_lookup(struct libos_dentry** dent, int flags) {
     assert(locked(&g_dcache_lock));
 
     struct libos_dentry* cur_dent = *dent;
@@ -120,7 +121,7 @@ static int traverse_mount_and_lookup(struct libos_dentry** dent) {
         cur_dent = cur_dent->attached_mount->root;
     }
 
-    int ret = lookup_dentry(cur_dent);
+    int ret = lookup_dentry(cur_dent, flags);
     if (ret < 0)
         return ret;
 
@@ -157,7 +158,7 @@ static int lookup_enter_dentry(struct lookup* lookup) {
     bool is_final = (*lookup->name == '\0');
     bool has_slash = lookup->has_slash;
 
-    if ((ret = traverse_mount_and_lookup(&lookup->dent)) < 0)
+    if ((ret = traverse_mount_and_lookup(&lookup->dent, lookup->flags)) < 0)
         return ret;
 
     if (lookup->dent->inode && lookup->dent->inode->type == S_IFLNK) {
@@ -630,7 +631,7 @@ static int populate_directory(struct libos_dentry* dent) {
             goto out;
         }
 
-        ret = traverse_mount_and_lookup(&child);
+        ret = traverse_mount_and_lookup(&child, /*flags=*/0);
         put_dentry(child);
         if (ret < 0 && ret != -EACCES) {
             /* Fail on underlying lookup errors, except -EACCES (for which we will just ignore the

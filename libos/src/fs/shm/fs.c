@@ -85,19 +85,21 @@ out:
 }
 
 static int shm_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm,
-                            file_off_t size) {
+                            file_off_t size, bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
     assert(!dent->inode);
 
     struct libos_inode* inode = get_new_inode(dent->mount, type, perm);
     if (!inode)
         return -ENOMEM;
-    inode->size = size;
+    if (!skip_inode_setup) {
+        inode->size = size;
+    }
     dent->inode = inode;
     return 0;
 }
 
-static int shm_lookup(struct libos_dentry* dent) {
+static int shm_lookup(struct libos_dentry* dent, bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
 
     char* uri = NULL;
@@ -140,7 +142,7 @@ static int shm_lookup(struct libos_dentry* dent) {
 
     file_off_t size = (type == S_IFCHR ? pal_attr.pending_size : 0);
 
-    ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size);
+    ret = shm_setup_dentry(dent, type, pal_attr.share_flags, size, skip_inode_setup);
 out:
     free(uri);
     return ret;
@@ -162,7 +164,7 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     if (ret < 0)
         return ret;
 
-    return shm_setup_dentry(dent, type, perm, /*size=*/0);
+    return shm_setup_dentry(dent, type, perm, /*size=*/0, /*skip_inode_setup=*/false);
 }
 
 struct libos_fs_ops shm_fs_ops = {

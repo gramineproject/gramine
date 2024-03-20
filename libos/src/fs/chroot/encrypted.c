@@ -97,7 +97,7 @@ static void chroot_encrypted_idrop(struct libos_inode* inode) {
     }
 }
 
-static int chroot_encrypted_lookup(struct libos_dentry* dent) {
+static int chroot_encrypted_lookup(struct libos_dentry* dent, bool skip_inode_setup) {
     assert(locked(&g_dcache_lock));
 
     char* uri = NULL;
@@ -145,7 +145,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         goto out;
     }
 
-    if (type == S_IFREG) {
+    if (type == S_IFREG && !skip_inode_setup) {
         struct libos_encrypted_file* enc;
         file_off_t size;
 
