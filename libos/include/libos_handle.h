@@ -134,6 +134,10 @@ struct libos_epoll_handle {
     size_t last_returned_index;
 };
 
+struct libos_eventfd_handle {
+    bool is_semaphore;
+};
+
 struct libos_handle {
     enum libos_handle_type type;
     bool is_dir;
@@ -203,7 +207,7 @@ struct libos_handle {
         struct libos_sock_handle sock;           /* TYPE_SOCK */
 
         struct libos_epoll_handle epoll;         /* TYPE_EPOLL */
-        struct { bool is_semaphore; } eventfd;   /* TYPE_EVENTFD */
+        struct libos_eventfd_handle eventfd;     /* TYPE_EVENTFD */
     } info;
 
     struct libos_dir_handle dir_info;

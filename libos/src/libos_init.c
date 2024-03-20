@@ -502,6 +502,8 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(set_hostname, g_pal_public_state->dns_host.hostname,
              strlen(g_pal_public_state->dns_host.hostname));
 
+    RUN_INIT(init_eventfd_mode);
+
     log_debug("LibOS initialized");
 
     libos_tcb_t* cur_tcb = libos_get_tcb();
