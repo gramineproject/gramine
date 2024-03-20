@@ -47,7 +47,7 @@ etc/passwd:
 	printf "root:x:0:0:root:/root:/bin/bash\nnobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin\n" > $@
 
 ifeq ($(SGX),1)
-CFG = ltp.cfg ltp_sgx.cfg ltp_bug_1075.cfg
+CFG = ltp.cfg ltp_sgx.cfg
 else
 CFG = ltp.cfg
 endif
