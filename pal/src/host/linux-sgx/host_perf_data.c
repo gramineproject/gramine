@@ -32,6 +32,7 @@
 #include <assert.h>
 #include <linux/perf_event.h>
 #include <linux/fs.h>
+#include <unistd.h>
 
 #include "host_internal.h"
 #include "host_log.h"
@@ -72,6 +73,8 @@
 
 #define PERF_MAGIC 0x32454c4946524550ULL  // "PERFILE2"
 #define HEADER_ARCH 6
+
+static int g_dev_null_fd = -1;
 
 struct perf_file_section {
     uint64_t offset;
@@ -149,6 +152,16 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
         return NULL;
     }
 
+    // File `/dev/null` is open once and remain open during the lifecycle of the process
+    if (g_dev_null_fd < 0) {
+        ret = DO_SYSCALL(open, "/dev/null",
+                            O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, PERM_rw_r__r__);
+        if (ret < 0) {
+            log_error("pd_open: cannot open `/dev/null` for writing: %s", unix_strerror(fd));
+            goto fail;
+        }
+        g_dev_null_fd = ret;
+    }
     /*
      * Start writing to file from PROLOGUE_SIZE position. The beginning will be overwritten in
      * write_prologue_epilogue().
@@ -268,8 +281,7 @@ static int write_prologue_epilogue(struct perf_data* pd) {
 
 ssize_t pd_close(struct perf_data* pd) {
     ssize_t ret = 0;
-    int close_ret;
-
+    int dup2_ret;
     ret = pd_flush(pd);
     if (ret < 0)
         goto out;
@@ -283,9 +295,8 @@ ssize_t pd_close(struct perf_data* pd) {
         goto out;
 
 out:
-    close_ret = DO_SYSCALL(close, pd->fd);
-    if (close_ret < 0)
-        log_error("pd_close: close failed: %s", unix_strerror(close_ret));
+    if ((dup2_ret = dup2(g_dev_null_fd, pd->fd)) < 0)
+        log_error("pd_close: dup2 failed: %s", unix_strerror(dup2_ret));
 
     free(pd);
     return ret;

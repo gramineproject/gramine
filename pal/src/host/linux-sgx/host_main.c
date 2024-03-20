@@ -783,14 +783,10 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         // do not enable
     } else if (!strcmp(profile_str, "main")) {
         if (enclave_info->is_first_process) {
-            snprintf(enclave_info->profile_filename, ARRAY_SIZE(enclave_info->profile_filename),
-                     SGX_PROFILE_FILENAME);
             enclave_info->profile_enable = true;
         }
     } else if (!strcmp(profile_str, "all")) {
         enclave_info->profile_enable = true;
-        snprintf(enclave_info->profile_filename, ARRAY_SIZE(enclave_info->profile_filename),
-                 SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid);
     } else {
         log_error("Invalid 'sgx.profile.enable' "
                   "(the value must be \"none\", \"main\" or \"all\")");

@@ -19,6 +19,7 @@
 #include <stddef.h>
 
 #include "cpu.h"
+#include "debug_map.h"
 #include "elf/elf.h"
 #include "host_internal.h"
 #include "host_log.h"
@@ -34,6 +35,9 @@
 char* realpath(const char* path, char* resolved_path);
 
 #define NSEC_IN_SEC 1000000000
+
+/* Filenames for saved data */
+#define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d-%lu.data"
 
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
 static struct perf_data* g_perf_data = NULL;
@@ -104,24 +108,35 @@ int sgx_profile_init(void) {
     int ret;
 
     assert(!g_profile_enabled);
-    assert(g_mem_fd == -1);
     assert(!g_perf_data);
 
     g_profile_period = NSEC_IN_SEC / g_pal_enclave.profile_frequency;
     g_profile_mode = g_pal_enclave.profile_mode;
 
-    ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
-    if (ret < 0) {
-        log_error("sgx_profile_init: opening /proc/self/mem failed: %s", unix_strerror(ret));
-        goto out;
+    // File `/proc/self/mem` is open once and remain open during the lifecycle of the process
+    if (g_mem_fd < 0) {
+        ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
+        if (ret < 0) {
+            log_error("sgx_profile_init: opening /proc/self/mem failed: %s", unix_strerror(ret));
+            return ret;
+        }
+        g_mem_fd = ret;
     }
-    g_mem_fd = ret;
+
+    struct timespec ts;
+    ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
+    if (ret < 0) {
+        log_error("sgx_profile_init: clock_gettime failed: %s", unix_strerror(ret));
+        return ret;
+    }
+
+    snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
+             SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
 
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
-        ret = -EINVAL;
-        goto out;
+        return -EINVAL;
     }
     g_perf_data = pd;
 
@@ -135,15 +150,6 @@ int sgx_profile_init(void) {
     return 0;
 
 out:
-    if (g_mem_fd > 0) {
-        int close_ret = DO_SYSCALL(close, g_mem_fd);
-        if (close_ret < 0) {
-            log_error("sgx_profile_init: closing /proc/self/mem failed: %s",
-                      unix_strerror(close_ret));
-        }
-        g_mem_fd = -1;
-    }
-
     if (g_perf_data) {
         ssize_t close_ret = pd_close(g_perf_data);
         if (close_ret < 0) {
@@ -154,36 +160,167 @@ out:
     return ret;
 }
 
-void sgx_profile_finish(void) {
-    int ret;
+static void sgx_profile_finish_thread_unsafe(void) {
     ssize_t size;
 
     if (!g_profile_enabled)
         return;
-
-    spinlock_lock(&g_perf_data_lock);
 
     size = pd_close(g_perf_data);
     if (size < 0)
         log_error("sgx_profile_finish: pd_close failed: %s", unix_strerror(size));
     g_perf_data = NULL;
 
-    spinlock_unlock(&g_perf_data_lock);
-
-    ret = DO_SYSCALL(close, g_mem_fd);
-    if (ret < 0)
-        log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
-    g_mem_fd = -1;
-
-    log_debug("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
+    log_always("Profile data written to %s (%lu bytes)", g_pal_enclave.profile_filename, size);
 
     g_profile_enabled = false;
+}
+
+void sgx_profile_finish(void) {
+    spinlock_lock(&g_perf_data_lock);
+    sgx_profile_finish_thread_unsafe();
+    spinlock_unlock(&g_perf_data_lock);
+}
+
+static void sgx_profile_report_elf_thread_unsafe(const char* filename, void* addr) {
+    int ret;
+
+    if (!g_profile_enabled && !g_vtune_profile_enabled)
+        return;
+
+    if (!strcmp(filename, ""))
+        filename = get_main_exec_path();
+
+    if (!strcmp(filename, "[vdso]") || !strcmp(filename, "[vdso_libos]")) {
+        /*
+         * Our SGX profiler currently does not support reporting perf events in vDSO binaries:
+         * host-Linux `[vdso]` and enclave-LibOS `[vdso_libos]`. It is hard to find these vDSO
+         * binaries: the former is embedded in host Linux and the latter is embedded in LibOS
+         * `libsysdb.so` binary. The assumption is that vDSO is never a perf bottleneck in SGX
+         * environments, so we don't lose much precision in our profiler.
+         */
+        return;
+    }
+
+    // Convert filename to absolute path - some tools (e.g. libunwind in 'perf report') refuse to
+    // process relative paths.
+    char buf[PATH_MAX];
+    char* path = realpath(filename, buf);
+    if (!path) {
+        log_error("sgx_profile_report_elf(%s): realpath failed", filename);
+        return;
+    }
+
+    // Open the file and mmap it.
+
+    int fd = DO_SYSCALL(open, path, O_RDONLY | O_CLOEXEC, 0);
+    if (fd < 0) {
+        log_error("sgx_profile_report_elf(%s): open failed: %s", filename, unix_strerror(fd));
+        return;
+    }
+
+    off_t elf_length = DO_SYSCALL(lseek, fd, 0, SEEK_END);
+    if (elf_length < 0) {
+        log_error("sgx_profile_report_elf(%s): lseek failed: %s", filename,
+                  unix_strerror(elf_length));
+        goto out_close;
+    }
+
+    void* elf_addr = (void*)DO_SYSCALL(mmap, NULL, elf_length, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (IS_PTR_ERR(elf_addr)) {
+        log_error("sgx_profile_report_elf(%s): mmap failed: %s", filename,
+                  unix_strerror(PTR_TO_ERR(addr)));
+        goto out_close;
+    }
+
+    // Perform a simple sanity check to verify if this looks like ELF (see TODO for PalDebugMapAdd
+    // in pal/src/pal_rtld.c).
+
+    const elf_ehdr_t* ehdr = elf_addr;
+
+    if (elf_length < (off_t)sizeof(*ehdr) || memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
+        log_error("sgx_profile_report_elf(%s): invalid ELF binary", filename);
+        goto out_unmap;
+    }
+
+    // Read the program headers and record mmap events for the segments that should be mapped as
+    // executable.
+
+    const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
+    ret = 0;
+
+    for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
+        if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
+            uint64_t mapstart = ALLOC_ALIGN_DOWN(phdr[i].p_vaddr);
+            uint64_t mapend = ALLOC_ALIGN_UP(phdr[i].p_vaddr + phdr[i].p_filesz);
+            uint64_t offset = ALLOC_ALIGN_DOWN(phdr[i].p_offset);
+            if (g_profile_enabled) {
+                ret = pd_event_mmap(g_perf_data, path, g_host_pid,
+                        (uint64_t)addr + mapstart, mapend - mapstart, offset);
+                if (ret < 0)
+                    break;
+            }
+#ifdef SGX_VTUNE_PROFILE
+            if (g_vtune_profile_enabled)
+                __itt_module_load((void*)addr + mapstart, (void*)addr + mapend - 1, path);
+#endif
+        }
+    }
+
+    if (ret < 0) {
+        log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %s", filename,
+                  unix_strerror(ret));
+    }
+
+    // Clean up.
+
+out_unmap:
+    ret = DO_SYSCALL(munmap, elf_addr, elf_length);
+    if (ret < 0)
+        log_error("sgx_profile_report_elf(%s): munmap failed: %s", filename, unix_strerror(ret));
+
+out_close:
+    ret = DO_SYSCALL(close, fd);
+    if (ret < 0)
+        log_error("sgx_profile_report_elf(%s): close failed: %s", filename, unix_strerror(ret));
+}
+
+void sgx_profile_report_elf(const char* filename, void* addr) {
+    spinlock_lock(&g_perf_data_lock);
+    sgx_profile_report_elf_thread_unsafe(filename, addr);
+    spinlock_unlock(&g_perf_data_lock);
+}
+
+/* Re-initialize based on g_pal_enclave settings */
+static int sgx_profile_reinit(void) {
+    assert(spinlock_is_locked(&g_perf_data_lock));
+
+    int ret;
+    sgx_profile_finish_thread_unsafe();
+
+    ret = sgx_profile_init();
+    if (ret < 0) {
+        log_error("sgx_profile_reinit failed: %s", unix_strerror(ret));
+        return ret;
+    }
+
+    /* Report all ELFs already loaded */
+    struct debug_map* map = g_debug_map;
+    while (map) {
+        sgx_profile_report_elf_thread_unsafe(map->name, map->addr);
+        map = map->next;
+    }
+
+    return 0;
 }
 
 static void sample_simple(uint64_t rip) {
     int ret;
 
     spinlock_lock(&g_perf_data_lock);
+    if (__atomic_exchange_n(&g_pal_enclave.profile_delayed_reinit, false, __ATOMIC_ACQ_REL) == true)
+        sgx_profile_reinit();
+
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_simple(g_perf_data, rip, g_host_pid, /*tid=*/g_host_pid,
                                  g_profile_period);
@@ -207,6 +344,9 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     stack_size = ret;
 
     spinlock_lock(&g_perf_data_lock);
+    if (__atomic_exchange_n(&g_pal_enclave.profile_delayed_reinit, false, __ATOMIC_ACQ_REL) == true)
+        sgx_profile_reinit();
+
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_stack(g_perf_data, gpr->rip, g_host_pid, /*tid=*/g_host_pid,
                                 g_profile_period, gpr, stack, stack_size);
@@ -303,113 +443,6 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
     assert(ocall_func);
     assert(!g_pal_enclave.profile_with_stack);
     sample_simple((uint64_t)ocall_func);
-}
-
-void sgx_profile_report_elf(const char* filename, void* addr) {
-    int ret;
-
-    if (!g_profile_enabled && !g_vtune_profile_enabled)
-        return;
-
-    if (!strcmp(filename, ""))
-        filename = get_main_exec_path();
-
-    if (!strcmp(filename, "[vdso]") || !strcmp(filename, "[vdso_libos]")) {
-        /*
-         * Our SGX profiler currently does not support reporting perf events in vDSO binaries:
-         * host-Linux `[vdso]` and enclave-LibOS `[vdso_libos]`. It is hard to find these vDSO
-         * binaries: the former is embedded in host Linux and the latter is embedded in LibOS
-         * `libsysdb.so` binary. The assumption is that vDSO is never a perf bottleneck in SGX
-         * environments, so we don't lose much precision in our profiler.
-         */
-        return;
-    }
-
-    // Convert filename to absolute path - some tools (e.g. libunwind in 'perf report') refuse to
-    // process relative paths.
-    char buf[PATH_MAX];
-    char* path = realpath(filename, buf);
-    if (!path) {
-        log_error("sgx_profile_report_elf(%s): realpath failed", filename);
-        return;
-    }
-
-    // Open the file and mmap it.
-
-    int fd = DO_SYSCALL(open, path, O_RDONLY | O_CLOEXEC, 0);
-    if (fd < 0) {
-        log_error("sgx_profile_report_elf(%s): open failed: %s", filename, unix_strerror(fd));
-        return;
-    }
-
-    off_t elf_length = DO_SYSCALL(lseek, fd, 0, SEEK_END);
-    if (elf_length < 0) {
-        log_error("sgx_profile_report_elf(%s): lseek failed: %s", filename,
-                  unix_strerror(elf_length));
-        goto out_close;
-    }
-
-    void* elf_addr = (void*)DO_SYSCALL(mmap, NULL, elf_length, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (IS_PTR_ERR(elf_addr)) {
-        log_error("sgx_profile_report_elf(%s): mmap failed: %s", filename,
-                  unix_strerror(PTR_TO_ERR(addr)));
-        goto out_close;
-    }
-
-    // Perform a simple sanity check to verify if this looks like ELF (see TODO for PalDebugMapAdd
-    // in pal/src/pal_rtld.c).
-
-    const elf_ehdr_t* ehdr = elf_addr;
-
-    if (elf_length < (off_t)sizeof(*ehdr) || memcmp(ehdr->e_ident, ELFMAG, SELFMAG) != 0) {
-        log_error("sgx_profile_report_elf(%s): invalid ELF binary", filename);
-        goto out_unmap;
-    }
-
-    // Read the program headers and record mmap events for the segments that should be mapped as
-    // executable.
-
-    const elf_phdr_t* phdr = (const elf_phdr_t*)((uintptr_t)elf_addr + ehdr->e_phoff);
-    ret = 0;
-
-    spinlock_lock(&g_perf_data_lock);
-
-    for (unsigned int i = 0; i < ehdr->e_phnum; i++) {
-        if (phdr[i].p_type == PT_LOAD && phdr[i].p_flags & PF_X) {
-            uint64_t mapstart = ALLOC_ALIGN_DOWN(phdr[i].p_vaddr);
-            uint64_t mapend = ALLOC_ALIGN_UP(phdr[i].p_vaddr + phdr[i].p_filesz);
-            uint64_t offset = ALLOC_ALIGN_DOWN(phdr[i].p_offset);
-            if (g_profile_enabled) {
-                ret = pd_event_mmap(g_perf_data, path, g_host_pid,
-                        (uint64_t)addr + mapstart, mapend - mapstart, offset);
-                if (ret < 0)
-                    break;
-            }
-#ifdef SGX_VTUNE_PROFILE
-            if (g_vtune_profile_enabled)
-                __itt_module_load((void*)addr + mapstart, (void*)addr + mapend - 1, path);
-#endif
-        }
-    }
-
-    spinlock_unlock(&g_perf_data_lock);
-
-    if (ret < 0) {
-        log_error("sgx_profile_report_elf(%s): pd_event_mmap failed: %s", filename,
-                  unix_strerror(ret));
-    }
-
-    // Clean up.
-
-out_unmap:
-    ret = DO_SYSCALL(munmap, elf_addr, elf_length);
-    if (ret < 0)
-        log_error("sgx_profile_report_elf(%s): munmap failed: %s", filename, unix_strerror(ret));
-
-out_close:
-    ret = DO_SYSCALL(close, fd);
-    if (ret < 0)
-        log_error("sgx_profile_report_elf(%s): close failed: %s", filename, unix_strerror(ret));
 }
 
 #endif /* DEBUG */
