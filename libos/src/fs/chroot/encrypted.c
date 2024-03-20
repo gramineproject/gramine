@@ -277,8 +277,6 @@ out:
     return ret;
 }
 
-/* NOTE: this function is different from generic `chroot_unlink` only to add PAL_OPTION_PASSTHROUGH.
- * Once that option is removed, we can safely go back to using `chroot_unlink`. */
 static int chroot_encrypted_unlink(struct libos_dentry* dent) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
