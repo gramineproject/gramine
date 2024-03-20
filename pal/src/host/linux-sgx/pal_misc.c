@@ -858,9 +858,6 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
             if (ret < 0)
                 return ret;
         } else {
-#ifdef ASAN
-            asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
-#endif
             /*
              * In SGX1 the memory is mapped only at the enclave initialization and cannot be
              * unmapped; we simiply `memset()` to have zero-filled pages on subsequent accesses.
