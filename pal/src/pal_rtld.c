@@ -429,10 +429,7 @@ static int perform_relocations(struct link_map* map) {
     return 0;
 }
 
-/* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
- * we don't bother undoing _PalStreamMap() and _PalVirtualMemoryAlloc() in case of failure. */
-static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
-                                          const char* elf_file_buf) {
+static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_buf) {
     int ret;
     struct loadcmd* loadcmds = NULL;
 
@@ -546,10 +543,18 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
 
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
         size_t map_size = c->map_end - c->start;
+        size_t cpy_size = c->data_end - c->start;
+        assert(cpy_size <= map_size);
 
-        ret = _PalStreamMap(handle, map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
+        ret = _PalVirtualMemoryAlloc(map_addr, map_size, c->prot | PAL_PROT_WRITE);
         if (ret < 0) {
-            log_error("Failed to map segment from ELF file");
+            log_error("Failed to prepare mapping for segment from ELF file");
+            goto out;
+        }
+        memcpy(map_addr, elf_file_buf + c->map_off, cpy_size);
+        ret = _PalVirtualMemoryProtect(map_addr, map_size, c->prot);
+        if (ret < 0) {
+            log_error("Failed to remove write memory protection off the segment from ELF file");
             goto out;
         }
 
@@ -641,23 +646,52 @@ out:
 int load_entrypoint(const char* uri) {
     int ret;
     PAL_HANDLE handle;
+    char* buf = NULL;
 
-    char buf[1024]; /* must be enough to hold ELF header and all its program headers */
     ret = _PalStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                          /*options=*/0);
     if (ret < 0)
         return ret;
 
-    ret = _PalStreamRead(handle, 0, sizeof(buf), buf);
+    PAL_STREAM_ATTR attr;
+    ret = _PalStreamAttributesQueryByHandle(handle, &attr);
     if (ret < 0) {
-        log_error("Reading ELF file failed");
+        log_error("Getting size of ELF file failed");
         goto out;
     }
 
-    size_t bytes_read = (size_t)ret;
+    buf = malloc(attr.pending_size);
+    if (!buf) {
+        log_error("Allocating buffer to hold ELF file of size %lu failed", attr.pending_size);
+        goto out;
+    }
 
-    elf_ehdr_t* ehdr = (elf_ehdr_t*)&buf;
-    if (bytes_read < sizeof(elf_ehdr_t)) {
+    size_t buf_offset = 0;
+    size_t remaining = attr.pending_size;
+    while (remaining > 0) {
+        int64_t read = _PalStreamRead(handle, buf_offset, remaining, buf + buf_offset);
+        if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN)
+            continue;
+        if (ret < 0 || read == 0) {
+            log_error("Reading ELF file failed");
+            ret = ret < 0 ? ret : -PAL_ERROR_DENIED;
+            goto out;
+        }
+
+        assert((size_t)read <= remaining);
+        remaining -= (size_t)read;
+        buf_offset += (size_t)read;
+    }
+    assert(remaining == 0);
+
+    ret = _PalValidateEntrypoint(buf, attr.pending_size);
+    if (ret < 0) {
+        log_error("Validating ELF file failed");
+        goto out;
+    }
+
+    elf_ehdr_t* ehdr = (elf_ehdr_t*)buf;
+    if (attr.pending_size < sizeof(elf_ehdr_t)) {
         log_error("ELF file is too small (cannot read the ELF header)");
         ret = -PAL_ERROR_INVAL;
         goto out;
@@ -682,13 +716,13 @@ int load_entrypoint(const char* uri) {
         goto out;
     }
 
-    if (bytes_read < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
+    if (attr.pending_size < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
         log_error("Read too few bytes from the ELF file (not all program headers)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
-    ret = create_and_relocate_entrypoint(handle, uri, buf);
+    ret = create_and_relocate_entrypoint(uri, buf);
     if (ret < 0) {
         log_error("Could not map the ELF file into memory and then relocate it");
         ret = -PAL_ERROR_INVAL;
@@ -702,6 +736,7 @@ int load_entrypoint(const char* uri) {
 
 out:
     _PalObjectDestroy(handle);
+    free(buf);
     return ret;
 }
 
