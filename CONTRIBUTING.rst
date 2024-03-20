@@ -144,7 +144,7 @@ Reviewing Guidelines
    the same time).
 #. Meaningful commit messages (it's much easier to get them right if commits are
    really atomic). Commit messages should follow `commit message style guidelines
-   <coding-style.html#commit-message-formatting>`__.
+   <https://gramine.readthedocs.io/en/latest/devel/coding-style.html#commit-message-formatting>`__.
 #. Every PR description should include: what's the purpose of the changes, what
    is changed (and how, in case of redesigning a component), and how to test the
    changes.

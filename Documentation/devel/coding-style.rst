@@ -43,8 +43,8 @@ Commit message formatting
 TL;DR: we follow https://commit.style/.
 
 Additionally, commit message one-liner should include which component was
-changed (``PAL-{Linux,SGX}`` / ``LibOS`` / ``Docs`` / ``CI``) in the format
-"[component] Change description". The one-liner should be
+changed (``PAL/{Linux,Linux-SGX}`` / ``LibOS`` / ``Docs`` / ``CI``) in the
+format "[component] Change description". The one-liner should be
 written in imperative mood and say what this particular commit changes.
 
 We aim for our repository and commit history to be self-contained and still
@@ -52,7 +52,8 @@ usable even without GitHub (e.g. in case we migrate to a different provider).
 Thus, please restrain from descriptions like "Fixes #1234" and instead describe
 the fix in the commit message. If you really need to reference something on our
 GitHub, then use the full URL instead of #1234, so that it won't break if we
-move to a different repository.
+move to a different repository. If you want to reference a specific commit,
+please quote its one-liner message and optionally its hash.
 
 Please never write descriptions like "file.c doesn't flush buffers on exit" -
 it's not clear whether it's what the commit does, or whether it's the problem it
