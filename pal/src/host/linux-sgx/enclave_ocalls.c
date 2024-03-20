@@ -519,7 +519,7 @@ ssize_t ocall_write(int fd, const void* buf, size_t count) {
     void* old_ustack = sgx_prepare_ustack();
 
     if (sgx_is_valid_untrusted_ptr(buf, count, /*alignment=*/1)) {
-        /* buf is in untrusted memory (e.g., allowed file mmaped in untrusted memory) */
+        /* buf is in untrusted memory */
         untrusted_buf = buf;
     } else if (sgx_is_completely_within_enclave(buf, count)) {
         /* typical case of buf inside of enclave memory */
@@ -645,7 +645,7 @@ ssize_t ocall_pwrite(int fd, const void* buf, size_t count, off_t offset) {
     void* old_ustack = sgx_prepare_ustack();
 
     if (sgx_is_valid_untrusted_ptr(buf, count, /*alignment=*/1)) {
-        /* buf is in untrusted memory (e.g., allowed file mmaped in untrusted memory) */
+        /* buf is in untrusted memory */
         untrusted_buf = buf;
     } else if (sgx_is_completely_within_enclave(buf, count)) {
         /* typical case of buf inside of enclave memory */

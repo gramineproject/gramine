@@ -18,7 +18,6 @@
 #include "api.h"
 #include "asan.h"
 #include "assert.h"
-#include "enclave_tf.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "init.h"
 #include "pal.h"
@@ -406,9 +405,22 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
 
 extern void* g_enclave_base;
 extern void* g_enclave_top;
-extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
+
+static bool need_warn_about_allowed_files_usage(void) {
+    if (!g_pal_common_state.parent_process) {
+        /* only warn in the master process, not in children */
+        return false;
+    }
+    toml_table_t* manifest_sgx = toml_table_in(g_pal_public_state.manifest_root, "sgx");
+    if (!manifest_sgx)
+        return false;
+    toml_array_t* toml_allowed_files = toml_array_in(manifest_sgx, "allowed_files");
+    if (!toml_allowed_files)
+        return false;
+    return true;
+}
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     int ret;
@@ -426,11 +438,12 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool allow_eventfd        = false;
     bool experimental_flock   = false;
     bool allow_all_files      = false;
-    bool use_allowed_files    = g_allowed_files_warn;
+    bool use_allowed_files    = need_warn_about_allowed_files_usage();
     bool encrypted_files_keys = false;
     bool memfaults_without_exinfo_allowed = g_pal_linuxsgx_state.memfaults_without_exinfo_allowed;
 
     char* log_level_str = NULL;
+    char* file_check_policy_str = NULL;
 
     ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
     if (ret < 0)
@@ -468,7 +481,11 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     if (ret < 0)
         goto out;
 
-    if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
+    ret = toml_string_in(g_pal_public_state.manifest_root, "sgx.file_check_policy",
+                         &file_check_policy_str);
+    if (ret < 0)
+        goto out;
+    if (file_check_policy_str && !strcmp(file_check_policy_str, "allow_all_but_log"))
         allow_all_files = true;
 
     toml_table_t* manifest_fs = toml_table_in(g_pal_public_state.manifest_root, "fs");
@@ -548,6 +565,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
 
     ret = 0;
 out:
+    free(file_check_policy_str);
     free(log_level_str);
     return ret;
 }
@@ -846,21 +864,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     if ((ret = init_seal_key_material()) < 0) {
         log_error("Failed to initialize SGX sealing key material: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_file_check_policy()) < 0) {
-        log_error("Failed to load the file check policy: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_allowed_files()) < 0) {
-        log_error("Failed to initialize allowed files: %s", pal_strerror(ret));
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
-    if ((ret = init_trusted_files()) < 0) {
-        log_error("Failed to initialize trusted files: %s", pal_strerror(ret));
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 

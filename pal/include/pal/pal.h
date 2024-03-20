@@ -410,7 +410,7 @@ enum pal_delete_mode {
 int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
 
 /*!
- * \brief Map a file to a virtual memory address in the current process.
+ * \brief Map a device to a virtual memory address in the current process.
  *
  * \param handle  Handle to the stream to be mapped.
  * \param addr    See #PalVirtualMemoryAlloc.
@@ -420,7 +420,8 @@ int PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode);
  *
  * \returns 0 on success, negative error code on failure.
  *
- * Use `PalVirtualMemoryFree` to unmap the file.
+ * Currently used only by devices (to establish shared memory on device); files emulate this via
+ * `PalStreamRead` and `PalStreamWrite`. Use `PalVirtualMemoryFree` to unmap this mapping.
  */
 int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size);

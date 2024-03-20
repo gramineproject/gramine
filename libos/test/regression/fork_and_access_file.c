@@ -19,6 +19,10 @@
 char g_parent_buf[MAX_BUF_SIZE];
 char g_child_buf[MAX_BUF_SIZE];
 
+static __attribute__ ((noinline)) void die_on_wrong_file_contents(void) {
+    errx(1, "child detected incorrect contents in test file");
+}
+
 int main(void) {
     int fd = CHECK(open(FILENAME, O_RDONLY));
 
@@ -27,7 +31,12 @@ int main(void) {
 
     pid_t p = CHECK(fork());
     if (p == 0) {
-        ssize_t child_read_ret = CHECK(posix_fd_read(fd, g_child_buf, sizeof(g_child_buf)));
+        ssize_t child_read_ret = posix_fd_read(fd, g_child_buf, sizeof(g_child_buf));
+        if (child_read_ret < 0) {
+            if (errno == EPERM)
+                die_on_wrong_file_contents();
+            errx(1, "child read failed with an unexpected error %d", errno);
+        }
         if (child_read_ret != parent_read_ret ||
                 memcmp(g_child_buf, g_parent_buf, child_read_ret)) {
             errx(1, "child read data different from what parent read");

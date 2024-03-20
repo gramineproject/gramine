@@ -539,10 +539,6 @@ long libos_syscall_msync(unsigned long start, size_t len_orig, int flags) {
         return -ENOSYS;
     }
 
-    if (flags & MS_SYNC) {
-        return msync_range(start, start + len);
-    } else {
-        /* `MS_ASYNC` is a no-op on Linux. */
-        return 0;
-    }
+    /* `MS_ASYNC` is emulated as `MS_SYNC`; this sacrifices performance for correctness. */
+    return msync_range(start, start + len);
 }

@@ -79,3 +79,9 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     __UNUSED(key_size);
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
+
+int _PalValidateEntrypoint(const void* buf, size_t size) {
+    __UNUSED(buf);
+    __UNUSED(size);
+    return 0; /* no need to validate entrypoint; this PAL doesn't provide security */
+}
