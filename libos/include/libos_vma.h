@@ -140,3 +140,5 @@ size_t get_peak_memory_usage(void);
 
 /* Returns total memory usage */
 size_t get_total_memory_usage(void);
+
+void dump_vma_alloc_stats(void);

@@ -59,7 +59,7 @@ int init_fs(void) {
         goto err;
     }
 
-    g_mount_mgr = create_mem_mgr(init_align_up(MOUNT_MGR_ALLOC));
+    g_mount_mgr = create_mem_mgr(init_align_up(MOUNT_MGR_ALLOC), "FS mounts");
     if (!g_mount_mgr) {
         ret = -ENOMEM;
         goto err;
@@ -91,6 +91,10 @@ err:
     if (lock_created(&g_mount_list_lock))
         destroy_lock(&g_mount_list_lock);
     return ret;
+}
+
+void dump_mount_alloc_stats(void) {
+    dump_mem_mgr_stats(g_mount_mgr);
 }
 
 static struct libos_mount* alloc_mount(void) {

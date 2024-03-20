@@ -83,6 +83,10 @@ int init_slab(void) {
     return 0;
 }
 
+void dump_slab_alloc_stats(void) {
+    dump_slab_mgr_stats(slab_mgr);
+}
+
 void* malloc(size_t size) {
     void* mem = slab_alloc(slab_mgr, size);
 

@@ -661,7 +661,7 @@ int init_vma(void) {
         log_error("Failed to add tmp vma to cache!");
         BUG();
     }
-    vma_mgr = create_mem_mgr(DEFAULT_VMA_COUNT);
+    vma_mgr = create_mem_mgr(DEFAULT_VMA_COUNT, "VMAs");
     if (!vma_mgr) {
         log_error("Failed to create VMA memory manager!");
         return -ENOMEM;
@@ -699,6 +699,12 @@ int init_vma(void) {
     }
 
     return 0;
+}
+
+void dump_vma_alloc_stats(void) {
+    lock(&vma_mgr_lock);
+    dump_mem_mgr_stats(vma_mgr);
+    unlock(&vma_mgr_lock);
 }
 
 static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* vma) {

@@ -70,6 +70,10 @@ void init_slab_mgr(void) {
         INIT_FAIL("cannot initialize slab manager");
 }
 
+void dump_slab_stats(void) {
+    dump_slab_mgr_stats(g_slab_mgr);
+}
+
 void* malloc(size_t size) {
     void* ptr = slab_alloc(g_slab_mgr, size);
 

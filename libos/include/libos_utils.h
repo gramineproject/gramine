@@ -25,6 +25,7 @@ static inline uint64_t hash64(uint64_t key) {
 
 /* heap allocation functions */
 int init_slab(void);
+void dump_slab_alloc_stats(void);
 
 void* malloc(size_t size);
 void free(void* mem);

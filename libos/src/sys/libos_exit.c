@@ -15,6 +15,7 @@
 #include "libos_table.h"
 #include "libos_thread.h"
 #include "libos_utils.h"
+#include "libos_vma.h"
 #include "pal.h"
 
 static noreturn void libos_clean_and_exit(int exit_code) {
@@ -56,6 +57,12 @@ static noreturn void libos_clean_and_exit(int exit_code) {
     terminate_ipc_worker();
 
     log_debug("process %u exited with status %d", g_process_ipc_ids.self_vmid, exit_code);
+
+    dump_dentry_alloc_stats();
+    dump_mount_alloc_stats();
+    dump_handle_alloc_stats();
+    dump_vma_alloc_stats();
+    dump_slab_alloc_stats();
 
     /* TODO: We exit whole libos, but there are some objects that might need cleanup - we should do
      * a proper cleanup of everything. */
