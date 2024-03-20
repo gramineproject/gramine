@@ -262,7 +262,7 @@ class TC_00_FileSystem(RegressionTestCase):
         self.verify_seek_tell_truncate(f"{file_path}c", 512, 64, 65536)
         self.verify_seek_tell_truncate(f"{file_path}d", 512, 512, 0)
         self.verify_seek_tell_truncate(f"{file_path}e", 512, 256, 0)
-        # XXX: we do not support shrinking files to arbitrary sizes in protected files
+        self.verify_seek_tell_truncate(f"{file_path}f", 31337, 20000, 7331)
 
     def verify_copy_content(self, input_path, output_path):
         self.assertTrue(filecmp.cmp(input_path, output_path, shallow=False))

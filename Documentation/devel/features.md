@@ -389,10 +389,10 @@ The below list is generated from the [syscall table of Linux
 - ☑ `fdatasync()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ▣ `truncate()`
+- ☑ `truncate()`
   <sup>[9a](#file-system-operations)</sup>
 
-- ▣ `ftruncate()`
+- ☑ `ftruncate()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `getdents()`
@@ -2087,9 +2087,7 @@ Gramine supports file flushes (via `fsync()` and `fdatasync()`). However, flushi
 metadata (`sync()` and `syncfs()`) is not supported. Similarly, `sync_file_range()` system call is
 currently not supported.
 
-Gramine supports file truncation (via `truncate()` and `ftruncate()`). There is one exception
-currently: shrinking encrypted files to arbitrary size is not supported (only shrink-to-zero is
-supported).
+Gramine supports file truncation (via `truncate()` and `ftruncate()`).
 
 Gramine has very limited support of `fallocate()` system call. Only mode 0 is supported ("allocating
 disk space"). The emulation of this mode simply extends the file size if applicable, otherwise does
@@ -2164,8 +2162,8 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ▣ `ppoll()`: dummy
 - ☑ `fsync()`
 - ☑ `fdatasync()`
-- ▣ `truncate()`: see note above
-- ▣ `ftruncate()`: see note above
+- ☑ `truncate()`
+- ☑ `ftruncate()`
 - ▣ `fallocate()`: dummy
 - ▣ `fadvise64()`: dummy
 

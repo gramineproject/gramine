@@ -159,23 +159,6 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         self.verify_size(path_1, size_out)
         self.verify_size(path_2, size_out)
 
-    # overrides TC_00_FileSystem to change input dir (from plaintext to encrypted) and
-    # because file truncation from greater to small size is not yet implemented
-    def test_140_file_truncate(self):
-        enc_path = self.ENCRYPTED_FILES[-1] # existing file
-        path_1 = os.path.join(self.OUTPUT_DIR, 'test_140a') # writable files
-        path_2 = os.path.join(self.OUTPUT_DIR, 'test_140b') # writable files
-        self.copy_input(enc_path, path_1) # encrypt
-        self.copy_input(enc_path, path_2) # encrypt
-
-        self.verify_truncate_test(path_1, path_2, 0)
-        self.verify_truncate_test(path_1, path_2, 200)
-        self.verify_truncate_test(path_1, path_2, 0)
-        self.verify_truncate_test(path_1, path_2, 1000)
-        self.verify_truncate_test(path_1, path_2, 1000)
-        self.verify_truncate_test(path_1, path_2, 0)
-        self.verify_truncate_test(path_1, path_2, 0)
-
     def test_150_file_rename(self):
         path1 = os.path.join(self.OUTPUT_DIR, 'test_150a')
         path2 = os.path.join(self.OUTPUT_DIR, 'test_150b')
