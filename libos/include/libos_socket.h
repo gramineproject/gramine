@@ -125,6 +125,7 @@ void check_connect_inprogress_on_poll(struct libos_handle* handle, bool error_ev
 
 extern struct libos_sock_ops sock_unix_ops;
 extern struct libos_sock_ops sock_ip_ops;
+extern struct libos_sock_ops sock_nl_ops;
 
 ssize_t do_recvmsg(struct libos_handle* handle, struct iovec* iov, size_t iov_len,
                    void* msg_control, size_t* msg_controllen_ptr, void* addr, size_t* addrlen_ptr,

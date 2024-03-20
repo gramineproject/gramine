@@ -7,8 +7,9 @@
 #include "pal_internal.h"
 
 int PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                    pal_stream_options_t options, PAL_HANDLE* out_handle) {
-    return _PalSocketCreate(domain, type, options, out_handle);
+                    pal_socket_protocol protocol, pal_stream_options_t options,
+                    PAL_HANDLE* out_handle) {
+    return _PalSocketCreate(domain, type, protocol, options, out_handle);
 }
 
 int PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr) {

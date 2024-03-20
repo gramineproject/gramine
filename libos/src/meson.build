@@ -68,6 +68,7 @@ libos_sources = files(
     'libos_syscalls.c',
     'libos_utils.c',
     'net/ip.c',
+    'net/nl.c',
     'net/unix.c',
     'sync/libos_sync_client.c',
     'sync/libos_sync_server.c',
