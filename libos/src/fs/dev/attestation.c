@@ -21,6 +21,8 @@
 #include "pal.h"
 #include "toml_utils.h"
 
+// extern int provide_attestation_quote(const char* data, size_t data_size);
+
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently
  * these sizes are overapproximations of SGX requirements (report_data is 64B, target_info is
  * 512B, EPID quote is about 1KB, DCAP quote is about 4KB). */
@@ -233,6 +235,9 @@ static int quote_load(struct libos_dentry* dent, char** out_data, size_t* out_si
         free(quote);
         return -EACCES;
     }
+
+    // provide the generated quote to amber client
+//    provide_attestation_quote(quote, quote_size);
 
     *out_data = quote;
     *out_size = quote_size;

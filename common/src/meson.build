@@ -68,4 +68,5 @@ cryptoadapter_dep = declare_dependency(
 )
 
 subdir('ioctls')
+subdir('https')
 subdir('protected_files')
