@@ -35,9 +35,9 @@ ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count) {
     if (hdl->is_dir)
         return -EISDIR;
 
-    lock(&hdl->pos_lock);
+    lock_pos_handle(hdl);
     ssize_t ret = fs->fs_ops->read(hdl, buf, count, &hdl->pos);
-    unlock(&hdl->pos_lock);
+    unlock_pos_handle(hdl);
     return ret;
 }
 
@@ -70,9 +70,9 @@ ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count)
     if (hdl->is_dir)
         return -EISDIR;
 
-    lock(&hdl->pos_lock);
+    lock_pos_handle(hdl);
     ssize_t ret = fs->fs_ops->write(hdl, buf, count, &hdl->pos);
-    unlock(&hdl->pos_lock);
+    unlock_pos_handle(hdl);
     return ret;
 }
 
@@ -179,7 +179,7 @@ static file_off_t do_lseek_dir(struct libos_handle* hdl, off_t offset, int origi
     assert(hdl->is_dir);
 
     lock(&g_dcache_lock);
-    lock(&hdl->pos_lock);
+    lock_pos_handle(hdl);
     lock(&hdl->lock);
 
     file_off_t ret;
@@ -200,7 +200,7 @@ static file_off_t do_lseek_dir(struct libos_handle* hdl, off_t offset, int origi
 
 out:
     unlock(&hdl->lock);
-    unlock(&hdl->pos_lock);
+    unlock_pos_handle(hdl);
     unlock(&g_dcache_lock);
     return ret;
 }
@@ -360,7 +360,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     }
 
     lock(&g_dcache_lock);
-    lock(&hdl->pos_lock);
+    lock_pos_handle(hdl);
     lock(&hdl->lock);
 
     struct libos_dir_handle* dirhdl = &hdl->dir_info;
@@ -447,7 +447,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
     ret = buf_pos;
 out:
     unlock(&hdl->lock);
-    unlock(&hdl->pos_lock);
+    unlock_pos_handle(hdl);
     unlock(&g_dcache_lock);
 out_no_unlock:
     put_handle(hdl);
