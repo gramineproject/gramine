@@ -22,6 +22,7 @@ Build-Depends: debhelper-compat (= 13),
  python3-sphinx-rtd-theme,
  python3-tomli (>= 1.1.0),
  python3-tomli-w (>= 0.4.0),
+ python3-voluptuous,
 #libunwind8,
 #python3-pytest,
 Standards-Version: 4.1.3
@@ -44,6 +45,7 @@ Depends:
  python3-pyelftools,
  python3-tomli (>= 1.1.0),
  python3-tomli-w (>= 0.4.0),
+ python3-voluptuous,
 Recommends:
  gramine-ratls-dcap,
  gramine-ratls-epid,

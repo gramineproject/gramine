@@ -4,6 +4,7 @@ subdir('graminelibos.dist-info')
 install_data([
     'gramine-gen-depend',
     'gramine-manifest',
+    'gramine-manifest-check',
 ], install_dir: get_option('bindir'))
 
 if enable_tests
