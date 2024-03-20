@@ -15,6 +15,9 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr", uri = "file:/usr" },
   { path = "/tmp", uri = "file:/tmp" },
+
+  # many LTP multi-process tests rely on shared-memory IPC via `mmap(MAP_SHARED, </dev/shm fd>)`
+  { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
 # for flock tests

@@ -1495,6 +1495,88 @@ out:
     return ret;
 }
 
+static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* arg) {
+    struct libos_handle* hdl = arg;
+
+    /* guaranteed to have inode because invoked from `truncate` callback */
+    assert(hdl && hdl->inode);
+
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS))
+        return false;
+
+    assert(vma->file); /* check above filtered out non-file-backed mappings */
+
+    if (!vma->file->inode || vma->file->inode != hdl->inode)
+        return false;
+
+    return true;
+}
+
+static int prot_refresh_vma(struct libos_vma_info* vma_info) {
+    int ret;
+    struct libos_handle* file = vma_info->file;
+
+    /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
+     * another thread by the time we get to `PalVirtualMemoryProtect`. */
+    lock(&file->inode->lock);
+    uint64_t file_size = (uint64_t)file->inode->size;
+    unlock(&file->inode->lock);
+
+    size_t size_to_prot;
+    if (file_size < vma_info->file_offset) {
+        /* file got smaller than the offset from which VMA is mapped, all VMA is inaccessible */
+        size_to_prot = 0;
+    } else {
+        if (file_size - vma_info->file_offset > vma_info->length) {
+            /* file size exceeds the mmapped part in VMA, all VMA is accessible */
+            size_to_prot = vma_info->length;
+        } else {
+            /* file size is smaller than the mmapped part in VMA, only part of VMA is accessible */
+            size_to_prot = file_size - vma_info->file_offset;
+        }
+    }
+    size_to_prot = ALLOC_ALIGN_UP(size_to_prot);
+
+    if (size_to_prot) {
+        ret = PalVirtualMemoryProtect(vma_info->addr, size_to_prot,
+                                      LINUX_PROT_TO_PAL(vma_info->prot, vma_info->flags));
+        if (ret < 0)
+            BUG();
+    }
+    if (vma_info->length - size_to_prot) {
+        ret = PalVirtualMemoryProtect(vma_info->addr + size_to_prot,
+                                      vma_info->length - size_to_prot, /*prot=*/0);
+        if (ret < 0)
+            BUG();
+    }
+
+    return 0;
+}
+
+/* This helper function is to refresh access protections on the VMA pages of a given file handle on
+ * file-extend operations (currently only `ftruncate`). */
+int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl) {
+    struct libos_vma_info* vma_infos;
+    size_t count;
+
+    int ret = dump_vmas(&vma_infos, &count, /*begin=*/0, /*end=*/UINTPTR_MAX,
+                        vma_filter_needs_prot_refresh, hdl);
+    if (ret < 0)
+        return ret;
+
+    for (size_t i = 0; i < count; i++) {
+        ret = prot_refresh_vma(&vma_infos[i]);
+        if (ret < 0)
+            goto out;
+    }
+
+    ret = 0;
+out:
+    free_vma_info_array(vma_infos, count);
+    return ret;
+}
+
+
 static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
     assert(IS_ALLOC_ALIGNED(begin));
     assert(end == UINTPTR_MAX || IS_ALLOC_ALIGNED(end));
@@ -1514,8 +1596,30 @@ static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
 
         /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
          * another thread by the time we get to `msync`. */
+        lock(&file->inode->lock);
+        uint64_t file_size = (uint64_t)file->inode->size;
+        unlock(&file->inode->lock);
+
+        size_t size_to_msync;
+        if (file_size < vma_info->file_offset) {
+            /* file is smaller than the offset from which VMA is mapped, nothing to sync */
+            size_to_msync = 0;
+        } else {
+            if (file_size - vma_info->file_offset > vma_info->length) {
+                /* file size exceeds the mmapped part in VMA, all VMA is synced */
+                size_to_msync = vma_info->length;
+            } else {
+                /* file size is smaller than the mmapped part in VMA, only part of VMA is synced */
+                size_to_msync = file_size - vma_info->file_offset;
+            }
+        }
+        size_to_msync = ALLOC_ALIGN_UP(size_to_msync);
+
+        if (!size_to_msync)
+            continue;
+
         uintptr_t msync_begin = MAX(begin, (uintptr_t)vma_info->addr);
-        uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->length);
+        uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + size_to_msync);
         assert(IS_ALLOC_ALIGNED(msync_begin));
         assert(IS_ALLOC_ALIGNED(msync_end));
 

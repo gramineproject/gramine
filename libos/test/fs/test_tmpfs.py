@@ -46,7 +46,7 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
         self.assertIn('compare(' + file_path + ') RW OK', stdout)
         self.assertIn('close(' + file_path + ') RW OK', stdout)
 
-    # overrides TC_00_FileSystem to not skip Gramine-SGX and to skip verification of file existence
+    # overrides TC_00_FileSystem to skip verification of file existence
     def test_111_read_write_mmap(self):
         file_path = os.path.join(self.OUTPUT_DIR, 'test_111') # new file to be created
         stdout, stderr = self.run_binary(['read_write_mmap', file_path])
@@ -91,18 +91,6 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
     # overrides TC_00_FileSystem to skip verification by python
     def verify_copy_content(self, input_path, output_path):
         pass
-
-    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
-    def test_204_copy_dir_mmap_whole(self):
-        self.do_copy_test('copy_mmap_whole', 30)
-
-    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
-    def test_205_copy_dir_mmap_seq(self):
-        self.do_copy_test('copy_mmap_seq', 60)
-
-    # This overrides parent class to remove @expectedFailureIf(HAS_SGX)
-    def test_206_copy_dir_mmap_rev(self):
-        self.do_copy_test('copy_mmap_rev', 60)
 
     @unittest.skip("not applicable for tmpfs")
     def test_210_copy_dir_mounted(self):
