@@ -10,6 +10,7 @@ tests = {
     'bootstrap_static': {
         'static': true,
     },
+    'close_range': {},
     'console': {},
     'debug': {
         'c_args': '-g3',

@@ -50,3 +50,6 @@ struct linux_dirent_tail {
 #define SEEK_END  2 /* seek relative to end of file */
 #define SEEK_DATA 3 /* seek to the next data */
 #define SEEK_HOLE 4 /* seek to the next hole */
+
+#define CLOSE_RANGE_UNSHARE (1U << 1)
+#define CLOSE_RANGE_CLOEXEC (1U << 2)

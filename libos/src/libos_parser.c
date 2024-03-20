@@ -52,6 +52,7 @@ static void parse_waitid_which(struct print_buf*, va_list*);
 static void parse_getrandom_flags(struct print_buf*, va_list*);
 static void parse_epoll_op(struct print_buf*, va_list*);
 static void parse_epoll_event(struct print_buf* buf, va_list* ap);
+static void parse_close_range_flags(struct print_buf* buf, va_list* ap);
 
 static void parse_string_arg(struct print_buf*, va_list* ap);
 static void parse_pointer_arg(struct print_buf*, va_list* ap);
@@ -588,7 +589,8 @@ struct parser_table {
     [__NR_fspick] = {.slow = false, .name = "fspick", .parser = {NULL}},
     [__NR_pidfd_open] = {.slow = false, .name = "pidfd_open", .parser = {NULL}},
     [__NR_clone3] = {.slow = false, .name = "clone3", .parser = {NULL}},
-    [__NR_close_range] = {.slow = false, .name = "close_range", .parser = {NULL}},
+    [__NR_close_range] = {.slow = false, .name = "close_range", .parser = {parse_long_arg,
+                          parse_integer_arg, parse_integer_arg, parse_close_range_flags}},
     [__NR_openat2] = {.slow = false, .name = "openat2", .parser = {NULL}},
     [__NR_pidfd_getfd] = {.slow = false, .name = "pidfd_getfd", .parser = {NULL}},
     [__NR_faccessat2] = {.slow = false, .name = "faccessat2", .parser = {NULL}},
@@ -1595,6 +1597,22 @@ static void parse_epoll_event(struct print_buf* buf, va_list* ap) {
     }
 
     buf_printf(buf, ", .data=%#llx}", event->data);
+}
+
+static void parse_close_range_flags(struct print_buf* buf, va_list* ap) {
+    int flags = va_arg(*ap, int);
+
+#define FLG(n) \
+    { #n, n }
+    const struct flag_table all_flags[] = {
+        FLG(CLOSE_RANGE_CLOEXEC),
+        FLG(CLOSE_RANGE_UNSHARE),
+    };
+#undef FLG
+
+    flags = parse_flags(buf, flags, all_flags, ARRAY_SIZE(all_flags));
+    if (flags)
+        buf_printf(buf, "|0x%x", flags);
 }
 
 static void parse_string_arg(struct print_buf* buf, va_list* ap) {

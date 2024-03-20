@@ -206,3 +206,4 @@ long libos_syscall_getcpu(unsigned* cpu, unsigned* node, void* unused_cache);
 long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
+long libos_syscall_close_range(unsigned int first, unsigned int last, unsigned int flags);
