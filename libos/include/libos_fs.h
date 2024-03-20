@@ -833,6 +833,14 @@ int dentry_abs_path(struct libos_dentry* dent, char** path, size_t* size);
  */
 int dentry_rel_path(struct libos_dentry* dent, char** path, size_t* size);
 
+/*
+ * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It
+ * needs to be passed separately (instead of using `dent->inode->type`) because the dentry might not
+ * have inode associated yet: we might be creating a new file, or looking up a file we don't know
+ * yet.
+ */
+int dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri);
+
 ino_t dentry_ino(struct libos_dentry* dent);
 
 /*!
@@ -964,14 +972,6 @@ int generic_truncate(struct libos_handle* hdl, file_off_t size);
 int synthetic_setup_dentry(struct libos_dentry* dent, mode_t type, mode_t perm);
 
 int fifo_setup_dentry(struct libos_dentry* dent, mode_t perm, int fd_read, int fd_write);
-
-/*
- * Calculate the URI for a dentry. The URI scheme is determined by file type (`type` field). It
- * needs to be passed separately (instead of using `dent->inode->type`) because the dentry might not
- * have inode associated yet: we might be creating a new file, or looking up a file we don't know
- * yet.
- */
-int chroot_dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri);
 
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg);
 int chroot_unlink(struct libos_dentry* dent);

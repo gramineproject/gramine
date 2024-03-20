@@ -342,6 +342,76 @@ int dentry_rel_path(struct libos_dentry* dent, char** path, size_t* size) {
     return dentry_path(dent, /*relative=*/true, path, size);
 }
 
+static const char* strip_prefix(const char* uri) {
+    const char* s = strchr(uri, ':');
+    assert(s);
+    return s + 1;
+}
+
+int dentry_uri(struct libos_dentry* dent, mode_t type, char** out_uri) {
+    assert(dent->mount);
+    assert(dent->mount->uri);
+
+    int ret;
+
+    const char* root = strip_prefix(dent->mount->uri);
+
+    const char* prefix;
+    size_t prefix_len;
+    switch (type) {
+        case S_IFREG:
+            prefix = URI_PREFIX_FILE;
+            prefix_len = static_strlen(URI_PREFIX_FILE);
+            break;
+        case S_IFDIR:
+            prefix = URI_PREFIX_DIR;
+            prefix_len = static_strlen(URI_PREFIX_DIR);
+            break;
+        case S_IFCHR:
+            prefix = URI_PREFIX_DEV;
+            prefix_len = static_strlen(URI_PREFIX_DEV);
+            break;
+        default:
+            BUG();
+    }
+
+    char* rel_path;
+    size_t rel_path_size;
+    ret = dentry_rel_path(dent, &rel_path, &rel_path_size);
+    if (ret < 0)
+        return ret;
+
+    /* Treat empty path as "." */
+    if (*root == '\0')
+        root = ".";
+
+    size_t root_len = strlen(root);
+
+    /* Allocate buffer for "<prefix:><root>/<rel_path>" (if `rel_path` is empty, we don't need the
+     * space for `/`, but overallocating 1 byte doesn't hurt us, and keeps the code simple) */
+    char* uri = malloc(prefix_len + root_len + 1 + rel_path_size);
+    if (!uri) {
+        ret = -ENOMEM;
+        goto out;
+    }
+    memcpy(uri, prefix, prefix_len);
+    memcpy(uri + prefix_len, root, root_len);
+    if (rel_path_size == 1) {
+        /* this is the mount root, the URI is "<prefix:><root>"*/
+        uri[prefix_len + root_len] = '\0';
+    } else {
+        /* this is not the mount root, the URI is "<prefix:><root>/<rel_path>" */
+        uri[prefix_len + root_len] = '/';
+        memcpy(uri + prefix_len + root_len + 1, rel_path, rel_path_size);
+    }
+    *out_uri = uri;
+    ret = 0;
+
+out:
+    free(rel_path);
+    return ret;
+}
+
 struct libos_inode* get_new_inode(struct libos_mount* mount, mode_t type, mode_t perm) {
     assert(mount);
 
