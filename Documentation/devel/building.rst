@@ -69,6 +69,10 @@ Kernel version can be checked using the following command::
 
        uname -r
 
+If your current kernel version is 5.11 or higher, you have a built-in SGX
+support. The driver is accessible through /dev/sgx_enclave
+and /dev/sgx_provision.
+
 If your current kernel version is lower than 5.11, then you have two options:
 
 - Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,

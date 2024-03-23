@@ -12,32 +12,53 @@ material.
 
 SGX is an umbrella name of *technology* that comprises several parts:
 
-- CPU/platform *hardware features*: the new instruction set, new
-  microarchitecture with the :term:`PRM` (:term:`EPC`) memory region and some
-  new MSRs and some new logic in the MMU and so on;
+- CPU/platform *hardware features*: the instruction set, microarchitecture with
+  the :term:`PRM` memory region and some new MSRs, some new logic in the MMU
+  and so on;
 - the SGX :term:`Remote Attestation` *infrastructure*, online services provided
   by Intel and/or third parties (see :term:`DCAP`);
 - :term:`SDK` and assorted *software*.
 
-SGX is still being developed. The current (March 2020) version of CPU features
-is referred to as "SGX1" or simply "SGX" and is more or less finalized. All
-new/changed instructions from original SGX are informally referred to as
-":term:`SGX2`".
+SGX is still being developed. The current (March 2024) version of CPU features
+is referred to as ":term:`SGX2`" or simply "SGX". The older instruction set
+from the original SGX is informally referred to as ":term:`SGX1`".
 
 Features which might be considered part of SGX2:
 
-- :term:`EDMM` (Enclave Dynamic Memory Management) is part of SGX2
-- :term:`FLC` (Flexible Launch Control), not strictly part of SGX2, but was not
-  part of original SGX hardware either
-- :term:`KSS` (Key Separation and Sharing), also not part of SGX2, but was not
-  part of original SGX hardware either
+- :term:`EDMM` (Enclave Dynamic Memory Management)
+- :term:`FLC` (Flexible Launch Control; not strictly part of SGX2, but was not
+  part of original SGX hardware either)
+- :term:`KSS` (Key Separation and Sharing; also not part of SGX2, but was not
+  part of original SGX hardware either)
 
-As of now there is hardware support (on a |~| limited set of CPUs) for FLC and
-(on an even more limited set of CPUs) SGX2/EDMM. Most of the literature
-available (especially introduction-level) concerns original SGX1 only.
+Around 2022 Intel discontinued SGX support in client CPU cores, and instead
+introduced it to server cores. The new SGX hardware architecture didn't change
+the user-facing ABI, but loosened security guarantees, matching AMD SEV-SNP
+security model:
+
+- Merkle tree for memory integrity checking was removed.
+- Hardware RAM MitM attacks are not mitigated anymore: (because of Merkle tree
+  removal)
+
+  - On Icelake server CPUs there's no integrity protection at all.
+  - On Sapphire Rapids server CPUs there's a 28-bit MAC per each cacheline.
+    It's possible to bruteforce the MAC or do a replay attack with cacheline
+    granularity (but that still requires a hardware MitM).
+
+- EPC can now be almost arbitrarily big, significantly improving performance for
+  large workloads.
+
+As of now most of the broadly used server CPUs support :term:`SGX2`. Only older
+client CPUs support SGX, so they should not be used in production (because of
+missing security patches for side-channels).
 
 Introductory reading
 --------------------
+
+.. note::
+
+   Most of the older literature available (especially introduction-level)
+   concerns the original :term:`SGX1` only.
 
 - Quarkslab's two-part "Overview of Intel SGX":
 
@@ -61,7 +82,7 @@ Introductory reading
 
 - `Hardware compatibility list (unofficial) <https://github.com/ayeks/SGX-hardware>`__
 
-Official Documentation
+Official documentation
 ----------------------
 
 - `Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 3D:
@@ -70,22 +91,22 @@ Official Documentation
 - `SDK for Linux <https://01.org/intel-software-guard-extensions/downloads>`__
   (download of both the binaries and the documentation)
 
-Academic Research
+Academic research
 -----------------
 
 - `Intel's collection of academic papers
   <https://software.intel.com/en-us/sgx/documentation/academic-research>`__,
   likely the most comprehensive list of references
 
-Installation Instructions
+Installation instructions
 -------------------------
 
-.. todo:: TBD
+See :doc:`sgx-setup`.
 
 Linux kernel drivers
 ^^^^^^^^^^^^^^^^^^^^
 
-For historical reasons, there are three SGX drivers currently (January 2021):
+For historical reasons, there are three SGX drivers currently (March 2024):
 
 - https://github.com/intel/linux-sgx-driver -- old one, does not support DCAP,
   deprecated
@@ -96,88 +117,12 @@ For historical reasons, there are three SGX drivers currently (January 2021):
   more "normal" PKI infrastructure). Deprecated in favor of the upstreamed
   driver (see below).
 
-- SGX support was upstreamed to the Linux mainline starting from 5.11.
-  It currently supports only DCAP attestation. The driver is accessible through
-  /dev/sgx_enclave and /dev/sgx_provision.
+- The upstreamed Linux driver -- SGX support was upstreamed to the Linux
+  mainline starting from 5.11. It currently supports only DCAP attestation.
 
-  The following udev rules are recommended for users to access the SGX node::
-
-    groupadd -r sgx
-    gpasswd -a USERNAME sgx
-    groupadd -r sgx_prv
-    gpasswd -a USERNAME sgx_prv
-    cat > /etc/udev/rules.d/65-gramine-sgx.rules << EOF
-      SUBSYSTEM=="misc",KERNEL=="sgx_enclave",MODE="0660",GROUP="sgx"
-      SUBSYSTEM=="misc",KERNEL=="sgx_provision",MODE="0660",GROUP="sgx_prv"
-      EOF
-    udevadm trigger
-
-  Also it will not require :term:`IAS` and kernel maintainers consider
+  Also, it doesn't require :term:`IAS` and kernel maintainers consider
   non-writable :term:`FLC` MSRs as non-functional SGX:
   https://lore.kernel.org/lkml/20191223094614.GB16710@zn.tnic/
-
-The chronicle of kernel patchset:
-
-v1 (2016-04-25)
-   https://lore.kernel.org/lkml/1461605698-12385-1-git-send-email-jarkko.sakkinen@linux.intel.com/
-v2
-   ?
-v3
-   ?
-v4 (2017-10-16)
-   https://lore.kernel.org/lkml/20171016191855.16964-1-jarkko.sakkinen@linux.intel.com/
-v5 (2017-11-13)
-   https://lore.kernel.org/lkml/20171113194528.28557-1-jarkko.sakkinen@linux.intel.com/
-v6 (2017-11-25)
-   https://lore.kernel.org/lkml/20171125193132.24321-1-jarkko.sakkinen@linux.intel.com/
-v7 (2017-12-07)
-   https://lore.kernel.org/lkml/20171207015614.7914-1-jarkko.sakkinen@linux.intel.com/
-v8 (2017-12-15)
-   https://lore.kernel.org/lkml/20171215202936.28226-1-jarkko.sakkinen@linux.intel.com/
-v9 (2017-12-16)
-   https://lore.kernel.org/lkml/20171216162200.20243-1-jarkko.sakkinen@linux.intel.com/
-v10 (2017-12-24)
-   https://lore.kernel.org/lkml/20171224195854.2291-1-jarkko.sakkinen@linux.intel.com/
-v11 (2018-06-08)
-   https://lore.kernel.org/lkml/20180608171216.26521-1-jarkko.sakkinen@linux.intel.com/
-v12 (2018-07-03)
-   https://lore.kernel.org/lkml/20180703182118.15024-1-jarkko.sakkinen@linux.intel.com/
-v13 (2018-08-27)
-   https://lore.kernel.org/lkml/20180827185507.17087-1-jarkko.sakkinen@linux.intel.com/
-v14 (2018-09-25)
-   https://lore.kernel.org/lkml/20180925130845.9962-1-jarkko.sakkinen@linux.intel.com/
-v15 (2018-11-03)
-   https://lore.kernel.org/lkml/20181102231320.29164-1-jarkko.sakkinen@linux.intel.com/
-v16 (2018-11-06)
-   https://lore.kernel.org/lkml/20181106134758.10572-1-jarkko.sakkinen@linux.intel.com/
-v17 (2018-11-16)
-   https://lore.kernel.org/lkml/20181116010412.23967-2-jarkko.sakkinen@linux.intel.com/
-v18 (2018-12-22)
-   https://lore.kernel.org/linux-sgx/20181221231134.6011-1-jarkko.sakkinen@linux.intel.com/
-v19 (2019-03-20)
-   https://lore.kernel.org/lkml/20190320162119.4469-1-jarkko.sakkinen@linux.intel.com/
-v20 (2019-04-17)
-   https://lore.kernel.org/lkml/20190417103938.7762-1-jarkko.sakkinen@linux.intel.com/
-v21 (2019-07-13)
-   https://lore.kernel.org/lkml/20190713170804.2340-1-jarkko.sakkinen@linux.intel.com/
-v22 (2019-09-03)
-   https://lore.kernel.org/lkml/20190903142655.21943-1-jarkko.sakkinen@linux.intel.com/
-v23 (2019-10-28)
-   https://lore.kernel.org/lkml/20191028210324.12475-1-jarkko.sakkinen@linux.intel.com/
-v24 (2019-11-30)
-   https://lore.kernel.org/lkml/20191129231326.18076-1-jarkko.sakkinen@linux.intel.com/
-v25 (2020-02-04)
-   https://lore.kernel.org/lkml/20200204060545.31729-1-jarkko.sakkinen@linux.intel.com/
-v26 (2020-02-09)
-   https://lore.kernel.org/lkml/20200209212609.7928-1-jarkko.sakkinen@linux.intel.com/
-v27 (2020-02-23)
-   https://lore.kernel.org/lkml/20200223172559.6912-1-jarkko.sakkinen@linux.intel.com/
-v28 (2020-04-04)
-   https://lore.kernel.org/lkml/20200303233609.713348-1-jarkko.sakkinen@linux.intel.com/
-v29 (2020-04-22)
-   https://lore.kernel.org/lkml/20200421215316.56503-1-jarkko.sakkinen@linux.intel.com/
-v30 (2020-05-15)
-   https://lore.kernel.org/lkml/20200515004410.723949-1-jarkko.sakkinen@linux.intel.com/
 
 SGX terminology
 ---------------
@@ -203,9 +148,6 @@ SGX terminology
 
          :term:`Quoting Enclave`
 
-   AEP
-      .. todo:: TBD
-
    Architectural Enclave Service Manager
    AESM
 
@@ -215,8 +157,18 @@ SGX terminology
       and a component of the SGX SDK, which communicates with the daemon over a Unix
       socket with the fixed path :file:`/var/run/aesmd/aesm.sock`.
 
+   Asynchronous Enclave Exit
    AEX
-      .. todo:: TBD
+
+      An event caused by an exception occurring during in-enclave execution. CPU
+      saves the current context into :term:`SSA`, leaves SGX mode and jumps
+      to :term:`AEP`.
+
+   Asynchronous Exit Pointer
+   AEP
+
+      An address outside the enclave where CPU will jump in case an exception
+      happens during in-enclave execution.
 
    Attestation
 
@@ -224,17 +176,9 @@ SGX terminology
       to a local or remote party. More specifically, SGX attestation proves that
       the enclave runs on a real hardware in an up-to-date TEE with the expected
       initial state. There are two types of the attestation:
-      :term:`Local Attestation` and :term:`Remote Attestation`. For local
-      attestation, the attesting SGX enclave collects attestation evidence in
-      the form of an :term:`SGX Report` using the EREPORT hardware instruction.
-      For remote attestation, the attesting SGX enclave collects attestation
-      evidence in the form of an :term:`SGX Quote` using the :term:`Quoting
-      Enclave` (and the :term:`Provisioning Enclave` if required). The enclave
-      then may send the collected attestation evidence to the local or remote
-      party, which will verify the evidence and confirm the correctness of the
-      attesting enclave. After this, the local or remote party trusts the
-      enclave and may establish a secure channel with the enclave and send
-      secrets to it.
+      :term:`Local Attestation` (between enclaves on the same machines)
+      and :term:`Remote Attestation` (between enclave and any party, possibly
+      remote).
 
       .. seealso::
 
@@ -249,10 +193,7 @@ SGX terminology
 
       A |~| software infrastructure provided by Intel as a reference
       implementation for the new ECDSA/:term:`PCS`-based remote attestation.
-      Relies on the :term:`Flexible Launch Control` hardware feature. In
-      principle this is a |~| special version of :term:`SDK`/:term:`PSW` that
-      has a |~| reference launch enclave and is backed by the DCAP-enabled SGX
-      driver.
+      Relies on the :term:`Flexible Launch Control` hardware feature.
 
       This allows for launching enclaves with Intel's remote infrastructure
       only involved in the initial setup. Naturally however, this requires
@@ -269,24 +210,37 @@ SGX terminology
             A |~| way to launch enclaves with Intel's infrastructure, intended
             for client machines.
 
+   ECALL
+
+      A |~| special function call made by non-enclave world into an enclave.
+
    Enclave
-      .. todo:: TBD
+
+      An instance of SGX TEE, residing in a contiguous chunk of usermode address
+      space (``ELRANGE``) of some process on the system. Application threads
+      may enter and exit the enclave through dedicated CPU instructions. Code
+      running inside an enclave has access to usermode memory of the process
+      which contains it, but not the other way.
 
    Enclave Dynamic Memory Management
    EDMM
+
       A |~| hardware feature of :term:`SGX2`, allows for dynamic (in enclave
-      runtime) addition and removal of enclave memory, as well as changing
-      memory permissions and type. This in turn allows dynamic thread creation.
+      runtime) addition and removal of enclave threads and memory, as well as
+      changing memory permissions and type.
 
    Enclave Page Cache
    EPC
 
-      .. todo:: TBD
+      A |~| part of :term:`PRM` used for caching enclave pages. :term:`EPC` is
+      only an optimization and its size doesn't limit possible enclave sizes,
+      though too-small :term:`EPC` may lead to frequent page swapping and
+      significantly worsen performance.
 
    Enclave Page Cache Map
    EPCM
 
-      .. todo:: TBD
+      A |~| part of :term:`PRM` which holds metadata about EPC pages.
 
    Enhanced Privacy Identification
    Enhanced Privacy Identifier
@@ -306,7 +260,7 @@ SGX terminology
       quotes, pseudonymous quotes include an |~| identifier dependent on the
       identity of the CPU and the developer of the enclave being quoted, which
       allows determining whether two instances of your enclave are running on
-      the same hardware or not.
+      the same CPU or not.
 
       If your security model depends on enforcing that the identifiers are
       different (e.g. because you want to prevent sybil attacks), keep in mind
@@ -320,7 +274,7 @@ SGX terminology
 
          :term:`DCAP`
             A way to launch enclaves without relying on the Intel's
-            infrastructure.
+            infrastructure (after initial setup).
 
          :term:`SPID`
             An identifier one can obtain from Intel, required to make use of EPID
@@ -330,10 +284,10 @@ SGX terminology
    FLC
 
       Hardware (CPU) feature that allows substituting :term:`Launch Enclave` for
-      one not signed by Intel. A |~| change in SGX's EINIT logic to not require
-      the EINITTOKEN from the Intel-based Launch Enclave. An |~| MSR, which can
-      be locked at boot time, keeps the hash of the public key of the
-      "launching" entity.
+      one not signed by Intel through a |~| change in SGX's EINIT logic to not
+      require the EINITTOKEN from the Intel-based Launch Enclave. An |~| MSR,
+      which can be locked at boot time, keeps the hash of the public key of
+      the "launching" entity.
 
       With FLC, :term:`Launch Enclave` can be written by other companies (other
       than Intel) and must be signed with the key corresponding to the one
@@ -380,8 +334,8 @@ SGX terminology
       - Config ID
       - Config SVN
 
-      This feature was not part of original SGX and therefore not supported by
-      all SGX-enabled hardware.
+      This feature was not part of original SGX and therefore is not supported
+      by all SGX-enabled hardware.
 
    Launch Enclave
    LE
@@ -423,7 +377,7 @@ SGX terminology
 
    OCALL
 
-      .. todo:: TBD
+      A |~| special function call made by an enclave to the non-enclave world.
 
    SGX Platform Software
    PSW
@@ -436,7 +390,9 @@ SGX terminology
    Processor Reserved Memory
    PRM
 
-      .. todo:: TBD
+      A |~| mostly undocumented region of physical address space reserved by the
+      BIOS for internal use by SGX hardware. Known to contain at
+      least :term:`EPC` and :term:`EPCM`.
 
    Provisioning Enclave
    PE
@@ -516,11 +472,14 @@ SGX terminology
 
    Remote Attestation
 
-      In remote attestation, the attesting SGX enclave collects attestation
+      For remote attestation, the attesting SGX enclave collects attestation
       evidence in the form of an :term:`SGX Quote` using the :term:`Quoting
-      Enclave` (and the :term:`Provisioning Enclave` if required). This form of
-      attestation is used to send the attestation evidence to a remote party
-      (not on the same physical machine).
+      Enclave` (and the :term:`Provisioning Enclave` if required). The enclave
+      then may send the collected attestation evidence to the local or remote
+      party, which will verify the evidence and confirm the authenticity and
+      integrity of the attested enclave. After this, the local or remote party
+      trusts the enclave and may establish a secure channel with the enclave
+      and send secrets to it.
 
       .. seealso::
 
@@ -562,12 +521,14 @@ SGX terminology
       :term:`Local Attestation`. The SGX report is embedded into the
       :term:`SGX Quote`.
 
+   SGX1
+
+      The original SGX instruction set, without dynamic resource management.
+
    SGX2
 
-      This refers to all new SGX instructions and other hardware features that
-      were introduced after the release of the original SGX1.
-
-      Encompasses at least :term:`EDMM`, but is still work in progress.
+      New SGX instructions and other hardware features that were introduced
+      after the release of the original :term:`SGX1` (e.g. :term:`EDMM`).
 
    Service Provider ID
    SPID
@@ -577,8 +538,8 @@ SGX terminology
       obtain an |~| SPID through Intel's `Trusted Services Portal
       <https://api.portal.trustedservices.intel.com/EPID-attestation>`_.
 
-      See :term:`EPID` for a |~| description of the difference between *linkable*
-      and *unlinkable* quotes.
+      See :term:`EPID` for a |~| description of the difference between
+      *linkable* and *unlinkable* quotes.
 
    State Save Area
    SSA
