@@ -293,6 +293,11 @@ struct ocall_shutdown {
 
 struct ocall_gettime {
     uint64_t microsec;
+    uint64_t tsc;
+
+    /* for struct timezone initialization */
+    int tz_minuteswest;
+    int tz_dsttime;
 };
 
 struct ocall_poll {

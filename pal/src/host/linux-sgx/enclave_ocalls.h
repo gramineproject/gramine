@@ -89,6 +89,8 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
 
 int ocall_futex(uint32_t* uaddr, int op, int val, uint64_t* timeout_us);
 
+int ocall_reset_time(uint64_t* microsec, uint64_t* tsc, int* tz_minuteswest, int* tz_dsttime);
+
 int ocall_gettime(uint64_t* microsec);
 
 void ocall_sched_yield(void);

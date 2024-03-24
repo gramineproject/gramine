@@ -12,6 +12,7 @@
 #include <linux/in.h>
 #include <linux/in6.h>
 #include <linux/signal.h>
+#include <x86intrin.h>
 
 #include "cpu.h"
 #include "debug_map.h"
@@ -603,8 +604,13 @@ static long sgx_ocall_shutdown(void* args) {
 static long sgx_ocall_gettime(void* args) {
     struct ocall_gettime* ocall_gettime_args = args;
     struct timeval tv;
-    DO_SYSCALL(gettimeofday, &tv, NULL);
+    struct timezone tz;
+    unsigned long long tsc = __rdtsc();
+    DO_SYSCALL(gettimeofday, &tv, &tz);
     ocall_gettime_args->microsec = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
+    ocall_gettime_args->tsc = tsc;
+    ocall_gettime_args->tz_minuteswest = tz.tz_minuteswest;
+    ocall_gettime_args->tz_dsttime = tz.tz_dsttime;
     return 0;
 }
 
