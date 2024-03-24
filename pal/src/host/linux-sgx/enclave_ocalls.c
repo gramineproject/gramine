@@ -1766,7 +1766,7 @@ int ocall_shutdown(int sockfd, int how) {
     return retval;
 }
 
-int ocall_gettime(uint64_t* microsec_ptr, uint64_t* tsc_ptr, int* tz_minutewest_ptr, int* tz_dsttime_ptr) {
+int ocall_gettime(uint64_t* microsec_ptr, uint64_t* tsc_ptr) {
     int retval = 0;
     struct ocall_gettime* ocall_gettime_args;
 
@@ -1808,10 +1808,6 @@ int ocall_gettime(uint64_t* microsec_ptr, uint64_t* tsc_ptr, int* tz_minutewest_
         *microsec_ptr = MAX(microsec, expected_microsec);
         if (tsc_ptr != NULL) {
             *tsc_ptr = COPY_UNTRUSTED_VALUE(&ocall_gettime_args->tsc);
-        }
-        if (tz_minutewest_ptr != NULL && tz_dsttime_ptr != NULL) {
-            *tz_minutewest_ptr = COPY_UNTRUSTED_VALUE(&ocall_gettime_args->tz_minuteswest);
-            *tz_dsttime_ptr = COPY_UNTRUSTED_VALUE(&ocall_gettime_args->tz_minuteswest);
         }
     }
 
