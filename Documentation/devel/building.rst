@@ -69,6 +69,21 @@ Kernel version can be checked using the following command::
 
        uname -r
 
+If your current kernel version is 5.11 or higher, you have a built-in SGX
+support. The driver is accessible through /dev/sgx_enclave
+and /dev/sgx_provision. The following udev rules are recommended for users to
+access the SGX node::
+
+    groupadd -r sgx
+    gpasswd -a USERNAME sgx
+    groupadd -r sgx_prv
+    gpasswd -a USERNAME sgx_prv
+    cat > /etc/udev/rules.d/65-gramine-sgx.rules << EOF
+      SUBSYSTEM=="misc",KERNEL=="sgx_enclave",MODE="0660",GROUP="sgx"
+      SUBSYSTEM=="misc",KERNEL=="sgx_provision",MODE="0660",GROUP="sgx_prv"
+      EOF
+    udevadm trigger
+
 If your current kernel version is lower than 5.11, then you have two options:
 
 - Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,
