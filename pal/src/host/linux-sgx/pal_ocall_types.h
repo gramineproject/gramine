@@ -294,6 +294,7 @@ struct ocall_shutdown {
 
 struct ocall_gettime {
     uint64_t microsec;
+    uint64_t tsc;
 };
 
 struct ocall_poll {
