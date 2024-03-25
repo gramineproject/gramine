@@ -816,32 +816,18 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
     }
 }
 
-/* Get the to-be-lazily-committed pages of a given memory area; return a populated bitvector slice
+/* Gets the to-be-lazily-committed pages of a given memory area; returns a populated bitvector slice
  * if EDMM is enabled for the SGX PAL and all-zeros if it's not. */
-int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector,
-                           size_t* bitvector_size) {
+void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
     assert(addr && IS_ALIGNED_PTR(addr, PAGE_SIZE));
     assert(size && IS_ALIGNED(size, PAGE_SIZE));
     assert(bitvector);
-    assert(bitvector_size);
 
+    size_t count = size / g_page_size;
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        return get_lazy_commit_bitvector_slice(addr, size, bitvector, bitvector_size);
+        get_lazy_commit_bitvector_slice(addr, count, bitvector);
     } else {
-        size_t num_pages = size / g_page_size;
-        size_t num_bytes = UDIV_ROUND_UP(num_pages, 8);
-        if (num_bytes > *bitvector_size) {
-            return -PAL_ERROR_NOMEM;
-        }
-        *bitvector_size = num_bytes;
-
-        memset(bitvector, 0, num_bytes);
-
-        size_t leftover_pages = num_pages % 8;
-        if (leftover_pages)
-            bitvector[num_bytes - 1] = ~((1 << leftover_pages) - 1);
-
-        return 0;
+        memset(bitvector, 0, UDIV_ROUND_UP(count, 8));
     }
 }
 
@@ -860,7 +846,7 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
         } else {
             /*
              * In SGX1 the memory is mapped only at the enclave initialization and cannot be
-             * unmapped; we simiply `memset()` to have zero-filled pages on subsequent accesses.
+             * unmapped; we simply `memset()` to have zero-filled pages on subsequent accesses.
              */
             memset(addr, 0, size);
         }

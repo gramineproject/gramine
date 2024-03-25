@@ -1466,29 +1466,22 @@ BEGIN_CP_FUNC(vma) {
                 if (!bitvector)
                     return -ENOMEM;
 
-                int ret = PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector,
-                                                &bitvector_size);
-                if (ret < 0) {
-                    free(bitvector);
-                    return pal_to_unix_errno(ret);
-                }
+                PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector);
 
-                size_t last_byte_max_bit_idx = (vma_pages % 8) ? (vma_pages % 8) : 8;
-                for (size_t byte_idx = 0; byte_idx < bitvector_size; byte_idx++) {
+                for (size_t bit_idx = 0; bit_idx < vma_pages; bit_idx++) {
+                    size_t byte_idx = bit_idx / 8;
+                    size_t bit_position = bit_idx % 8;
+
                     uint8_t byte = bitvector[byte_idx];
-                    size_t max_bit_idx = (byte_idx == bitvector_size - 1) ?
-                                         last_byte_max_bit_idx : 8;
-                    for (size_t bit_idx = 0; bit_idx < max_bit_idx; bit_idx++) {
-                        /* skip the to-be-lazily-committed pages */
-                        if ((byte & (1 << bit_idx)))
-                            continue;
+                    /* skip the lazily-committed pages */
+                    if ((byte & (1 << bit_position)))
+                        continue;
 
-                        struct libos_mem_entry* mem;
-                        DO_CP_SIZE(memory, vma->addr + (byte_idx * 8 + bit_idx) * PAGE_SIZE,
-                                   PAGE_SIZE, &mem);
-                        mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
-                    }
+                    struct libos_mem_entry* mem;
+                    DO_CP_SIZE(memory, vma->addr + bit_idx * PAGE_SIZE, PAGE_SIZE, &mem);
+                    mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                 }
+
                 free(bitvector);
             } else {
                 /* Send file-backed memory region. */

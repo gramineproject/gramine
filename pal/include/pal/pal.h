@@ -1005,25 +1005,24 @@ void PalDebugMapRemove(void* start_addr);
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 /*!
- * \brief Get the to-be-lazily-committed pages of a given memory area via a bitvector.
+ * \brief Gets the lazily-committed pages of a given memory area via a bitvector.
  *
- * \param         addr           Starting address of the memory area.
- * \param         size           Size of the memory area.
- * \param[out]    bitvector      On success, will contain the commit status of the pages in the
- *                               memory area.
- * \param[in,out] bitvector_size On success, will contain the actual size of the bitvector.
+ * \param       addr           Starting address of the memory area.
+ * \param       size           Size of the memory area.
+ * \param[out]  bitvector      On success, will contain the commit status of the pages in the
+ *                                memory area.
  *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
  * be sent to the child process, as a perf optimization specific for SGX EDMM).
  */
-int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector, size_t* bitvector_size);
+void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
 
 /*!
- * \brief Free the committed pages within a given memory area but automatically recommit them on
+ * \brief Frees the committed pages within a given memory area but automatically recommits them on
  *        subsequent accesses.
  *
- * \param addr Starting address of the memory area.
- * \param size Size of the memory area.
+ * \param  addr Starting address of the memory area.
+ * \param  size Size of the memory area.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  * `[addr; addr+size)` must be a continuous memory range without any holes.

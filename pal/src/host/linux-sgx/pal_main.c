@@ -631,8 +631,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* initialize the enclave lazy commit page tracker as soon as we initialized the slab memory
      * allocator */
     if (edmm_enabled) {
-        ret = initialize_enclave_lazy_commit_page_tracker((uintptr_t)g_enclave_base,
-                                                          GET_ENCLAVE_TCB(enclave_size));
+        size_t enclave_pages = UDIV_ROUND_UP(GET_ENCLAVE_TCB(enclave_size), PAGE_SIZE);
+        ret = initialize_enclave_lazy_commit_page_tracker((uintptr_t)g_enclave_base, enclave_pages);
         if (ret < 0) {
             log_error("Initializing enclave lazy alloc page tracker failed");
             ocall_exit(1, /*is_exitgroup=*/true);
