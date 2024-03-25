@@ -32,7 +32,6 @@ BuildRequires: protobuf-c-compiler
 BuildRequires: protobuf-c-devel
 BuildRequires: python3-devel
 %if %{has_supported_sphinx}
-BuildRequires: python3-recommonmark
 BuildRequires: python3-sphinx >= 3.4
 BuildRequires: python3-sphinx_rtd_theme
 %endif
@@ -79,7 +78,7 @@ fi
 %meson_build
 
 %if %{has_supported_sphinx}
-%__make -C Documentation man
+%__make -C Documentation SPHINXOPTS=-tpkg_only man
 %endif
 
 %install
