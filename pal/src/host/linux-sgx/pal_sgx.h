@@ -33,11 +33,12 @@ extern enclave_lazy_commit_page_tracker_t* g_enclave_lazy_commit_page_tracker;
 
 int initialize_enclave_lazy_commit_page_tracker(uintptr_t enclave_base_address,
                                                 size_t enclave_pages);
-void set_enclave_lazy_commit_addr_range(uintptr_t start_addr, size_t count);
-void unset_enclave_lazy_commit_addr_range(uintptr_t start_addr, size_t count);
-void get_lazy_commit_bitvector_slice(uintptr_t start_addr, size_t count, uint8_t* bitvector);
-int uncommit_pages(uintptr_t start_addr, size_t count);
-int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t count);
-int maybe_commit_pages(uintptr_t start_addr, size_t count, pal_prot_flags_t prot);
-int commit_lazy_alloc_pages(uintptr_t start_addr, size_t count, pal_prot_flags_t prot);
-int set_committed_page_permissions(uintptr_t start_addr, size_t count, pal_prot_flags_t prot);
+void set_enclave_lazy_commit_pages(uintptr_t start_addr, size_t page_count);
+void unset_enclave_lazy_commit_pages(uintptr_t start_addr, size_t page_count);
+void get_lazy_commit_pages_bitvector_slice(uintptr_t start_addr, size_t page_count,
+                                           uint8_t* bitvector);
+int uncommit_pages(uintptr_t start_addr, size_t page_count);
+int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t page_count);
+int maybe_commit_pages(uintptr_t start_addr, size_t page_count, pal_prot_flags_t prot);
+int commit_lazy_alloc_pages(uintptr_t start_addr, size_t page_count, pal_prot_flags_t prot);
+int set_committed_pages_permissions(uintptr_t start_addr, size_t page_count, pal_prot_flags_t prot);

@@ -245,9 +245,9 @@ int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot);
 /*!
  * \brief Set upcalls for memory bookkeeping
  *
- * \param alloc          Function to call to get a memory range.
- * \param free           Function to call to release the memory range.
- * \param get_vma_info   Function to call to get the VMA info (currently only PAL prot flags).
+ * \param alloc         Function to call to get a memory range.
+ * \param free          Function to call to release the memory range.
+ * \param get_vma_info  Function to call to get the VMA info (currently only PAL prot flags).
  *
  * Both \p alloc and \p free must be thread-safe.
  */
@@ -1005,24 +1005,28 @@ void PalDebugMapRemove(void* start_addr);
 void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
 
 /*!
- * \brief Gets the lazily-committed pages of a given memory area via a bitvector.
+ * \brief Get the lazily-committed pages of a given memory area via a bitvector.
  *
- * \param       addr           Starting address of the memory area.
- * \param       size           Size of the memory area.
- * \param[out]  bitvector      On success, will contain the commit status of the pages in the
- *                                memory area.
+ * \param      addr       Starting address of the memory area.
+ * \param      size       Size of the memory area.
+ * \param[out] bitvector  On success, will contain the commit status of the pages in the
+ *                        memory area.
+ *
+ * \returns 0 on success, negative error code on failure.
  *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
  * be sent to the child process, as a perf optimization specific for SGX EDMM).
  */
-void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
+int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
 
 /*!
- * \brief Frees the committed pages within a given memory area but automatically recommits them on
+ * \brief Free the committed pages within a given memory area but automatically recommit them on
  *        subsequent accesses.
  *
- * \param  addr Starting address of the memory area.
- * \param  size Size of the memory area.
+ * \param addr  Starting address of the memory area.
+ * \param size  Size of the memory area.
+ *
+ * \returns 0 on success, negative error code on failure.
  *
  * Both `addr` and `size` must be non-zero and aligned at the allocation alignment.
  * `[addr; addr+size)` must be a continuous memory range without any holes.

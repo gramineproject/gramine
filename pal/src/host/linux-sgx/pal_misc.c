@@ -818,17 +818,19 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
 
 /* Gets the to-be-lazily-committed pages of a given memory area; returns a populated bitvector slice
  * if EDMM is enabled for the SGX PAL and all-zeros if it's not. */
-void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
+int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
     assert(addr && IS_ALIGNED_PTR(addr, PAGE_SIZE));
     assert(size && IS_ALIGNED(size, PAGE_SIZE));
     assert(bitvector);
 
-    size_t count = size / g_page_size;
+    size_t page_count = size / g_page_size;
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        get_lazy_commit_bitvector_slice(addr, count, bitvector);
+        get_lazy_commit_pages_bitvector_slice(addr, page_count, bitvector);
     } else {
-        memset(bitvector, 0, UDIV_ROUND_UP(count, 8));
+        memset(bitvector, 0, UDIV_ROUND_UP(page_count, 8));
     }
+
+    return 0;
 }
 
 int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
