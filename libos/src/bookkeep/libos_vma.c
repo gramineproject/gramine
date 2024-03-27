@@ -1466,11 +1466,7 @@ BEGIN_CP_FUNC(vma) {
                 if (!bitvector)
                     return -ENOMEM;
 
-                int ret = PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector);
-                if (ret < 0) {
-                    free(bitvector);
-                    return pal_to_unix_errno(ret);
-                }
+                PalGetLazyCommitPages((uintptr_t)vma->addr, vma->length, bitvector);
 
                 for (size_t bit_idx = 0; bit_idx < vma_pages; bit_idx++) {
                     size_t byte_idx = bit_idx / 8;

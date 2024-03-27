@@ -81,7 +81,7 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
 }
 
 /* Gets the to-be-lazily committed pages of a given memory area; returns all-zeros on Linux PAL. */
-int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
+void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
     __UNUSED(addr);
     assert(size && IS_ALIGNED(size, PAGE_SIZE));
     assert(bitvector);
@@ -89,8 +89,6 @@ int _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
     size_t bitvector_size = UDIV_ROUND_UP(size / g_page_size, 8);
 
     memset(bitvector, 0, bitvector_size);
-
-    return 0;
 }
 
 int _PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {

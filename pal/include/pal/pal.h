@@ -1012,12 +1012,10 @@ void PalDebugDescribeLocation(uintptr_t addr, char* buf, size_t buf_size);
  * \param[out] bitvector  On success, will contain the commit status of the pages in the
  *                        memory area.
  *
- * \returns 0 on success, negative error code on failure.
- *
  * This API is currently used for checkpoint-and-restore logic (to learn which memory areas need to
  * be sent to the child process, as a perf optimization specific for SGX EDMM).
  */
-int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
+void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
 
 /*!
  * \brief Free the committed pages within a given memory area but automatically recommit them on

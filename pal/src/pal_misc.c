@@ -52,9 +52,9 @@ int PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return _PalGetSpecialKey(name, key, key_size);
 }
 
-int PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
+void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size) || !bitvector) {
-        return -PAL_ERROR_INVAL;
+        BUG();
     }
 
     return _PalGetLazyCommitPages(addr, size, bitvector);
