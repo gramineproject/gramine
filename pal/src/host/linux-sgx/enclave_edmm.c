@@ -462,8 +462,16 @@ int uncommit_pages(uintptr_t start_addr, size_t page_count) {
     if (ret < 0)
         return ret;
 
-    return walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
-                      sgx_edmm_remove_pages_callback, NULL);
+    ret = walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
+                     sgx_edmm_remove_pages_callback, NULL);
+    if (ret < 0)
+        return ret;
+
+    spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
+    unset_enclave_lazy_commit_pages(start_addr, page_count);
+    spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
+
+    return 0;
 }
 
 int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t page_count) {
@@ -479,12 +487,12 @@ int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t page_count) {
 }
 
 int maybe_commit_pages(uintptr_t start_addr, size_t page_count, pal_prot_flags_t prot) {
-    assert(completely_within_tracked_range(start_addr, page_count));
-
     int ret;
     uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
 
     if (g_enclave_lazy_commit_page_tracker) {
+        assert(completely_within_tracked_range(start_addr, page_count));
+
         ret = maybe_alloc_bitvector_pages_eagerly(start_addr, page_count);
         if (ret < 0)
             return ret;

@@ -79,6 +79,21 @@ int mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
     return -PAL_ERROR_NOMEM;
 }
 
+/* for testing purposes only: this function updates protection flags for the entire VMA containing
+ * the specified address, i.e., splitting VMAs is not supported */
+static int mem_bkeep_set_vma_info(uintptr_t addr, pal_prot_flags_t prot_flags) {
+    assert(g_vmas_len);
+
+    for (size_t i = 0; i < g_vmas_len; i++) {
+        if (g_vmas[i].begin <= addr && addr < g_vmas[i].end) {
+            g_vmas[i].prot_flags = prot_flags;
+            return 0;
+        }
+    }
+
+    return -PAL_ERROR_NOMEM;
+}
+
 void init_memory_management(void) {
     struct pal_public_state* pal_public_state = PalGetPalPublicState();
     /* Because we are looking at free space between memory ranges, we need a VMA marking the end of
@@ -170,6 +185,27 @@ int memory_free(void* addr, size_t size) {
     if (ret < 0) {
         log_error("%s: mem_bkeep_free(%p, %#lx) failed: %s", __func__, addr, size,
                   pal_strerror(ret));
+        return ret;
+    }
+
+    return 0;
+}
+
+int memory_protect(void* addr, size_t size, pal_prot_flags_t prot) {
+    if (!IS_ALIGNED_PTR(addr, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE)) {
+        return -PAL_ERROR_INVAL;
+    }
+
+    int ret = PalVirtualMemoryProtect(addr, size, prot);
+    if (ret < 0) {
+        return ret;
+    }
+
+    ret = mem_bkeep_set_vma_info((uintptr_t)addr, prot);
+    if (ret < 0) {
+        log_error("%s: mem_bkeep_set_vma_info(%p, %#x) failed: %s", __func__, addr, prot,
+                  pal_strerror(ret));
+        return ret;
     }
 
     return 0;
