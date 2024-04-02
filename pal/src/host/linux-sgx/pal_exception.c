@@ -110,11 +110,12 @@ static void save_pal_context(PAL_CONTEXT* ctx, sgx_cpu_context_t* uc,
     }
 }
 
+#include "utils/fast_clock.h"
+
 static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
     if (FIRST_TIME()) {
-        /* if we end up emulating RDTSC/RDTSCP instruction, we cannot use invariant TSC */
-        extern uint64_t g_tsc_hz;
-        g_tsc_hz = 0;
+        /* if we end up emulating RDTSC/RDTSCP instruction, we cannot use TSC-based clock emulation */
+        fast_clock__disable(&g_fast_clock);
         log_warning("all RDTSC/RDTSCP instructions are emulated (imprecisely) via gettime() "
                     "syscall.");
     }

@@ -70,6 +70,7 @@ extern fast_clock_t g_fast_clock;
 int fast_clock__get_time(fast_clock_t* fast_clock, uint64_t* time_micros, bool force_new_timepoint);
 void fast_clock__get_timezone(const fast_clock_t* fast_clock, int* tz_minutewest, int* tz_dsttime);
 bool fast_clock__is_enabled(const fast_clock_t* fast_clock);
+void fast_clock__disable(fast_clock_t* fast_clock);
 
 #ifdef __cplusplus
 } /* extern int */

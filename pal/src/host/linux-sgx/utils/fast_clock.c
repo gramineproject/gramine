@@ -182,12 +182,6 @@ int fast_clock__get_time(fast_clock_t* fast_clock, uint64_t* time_usec, bool for
     }
 }
 
-bool fast_clock__is_enabled(const fast_clock_t* fast_clock)
-{
-    fast_clock_desc_t descriptor = desc_atomic_load(fast_clock, __ATOMIC_RELAXED);
-    return (descriptor.state != FC_STATE_RDTSC_DISABLED);
-}
-
 static inline bool set_change_state_guard(fast_clock_t* fast_clock, fast_clock_desc_t descriptor)
 {
     if ((descriptor.flags & FC_FLAGS_STATE_CHANGING) != 0) {
@@ -203,6 +197,25 @@ static inline bool set_change_state_guard(fast_clock_t* fast_clock, fast_clock_d
         &fast_clock->atomic_descriptor.desc, &descriptor.desc, state_change_guard_desc.desc,
         /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED
     );
+}
+
+bool fast_clock__is_enabled(const fast_clock_t* fast_clock)
+{
+    fast_clock_desc_t descriptor = desc_atomic_load(fast_clock, __ATOMIC_RELAXED);
+    return (descriptor.state != FC_STATE_RDTSC_DISABLED);
+}
+
+void fast_clock__disable(fast_clock_t* fast_clock)
+{
+    /* We need to busy-loop until the state change guard is acquired here - since fast-clock
+     * might be in the midst of transitioning states. We can't simply store the DISABLED state. */
+    fast_clock_desc_t descriptor;
+    do {
+        descriptor = desc_atomic_load(fast_clock, __ATOMIC_ACQUIRE);
+    } while(!set_change_state_guard(fast_clock, descriptor));
+
+    fast_clock_desc_t disabled_desc = advance_state(descriptor, FC_STATE_RDTSC_DISABLED, false);
+    desc_atomic_store(fast_clock, disabled_desc, __ATOMIC_RELEASE);
 }
 
 static inline fast_clock_timepoint_t* get_timepoint(fast_clock_t* fast_clock, fast_clock_desc_t descriptor)
