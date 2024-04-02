@@ -1,7 +1,0 @@
-[wrap-file]
-directory = curl-8.5.0
-source_url = https://curl.se/download/curl-8.5.0.tar.gz
-source_fallback_url = https://packages.gramineproject.io/distfiles/curl-8.5.0.tar.gz
-source_filename = curl-8.5.0.tar.gz
-source_hash = 05fc17ff25b793a437a0906e0484b82172a9f4de02be5ed447e0cab8c3475add
-patch_directory = curl-8.5.0

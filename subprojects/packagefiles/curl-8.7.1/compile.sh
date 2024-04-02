@@ -27,7 +27,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
     log "running configure..."
     # The list of configure options is selected based on:
-    # https://github.com/curl/curl/blob/curl-8_5_0/docs/INSTALL.md#reducing-size
+    # https://github.com/curl/curl/blob/curl-8_7_1/docs/INSTALL.md#reducing-size
     ./configure                                     \
         --enable-proxy                              \
         --disable-alt-svc                           \
@@ -39,6 +39,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-dnsshuffle                        \
         --disable-doh                               \
         --disable-file                              \
+        --disable-form-api                          \
         --disable-ftp                               \
         --disable-get-easy-options                  \
         --disable-gopher                            \
@@ -49,8 +50,10 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-ldaps                             \
         --disable-libcurl-option                    \
         --disable-manual                            \
+        --disable-mime                              \
         --disable-mqtt                              \
         --disable-netrc                             \
+        --disable-ntlm                              \
         --disable-ntlm-wb                           \
         --disable-pop3                              \
         --disable-progress-meter                    \
