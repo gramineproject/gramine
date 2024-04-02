@@ -150,6 +150,15 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
     mbedtls_ssl_config_init(conf);
     mbedtls_ssl_init(ssl);
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        ERROR("Failed to initialize PSA Crypto implementation: %d\n", (int)status);
+        ret = -EPERM;
+        goto out;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
+
     const char* pers = "secret-provisioning";
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
                                 (const uint8_t*)pers, strlen(pers));
@@ -357,6 +366,10 @@ out:
     mbedtls_x509_crt_free(&verifier_ca_chain);
     mbedtls_entropy_free(&entropy);
     mbedtls_ctr_drbg_free(&ctr_drbg);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
     free(servers);
     free(ca_chain_path);
