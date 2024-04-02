@@ -50,7 +50,7 @@ Features implemented in Gramine can be classified as:
 
 Each feature has a list of related system calls and pseudo-files, for cross-reference.
 
-### Table of Contents (abridged)
+## Table of Contents (abridged)
 
 - [List of system calls](#list-of-system-calls)
 - [List of pseudo-files](#list-of-pseudo-files)
@@ -104,14 +104,14 @@ The below list is generated from the [syscall table of Linux
 - ☑ `read()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `write()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -121,7 +121,7 @@ The below list is generated from the [syscall table of Linux
 - ☑ `close()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
@@ -131,7 +131,7 @@ The below list is generated from the [syscall table of Linux
 - ▣ `fstat()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `lstat()`
@@ -140,9 +140,9 @@ The below list is generated from the [syscall table of Linux
 - ▣ `poll()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `lseek()`
@@ -173,7 +173,7 @@ The below list is generated from the [syscall table of Linux
 
 - ▣ `ioctl()`
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[18](#ioctls)</sup>
 
@@ -186,13 +186,13 @@ The below list is generated from the [syscall table of Linux
 - ☑ `readv()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `writev()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `access()`
@@ -204,9 +204,9 @@ The below list is generated from the [syscall table of Linux
 - ▣ `select()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `sched_yield()`
@@ -261,66 +261,66 @@ The below list is generated from the [syscall table of Linux
 - ▣ `sendfile()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `socket()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `connect()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `accept()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `sendto()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `recvfrom()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `sendmsg()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `recvmsg()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `shutdown()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `bind()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `listen()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getsockname()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getpeername()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `socketpair()`
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `setsockopt()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `getsockopt()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☑ `clone()`
@@ -376,7 +376,7 @@ The below list is generated from the [syscall table of Linux
 - ▣ `fcntl()`
   <sup>[9b](#file-locking)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
   <sup>[23](#misc)</sup>
 
@@ -466,13 +466,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[19](#date-and-time)</sup>
 
 - ☒ `ptrace()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `getuid()`
   <sup>[8](#user-and-group-identifiers)</sup>
 
 - ☒ `syslog()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `getgid()`
   <sup>[8](#user-and-group-identifiers)</sup>
@@ -538,10 +538,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[23](#misc)</sup>
 
 - ☒ `capget()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `capset()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☑ `rt_sigpending()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -565,10 +565,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
 
 - ☒ `uselib()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `personality()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `ustat()`
   <sup>[9a](#file-system-operations)</sup>
@@ -622,16 +622,16 @@ The below list is generated from the [syscall table of Linux
   <sup>[6](#memory-management)</sup>
 
 - ☒ `vhangup()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `modify_ldt()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `pivot_root()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `_sysctl()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `prctl()`
   <sup>[2](#threads)</sup>
@@ -652,7 +652,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `acct()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `settimeofday()`
   <sup>[19](#date-and-time)</sup>
@@ -664,13 +664,13 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `swapon()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `swapoff()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `reboot()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `sethostname()`
   <sup>[22](#system-information-and-resource-accounting)</sup>
@@ -679,88 +679,88 @@ The below list is generated from the [syscall table of Linux
   <sup>[22](#system-information-and-resource-accounting)</sup>
 
 - ☒ `iopl()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `ioperm()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `create_module()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `init_module()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `delete_module()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `get_kernel_syms()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `query_module()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `quotactl()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `nfsservctl()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `getpmsg()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `putpmsg()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `afs_syscall()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `tuxcall()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `security()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☑ `gettid()`
   <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `readahead()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `setxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `lsetxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fsetxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `getxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `lgetxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fgetxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `listxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `llistxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `flistxattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `removexattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `lremovexattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fremovexattr()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `tkill()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -781,32 +781,32 @@ The below list is generated from the [syscall table of Linux
   <sup>[2](#threads)</sup>
 
 - ☒ `io_setup()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_destroy()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_getevents()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_submit()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_cancel()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `get_thread_area()`
   <sup>[2](#threads)</sup>
 
 - ☒ `lookup_dcookie()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☑ `epoll_create()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `remap_file_pages()`
@@ -819,7 +819,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[3](#process-and-thread-identifiers)</sup>
 
 - ☒ `restart_syscall()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `semtimedop()`
   <sup>[15](#semaphores)</sup>
@@ -860,17 +860,17 @@ The below list is generated from the [syscall table of Linux
 - ☑ `epoll_wait()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `epoll_ctl()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `tgkill()`
@@ -880,7 +880,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `vserver()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `mbind()`
   <sup>[6](#memory-management)</sup>
@@ -910,19 +910,19 @@ The below list is generated from the [syscall table of Linux
   <sup>[16](#message-queues)</sup>
 
 - ☒ `kexec_load()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `waitid()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `add_key()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `request_key()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `keyctl()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `ioprio_set()`
   <sup>[4](#scheduling)</sup>
@@ -984,22 +984,22 @@ The below list is generated from the [syscall table of Linux
 - ▣ `pselect6()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ▣ `ppoll()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `unshare()`
   <sup>[1](#processes)</sup>
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☑ `set_robust_list()`
   <sup>[5](#memory-synchronization-futexes)</sup>
@@ -1008,16 +1008,16 @@ The below list is generated from the [syscall table of Linux
   <sup>[5](#memory-synchronization-futexes)</sup>
 
 - ☒ `splice()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `tee()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `sync_file_range()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `vmsplice()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `move_pages()`
   <sup>[6](#memory-management)</sup>
@@ -1028,9 +1028,9 @@ The below list is generated from the [syscall table of Linux
 - ▣ `epoll_pwait()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `signalfd()`
@@ -1052,7 +1052,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[20](#sleeps-timers-and-alarms)</sup>
 
 - ☑ `accept4()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `signalfd4()`
@@ -1064,9 +1064,9 @@ The below list is generated from the [syscall table of Linux
 - ☑ `epoll_create1()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☑ `dup3()`
@@ -1088,10 +1088,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `perf_event_open()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `recvmmsg()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `fanotify_init()`
@@ -1116,27 +1116,27 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `sendmmsg()`
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
 
 - ☒ `setns()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ▣ `getcpu()`
   <sup>[4](#scheduling)</sup>
   <sup>[23](#misc)</sup>
 
 - ☒ `process_vm_readv()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `process_vm_writev()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `kcmp()`
   <sup>[1](#processes)</sup>
 
 - ☒ `finit_module()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `sched_setattr()`
   <sup>[4](#scheduling)</sup>
@@ -1148,7 +1148,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `seccomp()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☑ `getrandom()`
   <sup>[21](#randomness)</sup>
@@ -1157,10 +1157,10 @@ The below list is generated from the [syscall table of Linux
   <sup>[6](#memory-management)</sup>
 
 - ☒ `kexec_file_load()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `bpf()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `execveat()`
   <sup>[1](#processes)</sup>
@@ -1175,7 +1175,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[6](#memory-management)</sup>
 
 - ☒ `copy_file_range()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `preadv2()`
   <sup>[9a](#file-system-operations)</sup>
@@ -1184,52 +1184,52 @@ The below list is generated from the [syscall table of Linux
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `pkey_mprotect()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_alloc()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `pkey_free()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `statx()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `io_pgetevents()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `rseq()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_send_signal()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
 - ☒ `io_uring_setup()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_uring_enter()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `io_uring_register()`
-  <sup>[13](#asynchronous-i-o)</sup>
+  <sup>[13](#asynchronous-io)</sup>
 
 - ☒ `open_tree()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `move_mount()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fsopen()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fsconfig()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fsmount()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `fspick()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `pidfd_open()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -1239,7 +1239,7 @@ The below list is generated from the [syscall table of Linux
   <sup>[2](#threads)</sup>
 
 - ☒ `close_range()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `openat2()`
   <sup>[9a](#file-system-operations)</sup>
@@ -1257,25 +1257,25 @@ The below list is generated from the [syscall table of Linux
 - ☒ `epoll_pwait2()`
   <sup>[9a](#file-system-operations)</sup>
   <sup>[10](#pipes-and-fifos-named-pipes)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup>
   <sup>[11b](#unix-domain-sockets)</sup>
-  <sup>[12](#i-o-multiplexing)</sup>
+  <sup>[12](#io-multiplexing)</sup>
   <sup>[14](#event-notifications-eventfd)</sup>
 
 - ☒ `mount_setattr()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `quotactl_fd()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_create_ruleset()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_add_rule()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `landlock_restrict_self()`
-  <sup>[24](#advanced-infeasible-unimplemented-features)</sup>
+  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `memfd_secret()`
   <sup>[6](#memory-management)</sup>
@@ -1328,7 +1328,7 @@ grows with time, as Gramine adds functionality required by real-world workloads.
   <sup>[8](#user-and-group-identifiers)</sup>
   <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
   <sup>[22](#system-information-and-resource-accounting)</sup>
-  <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
+  <sup>[11a](#tcpip-and-udpip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
   - ▣ `/proc/[this-pid]/` (aka `/proc/self/`)
     <sup>[3](#process-and-thread-identifiers)</sup>
     <sup>[9d](#hard-links-and-soft-links-symbolic-links)</sup>
@@ -1374,16 +1374,16 @@ grows with time, as Gramine adds functionality required by real-world workloads.
 
   - ▣ `/proc/sys/`
     <sup>[3](#process-and-thread-identifiers)</sup>
-    <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
+    <sup>[11a](#tcpip-and-udpip-sockets)</sup> <sup>[11b](#unix-domain-sockets)</sup>
     - ▣ `/proc/sys/kernel/`
       <sup>[3](#process-and-thread-identifiers)</sup>
       - ☑ `/proc/sys/kernel/pid_max`
         <sup>[3](#process-and-thread-identifiers)</sup>
-    - ☒ `/proc/sys/net/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+    - ☒ `/proc/sys/net/` <sup>[11a](#tcpip-and-udpip-sockets)</sup>
       <sup>[11b](#unix-domain-sockets)</sup>
-      - ☒ `/proc/sys/net/core/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv4/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
-      - ☒ `/proc/sys/net/ipv6/` <sup>[11a](#tcp-ip-and-udp-ip-sockets)</sup>
+      - ☒ `/proc/sys/net/core/` <sup>[11a](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv4/` <sup>[11a](#tcpip-and-udpip-sockets)</sup>
+      - ☒ `/proc/sys/net/ipv6/` <sup>[11a](#tcpip-and-udpip-sockets)</sup>
       - ☒ `/proc/sys/net/unix/` <sup>[11b](#unix-domain-sockets)</sup>
 
 - ▣ `/sys/devices/system/`
@@ -1458,18 +1458,18 @@ in the entrypoint of the manifest. The first process can spawn child processes, 
 same Gramine instance.
 
 Gramine can execute ELF binaries (executables and libraries) and executable scripts. Gramine
-supports executing them as [entrypoints](../manifest-syntax.html#libos-entrypoint) and via
-`execve()` system call. In case of SGX backend, `execve()` execution replaces a calling program with
-a new program *in the same SGX enclave*.
+supports executing them as {ref}`entrypoints <libos-entrypoint>` and via `execve()` system call. In
+case of SGX backend, `execve()` execution replaces a calling program with a new program *in the same
+SGX enclave*.
 
 Gramine supports creating child processes using `fork()`, `vfork()` and `clone()` system calls.
 `vfork()` is emulated via `fork()`. `clone()` always means a separate process with its own address
 space (i.e., `CLONE_THREAD`, `CLONE_FILES`, etc. flags cannot be specified). In case of SGX backend,
 child processes are created *in a new SGX enclave*.
 
-It is possible to disallow creation of child processes, by specifying [`sys.disallow_subprocesses =
-true` in the manifest](../manifest-syntax.html#disallowing-subprocesses-fork). The intuition is that
-many applications have fallbacks when they fail to spawn a child process (e.g. Python). This can be
+It is possible to disallow creation of child processes, by specifying `sys.disallow_subprocesses =
+true` {ref}`in the manifest <disallowing-subprocesses-fork>`. The intuition is that many
+applications have fallbacks when they fail to spawn a child process (e.g. Python). This can be
 useful in SGX environments: child processes consume EPC memory which is a limited resource.
 
 Currently, Gramine does *not* fully support fork in multi-threaded applications. There is a [known
@@ -1537,7 +1537,7 @@ arch-specific (x86-specific) thread state via `arch_prctl(ARCH_GET_FS)` and
 
 Gramine sets the same stack size for each thread. Gramine does *not* support dynamic growth of the
 first-thread stack (as Linux does). The stack size in Gramine can be configured via the
-[`sys.stack.size` manifest option](../manifest-syntax.html#stack-size).
+`sys.stack.size` {ref}`manifest option <stack-size>`.
 
 </details>
 
@@ -1720,7 +1720,7 @@ mappings, it depends on the type of file:
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
-- on [systems supporting EDMM](../sgx-intro.html#term-edmm), `mprotect()` correctly applies
+- on systems supporting {term}`EDMM`, `mprotect()` correctly applies
   permissions;
 - on systems not supporting EDMM, all enclave memory is allocated with Read-Write-Execute
   permissions, and `mprotect()` calls are silently ignored.
@@ -1817,9 +1817,8 @@ to the complexity of message-passing implementation.
 
 Gramine implements limited support for POSIX shared memory (but not for System V shared memory).
 Please note that in case of the SGX backend, implementation of shared memory is *insecure*. For more
-information, please refer to the [corresponding manifest
-syntax](../manifest-syntax.html#untrusted-shared-memory) and [the corresponding section in this
-document](#shared-memory).
+information, please refer to the {ref}`corresponding manifest syntax <untrusted-shared-memory>` and
+[the corresponding section in this document](#shared-memory).
 
 Since Gramine has support for POSIX shared memory, consequently Gramine has support for POSIX
 semaphores (which are built on top of POSIX shared memory). In case of the SGX backend,
@@ -1858,11 +1857,10 @@ Gramine implements signal dispositions, but some rarely used features are not im
 - only fields `si_signo`, `si_code`, `si_pid`, `si_uid`, `si_status`, `si_addr` in the data type
   `siginfo_t` are populated.
 
-Gramine supports injecting a [single SIGTERM signal from the
-host](../manifest-syntax.html#external-sigterm-injection). No other signals from the host are
-supported. By default, Gramine ignores all signals sent by the host (including signals sent from
-other applications or from other Gramine instances). This limitation is for security reasons,
-relevant on SGX backend.
+Gramine supports injecting a {ref}`single SIGTERM signal from the host
+<external-sigterm-injection>`. No other signals from the host are supported. By default, Gramine
+ignores all signals sent by the host (including signals sent from other applications or from other
+Gramine instances). This limitation is for security reasons, relevant on SGX backend.
 
 Gramine has some limitations on sending signals to processes and threads:
 - sending a signal to a process group is not supported (e.g. `kill(0)` sends the signal only to the
@@ -1930,10 +1928,10 @@ The corresponding system calls are:
 - `getresuid()`, `setresuid()`, `getresgid()`, `setresgid()` for UID + EUID + SUID
   and GID + EGID + SGID (not implemented).
 
-Gramine starts the application with UID = EUID = SUID and equal to
-[`loader.uid`](../manifest-syntax.html#user-id-and-group-id). Similarly, the application is started
-with GID = EGID = SGID and equal to `loader.gid`. If these manifest options are not set, then all
-IDs are equal to zero, which means root user.
+Gramine starts the application with UID = EUID = SUID and equal to `loader.uid` {ref}`manifest
+option <user-id-and-group-id>`. Similarly, the application is started with GID = EGID = SGID and
+equal to `loader.gid`. If these manifest options are not set, then all IDs are equal to zero, which
+means root user.
 
 During execution, the application may modify these IDs, and the changes will be visible inside the
 Gramine environment.
@@ -1987,10 +1985,9 @@ Gramine implements filesystem operations, but with several peculiarities and lim
 
 The most important peculiarity is that Gramine does *not* simply mirror the host OS's directory
 hierarchy. Instead, Gramine constructs its own view on the selected subset of host's directories and
-files: this is controlled by the manifest's [FS mount points
-(`fs.mounts`)](../manifest-syntax.html#fs-mount-points). This feature is similar to the *volumes*
-concept in [Docker](https://docs.docker.com/storage/volumes/). This Gramine feature is introduced
-for security.
+files: this is controlled by the {ref}`manifest's FS mount points <fs-mount-points>` (`fs.mounts`).
+This feature is similar to the *volumes* concept in
+[Docker](https://docs.docker.com/storage/volumes/). This Gramine feature is introduced for security.
 
 Another peculiarity is that Gramine provides several types of filesystem mounts:
 - passthrough mounts (contain unencrypted files, see below),
@@ -2007,7 +2004,7 @@ Additionally, mounts may be hosted in one of two ways:
 
 All files potentially used by the application must be specified in the manifest file. Instead of
 single files, whole directories can be specified. Refer to the [manifest documentation for more
-details](../manifest-syntax.html#manifest-syntax).
+details](../manifest-syntax.rst).
 
 Gramine also provides a subset of pseudo-files that can be found in a Linux kernel. In particular,
 Gramine automatically populates `/proc`, `/dev` and `/sys` pseudo-filesystems with most widely used
@@ -2254,12 +2251,12 @@ implementation has the following caveats:
 Similarly to Linux, BSD (flock) locks ignore deprecated `LOCK_{MAND,READ,WRITE,RW}` operations.
 
 BSD (flock) locks are currently experimental and are *disabled* by default. To enable them, use the
-[``sys.experimental__enable_flock`` manifest
-option](../manifest-syntax.html#experimental-flock-bsd-style-locks-support). There is at least one
-problem with BSD locks currently: they are supposed to be released when the last reference (file
-descriptor, or FD) to the underlying opened file is closed, including when a process with the opened
-file terminates.  Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may
-lead to premature releases of flock locks in some situations.
+`sys.experimental__enable_flock` {ref}`manifest option
+<experimental-flock-bsd-style-locks-support>`. There is at least one problem with BSD locks
+currently: they are supposed to be released when the last reference (file descriptor, or FD) to the
+underlying opened file is closed, including when a process with the opened file terminates.
+Unfortunately, Gramine lacks system-wide tracking of opened files' FDs. This may lead to premature
+releases of flock locks in some situations.
 
 <details><summary>Related system calls</summary>
 
@@ -2463,8 +2460,8 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 <details><summary>Note on domain names configuration</summary>
 
 - To use libc name-resolving Berkeley socket APIs like `gethostbyname()`, `gethostbyaddr()`,
-  `getaddrinfo`, one must enable the [`sys.enable_extra_runtime_domain_names_conf` manifest
-  option](../manifest-syntax.html#domain-names-configuration).
+  `getaddrinfo`, one must enable the `sys.enable_extra_runtime_domain_names_conf` {ref}`manifest
+  option <domain-names-configuration>`.
 
 </details>
 
@@ -2577,7 +2574,7 @@ UDSes support the following socket options:
 <details><summary>Related system calls</summary>
 
 - ☑ `socketpair()`
-- For other system calls, see ["TCP/IP and UDP/IP sockets" subsection](#tcp-ip-and-udp-ip-sockets)
+- For other system calls, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
   above.
 
 </details>
@@ -2585,7 +2582,7 @@ UDSes support the following socket options:
 <details><summary>Related pseudo-files</summary>
 
 - ☒ `/proc/sys/net/unix/`
-- For other pseudo-files, see ["TCP/IP and UDP/IP sockets" subsection](#tcp-ip-and-udp-ip-sockets)
+- For other pseudo-files, see ["TCP/IP and UDP/IP sockets" subsection](#tcpip-and-udpip-sockets)
   above.
 
 </details><br />
@@ -2665,8 +2662,8 @@ Gramine and is supported.
 Gramine currently implements an *insecure* version of the `eventfd()` system call. It is considered
 insecure in the context of SGX backend because it relies on the host OS, which could for example
 maliciously drop an event or inject a random one. To enable this `eventfd()` implementation, the
-manifest file must contain [`sys.insecure__allow_eventfd =
-true`](../manifest-syntax.html#allowing-eventfd).
+manifest file must contain `sys.insecure__allow_eventfd = true` ({ref}`see manifest documentation
+<allowing-eventfd>`).
 
 Gramine supports polling on eventfd via `poll()`, `ppoll()`, `select()`, `epoll_*()` system calls.
 
@@ -2769,8 +2766,8 @@ Gramine to intercept memory accesses to shared memory regions (to provide some s
 It is the responsibility of the app developer to correctly use shared memory, with security
 implications in mind.
 
-For more information, please refer to the [corresponding manifest
-syntax](../manifest-syntax.html#untrusted-shared-memory). Also see [this
+For more information, please refer to the {ref}`corresponding manifest
+syntax <untrusted-shared-memory>`. Also see [this
 whitepaper](https://arxiv.org/abs/2203.01813).
 
 <details><summary>Related system calls</summary>
@@ -2795,8 +2792,8 @@ By default, Gramine implements only a minimal set of IOCTL request codes. See th
 
 It is possible to specify arbitrary IOCTLs (with arbitrary request codes and corresponding IOCTL
 data structures), targeted for special use cases like communication with hardware accelerators (e.g.
-GPUs) or implementing socket-related IOCTLs. This is achieved via [`sys.ioctl_structs` and
-`sys.allowed_ioctls` manifest options](../manifest-syntax.html#allowed-ioctls). Read the
+GPUs) or implementing socket-related IOCTLs. This is achieved via `sys.ioctl_structs` and
+`sys.allowed_ioctls` {ref}`manifest options <allowed-ioctls>`. Read the
 documentation to learn how to use this feature. There is also a corresponding [whitepaper on
 communication with hardware accelerators](https://arxiv.org/abs/2203.01813). Note that arbitrary
 IOCTLs specified in the manifest are pass-through and thus potentially insecure by themselves in
@@ -2928,7 +2925,7 @@ current process. The following resources are supported:
 - `RLIMIT_CPU` -- dummy, no limit by default
 - `RLIMIT_FSIZE` -- dummy, no limit by default
 - `RLIMIT_DATA` -- implemented, affects `brk()` system call
-- `RLIMIT_STACK` -- dummy, equal to [`sys.stack.size`](../manifest-syntax.html#stack-size) by
+- `RLIMIT_STACK` -- dummy, equal to `sys.stack.size` {ref}`manifest option <stack-size>` by
   default
 - `RLIMIT_CORE` -- dummy, zero by default
 - `RLIMIT_RSS` -- dummy, no limit by default
@@ -3200,8 +3197,8 @@ pseudo-filesystem. Manipulating with the `/dev/attestation/` pseudo-files allows
 attestation and remote attestation flows. Additionally, the `/dev/attestation/keys/` pseudo-dir
 exposes pseudo-files to set encryption keys (in particular, for encrypted files).
 
-For detailed information, refer to the ["Attestation and Secret Provisioning" documentation of
-Gramine](../attestation.html#low-level-dev-attestation-interface).
+For detailed information, refer to the {ref}`"Attestation and Secret Provisioning" documentation of
+Gramine <low-level-dev-attestation-interface>`.
 
 <details><summary>Related pseudo-files</summary>
 

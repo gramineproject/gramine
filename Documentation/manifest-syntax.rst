@@ -81,6 +81,8 @@ loads the actual executable (the user application) specified in
 ``libos.entrypoint``. Also note that, in contrast to ``libos.entrypoint``, the
 ``loader.entrypoint`` option specifies a PAL URI (with the ``file:`` prefix).
 
+.. _libos-entrypoint:
+
 LibOS Entrypoint
 ^^^^^^^^^^^^^^^^
 
@@ -150,6 +152,8 @@ source.
    Pointing to an encrypted file is currently not supported, due to the fact
    that encryption key provisioning currently happens after setting up
    arguments.
+
+.. _domain-names-configuration:
 
 Domain names configuration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -247,6 +251,8 @@ are "consumed" by ``insecure__use_host_env``).
    because it's inherently insecure (doesn't provide any real security).
    Gramine loudly fails if ``passthrough = false`` manifest options are set.
 
+.. _user-id-and-group-id:
+
 User ID and Group ID
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -289,6 +295,8 @@ may improve performance for certain workloads but may also generate
 ``SIGSEGV/SIGBUS`` exceptions for some applications that specifically use
 invalid pointers (though this is not expected for most real-world applications).
 
+.. _stack-size:
+
 Stack size
 ^^^^^^^^^^
 
@@ -317,6 +325,8 @@ Units like ``K`` (KiB), ``M`` (MiB), and ``G`` (GiB) can be appended to the
 values for convenience. For example, ``sys.brk.max_size = "1M"`` indicates
 a 1 |~| MiB brk size.
 
+.. _allowing-eventfd:
+
 Allowing eventfd
 ^^^^^^^^^^^^^^^^
 
@@ -328,6 +338,8 @@ Allowing eventfd
 This specifies whether to allow system calls `eventfd()` and `eventfd2()`. Since
 eventfd emulation currently relies on the host, these system calls are
 disallowed by default due to security concerns.
+
+.. _external-sigterm-injection:
 
 External SIGTERM injection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -342,6 +354,8 @@ into Gramine. Could be useful to handle graceful shutdown.
 Be careful! In SGX environment, the untrusted host could inject that signal in
 an arbitrary moment. Examine what your application's `SIGTERM` handler does and
 whether it poses any security threat.
+
+.. _disallowing-subprocesses-fork:
 
 Disallowing subprocesses (fork)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -375,6 +389,8 @@ Root FS mount point
 This syntax specifies the root filesystem to be mounted inside the library OS.
 Both parameters are optional. If not specified, then Gramine mounts the current
 working directory as the root.
+
+.. _fs-mount-points:
 
 FS mount points
 ^^^^^^^^^^^^^^^
@@ -450,6 +466,8 @@ Start (current working) directory
 
 This syntax specifies the start (current working) directory. If not specified,
 then Gramine sets the root directory as the start directory (see ``fs.root``).
+
+.. _allowed-ioctls:
 
 Allowed IOCTLs
 ^^^^^^^^^^^^^^
@@ -604,6 +622,8 @@ all), then the ``struct`` key must be an empty string or not exist at all::
    security implications in mind. In most cases, IOCTL arguments should be
    encrypted or integrity-protected with a key pre-shared between Gramine and
    the device.
+
+.. _experimental-flock-bsd-style-locks-support:
 
 Experimental flock (BSD-style locks) support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
