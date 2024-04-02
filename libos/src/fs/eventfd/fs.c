@@ -19,7 +19,12 @@ static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, f
         return -EINVAL;
 
     int ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &count, buf);
+    if (!ret && count != sizeof(uint64_t)) {
+        /* successful read must return 8 bytes, otherwise it's an attack or host malfunction */
+        return -EPERM;
+    }
     ret = pal_to_unix_errno(ret);
+    /* eventfd objects never perform partial reads, see also check above */
     maybe_epoll_et_trigger(hdl, ret, /*in=*/true, /*unused was_partial=*/false);
     return ret < 0 ? ret : (ssize_t)count;
 }
@@ -32,7 +37,12 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
         return -EINVAL;
 
     int ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &count, (void*)buf);
+    if (!ret && count != sizeof(uint64_t)) {
+        /* successful write must return 8 bytes, otherwise it's an attack or host malfunction */
+        return -EPERM;
+    }
     ret = pal_to_unix_errno(ret);
+    /* eventfd objects never perform partial writes, see also check above */
     maybe_epoll_et_trigger(hdl, ret, /*in=*/false, /*unused was_partial=*/false);
     return ret < 0 ? ret : (ssize_t)count;
 }

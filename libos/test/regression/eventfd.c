@@ -97,7 +97,7 @@ static void eventfd_using_poll(void) {
     for (int i = 0; i < MAX_EFDS; i++)
         CHECK(close(efds[i]));
 
-	printf("%s completed successfully\n", __func__);
+    printf("%s completed successfully\n", __func__);
 }
 
 static void eventfd_using_various_flags(void) {
