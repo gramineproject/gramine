@@ -111,6 +111,7 @@ local machine (preliminary step 0). When the SGX quote arrives, the user
 compares the certificates embedded in the quote against these cached
 certificates (step 9).
 
+.. _low-level-dev-attestation-interface:
 
 Low-level ``/dev/attestation`` interface
 ----------------------------------------
