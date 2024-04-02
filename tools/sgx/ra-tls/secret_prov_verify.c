@@ -202,6 +202,16 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     mbedtls_ssl_config_init(&conf);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        ERROR("Failed to initialize PSA Crypto implementation: %d\n", (int)status);
+        ret = -EPERM;
+        goto out;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
+
     mbedtls_pk_init(&srvkey);
     mbedtls_x509_crt_init(&srvcert);
     mbedtls_net_init(&client_fd);
@@ -328,6 +338,10 @@ out:
     mbedtls_ssl_config_free(&conf);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
     pthread_mutex_destroy(&g_handshake_lock);
     return ret;

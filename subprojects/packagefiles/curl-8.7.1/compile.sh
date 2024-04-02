@@ -21,6 +21,7 @@ log "preparing sources..."
 
 rm -rf "$PRIVATE_DIR"
 cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
+patch -p1 --directory "$PRIVATE_DIR" <"$CURRENT_SOURCE_DIR"/curl-8.7.1.patch
 
 (
     cd "$PRIVATE_DIR"
