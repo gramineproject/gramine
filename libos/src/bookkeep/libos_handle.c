@@ -31,7 +31,7 @@ static MEM_MGR handle_mgr = NULL;
 
 #define INIT_HANDLE_MAP_SIZE 32
 
-static void lock_unlock_pos_handle(struct libos_handle* hdl, bool is_lock) {
+static void maybe_lock_unlock_pos_handle(struct libos_handle* hdl, bool is_lock) {
     bool need = false;
     switch (hdl->type) {
         case TYPE_CHROOT:
@@ -63,12 +63,12 @@ static void lock_unlock_pos_handle(struct libos_handle* hdl, bool is_lock) {
     }
 }
 
-void lock_pos_handle(struct libos_handle* hdl) {
-    lock_unlock_pos_handle(hdl, /*is_lock=*/true);
+void maybe_lock_pos_handle(struct libos_handle* hdl) {
+    maybe_lock_unlock_pos_handle(hdl, /*is_lock=*/true);
 }
 
-void unlock_pos_handle(struct libos_handle* hdl) {
-    lock_unlock_pos_handle(hdl, /*is_lock=*/false);
+void maybe_unlock_pos_handle(struct libos_handle* hdl) {
+    maybe_lock_unlock_pos_handle(hdl, /*is_lock=*/false);
 }
 
 int open_executable(struct libos_handle* hdl, const char* path) {

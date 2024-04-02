@@ -119,7 +119,7 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
          * Some handles (e.g. files) do have their own, handle-specific poll callback. In such case
          * we do not add these handles for PAL polling, but instead populate `revents` of a
          * handle-corresponding FD with the result of the poll callback. Note that we acquire the
-         * handle's `pos_lock` because the poll callback may access the `poll` field.
+         * handle's `pos_lock` because the poll callback may access the `pos` field.
          *
          * Finally, some handles (e.g. tty/console) implement a dummy poll callback that returns
          * "Function not implemented" (-ENOSYS) error. We have this special case because it is
@@ -129,9 +129,9 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
          */
         bool handle_specific_poll_invoked = false;
         if (handle->fs && handle->fs->fs_ops && handle->fs->fs_ops->poll) {
-            lock_pos_handle(handle);
+            maybe_lock_pos_handle(handle);
             ret = handle->fs->fs_ops->poll(handle, events, &events);
-            unlock_pos_handle(handle);
+            maybe_unlock_pos_handle(handle);
             if (ret < 0 && ret != -ENOSYS) {
                 /* ENOSYS implies that no handle-specific poll was found; other errors imply that
                  * there was a handle-specific poll, but its invocation failed for other reasons */
