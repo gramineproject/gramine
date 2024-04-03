@@ -481,7 +481,8 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
      * If `offset` is not NULL, we use `*offset` as starting offset for reading, and update
      * `*offset` afterwards (and keep the offset in input handle unchanged).
      *
-     * If `offset` is NULL, we use the offset in input handle, and update it afterwards.
+     * If `offset` is NULL, we use the offset in input handle, and update it afterwards (only if the
+     * input handle is seekable).
      */
     file_off_t pos_in = 0;
     if (offset) {
@@ -550,7 +551,7 @@ out_update:
      * declaration). Note that we do it even if one of the read/write operations failed. */
     if (offset) {
         *offset = pos_in;
-    } else {
+    } else if (in_hdl->seekable) {
         maybe_lock_pos_handle(in_hdl);
         in_hdl->pos = pos_in;
         maybe_unlock_pos_handle(in_hdl);
