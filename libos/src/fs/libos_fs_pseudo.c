@@ -139,6 +139,7 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
             }
 
             hdl->type = TYPE_STR;
+            hdl->seekable = true;
             mem_file_init(&hdl->info.str.mem, str, len);
             hdl->pos = 0;
             break;
@@ -146,6 +147,8 @@ static int pseudo_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
 
         case PSEUDO_DEV: {
             hdl->type = TYPE_DEV;
+            hdl->seekable = true;
+            hdl->pos = 0;
             if (node->dev.dev_ops.open) {
                 ret = node->dev.dev_ops.open(hdl, dent, flags);
                 if (ret < 0)
@@ -403,6 +406,7 @@ static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int w
     struct pseudo_node* node = hdl->inode->data;
     switch (node->type) {
         case PSEUDO_STR: {
+            maybe_lock_pos_handle(hdl);
             lock(&hdl->lock);
             file_off_t pos = hdl->pos;
             ret = generic_seek(pos, hdl->info.str.mem.size, offset, whence, &pos);
@@ -411,6 +415,7 @@ static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int w
                 ret = pos;
             }
             unlock(&hdl->lock);
+            maybe_unlock_pos_handle(hdl);
             return ret;
         }
 
