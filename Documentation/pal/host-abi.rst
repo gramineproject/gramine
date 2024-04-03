@@ -293,8 +293,6 @@ Exception handling
 .. doxygenenum:: pal_event
    :project: pal
 
-.. doxygentypedef:: PAL_CONTEXT
-   :project: pal
 .. doxygenstruct:: PAL_CONTEXT
    :project: pal
    :members:
