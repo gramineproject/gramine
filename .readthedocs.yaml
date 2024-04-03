@@ -14,3 +14,6 @@ build:
 python:
     install:
         - requirements: Documentation/requirements.txt
+
+sphinx:
+  fail_on_warning: true
