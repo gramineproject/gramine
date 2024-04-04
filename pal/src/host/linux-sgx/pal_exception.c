@@ -429,6 +429,10 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         /* Only these two exceptions save information in EXINFO. */
         if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
                 || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
+            /* the access causing the exception is not an SGX violation */
+            if (exinfo->errcd.sgx == 0)
+                goto out;
+
             ctx.err = exinfo->error_code_val; /* bits: Present, Write/Read, User/Kernel, etc. */
             ctx.cr2 = exinfo->maddr;          /* NOTE: on #GP, maddr = 0 */
             has_hw_fault_address = true;
