@@ -160,7 +160,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         if (ret < 0) {
             if (ret == -EACCES) {
                 /* allow the inode to be created even if the underlying encrypted file is corrupted;
-                 * this is useful for `unlink`ing a corrupted file */
+                 * this is useful for unlinking a corrupted file */
                 inode->data = NULL;
             } else {
                 goto out;
@@ -338,8 +338,10 @@ static int chroot_encrypted_rename(struct libos_dentry* old, struct libos_dentry
     lock(&old->inode->lock);
 
     struct libos_encrypted_file* enc = old->inode->data;
-    if (!enc)
-        return -EACCES;
+    if (!enc) {
+        ret = -EACCES;
+        goto out;
+    }
 
     ret = encrypted_file_get(enc);
     if (ret < 0)

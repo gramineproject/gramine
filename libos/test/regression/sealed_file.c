@@ -19,8 +19,10 @@ int main(int argc, char** argv) {
     int ret;
     ssize_t bytes;
 
-    if (argc != 3)
-        errx(EXIT_FAILURE, "Usage: %s <protected file to create/validate> <unlink?>", argv[0]);
+    if (argc != 3 || (strcmp(argv[2], "unlink") && strcmp(argv[2], "nounlink"))) {
+        errx(EXIT_FAILURE, "Usage: %s <protected file to create/validate> unlink|nounlink",
+             argv[0]);
+    }
 
     ret = access(argv[1], F_OK);
     if (ret < 0) {
@@ -35,7 +37,7 @@ int main(int argc, char** argv) {
             if (bytes != SECRETSTRING_LEN)
                 errx(EXIT_FAILURE, "Wrote %ld instead of expected %ld", bytes, SECRETSTRING_LEN);
 
-            printf("CREATION OK\n");
+            puts("CREATION OK");
             return 0;
         }
         if (errno != EACCES || strcmp(argv[2], "unlink") != 0) {
@@ -53,7 +55,7 @@ int main(int argc, char** argv) {
         if (ret < 0)
             err(EXIT_FAILURE, "unlink failed");
 
-        printf("UNLINK OK");
+        puts("UNLINK OK");
         return 0;
     }
 
@@ -74,9 +76,9 @@ int main(int argc, char** argv) {
     /* The build system adds MODIFE_MRENCLAVE macro to produce a slightly different executable (due
      * to the below different string), which in turn produces a different MRENCLAVE SGX measurement.
      * This trick is to test `_sgx_mrsigner` functionality. */
-    printf("READING FROM MODIFIED ENCLAVE OK\n");
+    puts("READING FROM MODIFIED ENCLAVE OK");
 #else
-    printf("READING OK\n");
+    puts("READING OK");
 #endif
     return 0;
 }
