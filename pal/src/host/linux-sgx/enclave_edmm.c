@@ -467,6 +467,8 @@ int uncommit_pages(uintptr_t start_addr, size_t page_count) {
     if (ret < 0)
         return ret;
 
+    /* We only removed the already-committed pages in the above `walk_pages()`, i.e., the
+     * lazily-committed pages were skipped. So we need to unset them in the tracker. */
     spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
     unset_enclave_lazy_commit_pages(start_addr, page_count);
     spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);

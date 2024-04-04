@@ -462,10 +462,11 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             prot_flags &= ~PAL_PROT_LAZYALLOC;
 
             assert(ctx.err);
-            if ((!(ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_READ)) ||
-                ((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
+            if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
                 ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
-                 (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS) ) {
+                /* insufficient read access, e.g., read on a `PRTO_NONE` page */
+                (!(ctx.err & ERRCD_W) && !(ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_READ)) ||
+                 (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS)) {
                 /* the memfault can be caused by e.g. insufficient access rights rather than page
                  * not existing, which should be propagated in this case */
                 goto propagate_memfault;
