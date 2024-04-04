@@ -462,6 +462,10 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             prot_flags &= ~PAL_PROT_LAZYALLOC;
 
             assert(ctx.err);
+            /* the access causing the exception is not an SGX violation */
+            if (!(ctx.err & ERRCD_SGX))
+                goto out;
+
             if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
                 ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
                 /* This checks insufficient read access, e.g., reading a `PROT_NONE` page or
