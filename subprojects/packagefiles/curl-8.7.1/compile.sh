@@ -43,6 +43,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-ftp                               \
         --disable-get-easy-options                  \
         --disable-gopher                            \
+        --disable-headers-api                       \
         --disable-hsts                              \
         --disable-http-auth                         \
         --disable-imap                              \
