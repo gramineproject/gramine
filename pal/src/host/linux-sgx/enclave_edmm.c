@@ -328,6 +328,12 @@ void unset_enclave_lazy_commit_pages(uintptr_t start_addr, size_t page_count) {
     }
 }
 
+static int unset_enclave_lazy_commit_pages_callback(uintptr_t start_addr, size_t page_count,
+                                                    void* unused __attribute__((unused))) {
+    unset_enclave_lazy_commit_pages(start_addr, page_count);
+    return 0;
+}
+
 static void copy_bitvector_with_offset(uint8_t* dest_bitvector, const uint8_t* src_bitvector,
                                        size_t src_offset_bits, size_t size_bits) {
     assert(dest_bitvector != NULL);
@@ -378,11 +384,13 @@ void get_lazy_commit_pages_bitvector_slice(uintptr_t addr, size_t page_count, ui
 }
 
 /* This function iterates over the given range of enclave pages in the tracker and performs the
- * specified `callback` on the consecutive set/unset pages; returns error when `callback` failed.
- * Note that when an enclave page has mismatched set/unset status recorded and from the input, the
- * function skips this page and the `callback` will not be executed. */
+ * specified `callback()` on the consecutive set/unset pages based on `walk_set_pages`. Meanwhile,
+ * when enclave pages have mismatched set/unset status recorded and from the input,
+ * `callback_mismatch()` will be executed if specified; otherwise they will be skipped by default.
+ * This function returns an error when `callback()` or `callback_mismatch()` failed. */
 static int walk_pages(uintptr_t start_addr, size_t page_count, bool walk_set_pages,
-                      int (*callback)(uintptr_t, size_t, void*), void* arg) {
+                      int (*callback)(uintptr_t, size_t, void*), void* arg,
+                      int (*callback_mismatch)(uintptr_t, size_t, void*), void* arg_mismatch) {
     assert(completely_within_tracked_range(start_addr, page_count));
 
     int ret = 0;
@@ -409,7 +417,21 @@ static int walk_pages(uintptr_t start_addr, size_t page_count, bool walk_set_pag
             if (ret < 0)
                 break;
         } else {
-            i++;
+            if (callback_mismatch) {
+                uintptr_t consecutive_start_addr = index_to_address(i);
+                size_t consecutive_page_count = 0;
+                while (i < end && is_enclave_lazy_commit_page_set(i) != walk_set_pages) {
+                    consecutive_page_count++;
+                    i++;
+                }
+
+                ret = callback_mismatch(consecutive_start_addr, consecutive_page_count,
+                                        arg_mismatch);
+                if (ret < 0)
+                    break;
+            } else {
+                i++;
+            }
         }
     }
 
@@ -462,18 +484,9 @@ int uncommit_pages(uintptr_t start_addr, size_t page_count) {
     if (ret < 0)
         return ret;
 
-    ret = walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
-                     sgx_edmm_remove_pages_callback, NULL);
-    if (ret < 0)
-        return ret;
-
-    /* We only removed the already-committed pages in the above `walk_pages()`, i.e., the
-     * lazily-committed pages were skipped. So we need to unset them in the tracker. */
-    spinlock_lock(&g_enclave_lazy_commit_page_tracker_lock);
-    unset_enclave_lazy_commit_pages(start_addr, page_count);
-    spinlock_unlock(&g_enclave_lazy_commit_page_tracker_lock);
-
-    return 0;
+    return walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
+                      sgx_edmm_remove_pages_callback, /*arg=*/NULL,
+                      unset_enclave_lazy_commit_pages_callback, /*arg_mismatch=*/NULL);
 }
 
 int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t page_count) {
@@ -485,7 +498,8 @@ int uncommit_then_lazy_realloc_pages(uintptr_t start_addr, size_t page_count) {
         return ret;
 
     return walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
-                      sgx_edmm_remove_then_lazy_realloc_pages_callback, NULL);
+                      sgx_edmm_remove_then_lazy_realloc_pages_callback, /*arg=*/NULL,
+                      /*callback_mismatch=*/NULL, /*arg_mismatch=*/NULL);
 }
 
 int maybe_commit_pages(uintptr_t start_addr, size_t page_count, pal_prot_flags_t prot) {
@@ -508,7 +522,8 @@ int maybe_commit_pages(uintptr_t start_addr, size_t page_count, pal_prot_flags_t
         }
 
         ret = walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
-                         sgx_edmm_add_pages_callback, &prot_flags);
+                         sgx_edmm_add_pages_callback, &prot_flags,
+                         /*callback_mismatch=*/NULL, /*arg_mismatch=*/NULL);
     } else {
         /* for enclave pages allocated when the tracker is not ready (on bootstrap) */
         ret = sgx_edmm_add_pages(start_addr, page_count, prot_flags);
@@ -527,7 +542,7 @@ int commit_lazy_alloc_pages(uintptr_t start_addr, size_t page_count, pal_prot_fl
 
     uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
     ret = walk_pages(start_addr, page_count, /*walk_set_pages=*/true, sgx_edmm_add_pages_callback,
-                     &prot_flags);
+                     &prot_flags, /*callback_mismatch=*/NULL, /*arg_mismatch=*/NULL);
     if (ret < 0)
         return ret;
 
@@ -545,5 +560,6 @@ int set_committed_pages_permissions(uintptr_t start_addr, size_t page_count,
 
     uint64_t prot_flags = PAL_TO_SGX_PROT(prot);
     return walk_pages(start_addr, page_count, /*walk_set_pages=*/false,
-                      sgx_edmm_set_page_permissions_callback, &prot_flags);
+                      sgx_edmm_set_page_permissions_callback, &prot_flags,
+                      /*callback_mismatch=*/NULL, /*arg_mismatch=*/NULL);
 }
