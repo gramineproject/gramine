@@ -462,10 +462,14 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             prot_flags &= ~PAL_PROT_LAZYALLOC;
 
             assert(ctx.err);
-            if ((!(prot_flags & PAL_PROT_READ) && !(prot_flags & PAL_PROT_WRITE) &&
-                 !(prot_flags & PAL_PROT_EXEC)) || /* check if prot_flags is NONE */
-                ((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
+            if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
                 ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
+                /* This checks insufficient read access, e.g., reading a `PROT_NONE` page or
+                 * eXecute-Only-Memory (XOM) (specified with `PROT_EXEC` alone). Note that on Linux,
+                 * `PROT_READ` is not required to be set when `PROT_WRITE` or `PROT_EXEC` are set.
+                 * But since we're in SGX EDMM PAL, XOM should be allowed -- reading it would cause
+                 * a memfault. */
+                (!(ctx.err & ERRCD_W) && !(ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_READ)) ||
                 (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS)) {
                 /* the memfault can be caused by e.g. insufficient access rights rather than page
                  * not existing, which should be propagated in this case */
