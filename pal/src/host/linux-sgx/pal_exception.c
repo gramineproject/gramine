@@ -235,6 +235,14 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
     return false;
 }
 
+static bool is_eaccept_instr(sgx_cpu_context_t* uc) {
+    /* instruction must be ENCLU and leaf must be EACCEPT */
+    uint8_t* instr = (uint8_t*)uc->rip;
+    if (instr[0] == 0x0f && instr[1] == 0x01 && instr[2] == 0xd7 && uc->rax == EACCEPT)
+        return true;
+    return false;
+}
+
 /* perform exception handling inside the enclave */
 void _PalExceptionHandler(uint32_t trusted_exit_info_,
                           uint32_t untrusted_external_event, sgx_cpu_context_t* uc,
@@ -456,15 +464,25 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         /* EDMM lazy allocation */
         assert(g_mem_bkeep_get_vma_info_upcall);
 
+        assert(ctx.err);
+
+        if (!(ctx.err & ERRCD_P) && is_eaccept_instr(uc)) {
+            /* Corner case of a #PF on a non-present page during EACCEPT: this is a benign #PF that
+             * is resolved completely by the host kernel. Typically such resolved-by-kernel #PFs are
+             * not delivered to the Gramine enclave, but the EACCEPT SGX instruction explicitly
+             * triggers a #PF on a to-be-accepted enclave page that is not residing currently in the
+             * EPC (possible if the enclave page was swapped out of EPC, especially on client
+             * platforms with small EPC sizes). Since such a #PF is triggered by the process (from
+             * host kernel's perspective), the host kernel not only resolves the enclave page
+             * (brings it back into EPC) but also delivers it to Gramine, ending up in this code
+             * path. */
+            goto out;
+        }
+
         pal_prot_flags_t prot_flags;
 
         if (g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) == 0) {
             prot_flags &= ~PAL_PROT_LAZYALLOC;
-
-            assert(ctx.err);
-            /* the access causing the exception is not an SGX violation */
-            if (!(ctx.err & ERRCD_SGX))
-                goto out;
 
             if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
                 ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
