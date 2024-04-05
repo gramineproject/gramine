@@ -1235,34 +1235,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
         return PF_STATUS_SUCCESS;
     }
 
-    if (size == 0) {
-        // Shrink the file to zero.
-        char path[PATH_MAX_SIZE];
-        size_t path_len;
-        pf_status_t status = g_cb_truncate(pf->file, 0);
-        if (PF_FAILURE(status))
-            return status;
-
-        path_len = strlen(pf->encrypted_part_plain.path);
-        memcpy(path, pf->encrypted_part_plain.path, path_len);
-        erase_memory(&pf->encrypted_part_plain, sizeof(pf->encrypted_part_plain));
-        memcpy(pf->encrypted_part_plain.path, path, path_len);
-
-        memset(&pf->file_metadata, 0, sizeof(pf->file_metadata));
-        pf->file_metadata.plain_part.file_id       = PF_FILE_ID;
-        pf->file_metadata.plain_part.major_version = PF_MAJOR_VERSION;
-        pf->file_metadata.plain_part.minor_version = PF_MINOR_VERSION;
-
-        ipf_init_root_mht(&pf->root_mht);
-
-        pf->need_writing = true;
-
-        ipf_delete_cache(pf);
-
-        return PF_STATUS_SUCCESS;
-    }
-
-    // Arbitrary truncation.
+    // Truncation.
 
     // The structure of the protected file is such that we can simply truncate
     // the file after the last data block belonging to still-used data.
