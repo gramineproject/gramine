@@ -59,6 +59,7 @@ static void check_contents(const char* path, void* data, size_t size) {
     if (memcmp(buf, data, size)) {
         fatal_error("truncated data mismatch");
     }
+    free(buf);
 
     close_fd(path, fd);
 }
