@@ -407,7 +407,6 @@ static int import_and_init_extra_runtime_domain_names(struct pal_dns_host_conf* 
 extern void* g_enclave_base;
 extern void* g_enclave_top;
 extern bool g_allowed_files_warn;
-extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
 
 static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
@@ -552,14 +551,6 @@ out:
     return ret;
 }
 
-static void print_warning_on_invariant_tsc(PAL_HANDLE parent_process) {
-    if (!parent_process && !g_tsc_hz) {
-        /* Warn only in the first process. */
-        log_warning("Could not set up Invariant TSC (CPU is too old or you run on a VM that does "
-                    "not expose corresponding CPUID leaves). This degrades performance.");
-    }
-}
-
 static void print_warnings_on_invalid_dns_host_conf(PAL_HANDLE parent_process) {
     if (!parent_process) {
         /* Warn only in the first process. */
@@ -580,8 +571,6 @@ static void post_callback(void) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
-
-    print_warning_on_invariant_tsc(g_pal_common_state.parent_process);
 
     print_warnings_on_invalid_dns_host_conf(g_pal_common_state.parent_process);
 }
@@ -721,12 +710,11 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     SET_ENCLAVE_TCB(ready_for_exceptions, 1UL);
 
-    /* initialize "Invariant TSC" HW feature for fast and accurate gettime and immediately probe
-     * RDTSC instruction inside SGX enclave (via dummy get_tsc) -- it is possible that
-     * the CPU supports invariant TSC but doesn't support executing RDTSC inside SGX enclave, in
-     * this case the SIGILL exception is generated and leads to emulate_rdtsc_and_print_warning()
-     * which unsets invariant TSC, and we end up falling back to the slower ocall_gettime() */
-    init_tsc();
+    /* We implement a "fast-path" clock that is emulated internally using x86 RDTSC instruction.
+     * It is possible that the CPU does not support the RDTSC instruction within SGX enclave,
+     * in this case the SIGILL exception is generated and leads to emulate_rdtsc_and_print_warning()
+     * which disables the TSC based clock, and we end up falling back to the slower ocall_gettime()
+     */
     (void)get_tsc(); /* must be after `ready_for_exceptions=1` since it may generate SIGILL */
 
     ret = init_cpuid();
