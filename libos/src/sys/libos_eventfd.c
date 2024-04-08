@@ -20,9 +20,8 @@
  *
  *    - The emulation is currently implemented at the level of a single process. The emulation *may*
  *      work for multi-process applications, e.g., if the child process inherits the eventfd object
- *      but doesn't use it. However, multi-process support is brittle and thus disabled by default
- *      (Gramine will issue a warning, see `libos_clone.c`). To enable it still, set the manifest
- *      option `sys.experimental__allow_eventfd_fork`.
+ *      but doesn't use it. However, all eventfds created in the parent process are marked as
+ *      invalid in child processes, i.e. inter-process communication via eventfds is not allowed.
  *
  *    - The host's eventfd object is "dummy" and used purely for notifications -- to unblock
  *      blocking read/write/select/poll/epoll system calls. The read/write notify logic is already
@@ -53,10 +52,6 @@
 #include "toml_utils.h"
 
 bool g_eventfd_passthrough_mode __attribute_migratable = false;
-bool g_eventfd_emulated_allow_fork __attribute_migratable = false;
-
-/* atomic per-process number of currently existing eventds, used in `libos_clone.c` */
-uint32_t g_eventfd_cnt = 0;
 
 int init_eventfd_mode(void) {
     assert(g_manifest_root);
@@ -68,20 +63,6 @@ int init_eventfd_mode(void) {
         log_error("Cannot parse 'sys.insecure__allow_eventfd' (the value must be `true` or "
                   "`false`)");
         return -EPERM;
-    }
-
-    ret = toml_bool_in(g_manifest_root, "sys.experimental__allow_eventfd_fork",
-                       /*defaultval=*/false, &g_eventfd_emulated_allow_fork);
-    if (ret < 0) {
-        log_error("Cannot parse 'sys.experimental__allow_eventfd_fork' (the value must be `true` "
-                  "or `false`)");
-        return -EPERM;
-    }
-
-    if (g_eventfd_passthrough_mode && g_eventfd_emulated_allow_fork) {
-        log_warning("Manifest option 'sys.experimental__allow_eventfd_fork' is set though it is "
-                    "redundant because 'sys.insecure__allow_eventfd' is also set, and it always "
-                    "allows forking (spawning child processes).");
     }
 
     return 0;
@@ -116,9 +97,6 @@ static int create_eventfd_pal_handle(uint64_t initial_count, int flags,
         return -EINTR;
     }
 
-    /* see `fs/eventfd/fs.c` for the handle-close counterpart */
-    (void)__atomic_add_fetch(&g_eventfd_cnt, 1, __ATOMIC_ACQ_REL);
-
     *out_pal_handle = hdl;
     return 0;
 }
@@ -138,6 +116,7 @@ long libos_syscall_eventfd2(unsigned int count, int flags) {
     hdl->info.eventfd.is_semaphore = !!(flags & EFD_SEMAPHORE);
     hdl->info.eventfd.val = count;
     hdl->info.eventfd.dummy_host_val = 0;
+    hdl->info.eventfd.broken_in_child = false;
 
     if (g_eventfd_passthrough_mode) {
         ret = create_eventfd_pal_handle(hdl->info.eventfd.val, flags, &hdl->pal_handle);

@@ -899,26 +899,17 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['eventfd_read_then_write'])
         self.assertIn('TEST OK', stdout)
 
-    def test_073_eventfd_fork_disallowed(self):
-        try:
-            self.run_binary(['eventfd_fork_disallowed'])
-            self.fail('eventfd_fork_disallowed unexpectedly succeeded')
-        except subprocess.CalledProcessError as e:
-            stderr = e.stderr.decode()
-            stdout = e.stdout.decode()
-            self.assertIn('The app tried to create a subprocess, but this is disallowed because '
-                          'eventfd is emulated in a secure single-process mode', stderr)
-            self.assertIn('error at fork', stdout)
-
-    def test_074_eventfd_fork_allowed_failing(self):
+    def test_073_eventfd_fork_allowed_failing(self):
         try:
             self.run_binary(['eventfd_fork_allowed_failing'])
             self.fail('eventfd_fork_allowed_failing unexpectedly succeeded')
         except subprocess.CalledProcessError as e:
             stdout = e.stdout.decode()
-            self.assertIn('eventfd read failed', stdout)
+            stderr = e.stderr.decode()
+            self.assertIn('Child process tried to access eventfd created by parent process', stderr)
+            self.assertIn('eventfd write failed', stdout)
 
-    def test_075_eventfd_races(self):
+    def test_074_eventfd_races(self):
         stdout, _ = self.run_binary(['eventfd_races'])
         self.assertIn('TEST OK', stdout)
 

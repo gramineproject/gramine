@@ -2675,9 +2675,8 @@ There are two modes of eventfd:
 
    The emulation is currently implemented at the level of a single process. The emulation *may* work
    for multi-process applications, e.g., if the child process inherits the eventfd object but
-   doesn't use it. However, multi-process support is brittle and thus disabled by default (Gramine
-   will issue a warning). To enable it still, set the [`sys.experimental__allow_eventfd_fork`
-   manifest option](../manifest-syntax.html#allowing-eventfd-in-multi-process-applications).
+   doesn't use it. However, all eventfds created in the parent process are marked as invalid in
+   child processes, i.e. inter-process communication via eventfds is not allowed.
 
    Note that this secure version is *not* able to receive events from the host OS.
 

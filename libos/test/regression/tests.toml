@@ -23,7 +23,6 @@ manifests = [
   "eventfd",
   "eventfd_fork",
   "eventfd_fork_allowed_failing",
-  "eventfd_fork_disallowed",
   "eventfd_races",
   "eventfd_read_then_write",
   "exec",

@@ -13,6 +13,16 @@
 #include "linux_abi/errors.h"
 #include "pal.h"
 
+/* In emulate-in-libos mode, enforce a restriction: all eventfds created in the parent process are
+ * marked as invalid in child processes, i.e. inter-process communication via eventfds is not
+ * allowed. This restriction is because LibOS doesn't yet implement sync between eventfd objects. */
+static int eventfd_checkin(struct libos_handle* hdl) {
+    assert(hdl->type == TYPE_EVENTFD);
+    if (!g_eventfd_passthrough_mode)
+        hdl->info.eventfd.broken_in_child = true;
+    return 0;
+}
+
 static void eventfd_dummy_host_read(struct libos_handle* hdl) {
     int ret;
     uint64_t buf_dummy_host_val = 0;
@@ -71,6 +81,12 @@ static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, f
     }
 
     /* emulate-in-libos mode */
+    if (hdl->info.eventfd.broken_in_child) {
+        log_warning("Child process tried to access eventfd created by parent process. This is "
+                    "disallowed in Gramine (but see `sys.insecure__allow_eventfd`).");
+        return -EIO;
+    }
+
     int ret;
     spinlock_lock(&hdl->info.eventfd.lock);
 
@@ -128,6 +144,12 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
     }
 
     /* emulate-in-libos mode */
+    if (hdl->info.eventfd.broken_in_child) {
+        log_warning("Child process tried to access eventfd created by parent process. This is "
+                    "disallowed in Gramine (but see `sys.insecure__allow_eventfd`).");
+        return -EIO;
+    }
+
     uint64_t buf_val;
     memcpy(&buf_val, buf, sizeof(uint64_t));
     if (buf_val == UINT64_MAX)
@@ -162,17 +184,16 @@ out:
     return ret;
 }
 
-static int eventfd_close(struct libos_handle* hdl) {
-    __UNUSED(hdl);
-
-    /* see `libos_eventfd.c` for the handle-open counterpart */
-    (void)__atomic_sub_fetch(&g_eventfd_cnt, 1, __ATOMIC_ACQ_REL);
-    return 0;
-}
-
 static void eventfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_ret_events) {
     if (g_eventfd_passthrough_mode)
         return;
+
+    if (hdl->info.eventfd.broken_in_child) {
+        log_warning("Child process tried to access eventfd created by parent process. This is "
+                    "disallowed in Gramine (but see `sys.insecure__allow_eventfd`).");
+        *pal_ret_events = PAL_WAIT_ERROR;
+        return;
+    }
 
     if (*pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP)) {
         /* impossible: we control eventfd inside the LibOS, and we never raise such conditions */
@@ -198,9 +219,9 @@ static void eventfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_re
 }
 
 struct libos_fs_ops eventfd_fs_ops = {
+    .checkin   = &eventfd_checkin,
     .read      = &eventfd_read,
     .write     = &eventfd_write,
-    .close     = &eventfd_close,
     .post_poll = &eventfd_post_poll,
 };
 

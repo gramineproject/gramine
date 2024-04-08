@@ -329,24 +329,6 @@ long libos_syscall_clone(unsigned long flags, unsigned long user_stack_addr, int
             }
             return -EAGAIN;
         }
-
-        if (!g_eventfd_passthrough_mode && !g_eventfd_emulated_allow_fork
-                && __atomic_load_n(&g_eventfd_cnt, __ATOMIC_ACQUIRE)) {
-            /*
-             * Emulated (secure) mode of eventfd is currently only single-process. If the manifest
-             * doesn't specify explicitly that the fork is allowed for a process that created some
-             * eventfds, disallow this clone/fork. In some cases, however, the child process doesn't
-             * use eventfds of parent, and then clone/fork is not a problem; this is brittle so it
-             * is disabled by default (and enabled via `sys.experimental__allow_eventfd_fork`).
-             */
-            if (FIRST_TIME()) {
-                log_warning("The app tried to create a subprocess, but this is disallowed because "
-                            "eventfd is emulated in a secure single-process mode, there is at "
-                            "least one eventfd object existing and the manifest option "
-                            "'sys.experimental__allow_eventfd_fork' is not set");
-            }
-            return -EAGAIN;
-        }
     }
 
     struct libos_thread* thread = get_new_thread();

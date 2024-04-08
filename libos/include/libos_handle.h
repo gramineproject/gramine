@@ -135,6 +135,7 @@ struct libos_epoll_handle {
 };
 
 struct libos_eventfd_handle {
+    bool broken_in_child;
     bool is_semaphore;
     spinlock_t lock; /* protects below fields */
     uint64_t val;

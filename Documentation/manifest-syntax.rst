@@ -328,37 +328,19 @@ Allowing host-based insecure eventfd
     (Default: false)
 
 By default, Gramine implements eventfd in a secure but restricted way: currently
-this secure implementation only works in single-process applications. In other
-words, if your application uses eventfd *and* spawns child processes, then this
-implementation will not work and Gramine will fail with a warning. (But see
-:ref:`eventfd-in-multi-process`.)
+this secure implementation only works when eventfd usage is confined to a single
+process (note that application may still be multi-process and spawn child
+processes, but eventfds created in parent will be invalid in children).
 
 However, sometimes it is acceptable for applications to use host-based insecure
-eventfd implementation. This implementation works also for multi-process
-applications. Use ``sys.insecure__allow_eventfd`` manifest syntax to switch to
-this insecure implementation.
+eventfd implementation. This implementation works without the above-mentioned
+restriction in multi-process applications. Use ``sys.insecure__allow_eventfd``
+manifest syntax to switch to this insecure implementation.
 
 .. note ::
    ``sys.insecure__allow_eventfd`` is pass-through and thus potentially insecure
    in e.g. SGX environments. It is the responsibility of the app developer to
    analyze the app usage of eventfd, with security implications in mind.
-
-.. _eventfd-in-multi-process:
-
-Allowing eventfd in multi-process applications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-    sys.experimental__allow_eventfd_fork = [true|false]
-    (Default: false)
-
-By default, Gramine implements eventfd in a secure way, but this implementation
-works only in single-process applications. If you have a multi-process
-application and you are sure that the parent process and its child processes do
-not use eventfd for cross-process communication, you can use
-``sys.experimental__allow_eventfd_fork`` manifest syntax. Also see
-:ref:`host-based-insecure-eventfd`.
 
 External SIGTERM injection
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
