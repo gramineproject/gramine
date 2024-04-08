@@ -30,5 +30,5 @@ a web server (Nginx), with SSL/TLS and the RA-TLS extension.
 Note that the SCAG tool is standalone and not part of core Gramine, and is
 hosted here:
 
-- https://github.com/intel/ScaffoldingForGramine -- GitHub repository,
+- https://github.com/gramineproject/gramine-scaffolding -- GitHub repository,
 - https://gramine-scaffolding.readthedocs.io/en/latest/ -- documentation.
