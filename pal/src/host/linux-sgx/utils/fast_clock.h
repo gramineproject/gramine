@@ -2,62 +2,45 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "api.h"
 
-
-enum fast_clock_state_e
-{
-    FC_STATE_RDTSC,
-    FC_STATE_RDTSC_RECALIBRATE,
-    FC_STATE_CALIBRATING,
-    FC_STATE_INIT,
-
-    FC_STATE_RDTSC_DISABLED,
-};
-typedef uint16_t fast_clock_state_t;
 
 #define _FC_NUM_TIMEPOINT_BITS  (1)
-#define _FC_NUM_TIMEPOINTS      (1<<_FC_NUM_TIMEPOINT_BITS)
-
-enum fast_clock_flags_e
-{
-    FC_FLAGS_INIT = 0,
-
-    FC_FLAGS_TIMEPOINT_MASK = _FC_NUM_TIMEPOINTS - 1,
-    FC_FLAGS_NUM_TIMEPOINTS = _FC_NUM_TIMEPOINTS,
-
-    FC_FLAGS_STATE_CHANGING = 0x8000,
-};
-typedef uint16_t fast_clock_flags_t;
+#define FC_NUM_TIMEPOINTS       (1<<_FC_NUM_TIMEPOINT_BITS)
 
 typedef union
 {
-    #pragma pack(push, 1)
     struct
     {
-        fast_clock_state_t state;
-        fast_clock_flags_t flags;
+        uint16_t state              : 4;
+        uint16_t timepoint_index    : _FC_NUM_TIMEPOINT_BITS;
+        uint16_t _pad0              : (16 - _FC_NUM_TIMEPOINT_BITS - 5);
+        uint16_t state_changing     : 1;
     };
-    #pragma pack(pop)
 
-    uint32_t desc;
-} fast_clock_desc_t;
+    uint16_t desc;
+} fast_clock_desc;
 
-typedef struct fast_clock_timepoint_s
+static_assert(_FC_NUM_TIMEPOINT_BITS >= 1, "timepoint_index must have at minimum 1-bit");
+static_assert(_FC_NUM_TIMEPOINT_BITS + 5 <= 16, "timepoint_index uses too many bits");
+static_assert(sizeof(fast_clock_desc) == sizeof(uint16_t), "fast_clock_desc size mismatch");
+
+typedef struct
 {
     uint64_t clock_freq;
     uint64_t tsc0;
     uint64_t t0_usec;
     uint64_t expiration_usec;
-} fast_clock_timepoint_t;
+} fast_clock_timepoint;
 
-typedef struct fast_clock_s
+typedef struct
 {
-    fast_clock_desc_t atomic_descriptor;
-    fast_clock_timepoint_t time_points[FC_FLAGS_NUM_TIMEPOINTS];
-} fast_clock_t;
+    fast_clock_desc atomic_descriptor;
+    fast_clock_timepoint time_points[FC_NUM_TIMEPOINTS];
+} fast_clock;
 
-extern fast_clock_t g_fast_clock;
+extern fast_clock g_fast_clock;
 
-int fast_clock_get_time(fast_clock_t* fast_clock, uint64_t* time_micros, bool force_new_timepoint);
-bool fast_clock_is_enabled(const fast_clock_t* fast_clock);
-void fast_clock_disable(fast_clock_t* fast_clock);
+int fast_clock_get_time(fast_clock* fast_clock, uint64_t* time_micros, bool force_new_timepoint);
+bool fast_clock_is_enabled(const fast_clock* fast_clock);
+void fast_clock_disable(fast_clock* fast_clock);

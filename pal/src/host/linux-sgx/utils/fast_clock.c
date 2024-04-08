@@ -66,10 +66,10 @@
  *
  * To achieve the above, we use the following data structures.
  *
- *   1. fast_clock_timepoint_t - this contains all the internal state needed by FastClock to
+ *   1. fast_clock_timepoint - this contains all the internal state needed by FastClock to
  *      calculate the time as discussed above. FastClock internally has *two* timepoints, which
  *      are used in round-robin (alternating).
- *   2. fast_clock_desc_t - this is read and written to atomically, which is how the lockless
+ *   2. fast_clock_desc - this is read and written to atomically, which is how the lockless
  *      thread safety is implemented. The descriptor contains:
  *      - The current "state" of the FastClock state machine.
  *      - The round-robin index of the timepoint that is currently in use.
@@ -104,9 +104,23 @@
 #define RDTSC_CALIBRATION_TIME          ((uint64_t)1 * TIME_US_IN_S)
 #define RDTSC_RECALIBRATION_INTERVAL    ((uint64_t)120 * TIME_US_IN_S)
 
-fast_clock_t g_fast_clock = {
-    .atomic_descriptor = { .state = FC_STATE_INIT, .flags = FC_FLAGS_INIT },
-    .time_points = { [0 ... _FC_NUM_TIMEPOINTS-1] = {
+typedef enum
+{
+    FC_STATE_RDTSC,
+    FC_STATE_RDTSC_RECALIBRATE,
+    FC_STATE_CALIBRATING,
+    FC_STATE_INIT,
+
+    FC_STATE_RDTSC_DISABLED,
+} fast_clock_state;
+
+fast_clock g_fast_clock = {
+    .atomic_descriptor = {
+        .state = FC_STATE_INIT,
+        .timepoint_index = 0,
+        .state_changing = 0,
+    },
+    .time_points = { [0 ... FC_NUM_TIMEPOINTS-1] = {
         .clock_freq = 0,
         .tsc0 = 0,
         .t0_usec = 0,
@@ -115,29 +129,22 @@ fast_clock_t g_fast_clock = {
 };
 
 
-static inline uint16_t timepoint_index(fast_clock_desc_t curr)
+static inline fast_clock_desc advance_state(fast_clock_desc curr, fast_clock_state new_state, bool advance_timepoint)
 {
-    return (curr.flags & FC_FLAGS_TIMEPOINT_MASK);
-}
-
-static inline fast_clock_desc_t advance_state(fast_clock_desc_t curr, fast_clock_state_t new_state, bool advance_timepoint)
-{
-    fast_clock_desc_t new_descriptor;
-    new_descriptor.state = new_state;
-    uint16_t new_tp_index = timepoint_index(curr);
-    if (advance_timepoint) {
-        new_tp_index = (new_tp_index + 1) % FC_FLAGS_NUM_TIMEPOINTS;
-    }
-    new_descriptor.flags = new_tp_index;
+    fast_clock_desc new_descriptor = {
+        .state = new_state,
+        .timepoint_index = advance_timepoint ? curr.timepoint_index + 1  : curr.timepoint_index,
+        .state_changing = 0,
+    };
     return new_descriptor;
 }
 
-static inline bool is_expired(const fast_clock_timepoint_t* timepoint, uint64_t now_usec)
+static inline bool is_expired(const fast_clock_timepoint* timepoint, uint64_t now_usec)
 {
     return (timepoint->expiration_usec < now_usec);
 }
 
-static inline void calc_time(const fast_clock_timepoint_t* timepoint, uint64_t* time_usec)
+static inline void calc_time(const fast_clock_timepoint* timepoint, uint64_t* time_usec)
 {
     uint64_t tsc = get_tsc();
     uint64_t dtsc = tsc - timepoint->tsc0;
@@ -145,7 +152,7 @@ static inline void calc_time(const fast_clock_timepoint_t* timepoint, uint64_t* 
     *time_usec = timepoint->t0_usec + dt_usec;
 }
 
-static inline void reset_clock_frequency(fast_clock_timepoint_t* timepoint, uint64_t tsc, uint64_t time_usec)
+static inline void reset_clock_frequency(fast_clock_timepoint* timepoint, uint64_t tsc, uint64_t time_usec)
 {
     // calculate clock frequency in Hz
     uint64_t dt_usec = time_usec - timepoint->t0_usec;
@@ -153,37 +160,34 @@ static inline void reset_clock_frequency(fast_clock_timepoint_t* timepoint, uint
     timepoint->clock_freq = (dtsc * TIME_US_IN_S) / dt_usec;
 }
 
-static inline long reset_timepoint(fast_clock_timepoint_t* timepoint)
+static inline long reset_timepoint(fast_clock_timepoint* timepoint)
 {
     int ret = ocall_gettime(&timepoint->t0_usec, &timepoint->tsc0);
     return ret;
 }
 
-static inline void reset_expiration(fast_clock_timepoint_t* timepoint, uint64_t next_expiration)
+static inline void reset_expiration(fast_clock_timepoint* timepoint, uint64_t next_expiration)
 {
     timepoint->expiration_usec = timepoint->t0_usec + next_expiration;
 }
 
-static inline bool set_change_state_guard(fast_clock_t* fast_clock, fast_clock_desc_t descriptor)
+static inline bool set_change_state_guard(fast_clock* fast_clock, fast_clock_desc descriptor)
 {
-    if ((descriptor.flags & FC_FLAGS_STATE_CHANGING) != 0) {
+    if (descriptor.state_changing != 0) {
         return false;
     }
 
-    fast_clock_desc_t state_change_guard_desc = {
-        .state = descriptor.state,
-        .flags = descriptor.flags | FC_FLAGS_STATE_CHANGING,
-    };
-
+    fast_clock_desc state_change_guard_desc = descriptor;
+    state_change_guard_desc.state_changing = 1;
     return __atomic_compare_exchange_n(
         &fast_clock->atomic_descriptor.desc, &descriptor.desc, state_change_guard_desc.desc,
         /*weak=*/false, __ATOMIC_RELAXED, __ATOMIC_RELAXED
     );
 }
 
-static inline fast_clock_timepoint_t* get_timepoint(fast_clock_t* fast_clock, fast_clock_desc_t descriptor)
+static inline fast_clock_timepoint* get_timepoint(fast_clock* fast_clock, fast_clock_desc descriptor)
 {
-    return &fast_clock->time_points[timepoint_index(descriptor)];
+    return &fast_clock->time_points[descriptor.timepoint_index];
 }
 
 static bool is_rdtsc_available(void) {
@@ -215,20 +219,20 @@ static int handle_state_rdtsc_disabled(uint64_t* time_usec)
     return ocall_gettime(time_usec, NULL);
 }
 
-static int handle_state_init(fast_clock_t* fast_clock, fast_clock_desc_t descriptor, uint64_t* time_usec)
+static int handle_state_init(fast_clock* fast_clock, fast_clock_desc descriptor, uint64_t* time_usec)
 {
     if (!set_change_state_guard(fast_clock, descriptor)) {
         return handle_state_rdtsc_disabled(time_usec);
     }
 
     if (!is_rdtsc_available()) {
-        fast_clock_desc_t next_desc = advance_state(descriptor, FC_STATE_RDTSC_DISABLED, false);
+        fast_clock_desc next_desc = advance_state(descriptor, FC_STATE_RDTSC_DISABLED, false);
         __atomic_store_n(&fast_clock->atomic_descriptor.desc, next_desc.desc, __ATOMIC_RELAXED);
         return handle_state_rdtsc_disabled(time_usec);
     }
 
-    fast_clock_desc_t next_desc = advance_state(descriptor, FC_STATE_CALIBRATING, false);
-    fast_clock_timepoint_t* timepoint = get_timepoint(fast_clock, next_desc);
+    fast_clock_desc next_desc = advance_state(descriptor, FC_STATE_CALIBRATING, false);
+    fast_clock_timepoint* timepoint = get_timepoint(fast_clock, next_desc);
     int ret = reset_timepoint(timepoint);
 
     // gettimeofday failed - restore descriptor
@@ -246,7 +250,7 @@ static int handle_state_init(fast_clock_t* fast_clock, fast_clock_desc_t descrip
     return ret;
 }
 
-static int handle_state_calibrating(fast_clock_t* fast_clock, fast_clock_desc_t descriptor, uint64_t* time_usec)
+static int handle_state_calibrating(fast_clock* fast_clock, fast_clock_desc descriptor, uint64_t* time_usec)
 {
     // all callers in this state will perform an OCALL - no need to set the change_state_guard before OCALLing
     uint64_t tmp_tsc = 0;
@@ -255,7 +259,7 @@ static int handle_state_calibrating(fast_clock_t* fast_clock, fast_clock_desc_t 
         return ret;
     }
 
-    fast_clock_timepoint_t* timepoint = get_timepoint(fast_clock, descriptor);
+    fast_clock_timepoint* timepoint = get_timepoint(fast_clock, descriptor);
     if (!is_expired(timepoint, *time_usec) || !set_change_state_guard(fast_clock, descriptor)) {
         return ret;
     }
@@ -263,15 +267,15 @@ static int handle_state_calibrating(fast_clock_t* fast_clock, fast_clock_desc_t 
     // calculate the clock_freq and advance state
     reset_clock_frequency(timepoint, tmp_tsc, *time_usec);
     reset_expiration(timepoint, RDTSC_RECALIBRATION_INTERVAL);
-    fast_clock_desc_t new_desc = advance_state(descriptor, FC_STATE_RDTSC, false);
+    fast_clock_desc new_desc = advance_state(descriptor, FC_STATE_RDTSC, false);
     __atomic_store_n(&fast_clock->atomic_descriptor.desc, new_desc.desc, __ATOMIC_RELEASE);
 
     return ret;
 }
 
-static inline int handle_state_rdtsc(fast_clock_t* fast_clock, fast_clock_desc_t descriptor, uint64_t* time_usec, bool force_new_timepoint)
+static inline int handle_state_rdtsc(fast_clock* fast_clock, fast_clock_desc descriptor, uint64_t* time_usec, bool force_new_timepoint)
 {
-    fast_clock_timepoint_t* timepoint = get_timepoint(fast_clock, descriptor);
+    fast_clock_timepoint* timepoint = get_timepoint(fast_clock, descriptor);
 
     // fast path - calculate time with rdtsc
     calc_time(timepoint, time_usec);
@@ -281,8 +285,8 @@ static inline int handle_state_rdtsc(fast_clock_t* fast_clock, fast_clock_desc_t
     }
 
     // acquire the state_change_guard and prepare the next state (get new ground truth timepoint)
-    fast_clock_desc_t next_desc = advance_state(descriptor, FC_STATE_RDTSC_RECALIBRATE, true);
-    fast_clock_timepoint_t* next_timepoint = get_timepoint(fast_clock, next_desc);
+    fast_clock_desc next_desc = advance_state(descriptor, FC_STATE_RDTSC_RECALIBRATE, true);
+    fast_clock_timepoint* next_timepoint = get_timepoint(fast_clock, next_desc);
 
     int ret = reset_timepoint(next_timepoint);
     if (ret != 0) {
@@ -299,9 +303,9 @@ static inline int handle_state_rdtsc(fast_clock_t* fast_clock, fast_clock_desc_t
     return ret;
 }
 
-static inline int handle_state_rdtsc_recalibrate(fast_clock_t* fast_clock, fast_clock_desc_t descriptor, uint64_t* time_usec)
+static inline int handle_state_rdtsc_recalibrate(fast_clock* fast_clock, fast_clock_desc descriptor, uint64_t* time_usec)
 {
-    fast_clock_timepoint_t* timepoint = get_timepoint(fast_clock, descriptor);
+    fast_clock_timepoint* timepoint = get_timepoint(fast_clock, descriptor);
 
     // fast path - calculate time with rdtsc
     calc_time(timepoint, time_usec);
@@ -318,15 +322,15 @@ static inline int handle_state_rdtsc_recalibrate(fast_clock_t* fast_clock, fast_
 
     reset_clock_frequency(timepoint, tsc, *time_usec);
     reset_expiration(timepoint, RDTSC_RECALIBRATION_INTERVAL);
-    fast_clock_desc_t next_desc = advance_state(descriptor, FC_STATE_RDTSC, false);
+    fast_clock_desc next_desc = advance_state(descriptor, FC_STATE_RDTSC, false);
     __atomic_store_n(&fast_clock->atomic_descriptor.desc, next_desc.desc, __ATOMIC_RELEASE);
 
     return ret;
 }
 
-int fast_clock_get_time(fast_clock_t* fast_clock, uint64_t* time_usec, bool force_new_timepoint)
+int fast_clock_get_time(fast_clock* fast_clock, uint64_t* time_usec, bool force_new_timepoint)
 {
-    fast_clock_desc_t descriptor = {
+    fast_clock_desc descriptor = {
         .desc = __atomic_load_n(&fast_clock->atomic_descriptor.desc, __ATOMIC_ACQUIRE),
     };
     switch (descriptor.state)
@@ -345,23 +349,23 @@ int fast_clock_get_time(fast_clock_t* fast_clock, uint64_t* time_usec, bool forc
     }
 }
 
-bool fast_clock_is_enabled(const fast_clock_t* fast_clock)
+bool fast_clock_is_enabled(const fast_clock* fast_clock)
 {
-    fast_clock_desc_t descriptor = {
+    fast_clock_desc descriptor = {
         .desc = __atomic_load_n(&fast_clock->atomic_descriptor.desc, __ATOMIC_RELAXED),
     };
     return (descriptor.state != FC_STATE_RDTSC_DISABLED);
 }
 
-void fast_clock_disable(fast_clock_t* fast_clock)
+void fast_clock_disable(fast_clock* fast_clock)
 {
     /* We need to busy-loop until the state change guard is acquired here - since fast-clock
      * might be in the midst of transitioning states. We can't simply store the DISABLED state. */
-    fast_clock_desc_t descriptor;
+    fast_clock_desc descriptor;
     do {
         descriptor.desc = __atomic_load_n(&fast_clock->atomic_descriptor.desc, __ATOMIC_ACQUIRE);
     } while(!set_change_state_guard(fast_clock, descriptor));
 
-    fast_clock_desc_t disabled_desc = advance_state(descriptor, FC_STATE_RDTSC_DISABLED, false);
+    fast_clock_desc disabled_desc = advance_state(descriptor, FC_STATE_RDTSC_DISABLED, false);
     __atomic_store_n(&fast_clock->atomic_descriptor.desc, disabled_desc.desc, __ATOMIC_RELEASE);
 }
