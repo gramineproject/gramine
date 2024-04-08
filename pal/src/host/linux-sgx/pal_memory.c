@@ -26,10 +26,9 @@ int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_add_pages((uint64_t)addr, size / PAGE_SIZE, PAL_TO_SGX_PROT(prot));
-        if (ret < 0) {
+        int ret = maybe_commit_pages((uintptr_t)addr, size / PAGE_SIZE, prot);
+        if (ret < 0)
             return ret;
-        }
     } else {
 #ifdef ASAN
         asan_unpoison_region((uintptr_t)addr, size);
@@ -53,10 +52,9 @@ int _PalVirtualMemoryFree(void* addr, uint64_t size) {
                && addr + size <= g_pal_linuxsgx_state.heap_max);
 
         if (g_pal_linuxsgx_state.edmm_enabled) {
-            int ret = sgx_edmm_remove_pages((uint64_t)addr, size / PAGE_SIZE);
-            if (ret < 0) {
+            int ret = uncommit_pages((uintptr_t)addr, size / PAGE_SIZE);
+            if (ret < 0)
                 return ret;
-            }
         } else {
 #ifdef ASAN
             asan_poison_region((uintptr_t)addr, size, ASAN_POISON_USER);
@@ -96,11 +94,10 @@ int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
     assert(sgx_is_completely_within_enclave(addr, size));
 
     if (g_pal_linuxsgx_state.edmm_enabled) {
-        int ret = sgx_edmm_set_page_permissions((uint64_t)addr, size / PAGE_SIZE,
-                                                PAL_TO_SGX_PROT(prot));
-        if (ret < 0) {
+        int ret = set_committed_pages_permissions((uintptr_t)addr, size / PAGE_SIZE,
+                                                  PAL_TO_SGX_PROT(prot));
+        if (ret < 0)
             return ret;
-        }
     } else {
 #ifdef ASAN
         if (prot) {

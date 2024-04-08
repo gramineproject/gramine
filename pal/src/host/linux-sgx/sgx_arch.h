@@ -270,6 +270,14 @@ typedef struct {
 } sgx_arch_exinfo_t;
 static_assert(sizeof(sgx_arch_exinfo_t) == 16, "invalid size");
 
+#define ERRCD_P   (1U << 0)
+#define ERRCD_W   (1U << 1)
+#define ERRCD_U   (1U << 2)
+#define ERRCD_I   (1U << 4)
+#define ERRCD_PK  (1U << 5)
+#define ERRCD_SS  (1U << 6)
+#define ERRCD_SGX (1U << 15)
+
 typedef struct {
     uint64_t lin_addr;
     uint64_t src_pge;

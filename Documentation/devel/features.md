@@ -1715,13 +1715,18 @@ mappings, it depends on the type of file:
 - allowed for encrypted files (but synchronization happens only on explicit system calls like
   `msync()` and `close()`).
 
-`MAP_LOCKED`, `MAP_NORESERVE`, `MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`,
-`MAP_HUGE_1GB` flags are ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
+`MAP_NORESERVE`'s original semantics are not implemented and it is silently ignored. However, in
+case of SGX backend and on [systems supporting EDMM](../sgx-intro.html#term-edmm), `MAP_NORESERVE`
+flag is used as a lazy-allocation heuristic/hint for anonymous mappings -- instead of pre-accepting
+the region of enclave pages on mmap requests, the enclave pages are lazily accepted on page-fault
+events.
+
+`MAP_LOCKED`, `MAP_POPULATE`, `MAP_NONBLOCK`, `MAP_HUGETLB`, `MAP_HUGE_2MB`, `MAP_HUGE_1GB` flags
+are ignored (allowed but have no effect). `MAP_SYNC` flag is not supported.
 
 `mprotect()` supports all flags except `PROT_SEM` and `PROT_GROWSUP`. We haven't encountered any
 applications that would use these flags. In case of SGX backend, `mprotect()` behavior differs:
-- on [systems supporting EDMM](../sgx-intro.html#term-edmm), `mprotect()` correctly applies
-  permissions;
+- on systems supporting EDMM, `mprotect()` correctly applies permissions;
 - on systems not supporting EDMM, all enclave memory is allocated with Read-Write-Execute
   permissions, and `mprotect()` calls are silently ignored.
 

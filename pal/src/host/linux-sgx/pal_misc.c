@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2014 Stony Brook University */
+/* Copyright (C) 2014 Stony Brook University
+ * Copyright (C) 2024 Intel Corporation
+ *                    Kailun Qin <kailun.qin@intel.com>
+ */
 
 /*
  * This file contains APIs for miscellaneous use.
@@ -17,6 +20,7 @@
 #include "pal_internal.h"
 #include "pal_linux.h"
 #include "pal_linux_error.h"
+#include "pal_sgx.h"
 #include "seqlock.h"
 #include "sgx_attest.h"
 #include "spinlock.h"
@@ -810,4 +814,45 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
         default:
             return -PAL_ERROR_INVAL;
     }
+}
+
+/* Gets the to-be-lazily-committed pages of a given memory area; returns a populated bitvector slice
+ * if EDMM is enabled for the SGX PAL and all-zeros if it's not. */
+void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
+    assert(addr && IS_ALIGNED_PTR(addr, PAGE_SIZE));
+    assert(size && IS_ALIGNED(size, PAGE_SIZE));
+    assert(bitvector);
+
+    size_t page_count = size / g_page_size;
+    if (g_pal_linuxsgx_state.edmm_enabled) {
+        get_lazy_commit_pages_bitvector_slice(addr, page_count, bitvector);
+    } else {
+        memset(bitvector, 0, UDIV_ROUND_UP(page_count, 8));
+    }
+}
+
+int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
+    assert(IS_ALIGNED_PTR(addr, PAGE_SIZE) && IS_ALIGNED(size, PAGE_SIZE));
+    assert(access_ok(addr, size));
+
+    if (sgx_is_completely_within_enclave(addr, size)) {
+        assert(g_pal_linuxsgx_state.heap_min <= addr
+               && addr + size <= g_pal_linuxsgx_state.heap_max);
+
+        if (g_pal_linuxsgx_state.edmm_enabled) {
+            int ret = uncommit_then_lazy_realloc_pages((uintptr_t)addr, size / PAGE_SIZE);
+            if (ret < 0)
+                return ret;
+        } else {
+            /*
+             * In SGX1 the memory is mapped only at the enclave initialization and cannot be
+             * unmapped; we simply `memset()` to have zero-filled pages on subsequent accesses.
+             */
+            memset(addr, 0, size);
+        }
+    } else {
+        return -PAL_ERROR_DENIED;
+    }
+
+    return 0;
 }
