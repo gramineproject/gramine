@@ -16,6 +16,18 @@ project(
     ],
 )
 
+# If C23 (or experimetal C23 - C2x) is available, use it.
+# TODO: Gramine supports older versions of gcc, so newer versions of compilers
+#       may not be available.
+#       We can change to c2x when we drop *EL8 and Ubuntu 20.04.
+#       We can't change to c23 for any supported versions yet (requires at
+#       least gcc 14).
+if meson.get_compiler('c').has_argument('-std=c23')
+  add_project_arguments('-std=c23', language: 'c')
+elif meson.get_compiler('c').has_argument('-std=c2x')
+  add_project_arguments('-std=c2x', language: 'c')
+endif
+
 # we need this subdir() early, because we need scripts defined there for setting up global vars
 subdir('scripts')
 
