@@ -16,6 +16,15 @@ project(
     ],
 )
 
+# If C23 (or experimetal C23 - C2x) is available, use it.
+# XXX: Gramine supports older versions of Ubuntu, so newer versions of compilers
+#      may not be available.
+if meson.get_compiler('c').has_argument('-std=c23')
+  add_project_arguments('-std=c23', language: 'c')
+elif meson.get_compiler('c').has_argument('-std=c2x')
+  add_project_arguments('-std=c2x', language: 'c')
+endif
+
 # we need this subdir() early, because we need scripts defined there for setting up global vars
 subdir('scripts')
 
