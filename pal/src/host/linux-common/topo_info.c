@@ -288,10 +288,23 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
     if (ret < 0)
         return ret;
-    size_t nodes_cnt = 0;
+
+    bool cpu_nodes_file_exists = false;
+    size_t nodes_cnt = 1;
+    /* Get the CPU node number. By default, the number is 1.
+     * Some systems do not have the file, for example, Windows Subsystem for Linux, for which we
+     * will ignore the -ENOENT error and synthesize later a corresponding (single) numa node
+     * instead. */
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if (ret < 0)
-        return ret;
+    if (ret < 0) {
+        if (ret != -ENOENT) {
+            return ret;
+        } else {
+            cpu_nodes_file_exists = false;
+        }
+    } else {
+        cpu_nodes_file_exists = true;
+    }
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -322,10 +335,15 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
     if (ret < 0)
         goto fail;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
-                                   numa_nodes);
-    if (ret < 0)
-        goto fail;
+
+    if (cpu_nodes_file_exists) {
+        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online, numa_nodes);
+        if (ret < 0)
+            goto fail;
+    } else {
+        /* If there is no node information, the (only) node must be online. */
+        numa_nodes[0].is_online = true;
+    }
 
     char path[128];
     for (size_t i = 0; i < threads_cnt; i++) {
@@ -367,23 +385,30 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+    if (cpu_nodes_file_exists) {
+        for (size_t i = 0; i < nodes_cnt; i++) {
+            if (!numa_nodes[i].is_online)
+                continue;
 
-        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
-        ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
-            .threads = threads,
-            .cores = cores,
-            .id_to_set = i,
-        });
-        if (ret < 0)
-            goto fail;
+            snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+            ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
+                    .threads = threads,
+                    .cores = cores,
+                    .id_to_set = i,
+                });
+            if (ret < 0)
+                goto fail;
 
-        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+            /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
+             * of zero */
+            numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+            numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+        }
+    } else {
+        /* As node-id is by default zero we do not have to call set_node_id for synthesized mnode
+         * and, as above, unsupported persistent huge pages to zero */
+        numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
     }
 
     /*
@@ -400,18 +425,23 @@ int get_topology_info(struct pal_topo_info* topo_info) {
      *            0        ,    0    ,        0
      *     node 2 -> node 0,    0    , node 2 -> node 2 ]
      */
-    memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+    if (cpu_nodes_file_exists) {
+        memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
+        for (size_t i = 0; i < nodes_cnt; i++) {
+            if (!numa_nodes[i].is_online)
+                continue;
 
-        /* populate row i of `distances`, setting only online nodes */
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
-        if (ret < 0)
-            goto fail;
-        ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
-        if (ret < 0)
-            goto fail;
+            /* populate row i of `distances`, setting only online nodes */
+            ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+            if (ret < 0)
+                goto fail;
+            ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
+            if (ret < 0)
+                goto fail;
+        }
+    } else {
+        /* Set the distance with default value Ubuntu 22.04 kernel 5.15 for syntheized numa node */
+        distances[0] = 10;
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
