@@ -6,7 +6,6 @@ libos.entrypoint = "{{ entrypoint }}"
 loader.log_level = "warning"  # to print the warning about eventfd usage in child process
 
 loader.env.LD_LIBRARY_PATH = "/lib"
-loader.insecure__use_cmdline_argv = true
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
