@@ -288,10 +288,17 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     int ret = iterate_ranges_from_file("/sys/devices/system/cpu/possible", get_ranges_end, &threads_cnt);
     if (ret < 0)
         return ret;
-    size_t nodes_cnt = 0;
+
+    size_t nodes_cnt = 1;
+    /* Get the number of NUMA nodes on the system. By default, the number is 1. */
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if (ret < 0)
+    if (ret < 0 && ret != -ENOENT) {
+        /* Some systems do not have the file, e.g., Windows Subsystem for Linux, for which we
+         * ignore the -ENOENT error and synthesize later a corresponding (single) NUMA node
+         * instead. */
         return ret;
+    }
+    bool sys_nodes_file_exists = (ret >= 0);
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -322,10 +329,16 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     ret = iterate_ranges_from_file("/sys/devices/system/cpu/online", set_thread_online, threads);
     if (ret < 0)
         goto fail;
-    ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
-                                   numa_nodes);
-    if (ret < 0)
-        goto fail;
+
+    if (sys_nodes_file_exists) {
+        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
+                                       numa_nodes);
+        if (ret < 0)
+            goto fail;
+    } else {
+        /* If there is no node information, the (only) node must be online. */
+        numa_nodes[0].is_online = true;
+    }
 
     char path[128];
     for (size_t i = 0; i < threads_cnt; i++) {
@@ -367,51 +380,72 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+    if (sys_nodes_file_exists) {
+        for (size_t i = 0; i < nodes_cnt; i++) {
+            if (!numa_nodes[i].is_online)
+                continue;
 
-        snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
-        ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
-            .threads = threads,
-            .cores = cores,
-            .id_to_set = i,
-        });
-        if (ret < 0)
-            goto fail;
+            snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/cpulist", i);
+            ret = iterate_ranges_from_file(path, set_node_id, &(struct set_node_id_args){
+                    .threads = threads,
+                    .cores = cores,
+                    .id_to_set = i,
+                });
+            if (ret < 0)
+                goto fail;
 
-        /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-         * of zero */
-        numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
-    }
+            /* Since our sysfs doesn't support writes, set persistent hugepages to their default
+             * value of zero */
+            numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
+            numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
+        }
 
-    /*
-     * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has node 0
-     * online, node 1 offline and node 2 online, then distances matrix in Linux will look like this:
-     *
-     *   [ node 0 -> node 0, node 0 -> node 2
-     *     node 2 -> node 0, node 2 -> node 2 ]
-     *
-     * Gramine has a different view of the `distances` array -- it includes both online nodes and
-     * offline nodes (distances to offline nodes are 0). Thus, the above system will look like this:
-     *
-     *   [ node 0 -> node 0,    0    , node 0 -> node 2
-     *            0        ,    0    ,        0
-     *     node 2 -> node 0,    0    , node 2 -> node 2 ]
-     */
-    memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
-    for (size_t i = 0; i < nodes_cnt; i++) {
-        if (!numa_nodes[i].is_online)
-            continue;
+        /*
+         * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has
+         * node 0 online, node 1 offline and node 2 online, then distances matrix in Linux will look
+         * like this:
+         *
+         *   [ node 0 -> node 0, node 0 -> node 2
+         *     node 2 -> node 0, node 2 -> node 2 ]
+         *
+         * Gramine has a different view of the `distances` array -- it includes both online nodes
+         * and offline nodes (distances to offline nodes are 0). Thus, the above system will look
+         * like this:
+         *
+         *   [ node 0 -> node 0,    0    , node 0 -> node 2
+         *            0        ,    0    ,        0
+         *     node 2 -> node 0,    0    , node 2 -> node 2 ]
+         */
+        memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
+        for (size_t i = 0; i < nodes_cnt; i++) {
+            if (!numa_nodes[i].is_online)
+                continue;
 
-        /* populate row i of `distances`, setting only online nodes */
-        ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
-        if (ret < 0)
-            goto fail;
-        ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
-        if (ret < 0)
-            goto fail;
+            /* populate row i of `distances`, setting only online nodes */
+            ret = snprintf(path, sizeof(path), "/sys/devices/system/node/node%zu/distance", i);
+            if (ret < 0)
+                goto fail;
+            ret = read_distances_from_file(path, distances + i * nodes_cnt, numa_nodes, nodes_cnt);
+            if (ret < 0)
+                goto fail;
+        }
+    } else {
+        /* Set node-id of active threads to the synthesized NUMA node with id 0. */
+        for (size_t i = 0; i < threads_cnt; i++) {
+            set_node_id(i, &(struct set_node_id_args){
+                               .threads   = threads,
+                               .cores     = cores,
+                               .id_to_set = 0,
+                           });
+        }
+        /* As above, set unsupported persistent huge pages to zero for our synthesized NUMA node.
+         */
+        numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
+
+        /* Set distance for synthesized NUMA node to standard node-local value provided by ACPI
+         * SLIT */
+        distances[0] = 10;
     }
 
     for (size_t i = 0; i < threads_cnt; i++) {
