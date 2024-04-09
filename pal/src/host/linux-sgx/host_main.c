@@ -280,22 +280,20 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                        SHARED_ADDR_MIN, SHARED_ADDR_MIN + SHARED_MEM_SIZE)
         || ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
                           DBGINFO_ADDR, DBGINFO_ADDR + sizeof(struct enclave_dbginfo))) {
-        log_error("Enclave range collides with shared memory or debug range. This is most likely "
-                  "caused by too large enclave size.");
-        ret = -EINVAL;
-        goto out;
-
-    }
-    #ifdef ASAN
-    if (ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
-                       ASAN_SHADOW_START, ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)) {
-        log_error("Enclave range collides with ASan range. This is most likely caused by too large "
+        log_error("Enclave range collides with shared memory or debug range. Consider reducing "
                   "enclave size.");
         ret = -EINVAL;
         goto out;
-    }
-    #endif
 
+    }
+#ifdef ASAN
+    if (ranges_overlap(enclave->baseaddr, enclave->baseaddr + enclave->size,
+                       ASAN_SHADOW_START, ASAN_SHADOW_START + ASAN_SHADOW_LENGTH)) {
+        log_error("Enclave range collides with ASan range. Consider reducing enclave size.");
+        ret = -EINVAL;
+        goto out;
+    }
+#endif
 
     sig_path = alloc_concat(g_pal_enclave.application_path, -1, ".sig", -1);
     if (!sig_path) {
