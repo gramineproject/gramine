@@ -229,42 +229,29 @@ int sgx_edmm_convert_pages_to_tcs(uint64_t addr, size_t count) {
 
 /* initializes the enclave lazy commit page tracker with the the specified enclave memory base
  * address and the count of enclave pages */
-int initialize_enclave_lazy_commit_page_tracker(uintptr_t enclave_base_address,
-                                                size_t enclave_pages) {
+void init_enclave_lazy_commit_page_tracker(uintptr_t enclave_base_address, size_t enclave_pages) {
     assert(!g_enclave_lazy_commit_page_tracker);
 
     enclave_lazy_commit_page_tracker_t* tracker = calloc(1, sizeof(*tracker));
     if (!tracker)
-        return -PAL_ERROR_NOMEM;
+        INIT_FAIL("Allocating enclave lazy commit page tracker failed");
     tracker->enclave_base_address = enclave_base_address;
     tracker->enclave_pages = enclave_pages;
 
     size_t lazy_commit_bitvector_size = UDIV_ROUND_UP(enclave_pages, 8);
     uintptr_t lazy_commit_bitvector_addr;
     int ret = initial_mem_bkeep(lazy_commit_bitvector_size, &lazy_commit_bitvector_addr);
-    if (ret < 0) {
-        log_error("Reserving the bitvector for lazily committed pages failed");
-        goto out;
-    }
+    if (ret < 0)
+        INIT_FAIL("Reserving bitvector for lazily committed pages failed");
     tracker->is_lazily_committed = (uint8_t*)lazy_commit_bitvector_addr;
 
     size_t bitvector_page_alloc_status_size =
         UDIV_ROUND_UP(UDIV_ROUND_UP(lazy_commit_bitvector_size, PAGE_SIZE), 8);
     tracker->is_bitvector_page_allocated = calloc(1, bitvector_page_alloc_status_size);
-    if (!tracker->is_bitvector_page_allocated) {
-        ret = -PAL_ERROR_NOMEM;
-        goto out;
-    }
+    if (!tracker->is_bitvector_page_allocated)
+        INIT_FAIL("Allocating meta bitvector for bitvector pages failed");
 
     g_enclave_lazy_commit_page_tracker = tracker;
-    ret = 0;
-out:
-    if (ret < 0) {
-        free(tracker->is_bitvector_page_allocated);
-        free(tracker);
-    }
-
-    return ret;
 }
 
 static inline bool completely_within_tracked_range(uintptr_t addr, size_t page_count) {
