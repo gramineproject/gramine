@@ -359,7 +359,7 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    if (!dent->inode->data)
+    if (dent->inode->type == S_IFREG && !dent->inode->data)
         return -EACCES;
 
     char* uri = NULL;
@@ -528,7 +528,7 @@ static int chroot_encrypted_stat(struct libos_dentry* dent, struct stat* buf) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    if (!dent->inode->data)
+    if (dent->inode->type == S_IFREG && !dent->inode->data)
         return -EACCES;
 
     return generic_inode_stat(dent, buf);

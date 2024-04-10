@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2021 Intel Corporation */
 
+#define _GNU_SOURCE
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -8,9 +9,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "rw_file.h"
+
+#define ENC_FILES_MOUNT "tmp_enc/mrenclaves/"
 
 #define SECRETSTRING "Secret string\n"
 #define SECRETSTRING_LEN (sizeof(SECRETSTRING) - 1)
@@ -23,6 +28,13 @@ int main(int argc, char** argv) {
         errx(EXIT_FAILURE, "Usage: %s <protected file to create/validate> unlink|nounlink",
              argv[0]);
     }
+
+    /* test that the encrypted-files mount is stat-able (there was a bug in Gramine) */
+    struct stat st;
+    if (stat(ENC_FILES_MOUNT, &st) < 0)
+        err(EXIT_FAILURE, "stat on encrypted-files mount");
+    if ((st.st_mode & S_IFMT) != S_IFDIR)
+        errx(EXIT_FAILURE, "stat on encrypted-files mount didn't return S_IFDIR");
 
     ret = access(argv[1], F_OK);
     if (ret < 0) {
