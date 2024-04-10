@@ -51,8 +51,8 @@ static void eventfd_dummy_host_write(struct libos_handle* hdl) {
     }
 }
 
-static void eventfd_dummy_host_wait(struct libos_handle* hdl, bool wait_for_read) {
-    pal_wait_flags_t wait_for_events = wait_for_read ? PAL_WAIT_READ : PAL_WAIT_WRITE;
+static void eventfd_dummy_host_wait(struct libos_handle* hdl) {
+    pal_wait_flags_t wait_for_events = PAL_WAIT_READ;
     pal_wait_flags_t ret_events = 0;
     int ret = PalStreamsWaitEvents(1, &hdl->pal_handle, &wait_for_events, &ret_events, NULL);
     if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED) {
@@ -96,7 +96,7 @@ static ssize_t eventfd_read(struct libos_handle* hdl, void* buf, size_t count, f
             goto out;
         }
         spinlock_unlock(&hdl->info.eventfd.lock);
-        eventfd_dummy_host_wait(hdl, /*wait_for_read=*/true);
+        eventfd_dummy_host_wait(hdl);
         spinlock_lock(&hdl->info.eventfd.lock);
     }
 
@@ -127,7 +127,9 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
                              file_off_t* pos) {
     __UNUSED(pos);
 
-    if (count < sizeof(uint64_t))
+    /* note: before v6.9, Linux kernel had a `<` comparison; here we adhere to the latest Linux
+     * version (v6.9) that switched to `!=` */
+    if (count != sizeof(uint64_t))
         return -EINVAL;
 
     if (g_eventfd_passthrough_mode) {
@@ -165,7 +167,13 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
             goto out;
         }
         spinlock_unlock(&hdl->info.eventfd.lock);
-        eventfd_dummy_host_wait(hdl, /*wait_for_read=*/false);
+        /* For the corner case of write overflowing the counter (and thus blocking), we choose to
+         * emulate blocking via busy loop. This may burn cycles and starve other threads, but is
+         * considered a sufficiently rare event. An alternative would be to (1) use a separate
+         * synchronization mechanism on which the writer would block, or to (2) keep the host value
+         * in sync with the LibOS value. The former alternative would introduce complexity, whereas
+         * the latter alternative would violate confidentiality (by leaking eventfd counter). */
+        PalThreadYieldExecution();
         spinlock_lock(&hdl->info.eventfd.lock);
     }
 

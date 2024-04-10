@@ -181,9 +181,15 @@ void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool 
                  * Some workloads (e.g. rust's tokio crate) use eventfd with EPOLLET in a peculiar
                  * way: each write to that eventfd increases counter by 1 and thanks to EPOLLET is
                  * reported by epoll only once, even if there is no read from eventfd.
+                 *
                  * To handle such usage pattern, we mark eventfd as read-epollet-pollable on each
-                 * write - we assume that eventfd is not shared between processes.
-                 * Hopefully no app tries to increase the eventfd counter by 0...
+                 * write - we assume that eventfd is not shared between processes. Note that we mark
+                 * eventfd even on write of zero (i.e. no change of the eventfd counter), which
+                 * wakes up EPOLLET listeners. In contrast, Linux would *not* wake up EPOLLET
+                 * listeners in this write-of-zero special case. Hopefully no app tries to increase
+                 * the eventfd counter by 0, so this discrepancy in behavior is never observed.
+                 *
+                 * FIXME: Can this func's callers in eventfd code special-case write-to-zero logic?
                  */
                 __atomic_store_n(&handle->needs_et_poll_in, true, __ATOMIC_RELEASE);
                 needs_et = true;
