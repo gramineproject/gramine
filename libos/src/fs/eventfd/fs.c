@@ -204,14 +204,16 @@ static void eventfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_re
     if (*pal_ret_events & PAL_WAIT_READ) {
         /* there is data to read: verify if counter has value greater than zero */
         if (!hdl->info.eventfd.val) {
-            /* spurious or malicious notification -- for now we don't BUG but ignore it */
+            /* spurious or malicious notification, can legitimately happen if another thread
+             * consumed this event between this thread's poll wakeup and the post_poll callback;
+             * we currently choose to return a spurious notification to the user */
             *pal_ret_events &= ~PAL_WAIT_READ;
         }
     }
     if (*pal_ret_events & PAL_WAIT_WRITE) {
         /* verify it's really possible to write a value of at least "1" without blocking */
         if (hdl->info.eventfd.val >= UINT64_MAX - 1) {
-            /* spurious or malicious notification -- for now we don't BUG but ignore it */
+            /* spurious or malicious notification, see comment above */
             *pal_ret_events &= ~PAL_WAIT_WRITE;
         }
     }
