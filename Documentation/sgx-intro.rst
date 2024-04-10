@@ -20,9 +20,8 @@ SGX is an umbrella name of *technology* that comprises several parts:
 - :term:`SDK` and assorted *software*.
 
 SGX is still being developed. The current (March 2024) version of CPU features
-is referred to as ":term:`SGX2`" or simply "SGX" and is more or less finalized.
-The older instruction set from the original SGX is informally referred to as
-":term:`SGX1`".
+is referred to as ":term:`SGX2`" or simply "SGX". The older instruction set
+from the original SGX is informally referred to as ":term:`SGX1`".
 
 Features which might be considered part of SGX2:
 
@@ -37,10 +36,10 @@ introduced it to server cores. The new SGX hardware architecture didn't change
 the user-facing ABI, but loosened security guarantees, matching AMD SEV-SNP
 security model:
 
-- Merkle Tree for memory integrity checking was removed, each page is now signed
-  separately.
+- Merkle tree for memory integrity checking was removed, each page is now
+  integrity-protected separately.
 - RAM replay attacks are now possible through hardware MitM attacks, with
-  single-page granularity (previously prevented by Merkle Tree).
+  single-page granularity (previously prevented by Merkle tree).
 - EPC can now be almost arbitrarily big, significantly improving performance for
   large workloads.
 
@@ -120,69 +119,6 @@ For historical reasons, there are three SGX drivers currently (March 2024):
   non-writable :term:`FLC` MSRs as non-functional SGX:
   https://lore.kernel.org/lkml/20191223094614.GB16710@zn.tnic/
 
-The chronicle of kernel patchset:
-
-v1 (2016-04-25)
-   https://lore.kernel.org/lkml/1461605698-12385-1-git-send-email-jarkko.sakkinen@linux.intel.com/
-v2
-   ?
-v3
-   ?
-v4 (2017-10-16)
-   https://lore.kernel.org/lkml/20171016191855.16964-1-jarkko.sakkinen@linux.intel.com/
-v5 (2017-11-13)
-   https://lore.kernel.org/lkml/20171113194528.28557-1-jarkko.sakkinen@linux.intel.com/
-v6 (2017-11-25)
-   https://lore.kernel.org/lkml/20171125193132.24321-1-jarkko.sakkinen@linux.intel.com/
-v7 (2017-12-07)
-   https://lore.kernel.org/lkml/20171207015614.7914-1-jarkko.sakkinen@linux.intel.com/
-v8 (2017-12-15)
-   https://lore.kernel.org/lkml/20171215202936.28226-1-jarkko.sakkinen@linux.intel.com/
-v9 (2017-12-16)
-   https://lore.kernel.org/lkml/20171216162200.20243-1-jarkko.sakkinen@linux.intel.com/
-v10 (2017-12-24)
-   https://lore.kernel.org/lkml/20171224195854.2291-1-jarkko.sakkinen@linux.intel.com/
-v11 (2018-06-08)
-   https://lore.kernel.org/lkml/20180608171216.26521-1-jarkko.sakkinen@linux.intel.com/
-v12 (2018-07-03)
-   https://lore.kernel.org/lkml/20180703182118.15024-1-jarkko.sakkinen@linux.intel.com/
-v13 (2018-08-27)
-   https://lore.kernel.org/lkml/20180827185507.17087-1-jarkko.sakkinen@linux.intel.com/
-v14 (2018-09-25)
-   https://lore.kernel.org/lkml/20180925130845.9962-1-jarkko.sakkinen@linux.intel.com/
-v15 (2018-11-03)
-   https://lore.kernel.org/lkml/20181102231320.29164-1-jarkko.sakkinen@linux.intel.com/
-v16 (2018-11-06)
-   https://lore.kernel.org/lkml/20181106134758.10572-1-jarkko.sakkinen@linux.intel.com/
-v17 (2018-11-16)
-   https://lore.kernel.org/lkml/20181116010412.23967-2-jarkko.sakkinen@linux.intel.com/
-v18 (2018-12-22)
-   https://lore.kernel.org/linux-sgx/20181221231134.6011-1-jarkko.sakkinen@linux.intel.com/
-v19 (2019-03-20)
-   https://lore.kernel.org/lkml/20190320162119.4469-1-jarkko.sakkinen@linux.intel.com/
-v20 (2019-04-17)
-   https://lore.kernel.org/lkml/20190417103938.7762-1-jarkko.sakkinen@linux.intel.com/
-v21 (2019-07-13)
-   https://lore.kernel.org/lkml/20190713170804.2340-1-jarkko.sakkinen@linux.intel.com/
-v22 (2019-09-03)
-   https://lore.kernel.org/lkml/20190903142655.21943-1-jarkko.sakkinen@linux.intel.com/
-v23 (2019-10-28)
-   https://lore.kernel.org/lkml/20191028210324.12475-1-jarkko.sakkinen@linux.intel.com/
-v24 (2019-11-30)
-   https://lore.kernel.org/lkml/20191129231326.18076-1-jarkko.sakkinen@linux.intel.com/
-v25 (2020-02-04)
-   https://lore.kernel.org/lkml/20200204060545.31729-1-jarkko.sakkinen@linux.intel.com/
-v26 (2020-02-09)
-   https://lore.kernel.org/lkml/20200209212609.7928-1-jarkko.sakkinen@linux.intel.com/
-v27 (2020-02-23)
-   https://lore.kernel.org/lkml/20200223172559.6912-1-jarkko.sakkinen@linux.intel.com/
-v28 (2020-04-04)
-   https://lore.kernel.org/lkml/20200303233609.713348-1-jarkko.sakkinen@linux.intel.com/
-v29 (2020-04-22)
-   https://lore.kernel.org/lkml/20200421215316.56503-1-jarkko.sakkinen@linux.intel.com/
-v30 (2020-05-15)
-   https://lore.kernel.org/lkml/20200515004410.723949-1-jarkko.sakkinen@linux.intel.com/
-
 SGX terminology
 ---------------
 
@@ -253,9 +189,7 @@ SGX terminology
       A |~| software infrastructure provided by Intel as a reference
       implementation for the new ECDSA/:term:`PCS`-based remote attestation.
       Relies on the :term:`Flexible Launch Control` hardware feature. In
-      principle this is a |~| special version of :term:`SDK`/:term:`PSW` that
-      has a |~| reference launch enclave and is backed by the SGX driver with
-      DCAP support.
+      principle this is a |~| special version of :term:`SDK`/:term:`PSW`.
 
       This allows for launching enclaves with Intel's remote infrastructure
       only involved in the initial setup. Naturally however, this requires
@@ -274,15 +208,15 @@ SGX terminology
 
    ECALL
 
-      A function call made by non-enclave world into an enclave.
+      A |~| special function call made by non-enclave world into an enclave.
 
    Enclave
 
       An instance of SGX TEE, residing in a contiguous chunk of usermode address
       space (``ELRANGE``) of some process on the system. Application threads
-      may enter the enclave through dedicated CPU instructions. Code running
-      inside an enclave has access to usermode memory of the process which
-      contains it, but not the other way.
+      may enter and exit the enclave through dedicated CPU instructions. Code
+      running inside an enclave has access to usermode memory of the process
+      which contains it, but not the other way.
 
    Enclave Dynamic Memory Management
    EDMM
@@ -294,15 +228,15 @@ SGX terminology
    Enclave Page Cache
    EPC
 
-      A part of :term:`PRM` used for caching enclave pages. :term:`EPC` is only
-      an optimization and its size doesn't limit possible enclave sizes, though
-      too-small :term:`EPC` may lead to frequent page swapping and
+      A |~| part of :term:`PRM` used for caching enclave pages. :term:`EPC` is
+      only an optimization and its size doesn't limit possible enclave sizes,
+      though too-small :term:`EPC` may lead to frequent page swapping and
       significantly worsen performance.
 
    Enclave Page Cache Map
    EPCM
 
-      An undocumented part of :term:`PRM` which holds metadata about EPC pages.
+      A |~| part of :term:`PRM` which holds metadata about EPC pages.
 
    Enhanced Privacy Identification
    Enhanced Privacy Identifier
@@ -439,7 +373,7 @@ SGX terminology
 
    OCALL
 
-      A function call made by an enclave to the non-enclave world.
+      A special function call made by an enclave to the non-enclave world.
 
    SGX Platform Software
    PSW
@@ -538,10 +472,10 @@ SGX terminology
       evidence in the form of an :term:`SGX Quote` using the :term:`Quoting
       Enclave` (and the :term:`Provisioning Enclave` if required). The enclave
       then may send the collected attestation evidence to the local or remote
-      party, which will verify the evidence and confirm the correctness of the
-      attesting enclave. After this, the local or remote party trusts the
-      enclave and may establish a secure channel with the enclave and send
-      secrets to it.
+      party, which will verify the evidence and confirm the authenticity and
+      integrity of the attested enclave. After this, the local or remote party
+      trusts the enclave and may establish a secure channel with the enclave
+      and send secrets to it.
 
       .. seealso::
 
@@ -590,9 +524,7 @@ SGX terminology
    SGX2
 
       New SGX instructions and other hardware features that were introduced
-      after the release of the original :term:`SGX1`.
-
-      Encompasses at least :term:`EDMM`, but is still work in progress.
+      after the release of the original :term:`SGX1` (e.g. :term:`EDMM`).
 
    Service Provider ID
    SPID
