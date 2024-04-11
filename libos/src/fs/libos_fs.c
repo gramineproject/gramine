@@ -195,10 +195,11 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
 
     int ret;
 
-    char* mount_type     = NULL;
-    char* mount_path     = NULL;
-    char* mount_uri      = NULL;
-    char* mount_key_name = NULL;
+    char* mount_type             = NULL;
+    char* mount_path             = NULL;
+    char* mount_uri              = NULL;
+    char* mount_key_name         = NULL;
+    char* mount_protection_mode  = NULL;
 
     ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
@@ -222,6 +223,13 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     }
 
     ret = toml_string_in(mount, "key_name", &mount_key_name);
+    if (ret < 0) {
+        log_error("Cannot parse '%s.key_name'", prefix);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_string_in(mount, "protection_mode", &mount_protection_mode);
     if (ret < 0) {
         log_error("Cannot parse '%s.key_name'", prefix);
         ret = -EINVAL;
@@ -269,10 +277,11 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     }
 
     struct libos_mount_params params = {
-        .type = mount_type ?: "chroot",
-        .path = mount_path,
-        .uri = mount_uri,
-        .key_name = mount_key_name,
+        .type            = mount_type ?: "chroot",
+        .path            = mount_path,
+        .uri             = mount_uri,
+        .key_name        = mount_key_name,
+        .protection_mode = mount_protection_mode,
     };
     ret = mount_fs(&params);
 

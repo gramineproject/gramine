@@ -1076,7 +1076,7 @@ static void ipf_delete_cache(pf_context_t* pf) {
     }
 }
 
-static bool ipf_close(pf_context_t* pf) {
+static bool ipf_close(pf_context_t* pf, pf_mac_t* closing_root_gmac) {
     bool retval = true;
 
     if (pf->file_status != PF_STATUS_SUCCESS) {
@@ -1087,6 +1087,10 @@ static bool ipf_close(pf_context_t* pf) {
             DEBUG_PF("internal flush failed");
             retval = false;
         }
+    }
+
+    if (closing_root_gmac != NULL) {
+        memcpy(*closing_root_gmac, pf->file_metadata.plain_part.metadata_gmac, sizeof(pf_mac_t));
     }
 
     // omeg: fs close is done by Gramine handler
@@ -1126,20 +1130,25 @@ void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
 }
 
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
-                    pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context) {
+                    pf_file_mode_t mode, bool create, const pf_key_t* key,
+                    pf_mac_t* opening_root_gmac, pf_context_t** context) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
     pf_status_t status;
     *context = ipf_open(path, mode, create, handle, underlying_size, key, &status);
+    if (opening_root_gmac != NULL) {
+        memcpy(*opening_root_gmac, (*context)->file_metadata.plain_part.metadata_gmac,
+               sizeof(pf_mac_t));
+    }
     return status;
 }
 
-pf_status_t pf_close(pf_context_t* pf) {
+pf_status_t pf_close(pf_context_t* pf, pf_mac_t* closing_root_gmac) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    if (ipf_close(pf)) {
+    if (ipf_close(pf, closing_root_gmac)) {
         free(pf);
         return PF_STATUS_SUCCESS;
     }
@@ -1208,7 +1217,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     return PF_STATUS_SUCCESS;
 }
 
-pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
+pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_gmac) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
@@ -1224,6 +1233,9 @@ pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
     pf->need_writing = true;
     if (!ipf_internal_flush(pf))
         return pf->last_error;
+    if (new_root_gmac != NULL) {
+        memcpy(*new_root_gmac, pf->file_metadata.plain_part.metadata_gmac, sizeof(pf_mac_t));
+    }
 
     return PF_STATUS_SUCCESS;
 }
@@ -1296,4 +1308,8 @@ pf_status_t pf_flush(pf_context_t* pf) {
     }
 
     return PF_STATUS_SUCCESS;
+}
+
+void pf_set_corrupted(pf_context_t* pf) {
+    pf->file_status = PF_STATUS_CORRUPTED;
 }

@@ -20,6 +20,11 @@ static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 /* Protects the `g_keys` list, but also individual keys, since they can be updated */
 static struct libos_lock g_keys_lock;
 
+static LISTP_TYPE(libos_encrypted_volume) g_volumes = LISTP_INIT;
+
+/* Protects the `g_volumes` list. */
+static struct libos_lock g_volumes_lock;
+
 static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, size_t size) {
     PAL_HANDLE pal_handle = (PAL_HANDLE)handle;
 
@@ -210,24 +215,99 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
 
     pf_context_t* pf;
     lock(&g_keys_lock);
-    if (!enc->key->is_set) {
-        log_warning("key '%s' is not set", enc->key->name);
+    if (!enc->volume->key->is_set) {
+        log_warning("key '%s' is not set", enc->volume->key->name);
         unlock(&g_keys_lock);
         ret = -EACCES;
         goto out;
     }
+    pf_mac_t opening_root_gmac;
     pf_status_t pfs = pf_open(pal_handle, norm_path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
-                              create, &enc->key->pf_key, &pf);
+                              create, &enc->volume->key->pf_key, &opening_root_gmac, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_open failed: %s", pf_strerror(pfs));
         ret = -EACCES;
         goto out;
     }
+    /* rollback protection */
+    struct libos_encrypted_volume_state_map* file_state = NULL;
+    log_debug("file '%s' opened with MAC=" MAC_PRINTF_PATTERN, norm_path,
+              MAC_PRINTF_ARGS(opening_root_gmac));  // TODO (MST): remove me eventually?
+    lock(&(enc->volume->files_state_map_lock));
+    /* - get current state */
+    HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
+    /* - check current state */
+    if (create) {
+        if (file_state && (file_state->state != PF_FILE_STATE_DELETED)) {
+            log_error("file '%s' already exists or is in error state", norm_path);
+            if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
+                pf_set_corrupted(pf);
+                ret = -EEXIST;
+                goto out_unlock_map;
+            }
+        }
+    } else {
+        if (file_state) {
+            if ((file_state->state == PF_FILE_STATE_ERROR) ||
+                (file_state->state == PF_FILE_STATE_DELETED)) {
+                log_error("file '%s' was seen before but in %s state", norm_path,
+                          file_state->state == PF_FILE_STATE_DELETED ? "deleted" : "error");
+                if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
+                    pf_set_corrupted(pf);
+                    ret = -EACCES;
+                    goto out_unlock_map;
+                }
+            }
+            if (memcmp(file_state->last_seen_root_gmac, opening_root_gmac, sizeof(pf_mac_t)) != 0) {
+                log_error(
+                    "file '%s' was seen before but in different inconsistent (rolled-back?) "
+                    "state, expected MAC=" MAC_PRINTF_PATTERN
+                    " but file had "
+                    "MAC=" MAC_PRINTF_PATTERN,
+                    norm_path, MAC_PRINTF_ARGS(file_state->last_seen_root_gmac),
+                    MAC_PRINTF_ARGS(opening_root_gmac));
+                if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
+                    pf_set_corrupted(pf);
+                    ret = -EACCES;
+                    goto out_unlock_map;
+                }
+            }
+        } else {
+            if (enc->volume->protection_mode == PF_ENCLAVE_LIFE_RB_PROTECTION_STRICT) {
+                log_error(
+                    "file '%s' was not seen before which is not allowed with strict rollback "
+                    "protection mode",
+                    norm_path);
+                pf_set_corrupted(pf);
+                ret = -EACCES;
+                goto out_unlock_map;
+            }
+        }
+    }
+    /* - uodate map with new state */
+    if (file_state == NULL) {
+        file_state = malloc(sizeof(struct libos_encrypted_volume_state_map));
+        if (file_state == NULL) {
+            ret = -ENOMEM;
+            goto out_unlock_map;
+        }
+        file_state->norm_path = norm_path;
+        norm_path             = NULL; /* to prevent freeing it */
+        HASH_ADD_KEYPTR(hh, enc->volume->files_state_map, file_state->norm_path,
+                        strlen(file_state->norm_path), file_state);
+    }
+    /*   we do below unconditionally as we might recreate a deleted file or overwrite an existing
+     *   one */
+    memcpy(file_state->last_seen_root_gmac, opening_root_gmac, sizeof(pf_mac_t));
+    file_state->state = PF_FILE_STATE_ACTIVE;
 
     enc->pf = pf;
     enc->pal_handle = pal_handle;
     ret = 0;
+
+out_unlock_map:
+    unlock(&(enc->volume->files_state_map_lock));
 out:
     free(norm_path);
     if (ret < 0)
@@ -253,12 +333,37 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     return 0;
 }
 
-static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
+static void encrypted_file_internal_close(struct libos_encrypted_file* enc, bool fs_reachable) {
     assert(enc->pf);
+    pf_mac_t closing_root_gmac;
+    pf_status_t pfs = pf_close(enc->pf, &closing_root_gmac);
+    char* norm_path = NULL;
+    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
+    if (ret < 0) {
+        log_error("Could not normalize uri %s while closing file (ret=%d)", enc->uri, ret);
+    } else {
+        log_debug("%sreachable file '%s' closed with MAC=" MAC_PRINTF_PATTERN,
+                  (fs_reachable ? "" : "un"), norm_path,
+                  MAC_PRINTF_ARGS(closing_root_gmac));  // TODO (MST): remove me eventually?
+        lock(&(enc->volume->files_state_map_lock));
+        struct libos_encrypted_volume_state_map* file_state = NULL;
 
-    pf_status_t pfs = pf_close(enc->pf);
-    if (PF_FAILURE(pfs)) {
-        log_warning("pf_close failed: %s", pf_strerror(pfs));
+        HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
+        assert(file_state != NULL);
+        if (PF_FAILURE(pfs)) {
+            log_warning("pf_close failed: %s", pf_strerror(pfs));
+            file_state->state = PF_FILE_STATE_ERROR;
+            pf_set_corrupted(enc->pf);
+        } else {
+            if (fs_reachable && (file_state->state == PF_FILE_STATE_ACTIVE)) {
+                /* note: we only update if reachable in fileystem to prevent file-handles made
+                 * unreachable via unlink or rename to modify state.  We also do not touch it if
+                 * earlier we determined this file is in inconsistent error state. */
+                memcpy(file_state->last_seen_root_gmac, closing_root_gmac, sizeof(pf_mac_t));
+            }
+        }
+        unlock(&(enc->volume->files_state_map_lock));
+        free(norm_path);
     }
 
     enc->pf = NULL;
@@ -290,6 +395,8 @@ int init_encrypted_files(void) {
     cb_debug_ptr = &cb_debug;
 #endif
     if (!create_lock(&g_keys_lock))
+        return -ENOMEM;
+    if (!create_lock(&g_volumes_lock))
         return -ENOMEM;
 
     pf_set_callbacks(&cb_read, &cb_write, &cb_fsync, &cb_truncate,
@@ -453,12 +560,68 @@ void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_
     unlock(&g_keys_lock);
 }
 
-static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_key* key,
+static struct libos_encrypted_volume* get_volume(const char* mount_point_path) {
+    assert(locked(&g_volumes_lock));
+
+    struct libos_encrypted_volume* volume;
+    LISTP_FOR_EACH_ENTRY(volume, &g_volumes, list) {
+        if (!strcmp(volume->mount_point_path, mount_point_path)) {
+            return volume;
+        }
+    }
+
+    return NULL;
+}
+
+int register_encrypted_volume(struct libos_encrypted_volume* volume) {
+    assert(volume && volume->mount_point_path);
+
+    lock(&g_volumes_lock);
+
+    int ret = 0;
+
+    struct libos_encrypted_volume* existing_volume = get_volume(volume->mount_point_path);
+    if (existing_volume) {
+        ret = -EEXIST;
+        goto out;
+    }
+    LISTP_ADD_TAIL(volume, &g_volumes, list);
+out:
+    unlock(&g_volumes_lock);
+    return ret;
+}
+
+struct libos_encrypted_volume* get_encrypted_volume(const char* mount_point_path) {
+    lock(&g_volumes_lock);
+    struct libos_encrypted_volume* volume = get_volume(mount_point_path);
+    unlock(&g_volumes_lock);
+    return volume;
+}
+
+int list_encrypted_volumes(int (*callback)(struct libos_encrypted_volume* volume, void* arg),
+                           void* arg) {
+    lock(&g_volumes_lock);
+
+    int ret;
+
+    struct libos_encrypted_volume* volume;
+    LISTP_FOR_EACH_ENTRY(volume, &g_volumes, list) {
+        ret = callback(volume, arg);
+        if (ret < 0)
+            goto out;
+    }
+    ret = 0;
+out:
+    unlock(&g_volumes_lock);
+    return ret;
+}
+
+static int encrypted_file_alloc(const char* uri, struct libos_encrypted_volume* volume,
                                 struct libos_encrypted_file** out_enc) {
     assert(strstartswith(uri, URI_PREFIX_FILE));
 
-    if (!key) {
-        log_debug("trying to open a file (%s) before key is set", uri);
+    if (!volume) {
+        log_debug("trying to open a file (%s) before volume is set", uri);
         return -EACCES;
     }
 
@@ -466,23 +629,35 @@ static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_ke
     if (!enc)
         return -ENOMEM;
 
+    int ret;
+    enc->uri = NULL;
+
     enc->uri = strdup(uri);
     if (!enc->uri) {
-        free(enc);
-        return -ENOMEM;
+        ret = -ENOMEM;
+        goto err;
     }
-    enc->key = key;
+
+    enc->volume     = volume;
     enc->use_count = 0;
     enc->pf = NULL;
     enc->pal_handle = NULL;
     *out_enc = enc;
     return 0;
+
+err:
+    if (enc) {
+        if (enc->uri)
+            free(enc->uri);
+        free(enc);
+    }
+    return ret;
 }
 
-int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
+int encrypted_file_open(const char* uri, struct libos_encrypted_volume* volume,
                         struct libos_encrypted_file** out_enc) {
     struct libos_encrypted_file* enc;
-    int ret = encrypted_file_alloc(uri, key, &enc);
+    int ret = encrypted_file_alloc(uri, volume, &enc);
     if (ret < 0)
         return ret;
 
@@ -497,10 +672,10 @@ int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
     return 0;
 }
 
-int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
+int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_volume* volume,
                           struct libos_encrypted_file** out_enc) {
     struct libos_encrypted_file* enc;
-    int ret = encrypted_file_alloc(uri, key, &enc);
+    int ret = encrypted_file_alloc(uri, volume, &enc);
     if (ret < 0)
         return ret;
 
@@ -537,12 +712,12 @@ int encrypted_file_get(struct libos_encrypted_file* enc) {
     return 0;
 }
 
-void encrypted_file_put(struct libos_encrypted_file* enc) {
+void encrypted_file_put(struct libos_encrypted_file* enc, bool fs_reachable) {
     assert(enc->use_count > 0);
     assert(enc->pf);
     enc->use_count--;
     if (enc->use_count == 0) {
-        encrypted_file_internal_close(enc);
+        encrypted_file_internal_close(enc, fs_reachable);
     }
 }
 
@@ -643,7 +818,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     if (ret < 0)
         goto out;
 
-    pf_status_t pfs = pf_rename(enc->pf, new_norm_path);
+    pf_mac_t new_root_gmac;
+    pf_status_t pfs = pf_rename(enc->pf, new_norm_path, &new_root_gmac);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_rename failed: %s", pf_strerror(pfs));
         ret = -EACCES;
@@ -655,26 +831,88 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         log_warning("PalStreamChangeName failed: %s", pal_strerror(ret));
 
         /* We failed to rename the file. Try to restore the name in header. */
-        pfs = pf_rename(enc->pf, old_norm_path);
+        pfs = pf_rename(enc->pf, old_norm_path, &new_root_gmac);
         if (PF_FAILURE(pfs)) {
             log_warning("pf_rename (during cleanup) failed, the file might be unusable: %s",
                         pf_strerror(pfs));
         }
-
+        old_norm_path = NULL;  // don't free it later ...
         ret = pal_to_unix_errno(ret);
         goto out;
     }
+    /* update file state map */
+    log_debug("file '%s' renamed to '%s' with MAC=" MAC_PRINTF_PATTERN, old_norm_path,
+              new_norm_path,
+              MAC_PRINTF_ARGS(new_root_gmac));  // TODO (MST): remove me eventually?
+    lock(&(enc->volume->files_state_map_lock));
+    struct libos_encrypted_volume_state_map* old_file_state = NULL;
+    HASH_FIND_STR(enc->volume->files_state_map, old_norm_path, old_file_state);
+    assert(old_file_state != NULL);
+    struct libos_encrypted_volume_state_map* new_file_state = NULL;
+    HASH_FIND_STR(enc->volume->files_state_map, new_norm_path, new_file_state);
+    if (new_file_state == NULL) {
+        new_file_state = malloc(sizeof(struct libos_encrypted_volume_state_map));
+        if (new_file_state == NULL) {
+            ret = -ENOMEM;
+            goto out;
+        }
+        new_file_state->norm_path = new_norm_path;
+        HASH_ADD_KEYPTR(hh, enc->volume->files_state_map, new_file_state->norm_path,
+                        strlen(new_file_state->norm_path), new_file_state);
+    } else {
+        free(new_norm_path); /* should be same as old one used during HASH_ADD */
+        new_norm_path = new_file_state->norm_path;
+    }
+    new_file_state->state = old_file_state->state;
+    memcpy(new_file_state->last_seen_root_gmac, new_root_gmac, sizeof(pf_mac_t));
+    old_file_state->state = PF_FILE_STATE_DELETED; /* note: this might remove error state from that
+                                                      file but that is fine as it is deleted now. */
+    memset(old_file_state->last_seen_root_gmac, 0, sizeof(pf_mac_t));
+    unlock(&(enc->volume->files_state_map_lock));
 
     free(enc->uri);
-    enc->uri = new_uri_copy;
-    new_uri_copy = NULL;
+    enc->uri       = new_uri_copy;
+    new_uri_copy   = NULL;
+    new_norm_path  = NULL;
+
     ret = 0;
 
 out:
+    if (ret) {
+        // store in file state map fact that we could not rename file properly
+        if (!locked(&(enc->volume->files_state_map_lock)))  // for OOM case from above!
+            lock(&(enc->volume->files_state_map_lock));
+        if (old_file_state == NULL)  // we might already have it!
+            HASH_FIND_STR(enc->volume->files_state_map, old_norm_path, old_file_state);
+        assert(old_file_state != NULL);
+        old_file_state->state = PF_FILE_STATE_ERROR;
+        pf_set_corrupted(enc->pf);
+        unlock(&(enc->volume->files_state_map_lock));
+    }
     free(old_norm_path);
     free(new_norm_path);
     free(new_uri_copy);
     return ret;
+}
+
+int encrypted_file_unlink(struct libos_encrypted_file* enc) {
+    char* norm_path = NULL;
+    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
+    if (ret < 0)
+        return ret;
+
+    lock(&(enc->volume->files_state_map_lock));
+    struct libos_encrypted_volume_state_map* file_state = NULL;
+    HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
+    assert(file_state != NULL);
+    pf_mac_t root_gmac_before_unlink;
+    memcpy(root_gmac_before_unlink, file_state->last_seen_root_gmac, sizeof(pf_mac_t));
+    file_state->state = PF_FILE_STATE_DELETED;
+    memset(file_state->last_seen_root_gmac, 0, sizeof(pf_mac_t));
+    unlock(&(enc->volume->files_state_map_lock));
+    log_debug("file '%s' unlinked, previously with MAC=" MAC_PRINTF_PATTERN, norm_path,
+              MAC_PRINTF_ARGS(root_gmac_before_unlink));  // TODO (MST): remove me eventually?
+    return 0;
 }
 
 /* Checkpoint the `g_keys` list. */
@@ -744,6 +982,89 @@ BEGIN_RS_FUNC(encrypted_files_key) {
 }
 END_RS_FUNC(encrypted_files_key)
 
+/* Checkpoint the `g_volumes` list.  Note we only call this to checkpoint all volumes.  The list
+ * itself is not checkpointed (and hence also no corresponding restore function).  The list is
+ * reconstructed in the restore function of the volumes itself. */
+BEGIN_CP_FUNC(all_encrypted_volumes) {
+    __UNUSED(size);
+    __UNUSED(obj);
+    __UNUSED(objp);
+
+    lock(&g_volumes_lock);
+    struct libos_encrypted_volume* volume;
+    LISTP_FOR_EACH_ENTRY(volume, &g_volumes, list) {
+        DO_CP(encrypted_volume, volume, /*objp=*/NULL);
+    }
+    unlock(&g_volumes_lock);
+}
+END_CP_FUNC_NO_RS(all_encrypted_volumes)
+
+BEGIN_CP_FUNC(encrypted_volume) {
+    __UNUSED(size);
+
+    struct libos_encrypted_volume* volume     = obj;
+    struct libos_encrypted_volume* new_volume = NULL;
+
+    size_t off = GET_FROM_CP_MAP(obj);
+    if (!off) { /* We haven't already checkpointed this volume */
+        off = ADD_CP_OFFSET(sizeof(struct libos_encrypted_volume));
+        ADD_TO_CP_MAP(obj, off);
+        new_volume = (struct libos_encrypted_volume*)(base + off);
+
+        log_debug("CP(encrypted_volume): mount_point_path=%s protection_mode=%d file_state_mape=%p",
+                  volume->mount_point_path, volume->protection_mode,
+                  volume->files_state_map);  // TODO (MST): remove me eventually?
+        DO_CP_MEMBER(str, volume, new_volume, mount_point_path);
+        new_volume->protection_mode = volume->protection_mode;
+        lock(&volume->files_state_map_lock);
+        /* Note: for now we do not serialize hashmap so just make sure it is treated as empty list.
+         * Serialization would cover some corner cases, e.g., `send_handle_enc` test case might work
+         * in strict and not only in non-strict mode. However, checkpoint/restore with current
+         * framework does not provide a low-hanging fruit. For other reasons (persistant rollback
+         * protection) we will need file-based (de)serialization and so could use that here.
+         * However, to really solve multi-processor case, we have to adopt the same strategy as for
+         * file locks, i.e., a leader-based centralized map and IPC to access/modify. Hence, no
+         * point in doing some complicated interim throw-away variant. */
+        new_volume->files_state_map = NULL;
+        unlock(&volume->files_state_map_lock);
+        /* files_state_map_lock has no check point, it will be recreated in restore */
+        lock(&g_keys_lock);
+        DO_CP_MEMBER(encrypted_files_key, volume, new_volume, key);
+        unlock(&g_keys_lock);
+        INIT_LIST_HEAD(new_volume, list);
+
+        ADD_CP_FUNC_ENTRY(off);
+    } else {
+        new_volume = (struct libos_encrypted_volume*)(base + off);
+    }
+    if (objp)
+        *objp = (void*)new_volume;
+}
+END_CP_FUNC(encrypted_volume)
+
+BEGIN_RS_FUNC(encrypted_volume) {
+    __UNUSED(offset);
+    struct libos_encrypted_volume* migrated_volume = (void*)(base + GET_CP_FUNC_ENTRY());
+
+    CP_REBASE(migrated_volume->mount_point_path);
+
+    /* protection_mode needs no restore action. */
+    /* files_state_map for now is not serialized but just an empty list, so no restore action
+     * needed. See above in checkpoint for more information. */
+    if (!create_lock(&migrated_volume->files_state_map_lock)) {
+        return -ENOMEM;
+    }
+    CP_REBASE(migrated_volume->key);
+    log_debug("RS(encrypted_volume): mount_point_path=%s protection_mode=%d file_state_mape=%p",
+              migrated_volume->mount_point_path, migrated_volume->protection_mode,
+              migrated_volume->files_state_map);  // TODO (MST): remove me eventually?
+
+    int ret = register_encrypted_volume(migrated_volume);
+    if (ret < 0)
+        return ret;
+}
+END_RS_FUNC(encrypted_volume)
+
 BEGIN_CP_FUNC(encrypted_file) {
     __UNUSED(size);
 
@@ -762,9 +1083,7 @@ BEGIN_CP_FUNC(encrypted_file) {
     new_enc->use_count = enc->use_count;
     DO_CP_MEMBER(str, enc, new_enc, uri);
 
-    lock(&g_keys_lock);
-    DO_CP_MEMBER(encrypted_files_key, enc, new_enc, key);
-    unlock(&g_keys_lock);
+    DO_CP_MEMBER(encrypted_volume, enc, new_enc, volume);
 
     /* `enc->pf` will be recreated during restore */
     new_enc->pf = NULL;
@@ -786,7 +1105,8 @@ BEGIN_RS_FUNC(encrypted_file) {
     __UNUSED(offset);
 
     CP_REBASE(enc->uri);
-    CP_REBASE(enc->key);
+
+    CP_REBASE(enc->volume);
 
     /* If the file was used, recreate `enc->pf` based on the PAL handle */
     assert(!enc->pf);
