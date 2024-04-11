@@ -138,10 +138,10 @@ static ssize_t eventfd_write(struct libos_handle* hdl, const void* buf, size_t c
         return -EINVAL;
 
     if (buf_val == 0) {
-        /* note: we consider eventfd write of zero as a no-op, even though Linux kernel doesn't have
-         * such early-return case (https://elixir.bootlin.com/linux/v6.8/source/fs/eventfd.c#L247);
-         * it seems reasonable though that write-of-zero must have no side effects since this
-         * operation doesn't change the eventfd counter value */
+        /* Note: we explicitly emulate eventfd write-of-zero as a no-op. Linux kernel ultimately
+         * also no-ops on write-of-zero despite the lack of an explicit early-return condition
+         * (https://elixir.bootlin.com/linux/v6.8/source/fs/eventfd.c#L247). This explicit check is
+         * required in Gramine due to how our polling works. */
         return (ssize_t)count;
     }
 
