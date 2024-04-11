@@ -14,17 +14,22 @@
 #include "protected_files_format.h"
 
 struct pf_context {
-    metadata_node_t file_metadata; // actual data from disk's meta data node
-    pf_status_t last_error;
-    metadata_encrypted_t encrypted_part_plain; // encrypted part of metadata node, decrypted
-    file_node_t root_mht; // the root of the mht is always needed (for files bigger than 3KB)
-    pf_handle_t file;
-    pf_file_mode_t mode;
-    bool need_writing;
-    pf_status_t file_status;
-    pf_key_t user_kdk_key;
-    lruc_context_t* cache;
+    pf_handle_t host_file_handle;  // opaque file handle (e.g. PAL handle) used by callbacks
+    pf_file_mode_t mode;           // read-only, write-only or read-write
+    bool need_writing;             // whether file was modified and thus needs writing to storage
+
+    pf_status_t file_status;       // PF_STATUS_SUCCESS, PF_STATUS_CRYPTO_ERROR, etc.
+    pf_status_t last_error;        // FIXME: unclear why this is needed
+
+    pf_key_t kdk;                  // KDK installed by user of PF (e.g. from Gramine manifest)
+
+    metadata_node_t metadata_node; // plaintext and encrypted metadata from storage (bounce buffer)
+    metadata_decrypted_header_t metadata_decrypted_header; // contains file path, size, etc.
+
+    file_node_t root_mht_node;     // root MHT node is always needed (for files bigger than 3KB)
+
+    lruc_context_t* cache;         // up to MAX_PAGES_IN_CACHE nodes are cached for each file
 #ifdef DEBUG
-    char* debug_buffer; // buffer for debug output
+    char* debug_buffer;            // buffer for debug output
 #endif
 };
