@@ -188,8 +188,7 @@ SGX terminology
 
       A |~| software infrastructure provided by Intel as a reference
       implementation for the new ECDSA/:term:`PCS`-based remote attestation.
-      Relies on the :term:`Flexible Launch Control` hardware feature. In
-      principle this is a |~| special version of :term:`SDK`/:term:`PSW`.
+      Relies on the :term:`Flexible Launch Control` hardware feature.
 
       This allows for launching enclaves with Intel's remote infrastructure
       only involved in the initial setup. Naturally however, this requires
@@ -373,7 +372,7 @@ SGX terminology
 
    OCALL
 
-      A special function call made by an enclave to the non-enclave world.
+      A |~| special function call made by an enclave to the non-enclave world.
 
    SGX Platform Software
    PSW
@@ -386,9 +385,9 @@ SGX terminology
    Processor Reserved Memory
    PRM
 
-      An undocumented region of physical address space reserved by the BIOS for
-      internal use by SGX hardware. Known to contain at least :term:`EPC`
-      and :term:`EPCM`.
+      A |~| mostly undocumented region of physical address space reserved by the
+      BIOS for internal use by SGX hardware. Known to contain at
+      least :term:`EPC` and :term:`EPCM`.
 
    Provisioning Enclave
    PE
