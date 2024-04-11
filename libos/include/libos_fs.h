@@ -35,6 +35,9 @@ struct libos_mount_params {
 
     /* Key name (used by `chroot_encrypted` filesystem), or NULL if not applicable */
     const char* key_name;
+
+    /* Enforcement type (used by `chroot_encrypted` filesystem), or NULL if not applicable */
+    const char* protection_mode;
 };
 
 struct libos_fs_ops {
