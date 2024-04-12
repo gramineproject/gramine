@@ -1,10 +1,4 @@
 stage('build') {
-    sh '''
-        git clone https://github.com/intel/linux-sgx-driver.git
-        cd linux-sgx-driver
-        git checkout 276c5c6a064d22358542f5e0aa96b1c0ace5d695
-    '''
-
     env.MESON_OPTIONS = ''
     if (env.GRAMINE_MUSL == '1') {
         env.MESON_OPTIONS += ' -Dlibc=musl'
@@ -25,6 +19,12 @@ stage('build') {
         env.SGX_DRIVER = 'oot'
     }
     if (env.SGX_DRIVER == 'oot') {
+        sh '''
+            git clone https://github.com/intel/linux-sgx-driver.git
+            cd linux-sgx-driver
+            git checkout 276c5c6a064d22358542f5e0aa96b1c0ace5d695
+        '''
+
         env.MESON_OPTIONS += ' -Dsgx_driver_include_path=' + env.WORKSPACE + '/linux-sgx-driver'
     }
 
