@@ -1167,6 +1167,11 @@ static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot
         return ret;
 
     *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
+
+    if (vma_info.file) {
+        put_handle(vma_info.file);
+    }
+
     return 0;
 }
 
