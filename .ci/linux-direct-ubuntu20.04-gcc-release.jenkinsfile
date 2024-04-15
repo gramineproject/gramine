@@ -5,7 +5,7 @@ node('nonsgx_slave && aesni') {
     docker.build(
         "local:${env.BUILD_TAG}",
         '-f .ci/ubuntu20.04.dockerfile .'
-    ).inside("${env.DOCKER_ARGS_COMMON}") {
+    ).inside("${env.DOCKER_ARGS_COMMON} --security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp_mar_2021.json") {
         load '.ci/lib/config.jenkinsfile'
         load '.ci/lib/config-release.jenkinsfile'
 

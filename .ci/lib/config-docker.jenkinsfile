@@ -3,7 +3,6 @@ env.PREFIX = env.WORKSPACE + '/usr'
 // don't mess with PATH before reading this: https://issues.jenkins.io/browse/JENKINS-49076
 env.DOCKER_ARGS_COMMON = """
     --env=PATH=${env.PREFIX}/bin:${env.PATH}
-    --security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json
 """
 env.DOCKER_ARGS_SGX = '''
     --volume=/lib/modules:/lib/modules:ro
