@@ -221,13 +221,6 @@ static long do_poll(struct pollfd* fds, size_t fds_len, uint64_t* timeout_us) {
         if (ret_events[i] & PAL_WAIT_WRITE)
             fds[i].revents |= fds[i].events & (POLLOUT | POLLWRNORM);
 
-        /* TODO: move this to socket FS's post_poll() callback */
-        if (libos_handles[i]->type == TYPE_SOCK &&
-                (ret_events[i] & (PAL_WAIT_READ | PAL_WAIT_WRITE))) {
-            bool error_event = !!(ret_events[i] & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP));
-            check_connect_inprogress_on_poll(libos_handles[i], error_event);
-        }
-
         if (fds[i].revents)
             ret_events_count++;
     }

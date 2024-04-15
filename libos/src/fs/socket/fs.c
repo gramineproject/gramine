@@ -224,6 +224,15 @@ static int checkin(struct libos_handle* handle) {
     return 0;
 }
 
+static void post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_ret_events) {
+    assert(hdl->type == TYPE_SOCK);
+
+    if (*pal_ret_events & (PAL_WAIT_READ | PAL_WAIT_WRITE)) {
+        bool error_event = !!(*pal_ret_events & (PAL_WAIT_ERROR | PAL_WAIT_HANG_UP));
+        check_connect_inprogress_on_poll(hdl, error_event);
+    }
+}
+
 static struct libos_fs_ops socket_fs_ops = {
     .close    = close,
     .read     = read,
@@ -235,6 +244,7 @@ static struct libos_fs_ops socket_fs_ops = {
     .ioctl    = ioctl,
     .checkout = checkout,
     .checkin  = checkin,
+    .post_poll = &post_poll,
 };
 
 struct libos_fs socket_builtin_fs = {
