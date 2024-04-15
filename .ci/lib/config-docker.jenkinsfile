@@ -1,9 +1,15 @@
 env.PREFIX = env.WORKSPACE + '/usr'
 
 // don't mess with PATH before reading this: https://issues.jenkins.io/browse/JENKINS-49076
+/* about seccomp:
+ * - seccomp is needed for docker, because the default policy does not allow
+ *   personality(2) syscall, which we need (see pal/src/host/linux/pal_main.c)
+ * - it's OK to run unconfined, we're running inside VM anyway
+ * - real users will probably need to set up their own policy
+ */
 env.DOCKER_ARGS_COMMON = """
     --env=PATH=${env.PREFIX}/bin:${env.PATH}
-    --security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json
+    --security-opt seccomp=unconfined
 """
 env.DOCKER_ARGS_SGX = '''
     --volume=/lib/modules:/lib/modules:ro
