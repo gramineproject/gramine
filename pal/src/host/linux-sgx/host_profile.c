@@ -113,12 +113,12 @@ int sgx_profile_init(void) {
     g_profile_period = NSEC_IN_SEC / g_pal_enclave.profile_frequency;
     g_profile_mode = g_pal_enclave.profile_mode;
 
-    // File `/proc/self/mem` is open once and remain open during the lifecycle of the process
+    /* `/proc/self/mem` is opened once and is kept open for the whole runtime of Gramine */
     if (g_mem_fd < 0) {
         ret = DO_SYSCALL(open, "/proc/self/mem", O_RDONLY | O_LARGEFILE | O_CLOEXEC, 0);
         if (ret < 0) {
             log_error("sgx_profile_init: opening /proc/self/mem failed: %s", unix_strerror(ret));
-            return ret;
+            goto out;
         }
         g_mem_fd = ret;
     }
@@ -127,7 +127,7 @@ int sgx_profile_init(void) {
     ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
     if (ret < 0) {
         log_error("sgx_profile_init: clock_gettime failed: %s", unix_strerror(ret));
-        return ret;
+        goto out;
     }
 
     snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
@@ -136,7 +136,8 @@ int sgx_profile_init(void) {
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
-        return -EINVAL;
+        ret = -EINVAL;
+        goto out;
     }
     g_perf_data = pd;
 

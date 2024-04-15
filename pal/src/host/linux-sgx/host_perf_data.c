@@ -152,12 +152,11 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
         return NULL;
     }
 
-    // File `/dev/null` is open once and remain open during the lifecycle of the process
+    /* `/dev/null` is opened once and is kept open for the whole runtime of Gramine */
     if (g_dev_null_fd < 0) {
-        ret = DO_SYSCALL(open, "/dev/null",
-                            O_WRONLY | O_TRUNC | O_CREAT | O_CLOEXEC, PERM_rw_r__r__);
+        ret = DO_SYSCALL(open, "/dev/null", O_WRONLY | O_CLOEXEC, PERM_rw_r__r__);
         if (ret < 0) {
-            log_error("pd_open: cannot open `/dev/null` for writing: %s", unix_strerror(fd));
+            log_error("pd_open: cannot open `/dev/null` for writing: %s", unix_strerror(ret));
             goto fail;
         }
         g_dev_null_fd = ret;
@@ -295,7 +294,7 @@ ssize_t pd_close(struct perf_data* pd) {
         goto out;
 
 out:
-    if ((dup2_ret = dup2(g_dev_null_fd, pd->fd)) < 0)
+    if ((dup2_ret = DO_SYSCALL(dup2, g_dev_null_fd, pd->fd)) < 0)
         log_error("pd_close: dup2 failed: %s", unix_strerror(dup2_ret));
 
     free(pd);
