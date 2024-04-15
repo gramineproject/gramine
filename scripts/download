@@ -52,6 +52,11 @@ fi
 
 tmpd="$(mktemp -d -p "${DL_CACHE:-.}")"
 cleanup() {
+    # https://www.shellcheck.net/wiki/SC2317#exceptions:
+    # > ShellCheck may incorrectly believe that code is unreachable if it's
+    # > invoked by variable name or in a trap. In such a case, please Ignore the
+    # > message.
+    # shellcheck disable=SC2317
     rm -rf "$tmpd"
 }
 trap cleanup EXIT
