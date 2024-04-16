@@ -19,7 +19,7 @@ shift 8
 CC=gcc
 CXX=g++
 AS=gcc
-CFLAGS="-O2 -Wno-unused-value $EXTRA_CFLAGS"
+CFLAGS="-O2 -Wno-unused-value -Wno-attributes -U_FORTIFY_SOURCE $EXTRA_CFLAGS"
 CPPFLAGS="\
     -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include \
     -I$(realpath "$CURRENT_SOURCE_DIR")/../../libos/include/arch/$CPU_FAMILY \
