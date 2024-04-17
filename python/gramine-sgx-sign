@@ -129,7 +129,10 @@ def main(ctx, with_, output, libpal, manifest_file, date, sigfile, depfile, verb
 
     manifest = Manifest.load(manifest_file)
 
-    expanded = manifest.expand_all_trusted_files(chroot=chroot)
+    try:
+        expanded = manifest.expand_all_trusted_files(chroot=chroot)
+    except FileNotFoundError as err:
+        ctx.fail(f'Missing trusted file: {err.filename!r}')
 
     with open(output, 'wb') as f:
         manifest.dump(f)
