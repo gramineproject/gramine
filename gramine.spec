@@ -8,7 +8,7 @@
 %endif
 
 Name: gramine
-Version: 1.7~rc1
+Version: 1.7post~UNRELEASED
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
