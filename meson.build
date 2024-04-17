@@ -5,7 +5,7 @@
 project(
     'gramine',
     'c', 'cpp',
-    version: '1.6.2post~UNRELEASED',
+    version: '1.7~rc3',
     license: 'LGPLv3+',
 
     meson_version: '>=0.56',
