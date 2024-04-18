@@ -23,8 +23,7 @@
 
 static void usage(const char* prog_name) {
     fprintf(stderr, "usage: %s <IP address> poll|epoll\n", prog_name);
-    fprintf(stderr, "(use 127.0.0.1 for responsive peer and 10.255.255.255 for unresponsive "
-                    "peer)\n");
+    fprintf(stderr, "(use 127.0.0.1 for responsive peer and 203.0.113.1 for unresponsive peer)\n");
 }
 
 int main(int argc, const char** argv) {
