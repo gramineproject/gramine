@@ -1482,11 +1482,11 @@ class TC_80_Socket(RegressionTestCase):
     # Two tests for an unresponsive peer: first connect() returns EINPROGRESS, then poll/epoll
     # times out because the connection cannot be established
     def test_307_socket_tcp_einprogress_unresponsive_poll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '10.255.255.255', 'poll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', '203.0.113.0', 'poll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
 
     def test_308_socket_tcp_einprogress_unresponsive_epoll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '10.255.255.255', 'epoll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', '203.0.113.0', 'epoll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
 
     def test_310_socket_tcp_ipv6_v6only(self):
