@@ -1349,8 +1349,11 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 
     uintptr_t start = MAX(ctx->begin, vma->begin);
     uintptr_t end = MIN(ctx->end, vma->end);
-    if (PalFreeThenLazyReallocCommittedPages((void*)start, end - start) < 0)
+    int ret = PalFreeThenLazyReallocCommittedPages((void*)start, end - start);
+    if (ret < 0) {
+        ctx->error = pal_to_unix_errno(ret);
         return false;
+    }
 
     return true;
 }
