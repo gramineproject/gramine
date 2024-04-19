@@ -291,20 +291,15 @@ int get_topology_info(struct pal_topo_info* topo_info) {
 
     bool cpu_nodes_file_exists = false;
     size_t nodes_cnt = 1;
-    /* Get the CPU node number. By default, the number is 1.
-     * Some systems do not have the file, for example, Windows Subsystem for Linux, for which we
-     * will ignore the -ENOENT error and synthesize later a corresponding (single) numa node
-     * instead. */
+    /* Get the number of NUMA nodes on the system. By default, the number is 1. */
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if (ret < 0) {
-        if (ret != -ENOENT) {
-            return ret;
-        } else {
-            cpu_nodes_file_exists = false;
-        }
-    } else {
-        cpu_nodes_file_exists = true;
+    if ((ret < 0) && (ret != -ENOENT)) {
+        /* Some systems do not have the file, for example, Windows Subsystem for Linux, for which we
+         * will ignore the -ENOENT error and synthesize later a corresponding (single) numa node
+         * instead. */
+        return ret;
     }
+    cpu_nodes_file_exists = (ret >= 0);
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -337,7 +332,8 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         goto fail;
 
     if (cpu_nodes_file_exists) {
-        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online, numa_nodes);
+        ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
+                                       numa_nodes);
         if (ret < 0)
             goto fail;
     } else {
@@ -399,33 +395,28 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             if (ret < 0)
                 goto fail;
 
-            /* Since our sysfs doesn't support writes, set persistent hugepages to their default value
-             * of zero */
+            /* Since our sysfs doesn't support writes, set persistent hugepages to their default
+             * value of zero */
             numa_nodes[i].nr_hugepages[HUGEPAGES_2M] = 0;
             numa_nodes[i].nr_hugepages[HUGEPAGES_1G] = 0;
         }
-    } else {
-        /* As node-id is by default zero we do not have to call set_node_id for synthesized mnode
-         * and, as above, unsupported persistent huge pages to zero */
-        numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
-        numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
-    }
 
-    /*
-     * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has node 0
-     * online, node 1 offline and node 2 online, then distances matrix in Linux will look like this:
-     *
-     *   [ node 0 -> node 0, node 0 -> node 2
-     *     node 2 -> node 0, node 2 -> node 2 ]
-     *
-     * Gramine has a different view of the `distances` array -- it includes both online nodes and
-     * offline nodes (distances to offline nodes are 0). Thus, the above system will look like this:
-     *
-     *   [ node 0 -> node 0,    0    , node 0 -> node 2
-     *            0        ,    0    ,        0
-     *     node 2 -> node 0,    0    , node 2 -> node 2 ]
-     */
-    if (cpu_nodes_file_exists) {
+        /*
+         * Linux kernel reflects only online nodes in the `distances` array. E.g. if a system has
+         * node 0 online, node 1 offline and node 2 online, then distances matrix in Linux will look
+         * like this:
+         *
+         *   [ node 0 -> node 0, node 0 -> node 2
+         *     node 2 -> node 0, node 2 -> node 2 ]
+         *
+         * Gramine has a different view of the `distances` array -- it includes both online nodes
+         * and offline nodes (distances to offline nodes are 0). Thus, the above system will look
+         * like this:
+         *
+         *   [ node 0 -> node 0,    0    , node 0 -> node 2
+         *            0        ,    0    ,        0
+         *     node 2 -> node 0,    0    , node 2 -> node 2 ]
+         */
         memset(distances, 0, nodes_cnt * nodes_cnt * sizeof(*distances));
         for (size_t i = 0; i < nodes_cnt; i++) {
             if (!numa_nodes[i].is_online)
@@ -439,7 +430,12 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             if (ret < 0)
                 goto fail;
         }
-    } else {
+    } else {  // !cpu_nodes_file_exists
+        /* As node-id is by default zero we do not have to call set_node_id for synthesized node
+         * and, as above, unsupported persistent huge pages to zero */
+        numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
+        numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
+
         /* Set the distance with default value Ubuntu 22.04 kernel 5.15 for syntheized numa node */
         distances[0] = 10;
     }
