@@ -17,8 +17,6 @@ Gramine Library OS with Intel SGX Support
 .. |nbsp| unicode:: 0xa0
    :trim:
 
-.. highlight:: sh
-
 
 What is Gramine?
 ================
@@ -90,6 +88,7 @@ For bug reports and feature requests, `post an issue on our GitHub repository
 
 If you prefer emails, please send them to users@gramineproject.io
 (`public archive <https://groups.google.com/g/gramine-users>`__).
+
 
 Reporting security issues
 =========================
