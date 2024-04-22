@@ -289,17 +289,16 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     if (ret < 0)
         return ret;
 
-    bool cpu_nodes_file_exists = false;
     size_t nodes_cnt = 1;
     /* Get the number of NUMA nodes on the system. By default, the number is 1. */
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
     if ((ret < 0) && (ret != -ENOENT)) {
-        /* Some systems do not have the file, for example, Windows Subsystem for Linux, for which we
-         * will ignore the -ENOENT error and synthesize later a corresponding (single) numa node
+        /* Some systems do not have the file, e.g., Windows Subsystem for Linux, for which we
+         * ignore the -ENOENT error and synthesize later a corresponding (single) NUMA node
          * instead. */
         return ret;
     }
-    cpu_nodes_file_exists = (ret >= 0);
+    bool cpu_nodes_file_exists = (ret >= 0);
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -430,13 +429,17 @@ int get_topology_info(struct pal_topo_info* topo_info) {
             if (ret < 0)
                 goto fail;
         }
-    } else {  // !cpu_nodes_file_exists
-        /* As node-id is by default zero we do not have to call set_node_id for synthesized node
-         * and, as above, unsupported persistent huge pages to zero */
+    } else {
+        /* Node-id for each CPU core is by default zero, so no need to call set_node_id for
+         * our single synthesized NUMA node. */
+        ;
+        /* As above, set unsupported persistent huge pages to zero for our synthesized NUMA node.
+         */
         numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
 
-        /* Set the distance with default value Ubuntu 22.04 kernel 5.15 for syntheized numa node */
+        /* Set  distance for synthesized NUMA node to standard node-local value provided by ACPI
+         * SLIT */
         distances[0] = 10;
     }
 
