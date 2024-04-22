@@ -298,6 +298,11 @@ class Manifest:
     def __init__(self, manifest_str):
         manifest = tomli.loads(manifest_str)
 
+        loader = manifest['loader']
+        if not 'entrypoint_sha256' in loader:
+            entrypoint_tf = TrustedFile.from_realpath(uri2path(loader['entrypoint'])).ensure_hash()
+            loader.setdefault('entrypoint_sha256', entrypoint_tf.sha256);
+
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
         sgx.setdefault('max_threads', DEFAULT_THREAD_NUM)

@@ -15,7 +15,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "enclave_tf_structs.h"
 #include "list.h"
 #include "spinlock.h"
 
@@ -49,12 +48,7 @@ typedef struct {
         struct {
             PAL_IDX fd;
             char* realpath;
-            size_t size;
-            bool seekable;                  /* regular files are seekable, FIFO pipes are not */
-            /* below fields are used only for trusted files */
-            sgx_chunk_hash_t* chunk_hashes; /* array of hashes of file chunks */
-            void* umem;                     /* valid only when chunk_hashes != NULL and size > 0 */
-            bool trusted;                   /* is this a Trusted File? */
+            bool seekable; /* regular files are seekable, FIFO pipes are not */
         } file;
 
         struct {

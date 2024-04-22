@@ -133,6 +133,9 @@ int msync_handle(struct libos_handle* hdl);
 /* Reload file mappings of `hdl` */
 int reload_mmaped_from_file_handle(struct libos_handle* hdl);
 
+/* Refresh page protections of file mappings of `hdl` */
+int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl);
+
 void debug_print_all_vmas(void);
 
 /* Returns the peak amount of memory usage */
