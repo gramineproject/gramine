@@ -228,6 +228,7 @@ Indices and tables
 
    devel/features
    management-team
+   verify-sig
    gramine-users
    sgx-intro
    glossary
