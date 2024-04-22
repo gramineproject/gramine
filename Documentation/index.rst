@@ -231,6 +231,7 @@ Indices and tables
    devel/features
    devel/encfiles
    management-team
+   verify-sig
    gramine-users
    sgx-intro
    glossary
