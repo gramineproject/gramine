@@ -59,7 +59,7 @@ void update_and_print_stats(bool process_wide) {
     if (process_wide) {
         int pid = g_host_pid;
         assert(pid > 0);
-        log_always("----- TOTAL SGX stats for process %d -----\n"
+        log_always("----- Total SGX stats for process %d -----\n"
                    "  # of EENTERs:        %lu\n"
                    "  # of EEXITs:         %lu\n"
                    "  # of AEXs:           %lu\n"
