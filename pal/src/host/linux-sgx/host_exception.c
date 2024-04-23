@@ -30,9 +30,9 @@
 #include "pal_rpc_queue.h"
 #include "pal_tcb.h"
 #include "sigreturn.h"
-#include "ucontext.h
+#include "ucontext.h"
 
-#define MAX_DBG_THREADS 4096"
+#define MAX_DBG_THREADS 4096
 
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
 static int send_sigusr1_signal_to_children(void);
