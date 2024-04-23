@@ -15,19 +15,27 @@
                      *      __sigset_t uc_sigmask;
                      */
 
-
+#include <dirent.h>
 #include <linux/signal.h>
 #include <stdbool.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "api.h"
 #include "cpu.h"
 #include "debug_map.h"
+#include "gdb_integration/sgx_gdb.h"
 #include "host_internal.h"
 #include "pal_rpc_queue.h"
+#include "pal_tcb.h"
 #include "sigreturn.h"
-#include "ucontext.h"
+#include "ucontext.h
+
+#define MAX_DBG_THREADS 4096"
 
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
+static int send_sigusr1_signal_to_children(void);
 
 static int block_signal(int sig, bool block) {
     int how = block ? SIG_BLOCK : SIG_UNBLOCK;
@@ -188,6 +196,61 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     /* we need this handler to interrupt blocking syscalls in RPC threads */
 }
 
+static int send_sigusr1_signal_to_children() {
+    int signal_counter= 0;
+
+    for (size_t i = 1; i < MAX_DBG_THREADS; i++) {
+        int child_tid = ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i];
+        if(child_tid > 0) {
+            DO_SYSCALL(tkill, child_tid, SIGUSR1);
+            signal_counter++;
+        }
+    }
+    return signal_counter;
+}
+
+static void handle_async_sigusr1_signal(int signum, siginfo_t* info, struct ucontext* uc) {
+    __UNUSED(signum);
+    __UNUSED(info);
+    __UNUSED(uc);
+
+    static atomic_int no_of_children_visited = 0;
+    static const uint64_t LOOP_ATTEMPTS_MAX = 10000;   /* rather arbitrary */
+    static const uint64_t SLEEP_MAX    = 100000000; /* nanoseconds (0.1 seconds) */
+    static const uint64_t SLEEP_STEP   = 1000000;   /* 100 steps before capped */
+
+    if(g_sgx_enable_stats) {
+
+        if(DO_SYSCALL(gettid) == g_host_pid) {
+            int no_of_children = send_sigusr1_signal_to_children();
+            uint64_t loop_attempts = 0;
+            uint64_t sleep_time    = 0;
+
+            while((no_of_children) > (__atomic_load_n(&no_of_children_visited, __ATOMIC_RELAXED))) {
+                if (loop_attempts == LOOP_ATTEMPTS_MAX) {
+                    if (sleep_time < SLEEP_MAX)
+                        sleep_time += SLEEP_STEP;
+                    struct timespec tv = {.tv_sec = 0, .tv_nsec = sleep_time};
+                    (void)DO_SYSCALL(nanosleep, &tv, /*rem=*/NULL);
+                } else {
+                        loop_attempts++;
+                        CPU_RELAX();
+                }
+            }
+            update_and_print_stats(true);
+            __atomic_exchange_n(&no_of_children_visited, 0, __ATOMIC_ACQ_REL);
+        } else {
+            log_always("----- DUMPTING and RESETTING SGX STATS -----");
+            update_and_print_stats(/*process_wide=*/false);
+            PAL_HOST_TCB* tcb = pal_get_host_tcb();
+            int ret = pal_host_tcb_reset_stats(tcb);
+            if(ret < 0)
+                return;
+            __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
+        }
+    }
+}
+
 int sgx_signal_setup(void) {
     int ret;
 
@@ -233,6 +296,10 @@ int sgx_signal_setup(void) {
         goto err;
 
     ret = block_signal(SIGUSR2, /*block=*/true);
+    if (ret < 0)
+        goto err;
+
+    ret = set_signal_handler(SIGUSR1, handle_async_sigusr1_signal);
     if (ret < 0)
         goto err;
 

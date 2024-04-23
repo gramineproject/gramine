@@ -108,6 +108,8 @@ typedef struct pal_host_tcb {
 } PAL_HOST_TCB;
 
 extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
+extern void pal_host_tcb_reset_stats(PAL_HOST_TCB* tcb);
+extern int pal_thread_reset_stats(void* tcbptr);
 
 static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
     PAL_HOST_TCB* tcb;

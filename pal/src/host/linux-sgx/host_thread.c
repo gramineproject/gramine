@@ -50,16 +50,16 @@ void update_and_print_stats(bool process_wide) {
                tid, tcb->eenter_cnt, tcb->eexit_cnt, tcb->aex_cnt,
                tcb->sync_signal_cnt, tcb->async_signal_cnt);
 
-    g_eenter_cnt       += tcb->eenter_cnt;
-    g_eexit_cnt        += tcb->eexit_cnt;
-    g_aex_cnt          += tcb->aex_cnt;
-    g_sync_signal_cnt  += tcb->sync_signal_cnt;
-    g_async_signal_cnt += tcb->async_signal_cnt;
+    __atomic_fetch_add(&g_eenter_cnt, tcb->eenter_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_eexit_cnt, tcb->eexit_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_aex_cnt, tcb->aex_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_sync_signal_cnt, tcb->sync_signal_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_async_signal_cnt, tcb->async_signal_cnt, __ATOMIC_ACQ_REL);
 
     if (process_wide) {
         int pid = g_host_pid;
         assert(pid > 0);
-        log_always("----- Total SGX stats for process %d -----\n"
+        log_always("----- TOTAL in SGX stats for process %d -----\n"
                    "  # of EENTERs:        %lu\n"
                    "  # of EEXITs:         %lu\n"
                    "  # of AEXs:           %lu\n"
@@ -67,8 +67,16 @@ void update_and_print_stats(bool process_wide) {
                    "  # of async signals:  %lu",
                    pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
                    g_sync_signal_cnt, g_async_signal_cnt);
+
+        __atomic_exchange_n(&g_eenter_cnt, 0, __ATOMIC_ACQ_REL);
+        __atomic_exchange_n(&g_eexit_cnt, 0, __ATOMIC_ACQ_REL);
+        __atomic_exchange_n(&g_aex_cnt, 0, __ATOMIC_ACQ_REL);
+        __atomic_exchange_n(&g_sync_signal_cnt, 0, __ATOMIC_ACQ_REL);
+        __atomic_exchange_n(&g_async_signal_cnt, 0, __ATOMIC_ACQ_REL);
     }
 }
+
+
 
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->self = tcb;
@@ -85,6 +93,24 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->profile_sample_time = 0;
 
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
+}
+
+int pal_host_tcb_reset_stats(PAL_HOST_TCB* tcb) {
+    tcb->eenter_cnt       = 0;
+    tcb->eexit_cnt        = 0;
+    tcb->aex_cnt          = 0;
+    tcb->sync_signal_cnt  = 0;
+    tcb->async_signal_cnt = 0;
+
+    int ret;
+
+    /* set GS reg of this thread to thread's TCB; */
+    ret = DO_SYSCALL(arch_prctl, ARCH_SET_GS, tcb);
+    if (ret < 0) {
+        ret = -EPERM;
+        log_always("error at pal_thread_reset_stats %d", ret);
+    }
+    return ret;
 }
 
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
