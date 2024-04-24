@@ -377,3 +377,6 @@ libos_syscall_t libos_syscall_table[LIBOS_SYSCALL_BOUND] = {
     [__NR_futex_waitv]             = (libos_syscall_t)0, // libos_syscall_futex_waitv
     [__NR_set_mempolicy_home_node] = (libos_syscall_t)0, // libos_syscall_set_mempolicy_home_node
 };
+
+/* by default, all syscalls have `is_mocked = false` and `return_value = 0` */
+struct libos_mock_syscall libos_mock_syscall_table[LIBOS_SYSCALL_BOUND] = { 0 };

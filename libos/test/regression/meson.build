@@ -72,6 +72,7 @@ tests = {
     'mmap_file': {},
     'mmap_file_backed': {},
     'mmap_file_emulated': {},
+    'mock_syscalls': {},
     'mprotect_file_fork': {},
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},

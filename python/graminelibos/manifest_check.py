@@ -126,6 +126,8 @@ GramineManifestSchema = Schema({
         # not validated.
         'ioctl_structs': {str: object},
 
+        'mock_syscalls': [{Required('name'): str, 'return': int}],
+
         'stack': {'size': _size},
     },
 })

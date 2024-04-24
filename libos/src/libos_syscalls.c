@@ -11,7 +11,9 @@
 #include "libos_table.h"
 #include "libos_tcb.h"
 #include "libos_thread.h"
+#include "libos_utils.h"
 #include "linux_abi/errors.h"
+#include "toml_utils.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
                                                  arch_syscall_arg_t, arch_syscall_arg_t,
@@ -31,7 +33,19 @@ noreturn void libos_emulate_syscall(PAL_CONTEXT* context) {
         unsigned long args[] = { ALL_SYSCALL_ARGS(context) };
         ret = handle_libos_call(args[0], args[1], args[2]);
     } else {
-        if (sysnr >= LIBOS_SYSCALL_BOUND || !libos_syscall_table[sysnr]) {
+        if (sysnr >= LIBOS_SYSCALL_BOUND) {
+            warn_unsupported_syscall(sysnr);
+            ret = -ENOSYS;
+            goto out;
+        }
+
+        if (libos_mock_syscall_table[sysnr].is_mocked) {
+            trace_mock_syscall(sysnr);
+            ret = libos_mock_syscall_table[sysnr].return_value;
+            goto out;
+        }
+
+        if (!libos_syscall_table[sysnr]) {
             warn_unsupported_syscall(sysnr);
             ret = -ENOSYS;
             goto out;
@@ -83,4 +97,68 @@ noreturn void return_from_syscall(PAL_CONTEXT* context) {
                          LIBOS_THREAD_LIBOS_STACK_SIZE);
 #endif
     _return_from_syscall(context);
+}
+
+int init_syscalls(void) {
+    assert(g_manifest_root);
+    int ret;
+
+    toml_table_t* manifest_sys = toml_table_in(g_manifest_root, "sys");
+    if (!manifest_sys)
+        return 0;
+
+    toml_array_t* toml_mock_syscalls = toml_array_in(manifest_sys, "mock_syscalls");
+    if (!toml_mock_syscalls)
+        return 0;
+
+    ssize_t toml_mock_syscalls_cnt = toml_array_nelem(toml_mock_syscalls);
+    if (toml_mock_syscalls_cnt < 0)
+        return -EPERM;
+    if (toml_mock_syscalls_cnt == 0)
+        return 0;
+
+    char* syscall_name = NULL;
+
+    for (ssize_t i = 0; i < toml_mock_syscalls_cnt; i++) {
+        toml_table_t* toml_mock_syscall = toml_table_at(toml_mock_syscalls, i);
+        if (!toml_mock_syscall) {
+            log_error("Invalid mock syscall in manifest at index %ld (not a TOML table)", i);
+            ret = -EINVAL;
+            goto out;
+        }
+
+        ret = toml_string_in(toml_mock_syscall, "name", &syscall_name);
+        if (ret < 0) {
+            log_error("Invalid mock syscall in manifest at index %ld (can't parse `name`)", i);
+            ret = -EINVAL;
+            goto out;
+        }
+
+        int64_t syscall_return;
+        ret = toml_int_in(toml_mock_syscall, "return", /*defaultval=*/0, &syscall_return);
+        if (ret < 0) {
+            log_error("Invalid mock syscall in manifest at index %ld (can't parse `return`)", i);
+            ret = -EINVAL;
+            goto out;
+        }
+
+        uint64_t sysno;
+        ret = get_syscall_number(syscall_name, &sysno);
+        if (ret < 0) {
+            log_error("Unrecognized mock syscall `%s` in manifest at index %ld", syscall_name, i);
+            goto out;
+        }
+
+        /* add syscall to the table of mocked syscalls */
+        libos_mock_syscall_table[sysno].is_mocked = true;
+        libos_mock_syscall_table[sysno].return_value = syscall_return;
+
+        free(syscall_name);
+        syscall_name = NULL;
+    }
+
+    ret = 0;
+out:
+    free(syscall_name);
+    return ret;
 }
