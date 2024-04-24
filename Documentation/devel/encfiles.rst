@@ -16,16 +16,16 @@ transparently decrypts them when the application reads or writes them.
 Integrity- or confidentiality-sensitive files (or whole directories) accessed by
 the application must be put under the "encrypted" FS mount in the Gramine
 manifest. New files created in the "encrypted" FS mount are automatically
-treated as encrypted. The encryption format used for encrypted files is borrowed
-from the "protected files" feature of Intel SGX SDK (see the corresponding
-section in `Intel SGX Developer Reference manual
+treated as encrypted. The format used for encrypted and integrity-protected
+files is borrowed from the "protected files" feature of Intel SGX SDK (see the
+corresponding section in `Intel SGX Developer Reference manual
 <https://download.01.org/intel-sgx/sgx-linux/2.23/docs/Intel_SGX_Developer_Reference_Linux_2.23_Open_Source.pdf>`__).
 
 Each encrypted file is encrypted separately, i.e. Gramine employs file-level
 encryption and not block-level encryption. Each "encrypted" FS mount can have a
-separate encryption key. By putting each encrypted file in its own FS mount, it
-is possible to encrypt each file with its own key. More information on the usage
-of encrypted files can be found in the :ref:`encrypted-files` manifest syntax.
+separate encryption key (more precisely, this is the key derivation key or KDK).
+More information on the usage of encrypted files can be found in the
+:ref:`encrypted-files` manifest syntax.
 
 The feature was previously called "protected files" or "protected FS", same as
 in Intel SGX SDK. These legacy names may still be found in Gramine codebase.
@@ -42,9 +42,9 @@ security guarantees:
 
 - **Confidentiality of user data**: all user data is encrypted and then written
   to untrusted host storage; this prevents user data leakage.
-- **Integrity of user data**: all user data is read from disk and then decrypted
-  with the GMAC (Galois Message Authentication Code) verified to detect any data
-  tampering;
+- **Integrity of user data**: all user data is read from disk and decrypted,
+  with the authentication tag (or tag for simplicity) verified to detect any
+  data tampering;
 - **Matching of file name**: when opening an existing file, the metadata of the
   to-be-opened file is checked to ensure that the name of the file when created
   is the same as the name given to the open operation.
@@ -55,11 +55,13 @@ The current implementation does *not* protect against the following attacks:
   he has opened an old (but authenticated) version of a file. In other words,
   Gramine does not guarantee the freshness of user data in the file after this
   file was closed. Note that while the file is opened, the rollback/replay
-  attack is prevented (by comparing the root MHT hashes).
-- **Side-channel attacks**. Some seemingly-insignificant information, such as
-  file name, file size, access time, access patterns (e.g., which blocks are
-  read/written), etc. is not protected. This information could be used by
-  sophisticated attackers to gain sensitive information.
+  attack is prevented (by always keeping the root hash of a Merkle tree over the
+  file in trusted enclave memory and checking the consistency during accesses,
+  see more details below).
+- **Side-channel attacks**. Some file metadata, such as file name, file size,
+  access time, access patterns (e.g., which blocks are read/written), etc. is
+  not confidentiality-protected. This could be used by attackers to gain
+  sensitive information.
 
 .. note ::
    There is an effort to improve rollback/replay attack protection in Gramine.
@@ -95,8 +97,8 @@ There are several reasons for this decoupling:
 - Historical reason -- to ease the porting effort from Intel SGX SDK.
 - Reusability -- the encrypted-files code can be used as-is in stand-alone tools
   like :program:`gramine-sgx-pf-crypt`.
-- Crypto reviews -- the encrypted-files code contains only the crypto
-  algorithms, which facilitates crypto/security review efforts.
+- Crypto reviews -- the encrypted-files code is the only place that directly
+  uses crypto algorithms, which facilitates crypto/security review efforts.
 
 The application code is *not* aware of encrypted files. Applications treat
 encrypted files just like regular files, e.g. apps open file descriptors (FDs),
@@ -107,6 +109,10 @@ to them, and transforms regular I/O operations into encrypted-I/O operations.
 Note that before working with a particular encrypted file, the encryption key of
 its corresponding FS mount must be already provisioned.
 
+If Gramine detects tampering or integrity inconsistencies on an encrypted file,
+Grmaine marks the file as corrupted and refuses any operations on this file. In
+particular, the application's operations on the file will return ``-EACCES``.
+
 .. image:: ../img/encfiles/01_encfiles_datastructs.svg
    :target: ../img/encfiles/01_encfiles_datastructs.svg
    :alt: Figure: Relations between the app, the Gramine FS code, the Gramine glue code and the generic encrypted-files code
@@ -115,20 +121,20 @@ The diagram above shows the relations between the application, the Gramine FS
 code, the Gramine glue code and the generic encrypted-files code. Here the
 ``libos_encrypted_file`` data structure is hosted in the glue code, and the
 ``pf_context`` data structure is hosted in the generic encrypted-files code. The
-encryption key is installed through Gramine interfaces into the
-``libos_encrypted_key`` field in the glue code which copies it into the ``kdk``
-field in encrypted-files code. Also, the glue code opens a host file via
-Gramine's PAL interfaces and saves the reference to it into ``pal_handle``,
-which is copied into ``host_file_handle`` in encrypted-files code. With these
-two fields, plus the set of registered callbacks, the encrypted-files code has
-enough information to encrypt and decrypt files stored on the host's disk.
+KDK is installed through Gramine interfaces into the ``libos_encrypted_key``
+field in the glue code which copies it into the ``kdk`` field in encrypted-files
+code. Also, the glue code opens a host file via Gramine's PAL interfaces and
+saves the reference to it into ``pal_handle``, which is copied into
+``host_file_handle`` in encrypted-files code. With these two fields, plus the
+set of registered callbacks, the encrypted-files code has enough information to
+encrypt and decrypt files stored on the host's disk.
 
 Crypto used for encrypted files
 -------------------------------
 
 - The current implementation of encrypted files uses AES-GCM with 128-bit key
-  size for encryption and GMAC generation. Thus, all encryption keys are 16B in
-  size and all GMACs are 16B in size.
+  size for encryption and tag generation. Thus, all encryption keys are 16B in
+  size and all tags are 16B in size.
 
 - AES-CMAC with AES-128-bit is used to derive keys from the user-supplied KDK.
   The input material includes a hard-coded label and a 256-bit salt.
@@ -181,13 +187,13 @@ parts:
 
 1. The plaintext header, occupying bytes 0-57. The header contains a magic
    string, a major version of the encrypted-files protocol, a minor version, a
-   salt for KDF (Key Derivation Function, explained later) and a GMAC
+   salt for KDF (Key Derivation Function, explained later) and a tag
    (cryptographic hash over the encrypted header).
 2. The encrypted header, occupying bytes 58-3941. This header has two parts: the
    encrypted metadata fields and the first 3KB of actual file contents. The
    metadata fields contain a file path (to prevent rename attacks), the file
    size (to hide the exact file size from attackers) and the encryption key and
-   GMAC of the root MHT node (explained later).
+   tag of the root MHT node (explained later).
 3. The constant padding, occupying bytes 3942-4095. This padding is added purely
    to align the metadata node on the 4KB boundary and contains zeros.
 
@@ -201,17 +207,17 @@ After the metadata node, the two node types interleave: the *MHT nodes* and the
 the 4KB of plaintext file contents. The MHT nodes serve as building blocks for a
 variant of a Merkle Hash Tree.
 
-Each MHT node in the Merkle Hash Tree is comprised of 128 encryption key + GMAC
+Each MHT node in the Merkle Hash Tree is comprised of 128 encryption key + tag
 pairs for attached Data and MHT nodes. In particular, one MHT node has 96 pairs
 for the Data nodes attached to it, and 32 pairs for the child MHT nodes. Since
-each key is 16B in size and each GMAC is 16B in size, 128 pairs is the maximum
+each key is 16B in size and each tag is 16B in size, 128 pairs is the maximum
 that can be stored in a 4KB node.
 
 Inside the SGX enclave, each MHT node is represented as a data struct with the
 ``type`` being ``MHT_NODE`` and two linked buffers: the bounce buffer that
 contains the encrypted 4KB copied from the host disk and yet another data
 struct that contains the decrypted MHT node's contents (the array with 128 key +
-GMAC pairs). Additionally, each MHT node has a ``logical_node`` number and a
+tag pairs). Additionally, each MHT node has a ``logical_node`` number and a
 ``physical_node`` number. The former is the serial number in a logical
 representation of the MHT nodes in the Merkle tree, whereas the latter is the
 number of the page (chunk) in the on-storage representation. The difference
@@ -220,9 +226,15 @@ between logical and physical numbers is clear on the below diagram.
 Note that there is a special MHT node -- the root MHT node. It has the same
 representation inside the SGX enclave and on host storage as all other MHT
 nodes, but it is directly linked from the main data struct ``pf_handle`` via the
-``root_mht_node`` field. Also, the root MHT node's encryption key and GMAC are
+``root_mht_node`` field. Also, the root MHT node's encryption key and tag are
 stored directly in the encrypted header of the metadata node. The root MHT node
 starts to be used when the plaintext file size exceeds 3KB.
+
+Note that the root MHT node is kept in trusted enclave memory for the lifetime
+of the file handle (i.e. as long as the file is opened). This is in contrast to
+other MHT nodes which can be evicted from enclave memory; see the notes on LRU
+cache in :ref:`encfiles-additional-details`. The fact that the root MHT node is
+non-evictable ensures protection against rollback/replay attacks.
 
 .. image:: ../img/encfiles/03_encfiles_layout.svg
    :target: ../img/encfiles/03_encfiles_layout.svg
@@ -298,8 +310,8 @@ Finally in step 5, the resulting ciphertext is copied out from the bounce buffer
 to the host storage. An additional plaintext header in bytes 0-57 is prepended
 to the ciphertext, and the padding in bytes 3942-4095 aligns the resulting
 metadata node to 4KB. Note that the plaintext header contains the KDF salt
-generated in step 2 and the GMAC generated as a by-product of AES-GCM encryption
-in step 4. The salt and the GMAC can be stored in plaintext, and they will be
+generated in step 2 and the tag generated as a by-product of AES-GCM encryption
+in step 4. The salt and the tag can be stored in plaintext, and they will be
 used later to decrypt the metadata node's ciphertext.
 
 .. image:: ../img/encfiles/05_encfiles_read_less3k.svg
@@ -329,7 +341,7 @@ KDK and the salt.
 Now that the key is derived, the metadata's encrypted header can be decrypted.
 Step 4 shows that the AES-GCM decryption happens on the ``metadata_node`` bounce
 buffer, with plaintext output moved into the data struct ``metadata_decrypted``.
-As part of the decryption operation, the resulting GMAC is compared against the
+As part of the decryption operation, the resulting tag is compared against the
 one read from the plaintext header in ``metadata_node``. If comparison fails,
 then Gramine stops operations on this encrypted file and considers it corrupted;
 an ``-EACCES`` error is returned to the application.
@@ -339,7 +351,7 @@ application buffer. The ``read()`` operation is finished.
 
 Note that in the special case of files of size less than 3KB, only the metadata
 node is used. No MHT nodes and no data nodes are stored on the host. Also, the
-``root_mht_node_key`` and ``root_mht_node_gmac`` fields are unused in the
+``root_mht_node_key`` and ``root_mht_node_tag`` fields are unused in the
 metadata node's encrypted header.
 
 Encrypted I/O: general case
@@ -382,16 +394,16 @@ leaked.
 Now that a new key for the data node was generated, the data node can be
 encrypted. Step 4 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the data node, on the plaintext data-node buffer ``decrypted``
-and with the newly generated key. As part of this encryption operation, the GMAC
+and with the newly generated key. As part of this encryption operation, the tag
 is generated and is stored in the corresponding slot of the root MHT node (thus
-shaping a key + GMAC pair for data node 1). Since the MHT node's contents will
-be encrypted, the GMAC will not be leaked.
+shaping a key + tag pair for data node 1). Since the MHT node's contents will
+be encrypted, the tag will not be leaked.
 
 At this point, the 4KB of the file data are stored as ciphertext in the bounce
 buffer of the data node and are ready to be flushed to storage. However, the
 root MHT node must also be encrypted and flushed.
 
-The root MHT node is already updated with the data node's key and GMAC (more
+The root MHT node is already updated with the data node's key and tag (more
 specifically, only slot 1 of the MHT node's ``decrypted`` array was updated, the
 rest slots contain all-zeros). So it's only a matter of encrypting the root MHT
 node. For this, a new random key is generated (step 5). This key is stored in
@@ -401,17 +413,17 @@ will be encrypted, the key will not be leaked.
 Now that a key for the root MHT node was generated, the root MHT node can be
 encrypted. Step 6 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the root MHT node, on the plaintext root-MHT-node ``decrypted``
-and with the newly generated key. As part of this encryption operation, the GMAC
-is generated and is stored in the ``root_mht_node_gmac`` field of the metadata
-node's header. Since the header will be encrypted, the GMAC will not be leaked.
+and with the newly generated key. As part of this encryption operation, the tag
+is generated and is stored in the ``root_mht_node_tag`` field of the metadata
+node's header. Since the header will be encrypted, the tag will not be leaked.
 
 At this point, both the data node and the root MHT node are ready to be flushed
 to storage. Now steps 7-9 are performed, which correspond to steps 2-4 in the
 write flow of the <3KB file.
 
 Finally, all three nodes are encrypted and are ready to be flushed: the metadata
-node (contains the salt to decrypt itself and the key + GMAC to decrypt the root
-MHT node), the root MHT node (contains the key + GMAC to decrypt the data node)
+node (contains the salt to decrypt itself and the key + tag to decrypt the root
+MHT node), the root MHT node (contains the key + tag to decrypt the data node)
 and the data node (contains the file contents). Step 10 can be performed, that
 copies out all three bounce buffers to the host's hard disk.
 
@@ -441,16 +453,16 @@ representation in enclave memory, consisting of the main data-node struct, the
 ``decrypted`` 4KB buffer and the ``encrypted`` 4KB bounce buffer. Gramine also
 activates the root MHT node representation in enclave memory. The file data will
 be decrypted and then copied into the ``decrypted`` buffer. The root MHT node
-will have the key and GMAC for the data-node decryption.
+will have the key and tag for the data-node decryption.
 
 First the steps 1-4 are performed, which correspond to same steps 1-4 in the
 read flow of the <3KB file. Then in step 5, the root MHT node is copied into the
 enclave memory. The AES-GCM decryption of the root MHT node is performed using
-the ``root_mht_node_key`` key and the comparison against ``root_mht_node_gmac``
-(step 6). The resulting plaintext is the array of key-GMAC pairs, stored in the
+the ``root_mht_node_key`` key and the comparison against ``root_mht_node_tag``
+(step 6). The resulting plaintext is the array of key-tag pairs, stored in the
 ``decrypted`` field. Then in step 7, the data node is copied into the enclave
 memory. The AES-GCM decryption of the data node is performed using the key and
-GMAC stored in the first slot of the root MHT node's array (step 8).
+tag stored in the first slot of the root MHT node's array (step 8).
 
 At this point, the first 3KB of file data are stored in plaintext in the
 ``file_data`` buffer and the last 4KB of file data are stored in plaintext in
@@ -466,6 +478,8 @@ diagram correspond to the steps in the above description.
    :target: ../img/encfiles/09_encfiles_read_greater3k_general.svg
    :alt: Figure: Generic read flow for an encrypted file with size greater than 3KB
 
+.. _encfiles-additional-details:
+
 Additional details
 ------------------
 
@@ -477,10 +491,10 @@ Additional details
   into the cache, the whole chain of corresponding MHT nodes is also brought
   into the cache.
 
-- There is *no* multiprocess support for encrypted files. This means that if the
-  same file is opened simultaneously in two Gramine processes (even if they are
-  the parent and the child processes of the same application), the file may
-  become corrupted or inaccessible to one of the processes.
+- There is *limited* multiprocess support for encrypted files. This means that
+  if the same file is accessed concurrently by two Gramine processes (and at
+  least one process writes to the file), the file may become corrupted or
+  inaccessible to one of the processes.
 
 - There is no support for file recovery, if the file was only partially written
   to storage. Gramine will treat this file as corrupted and will return an
@@ -491,3 +505,8 @@ Additional details
   the KDK by itself (by overwriting the ``/dev/attestation/keys/``
   pseudo-files). Some support for key rotation may appear in future releases of
   Gramine.
+
+  - It is worth pointing out that the format of encrypted files mostly uses
+    one-time keys. The KDK is only used to derive the metadata-node key, thus it
+    produces much less ciphertext than if it would be used to directly encrypt
+    file data. Therefore, the usual NIST limits would be reached much slower.
