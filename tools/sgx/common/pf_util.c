@@ -124,12 +124,12 @@ static pf_status_t linux_truncate(pf_handle_t handle, uint64_t size) {
 /* Crypto callbacks for mbedTLS */
 
 pf_status_t mbedtls_aes_cmac(const pf_key_t* key, const void* input, size_t input_size,
-                             pf_mac_t* mac) {
+                             pf_tag_t* tag) {
     const mbedtls_cipher_info_t* cipher_info =
         mbedtls_cipher_info_from_type(MBEDTLS_CIPHER_AES_128_ECB);
 
     int ret = mbedtls_cipher_cmac(cipher_info, (const unsigned char*)key, PF_KEY_SIZE * 8, input,
-                                  input_size, (unsigned char*)mac);
+                                  input_size, (unsigned char*)tag);
     if (ret != 0) {
         ERROR("mbedtls_cipher_cmac failed: %d\n", ret);
         return PF_STATUS_CALLBACK_FAILED;
@@ -140,7 +140,7 @@ pf_status_t mbedtls_aes_cmac(const pf_key_t* key, const void* input, size_t inpu
 
 pf_status_t mbedtls_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                     size_t aad_size, const void* input, size_t input_size,
-                                    void* output, pf_mac_t* mac) {
+                                    void* output, pf_tag_t* tag) {
     pf_status_t status = PF_STATUS_CALLBACK_FAILED;
 
     mbedtls_gcm_context gcm;
@@ -154,8 +154,8 @@ pf_status_t mbedtls_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, cons
     }
 
     ret = mbedtls_gcm_crypt_and_tag(&gcm, MBEDTLS_GCM_ENCRYPT, input_size, (const unsigned char*)iv,
-                                    PF_IV_SIZE, aad, aad_size, input, output, PF_MAC_SIZE,
-                                    (unsigned char*)mac);
+                                    PF_IV_SIZE, aad, aad_size, input, output, PF_TAG_SIZE,
+                                    (unsigned char*)tag);
     if (ret != 0) {
         ERROR("mbedtls_gcm_crypt_and_tag failed: %d\n", ret);
         goto out;
@@ -169,7 +169,7 @@ out:
 
 pf_status_t mbedtls_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                     size_t aad_size, const void* input, size_t input_size,
-                                    void* output, const pf_mac_t* mac) {
+                                    void* output, const pf_tag_t* tag) {
     pf_status_t status = PF_STATUS_CALLBACK_FAILED;
 
     mbedtls_gcm_context gcm;
@@ -183,7 +183,7 @@ pf_status_t mbedtls_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, cons
     }
 
     ret = mbedtls_gcm_auth_decrypt(&gcm, input_size, (const unsigned char*)iv, PF_IV_SIZE, aad,
-                                   aad_size, (const unsigned char*)mac, PF_MAC_SIZE, input, output);
+                                   aad_size, (const unsigned char*)tag, PF_TAG_SIZE, input, output);
     if (ret != 0) {
         ERROR("mbedtls_gcm_auth_decrypt failed: %d\n", ret);
         goto out;

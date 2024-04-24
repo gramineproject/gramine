@@ -17,8 +17,8 @@
 /*! Size of IV for AES-GCM */
 #define PF_IV_SIZE 12
 
-/*! Size of MAC fields */
-#define PF_MAC_SIZE 16
+/*! Size of tag fields */
+#define PF_TAG_SIZE 16
 
 /*! Size of the AES-GCM encryption key */
 #define PF_KEY_SIZE 16
@@ -27,7 +27,7 @@
 #define PF_SALT_SIZE 32
 
 typedef uint8_t pf_iv_t[PF_IV_SIZE];
-typedef uint8_t pf_mac_t[PF_MAC_SIZE];
+typedef uint8_t pf_tag_t[PF_TAG_SIZE];
 typedef uint8_t pf_key_t[PF_KEY_SIZE];
 typedef uint8_t pf_salt_t[PF_SALT_SIZE];
 
@@ -41,7 +41,7 @@ typedef enum _pf_status_t {
     PF_STATUS_INVALID_VERSION      = -6,
     PF_STATUS_INVALID_HEADER       = -7,
     PF_STATUS_INVALID_PATH         = -8,
-    PF_STATUS_MAC_MISMATCH         = -9,
+    PF_STATUS_TAG_MISMATCH         = -9,
     PF_STATUS_NOT_IMPLEMENTED      = -10,
     PF_STATUS_CALLBACK_FAILED      = -11,
     PF_STATUS_PATH_TOO_LONG        = -12,
@@ -124,12 +124,12 @@ typedef void (*pf_debug_f)(const char* msg);
  * \param      key         AES-GCM key.
  * \param      input       Plaintext data.
  * \param      input_size  Size of \p input in bytes.
- * \param[out] mac         MAC computed for \p input.
+ * \param[out] tag         Authentication tag computed for \p input.
  *
  * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_cmac_f)(const pf_key_t* key, const void* input, size_t input_size,
-                                     pf_mac_t* mac);
+                                     pf_tag_t* tag);
 
 /*!
  * \brief AES-GCM encrypt callback.
@@ -141,13 +141,13 @@ typedef pf_status_t (*pf_aes_cmac_f)(const pf_key_t* key, const void* input, siz
  * \param      input       Plaintext data.
  * \param      input_size  Size of \p input in bytes.
  * \param[out] output      Buffer for encrypted data (size: \p input_size).
- * \param[out] mac         MAC computed for \p input and \p aad.
+ * \param[out] tag         Authentication tag computed for \p input and \p aad.
  *
  * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_gcm_encrypt_f)(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                             size_t aad_size, const void* input, size_t input_size,
-                                            void* output, pf_mac_t* mac);
+                                            void* output, pf_tag_t* tag);
 
 /*!
  * \brief AES-GCM decrypt callback.
@@ -159,13 +159,13 @@ typedef pf_status_t (*pf_aes_gcm_encrypt_f)(const pf_key_t* key, const pf_iv_t* 
  * \param      input       Encrypted data.
  * \param      input_size  Size of \p input in bytes.
  * \param[out] output      Buffer for decrypted data (size: \p input_size).
- * \param      mac         Expected MAC.
+ * \param      tag         Expected authentication tag.
  *
  * \returns PF status.
  */
 typedef pf_status_t (*pf_aes_gcm_decrypt_f)(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                             size_t aad_size, const void* input, size_t input_size,
-                                            void* output, const pf_mac_t* mac);
+                                            void* output, const pf_tag_t* tag);
 
 /*!
  * \brief Cryptographic random number generator callback.
