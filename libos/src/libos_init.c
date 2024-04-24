@@ -503,6 +503,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
              strlen(g_pal_public_state->dns_host.hostname));
 
     RUN_INIT(init_eventfd_mode);
+    RUN_INIT(init_syscalls);
 
     log_debug("LibOS initialized");
 

@@ -1,0 +1,32 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
+
+sys.disallowed_syscalls = [
+  # even though glibc wrapper is called eventfd, glibc translates it into eventfd2;
+  # we specify both syscall variants to be on the safe side
+  "eventfd",
+  "eventfd2",
+
+  # even though glibc wrapper is called fork, glibc translates it into clone;
+  # we specify all syscall variants to be on the safe side
+  "fork",
+  "vfork",
+  "clone",
+  "clone3",
+]
+
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]

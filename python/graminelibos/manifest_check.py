@@ -122,6 +122,7 @@ GramineManifestSchema = Schema({
         }],
         'brk': {'max_size': _size},
         'disallow_subprocesses': bool,
+        'disallowed_syscalls': [str],
         'enable_extra_runtime_domain_names_conf': bool,
         'enable_sigterm_injection': bool,
         'experimental__enable_flock': bool,

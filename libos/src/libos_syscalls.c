@@ -11,7 +11,9 @@
 #include "libos_table.h"
 #include "libos_tcb.h"
 #include "libos_thread.h"
+#include "libos_utils.h"
 #include "linux_abi/errors.h"
+#include "toml_utils.h"
 
 typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscall_arg_t,
                                                  arch_syscall_arg_t, arch_syscall_arg_t,
@@ -83,4 +85,60 @@ noreturn void return_from_syscall(PAL_CONTEXT* context) {
                          LIBOS_THREAD_LIBOS_STACK_SIZE);
 #endif
     _return_from_syscall(context);
+}
+
+int init_syscalls(void) {
+    assert(g_manifest_root);
+    int ret;
+
+    toml_table_t* manifest_sys = toml_table_in(g_manifest_root, "sys");
+    if (!manifest_sys)
+        return 0;
+
+    toml_array_t* toml_disallowed_syscalls = toml_array_in(manifest_sys, "disallowed_syscalls");
+    if (!toml_disallowed_syscalls)
+        return 0;
+
+    ssize_t toml_disallowed_syscalls_cnt = toml_array_nelem(toml_disallowed_syscalls);
+    if (toml_disallowed_syscalls_cnt < 0)
+        return -EPERM;
+    if (toml_disallowed_syscalls_cnt == 0)
+        return 0;
+
+    char* toml_disallowed_syscall_str = NULL;
+
+    for (ssize_t i = 0; i < toml_disallowed_syscalls_cnt; i++) {
+        toml_raw_t toml_disallowed_syscall_raw = toml_raw_at(toml_disallowed_syscalls, i);
+        if (!toml_disallowed_syscall_raw) {
+            log_error("Invalid disallowed syscall in manifest at index %ld", i);
+            return -EINVAL;
+            goto out;
+        }
+
+        ret = toml_rtos(toml_disallowed_syscall_raw, &toml_disallowed_syscall_str);
+        if (ret < 0) {
+            log_error("Invalid disallowed syscall in manifest at index %ld (not a string)", i);
+            return -EINVAL;
+            goto out;
+        }
+
+        uint64_t sysno = get_syscall_number(toml_disallowed_syscall_str);
+        if (sysno >= LIBOS_SYSCALL_BOUND) {
+            log_error("Unrecognized disallowed syscall `%s` in manifest at index %ld",
+                      toml_disallowed_syscall_str, i);
+            return -EINVAL;
+            goto out;
+        }
+
+        /* force the syscall to be unrecognized by LibOS and thus return -ENOSYS */
+        libos_syscall_table[sysno] = NULL;
+
+        free(toml_disallowed_syscall_str);
+        toml_disallowed_syscall_str = NULL;
+    }
+
+    ret = 0;
+out:
+    free(toml_disallowed_syscall_str);
+    return ret;
 }
