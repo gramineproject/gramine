@@ -1667,6 +1667,25 @@ void warn_unsupported_syscall(unsigned long sysno) {
         log_warning("Unsupported system call %lu", sysno);
 }
 
+void trace_mock_syscall(unsigned long sysno) {
+    log_trace("%s(...) = %ld (mock)", syscall_parser_table[sysno].name,
+              libos_mock_syscall_table[sysno].return_value);
+}
+
+int get_syscall_number(const char* name, unsigned long* out_sysno) {
+    static_assert(LIBOS_SYSCALL_BOUND == ARRAY_SIZE(syscall_parser_table), "oops");
+
+    for (size_t i = 0; i < LIBOS_SYSCALL_BOUND; i++) {
+        if (!syscall_parser_table[i].name)
+            continue;
+        if (strcmp(name, syscall_parser_table[i].name) == 0) {
+            *out_sysno = i;
+            return 0;
+        }
+    }
+    return -ENOSYS;
+}
+
 static int buf_write_all(const char* str, size_t size, void* arg) {
     __UNUSED(arg);
 

@@ -155,8 +155,11 @@ extern bool g_eventfd_passthrough_mode;
 int init_eventfd_mode(void);
 
 void warn_unsupported_syscall(unsigned long sysno);
+void trace_mock_syscall(unsigned long sysno);
 void debug_print_syscall_before(unsigned long sysno, ...);
 void debug_print_syscall_after(unsigned long sysno, ...);
+int get_syscall_number(const char* name, unsigned long* out_sysno);
+int init_syscalls(void);
 
 #ifndef __alloca
 #define __alloca __builtin_alloca
