@@ -44,7 +44,7 @@ security guarantees:
   to untrusted host storage; this prevents user data leakage.
 - **Integrity of user data**: all user data is read from disk and decrypted,
   with the authentication tag (or tag for simplicity) verified to detect any
-  data tampering;
+  data tampering.
 - **Matching of file name**: when opening an existing file, the metadata of the
   to-be-opened file is checked to ensure that the name of the file when created
   is the same as the name given to the open operation.
@@ -233,7 +233,7 @@ starts to be used when the plaintext file size exceeds 3KB.
 Note that the root MHT node is kept in trusted enclave memory for the lifetime
 of the file handle (i.e. as long as the file is opened). This is in contrast to
 other MHT nodes which can be evicted from enclave memory; see the notes on LRU
-cache in :ref:`encfiles-additional-details`. The fact that the root MHT node is
+cache in :ref:`additional-details`. The fact that the root MHT node is
 non-evictable ensures protection against rollback/replay attacks.
 
 .. image:: ../img/encfiles/03_encfiles_layout.svg
@@ -478,7 +478,7 @@ diagram correspond to the steps in the above description.
    :target: ../img/encfiles/09_encfiles_read_greater3k_general.svg
    :alt: Figure: Generic read flow for an encrypted file with size greater than 3KB
 
-.. _encfiles-additional-details:
+.. _additional-details:
 
 Additional details
 ------------------
