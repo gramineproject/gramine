@@ -16,6 +16,7 @@ tests = {
     },
     'devfs': {},
     'device_passthrough': {},
+    'disallowed_syscalls': {},
     'double_fork': {},
     'epoll_epollet': {},
     'epoll_test': {},

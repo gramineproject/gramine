@@ -1030,6 +1030,10 @@ class TC_31_Syscall(RegressionTestCase):
         self.assertIn('Got: P', stdout)
         self.assertIn('TEST 2 OK', stdout)
 
+    def test_020_disallowed_syscalls(self):
+        stdout, _ = self.run_binary(['disallowed_syscalls'])
+        self.assertIn('TEST OK', stdout)
+
 class TC_40_FileSystem(RegressionTestCase):
     def test_000_proc(self):
         stdout, _ = self.run_binary(['proc_common'])

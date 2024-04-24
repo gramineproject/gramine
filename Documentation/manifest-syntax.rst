@@ -389,6 +389,29 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
+Disallowing syscalls
+^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.disallowed_syscalls = [
+      "syscall_name",
+      "syscall_name",
+    ]
+
+This syntax specifies the system calls that will be disallowed to be executed in
+Gramine (i.e. a denylist). For example, to disallow eventfd completely, specify
+two syscall variants: ``sys.disallowed_syscalls = [ "eventfd", "eventfd2" ]``.
+This is similar, though significantly less flexible, to seccomp profiles.
+
+.. note ::
+   This option is *not* a replacement for ``sys.disallow_subprocesses`` (see
+   above). This is because the ``clone()`` syscall has two usages: (1) it is
+   used to spawn subprocesses by Glibc and many other libraries and runtimes and
+   (2) it is also used to create threads in the same process. The
+   ``sys.disallow_subprocesses`` manifest option disables only the first usage,
+   whereas ``sys.disallowed_syscalls = ["clone"]`` disables both usages.
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 
