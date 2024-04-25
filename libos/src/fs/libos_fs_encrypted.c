@@ -104,9 +104,9 @@ static pf_status_t cb_fsync(pf_handle_t handle) {
 }
 
 static pf_status_t cb_aes_cmac(const pf_key_t* key, const void* input, size_t input_size,
-                               pf_tag_t* tag) {
-    int ret = lib_AESCMAC((const uint8_t*)key, sizeof(*key), input, input_size, (uint8_t*)tag,
-                          sizeof(*tag));
+                               pf_mac_t* mac) {
+    int ret = lib_AESCMAC((const uint8_t*)key, sizeof(*key), input, input_size, (uint8_t*)mac,
+                          sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESCMAC failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;
@@ -116,9 +116,9 @@ static pf_status_t cb_aes_cmac(const pf_key_t* key, const void* input, size_t in
 
 static pf_status_t cb_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                       size_t aad_size, const void* input, size_t input_size,
-                                      void* output, pf_tag_t* tag) {
+                                      void* output, pf_mac_t* mac) {
     int ret = lib_AESGCMEncrypt((const uint8_t*)key, sizeof(*key), (const uint8_t*)iv, input,
-                                input_size, aad, aad_size, output, (uint8_t*)tag, sizeof(*tag));
+                                input_size, aad, aad_size, output, (uint8_t*)mac, sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESGCMEncrypt failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;
@@ -128,10 +128,10 @@ static pf_status_t cb_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, co
 
 static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, const void* aad,
                                       size_t aad_size, const void* input, size_t input_size,
-                                      void* output, const pf_tag_t* tag) {
+                                      void* output, const pf_mac_t* mac) {
     int ret = lib_AESGCMDecrypt((const uint8_t*)key, sizeof(*key), (const uint8_t*)iv, input,
-                                input_size, aad, aad_size, output, (const uint8_t*)tag,
-                                sizeof(*tag));
+                                input_size, aad, aad_size, output, (const uint8_t*)mac,
+                                sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESGCMDecrypt failed: %d", ret);
         return PF_STATUS_CALLBACK_FAILED;

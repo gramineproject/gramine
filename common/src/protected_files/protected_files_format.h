@@ -40,7 +40,7 @@ enum {
 
 typedef struct _gcm_crypto_data {
     pf_key_t key;
-    pf_tag_t tag;
+    pf_mac_t gmac;
 } gcm_crypto_data_t;
 
 // for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 MHT child nodes
@@ -55,14 +55,14 @@ typedef struct _metadata_plaintext_header {
     uint8_t    major_version;
     uint8_t    minor_version;
     pf_salt_t  metadata_key_salt;
-    pf_tag_t   metadata_tag; /* GCM MAC aka Authentication Tag */
+    pf_mac_t   metadata_gmac; /* GCM mac */
 } metadata_plaintext_header_t;
 
 typedef struct _metadata_decrypted_header {
     char     file_path[PATH_MAX_SIZE];
     uint64_t file_size;
     pf_key_t root_mht_node_key;
-    pf_tag_t root_mht_node_tag;
+    pf_mac_t root_mht_node_gmac;
     uint8_t  file_data[MD_USER_DATA_SIZE];
 } metadata_decrypted_header_t;
 
