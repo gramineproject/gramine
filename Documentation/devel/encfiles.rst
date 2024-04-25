@@ -61,8 +61,9 @@ The current implementation does *not* protect against the following attacks:
 - **Side-channel attacks**. Some file metadata, such as file name, file size,
   access time, access patterns (e.g., which blocks are read/written), etc. is
   not confidentiality-protected. This could be used by attackers to gain
-  sensitive information. See also chapters on file systems in
-  :doc:`devel/features` for additional discussions on file metadata.
+  sensitive information. See also
+  https://gramine.readthedocs.io/en/stable/devel/features.html#file-systems for
+  additional discussions on file metadata.
 
 .. note ::
    There is an effort to improve rollback/replay attack protection in Gramine.
