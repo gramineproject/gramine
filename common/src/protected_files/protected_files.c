@@ -204,7 +204,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     void* node;
 
     // 1. encrypt the changed data nodes
-    // 2. set the key + GMAC in the parent MHT nodes
+    // 2. set the key + MAC in the parent MHT nodes
     // 3. set the need_writing flag for all parent MHT nodes
     for (node = lruc_get_first(pf->cache); node != NULL; node = lruc_get_next(pf->cache)) {
         if (((file_node_t*)node)->type != FILE_DATA_NODE_TYPE)
@@ -221,10 +221,10 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
         if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
             goto out;
 
-        // encrypt data node, this also saves GMAC in the corresponding crypto slot of MHT node
+        // encrypt data node, this also saves MAC in the corresponding crypto slot of MHT node
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
                                       &data_node->decrypted.data.bytes, PF_NODE_SIZE,
-                                      &data_node->encrypted.bytes, &gcm_crypto_data->gmac);
+                                      &data_node->encrypted.bytes, &gcm_crypto_data->mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             goto out;
@@ -267,7 +267,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     if (dirty_count > 0)
         sort_nodes(mht_nodes_array, 0, dirty_count - 1);
 
-    // update the keys and GMACs in the parents from last node to first (bottom layers first)
+    // update the keys and MACs in the parents from last node to first (bottom layers first)
     for (dirty_idx = dirty_count; dirty_idx > 0; dirty_idx--) {
         file_node_t* mht_node = mht_nodes_array[dirty_idx - 1];
 
@@ -280,14 +280,14 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                       &mht_node->decrypted.mht, PF_NODE_SIZE,
-                                      &mht_node->encrypted.bytes, &gcm_crypto_data->gmac);
+                                      &mht_node->encrypted.bytes, &gcm_crypto_data->mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             goto out;
         }
     }
 
-    // update root MHT node's key and GMAC in the metadata node's headers
+    // update root MHT node's key and MAC in the metadata node's headers
     if (!ipf_generate_random_key(pf, &pf->metadata_decrypted_header.root_mht_node_key))
         goto out;
 
@@ -295,7 +295,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
                                   NULL, 0,
                                   &pf->root_mht_node.decrypted.mht, PF_NODE_SIZE,
                                   &pf->root_mht_node.encrypted.bytes,
-                                  &pf->metadata_decrypted_header.root_mht_node_gmac);
+                                  &pf->metadata_decrypted_header.root_mht_node_mac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         goto out;
@@ -419,11 +419,11 @@ static bool ipf_update_metadata_node(pf_context_t* pf) {
         return false;
     }
 
-    // encrypt metadata part-to-be-encrypted, also updates the GMAC in metadata plaintext header
+    // encrypt metadata part-to-be-encrypted, also updates the MAC in metadata plaintext header
     status = g_cb_aes_gcm_encrypt(&key, &g_empty_iv, NULL, 0, &pf->metadata_decrypted_header,
                                   sizeof(metadata_decrypted_header_t),
                                   &pf->metadata_node.encrypted_blob,
-                                  &pf->metadata_node.plaintext_header.metadata_gmac);
+                                  &pf->metadata_node.plaintext_header.metadata_mac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         return false;
@@ -642,10 +642,10 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
         &data_node->parent->decrypted.mht
              .data_nodes_crypto[data_node->logical_node_number % ATTACHED_DATA_NODES_COUNT];
 
-    // decrypt data and check integrity against the GMAC in corresponding slot in MHT node
+    // decrypt data and check integrity against the MAC in corresponding slot in MHT node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                   &data_node->encrypted.bytes, PF_NODE_SIZE,
-                                  &data_node->decrypted.data.bytes, &gcm_crypto_data->gmac);
+                                  &data_node->decrypted.data.bytes, &gcm_crypto_data->mac);
 
     if (PF_FAILURE(status)) {
         free(data_node);
@@ -705,10 +705,10 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_nod
         &mht_node->parent->decrypted.mht
              .mht_nodes_crypto[(mht_node->logical_node_number - 1) % CHILD_MHT_NODES_COUNT];
 
-    // decrypt data and check integrity against the GMAC in corresponding slot in parent MHT node
+    // decrypt data and check integrity against the MAC in corresponding slot in parent MHT node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                   &mht_node->encrypted.bytes, PF_NODE_SIZE,
-                                  &mht_node->decrypted.mht, &gcm_crypto_data->gmac);
+                                  &mht_node->decrypted.mht, &gcm_crypto_data->mac);
     if (PF_FAILURE(status)) {
         free(mht_node);
         pf->last_error = status;
@@ -793,7 +793,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
                                   &pf->metadata_node.encrypted_blob,
                                   sizeof(pf->metadata_node.encrypted_blob),
                                   &pf->metadata_decrypted_header,
-                                  &pf->metadata_node.plaintext_header.metadata_gmac);
+                                  &pf->metadata_node.plaintext_header.metadata_mac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         DEBUG_PF("failed to decrypt metadata: %d", status);
@@ -816,12 +816,12 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
         if (!ipf_read_node(pf, /*logical_node_number=*/1, &pf->root_mht_node.encrypted.bytes))
             return false;
 
-        // also verifies root MHT node's GMAC against the GMAC in metadata node's decrypted header
+        // also verifies root MHT node's MAC against the MAC in metadata node's decrypted header
         status = g_cb_aes_gcm_decrypt(&pf->metadata_decrypted_header.root_mht_node_key, &g_empty_iv,
                                       NULL, 0, // aad
                                       &pf->root_mht_node.encrypted.bytes, PF_NODE_SIZE,
                                       &pf->root_mht_node.decrypted.mht,
-                                      &pf->metadata_decrypted_header.root_mht_node_gmac);
+                                      &pf->metadata_decrypted_header.root_mht_node_mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             return false;
