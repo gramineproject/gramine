@@ -23,6 +23,23 @@ Command line arguments
 
    Have a |~| variable available in the template.
 
+.. option:: --check
+
+   After rendering manifest from template, perform validation against manifest
+   schema to check for unknown manifest entries and/or missing mandatory
+   options. See :doc:`gramine-manifest-check` for more details.
+
+   The check is enabled by default. This option serves to re-enable the check
+   after :option:`--no-check`.
+
+   For the 1.7 release, only a |~| warning is issued and
+   :program:`gramine-manifest` proceeds to write the faulty manifest. In version
+   1.8 this will be a |~| hard error.
+
+.. option:: --no-check
+
+   Disable schema validation, as described above in :option:`--check`.
+
 Functions and constants available in templates
 ==============================================
 
