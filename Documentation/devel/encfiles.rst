@@ -43,8 +43,8 @@ security guarantees:
 - **Confidentiality of user data**: all user data is encrypted and then written
   to untrusted host storage; this prevents user data leakage.
 - **Integrity of user data**: all user data is read from disk and decrypted,
-  with the authentication tag (or tag for simplicity) verified to detect any
-  data tampering.
+  with the Message Authentication Code (MAC) verified to detect any data
+  tampering.
 - **Matching of file name**: when opening an existing file, the metadata of the
   to-be-opened file is checked to ensure that the name of the file when created
   is the same as the name given to the open operation.
@@ -61,7 +61,8 @@ The current implementation does *not* protect against the following attacks:
 - **Side-channel attacks**. Some file metadata, such as file name, file size,
   access time, access patterns (e.g., which blocks are read/written), etc. is
   not confidentiality-protected. This could be used by attackers to gain
-  sensitive information.
+  sensitive information. See also chapters on file systems in
+  :doc:`devel/features` for additional discussions on file metadata.
 
 .. note ::
    There is an effort to improve rollback/replay attack protection in Gramine.
@@ -133,11 +134,12 @@ Crypto used for encrypted files
 -------------------------------
 
 - The current implementation of encrypted files uses AES-GCM with 128-bit key
-  size for encryption and tag generation. Thus, all encryption keys are 16B in
-  size and all tags are 16B in size.
+  size for encryption and MAC generation. Thus, all encryption keys are 16B in
+  size and all MACs are 16B in size.
 
-- AES-CMAC with AES-128-bit is used to derive keys from the user-supplied KDK.
-  The input material includes a hard-coded label and a 256-bit salt.
+- Sub-keys are derived from the user-supplied KDK using the `NIST SP800-108
+  <https://csrc.nist.gov/pubs/sp/800/108/r1/upd1/final>`__ construction, with
+  the required PRF (Pseudorandom Function) instantiated by AES-128-CMAC.
 
 - Initialization vectors (IVs) are always all-zeros. This is allowed because
   each node-encryption key is generated randomly and is never re-used.
@@ -187,13 +189,13 @@ parts:
 
 1. The plaintext header, occupying bytes 0-57. The header contains a magic
    string, a major version of the encrypted-files protocol, a minor version, a
-   salt for KDF (Key Derivation Function, explained later) and a tag
+   salt for KDF (Key Derivation Function, explained later) and a MAC
    (cryptographic hash over the encrypted header).
 2. The encrypted header, occupying bytes 58-3941. This header has two parts: the
    encrypted metadata fields and the first 3KB of actual file contents. The
    metadata fields contain a file path (to prevent rename attacks), the file
    size (to hide the exact file size from attackers) and the encryption key and
-   tag of the root MHT node (explained later).
+   MAC of the root MHT node (explained later).
 3. The constant padding, occupying bytes 3942-4095. This padding is added purely
    to align the metadata node on the 4KB boundary and contains zeros.
 
@@ -207,17 +209,17 @@ After the metadata node, the two node types interleave: the *MHT nodes* and the
 the 4KB of plaintext file contents. The MHT nodes serve as building blocks for a
 variant of a Merkle Hash Tree.
 
-Each MHT node in the Merkle Hash Tree is comprised of 128 encryption key + tag
+Each MHT node in the Merkle Hash Tree is comprised of 128 encryption key + MAC
 pairs for attached Data and MHT nodes. In particular, one MHT node has 96 pairs
 for the Data nodes attached to it, and 32 pairs for the child MHT nodes. Since
-each key is 16B in size and each tag is 16B in size, 128 pairs is the maximum
+each key is 16B in size and each MAC is 16B in size, 128 pairs is the maximum
 that can be stored in a 4KB node.
 
 Inside the SGX enclave, each MHT node is represented as a data struct with the
 ``type`` being ``MHT_NODE`` and two linked buffers: the bounce buffer that
 contains the encrypted 4KB copied from the host disk and yet another data
 struct that contains the decrypted MHT node's contents (the array with 128 key +
-tag pairs). Additionally, each MHT node has a ``logical_node`` number and a
+MAC pairs). Additionally, each MHT node has a ``logical_node`` number and a
 ``physical_node`` number. The former is the serial number in a logical
 representation of the MHT nodes in the Merkle tree, whereas the latter is the
 number of the page (chunk) in the on-storage representation. The difference
@@ -226,7 +228,7 @@ between logical and physical numbers is clear on the below diagram.
 Note that there is a special MHT node -- the root MHT node. It has the same
 representation inside the SGX enclave and on host storage as all other MHT
 nodes, but it is directly linked from the main data struct ``pf_handle`` via the
-``root_mht_node`` field. Also, the root MHT node's encryption key and tag are
+``root_mht_node`` field. Also, the root MHT node's encryption key and MAC are
 stored directly in the encrypted header of the metadata node. The root MHT node
 starts to be used when the plaintext file size exceeds 3KB.
 
@@ -297,10 +299,11 @@ is copied from the user buffer into the ``file_data`` buffer. This ``write()``
 system call triggers the flow of encrypting the file and saving it to disk.
 
 To encrypt the file, Gramine needs to generate a new key. To this end, a KDF
-salt is randomly generated in step 2. Then in step 3, AES-CMAC is used for key
-derivation, with input materials being the KDK and the salt (plus the hard-coded
-label ``SGX-PROTECTED-FS-METADATA-KEY`` and the hard-coded integers ``1`` and
-``128``).
+salt is randomly generated in step 2. Then in step 3, a `NIST SP800-108
+<https://csrc.nist.gov/pubs/sp/800/108/r1/upd1/final>`__ KDF (Key Derivation
+Function) is used to derive an AES-128 sub-key, with input materials being the
+KDK, the hard-coded label ``SGX-PROTECTED-FS-METADATA-KEY`` and the salt as
+nonce.
 
 Now that a new key was derived, the file can be encrypted. Step 4 shows that the
 AES-GCM encryption happens in the ``metadata_node`` bounce buffer, on the
@@ -310,8 +313,8 @@ Finally in step 5, the resulting ciphertext is copied out from the bounce buffer
 to the host storage. An additional plaintext header in bytes 0-57 is prepended
 to the ciphertext, and the padding in bytes 3942-4095 aligns the resulting
 metadata node to 4KB. Note that the plaintext header contains the KDF salt
-generated in step 2 and the tag generated as a by-product of AES-GCM encryption
-in step 4. The salt and the tag can be stored in plaintext, and they will be
+generated in step 2 and the MAC generated as a by-product of AES-GCM encryption
+in step 4. The salt and the MAC can be stored in plaintext, and they will be
 used later to decrypt the metadata node's ciphertext.
 
 .. image:: ../img/encfiles/05_encfiles_read_less3k.svg
@@ -341,7 +344,7 @@ KDK and the salt.
 Now that the key is derived, the metadata's encrypted header can be decrypted.
 Step 4 shows that the AES-GCM decryption happens on the ``metadata_node`` bounce
 buffer, with plaintext output moved into the data struct ``metadata_decrypted``.
-As part of the decryption operation, the resulting tag is compared against the
+As part of the decryption operation, the resulting MAC is compared against the
 one read from the plaintext header in ``metadata_node``. If comparison fails,
 then Gramine stops operations on this encrypted file and considers it corrupted;
 an ``-EACCES`` error is returned to the application.
@@ -351,7 +354,7 @@ application buffer. The ``read()`` operation is finished.
 
 Note that in the special case of files of size less than 3KB, only the metadata
 node is used. No MHT nodes and no data nodes are stored on the host. Also, the
-``root_mht_node_key`` and ``root_mht_node_tag`` fields are unused in the
+``root_mht_node_key`` and ``root_mht_node_mac`` fields are unused in the
 metadata node's encrypted header.
 
 Encrypted I/O: general case
@@ -394,16 +397,16 @@ leaked.
 Now that a new key for the data node was generated, the data node can be
 encrypted. Step 4 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the data node, on the plaintext data-node buffer ``decrypted``
-and with the newly generated key. As part of this encryption operation, the tag
+and with the newly generated key. As part of this encryption operation, the MAC
 is generated and is stored in the corresponding slot of the root MHT node (thus
-shaping a key + tag pair for data node 1). Since the MHT node's contents will
-be encrypted, the tag will not be leaked.
+shaping a key + MAC pair for data node 1). Since the MHT node's contents will
+be encrypted, the MAC will not be leaked.
 
 At this point, the 4KB of the file data are stored as ciphertext in the bounce
 buffer of the data node and are ready to be flushed to storage. However, the
 root MHT node must also be encrypted and flushed.
 
-The root MHT node is already updated with the data node's key and tag (more
+The root MHT node is already updated with the data node's key and MAC (more
 specifically, only slot 1 of the MHT node's ``decrypted`` array was updated, the
 rest slots contain all-zeros). So it's only a matter of encrypting the root MHT
 node. For this, a new random key is generated (step 5). This key is stored in
@@ -413,17 +416,17 @@ will be encrypted, the key will not be leaked.
 Now that a key for the root MHT node was generated, the root MHT node can be
 encrypted. Step 6 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the root MHT node, on the plaintext root-MHT-node ``decrypted``
-and with the newly generated key. As part of this encryption operation, the tag
-is generated and is stored in the ``root_mht_node_tag`` field of the metadata
-node's header. Since the header will be encrypted, the tag will not be leaked.
+and with the newly generated key. As part of this encryption operation, the MAC
+is generated and is stored in the ``root_mht_node_mac`` field of the metadata
+node's header. Since the header will be encrypted, the MAC will not be leaked.
 
 At this point, both the data node and the root MHT node are ready to be flushed
 to storage. Now steps 7-9 are performed, which correspond to steps 2-4 in the
 write flow of the <3KB file.
 
 Finally, all three nodes are encrypted and are ready to be flushed: the metadata
-node (contains the salt to decrypt itself and the key + tag to decrypt the root
-MHT node), the root MHT node (contains the key + tag to decrypt the data node)
+node (contains the salt to decrypt itself and the key + MAC to decrypt the root
+MHT node), the root MHT node (contains the key + MAC to decrypt the data node)
 and the data node (contains the file contents). Step 10 can be performed, that
 copies out all three bounce buffers to the host's hard disk.
 
@@ -453,16 +456,16 @@ representation in enclave memory, consisting of the main data-node struct, the
 ``decrypted`` 4KB buffer and the ``encrypted`` 4KB bounce buffer. Gramine also
 activates the root MHT node representation in enclave memory. The file data will
 be decrypted and then copied into the ``decrypted`` buffer. The root MHT node
-will have the key and tag for the data-node decryption.
+will have the key and MAC for the data-node decryption.
 
 First the steps 1-4 are performed, which correspond to same steps 1-4 in the
 read flow of the <3KB file. Then in step 5, the root MHT node is copied into the
 enclave memory. The AES-GCM decryption of the root MHT node is performed using
-the ``root_mht_node_key`` key and the comparison against ``root_mht_node_tag``
-(step 6). The resulting plaintext is the array of key-tag pairs, stored in the
+the ``root_mht_node_key`` key and the comparison against ``root_mht_node_mac``
+(step 6). The resulting plaintext is the array of key-MAC pairs, stored in the
 ``decrypted`` field. Then in step 7, the data node is copied into the enclave
 memory. The AES-GCM decryption of the data node is performed using the key and
-tag stored in the first slot of the root MHT node's array (step 8).
+MAC stored in the first slot of the root MHT node's array (step 8).
 
 At this point, the first 3KB of file data are stored in plaintext in the
 ``file_data`` buffer and the last 4KB of file data are stored in plaintext in
