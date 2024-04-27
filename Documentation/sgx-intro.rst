@@ -41,7 +41,7 @@ security model:
   removal)
   - On Icelake server CPUs there's no integrity protection at all.
   - On Sapphire Rapids server CPUs there's a 28-bit MAC per each cacheline.
-    It's possible to bruteforce MAC or do a replay attack with cacheline
+    It's possible to bruteforce the MAC or do a replay attack with cacheline
     granularity (but that still requires a hardware MitM).
 - EPC can now be almost arbitrarily big, significantly improving performance for
   large workloads.
