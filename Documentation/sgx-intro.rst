@@ -36,10 +36,13 @@ introduced it to server cores. The new SGX hardware architecture didn't change
 the user-facing ABI, but loosened security guarantees, matching AMD SEV-SNP
 security model:
 
-- Merkle tree for memory integrity checking was removed, each page is now
-  integrity-protected separately.
-- RAM replay attacks are now possible through hardware MitM attacks, with
-  single-page granularity (previously prevented by Merkle tree).
+- Merkle tree for memory integrity checking was removed.
+- Hardware RAM MitM attacks are not mitigated anymore: (because of Merkle tree
+  removal)
+  - On Icelake server CPUs there's no integrity protection at all.
+  - On Sapphire Rapids server CPUs there's a 28-bit MAC per each cacheline.
+    It's possible to bruteforce MAC or do a replay attack with cacheline
+    granularity (but that still requires a hardware MitM).
 - EPC can now be almost arbitrarily big, significantly improving performance for
   large workloads.
 
