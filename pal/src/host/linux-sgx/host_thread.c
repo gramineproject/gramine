@@ -76,8 +76,6 @@ void update_and_print_stats(bool process_wide) {
     }
 }
 
-
-
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->self = tcb;
     tcb->tcs = NULL;    /* initialized by child thread */

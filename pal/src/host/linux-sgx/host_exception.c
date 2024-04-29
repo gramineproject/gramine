@@ -30,7 +30,6 @@
 #include "ucontext.h"
 
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
-static int send_sigusr1_signal_to_children(void);
 
 static int block_signal(int sig, bool block) {
     int how = block ? SIG_BLOCK : SIG_UNBLOCK;
