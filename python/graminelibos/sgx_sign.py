@@ -105,25 +105,11 @@ def get_enclave_attributes(manifest_sgx):
     if ARCHITECTURE == 'amd64':
         flags |= offs.SGX_FLAGS_MODE64BIT
 
-    # TODO: 'require_exinfo' was deprecated in release v1.6, should be removed in v1.7
-    if 'require_exinfo' in manifest_sgx:
-        if 'use_exinfo' in manifest_sgx:
-            raise KeyError(f'`sgx.require_exinfo` cannot coexist with `sgx.use_exinfo`')
-        manifest_sgx['use_exinfo'] = manifest_sgx.pop('require_exinfo')
-
     miscs_dict = {
         'use_exinfo': offs.SGX_MISCSELECT_EXINFO,
     }
     miscs = collect_bits(manifest_sgx, miscs_dict)
 
-    # TODO: these were deprecated in release v1.6, so they should be removed in v1.7
-    deprecated_xfrms_dict = {
-        'require_avx': offs.SGX_XFRM_AVX,
-        'require_avx512': offs.SGX_XFRM_AVX512,
-        'require_mpx': offs.SGX_XFRM_MPX,
-        'require_pkru': offs.SGX_XFRM_PKRU,
-        'require_amx': offs.SGX_XFRM_AMX,
-    }
     xfrms_dict = {
         'avx': offs.SGX_XFRM_AVX,
         'avx512': offs.SGX_XFRM_AVX512,
@@ -135,13 +121,7 @@ def get_enclave_attributes(manifest_sgx):
     }
 
     xfrms, xfrms_mask = offs.SGX_XFRM_LEGACY, offs.SGX_XFRM_MASK_CONST
-    if manifest_sgx.get('cpu_features') is None:
-        # collect deprecated `sgx.require_xxx` options; remove this in v1.7
-        xfrms |= collect_bits(manifest_sgx, deprecated_xfrms_dict)
-    else:
-        for deprecated_key in deprecated_xfrms_dict:
-            if deprecated_key in manifest_sgx:
-                raise KeyError(f'`sgx.cpu_features` cannot coexist with `sgx.{deprecated_key}`')
+    if 'cpu_features' in manifest_sgx:
         xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx['cpu_features'], xfrms_dict,
                                                      xfrms, xfrms_mask, security_hardening=False)
         xfrms, xfrms_mask = collect_cpu_feature_bits(manifest_sgx['cpu_features'],

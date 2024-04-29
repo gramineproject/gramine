@@ -98,12 +98,6 @@ GramineManifestSchema = Schema({
         'ra_client_linkable': bool,
         'ra_client_spid': str,
         'remote_attestation': Any('none', 'dcap', 'epid'),
-        'require_amx': bool,        # deprecated
-        'require_avx': bool,        # deprecated
-        'require_avx512': bool,     # deprecated
-        'require_exinfo': bool,     # deprecated
-        'require_mpx': bool,        # deprecated
-        'require_pkru': bool,       # deprecated
         'seal_key': {
             'flags_mask': _mask64,
             'xfrm_mask': _mask64,
