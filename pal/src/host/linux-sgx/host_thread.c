@@ -68,11 +68,11 @@ void update_and_print_stats(bool process_wide) {
                    pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
                    g_sync_signal_cnt, g_async_signal_cnt);
 
-        __atomic_exchange_n(&g_eenter_cnt, 0, __ATOMIC_ACQ_REL);
-        __atomic_exchange_n(&g_eexit_cnt, 0, __ATOMIC_ACQ_REL);
-        __atomic_exchange_n(&g_aex_cnt, 0, __ATOMIC_ACQ_REL);
-        __atomic_exchange_n(&g_sync_signal_cnt, 0, __ATOMIC_ACQ_REL);
-        __atomic_exchange_n(&g_async_signal_cnt, 0, __ATOMIC_ACQ_REL);
+        __atomic_store_n(&g_eenter_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_eexit_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_aex_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_sync_signal_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_async_signal_cnt, 0, __ATOMIC_RELEASE);
     }
 }
 
@@ -104,7 +104,6 @@ int pal_host_tcb_reset_stats(PAL_HOST_TCB* tcb) {
 
     int ret;
 
-    /* set GS reg of this thread to thread's TCB; */
     ret = DO_SYSCALL(arch_prctl, ARCH_SET_GS, tcb);
     if (ret < 0) {
         ret = -EPERM;

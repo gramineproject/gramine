@@ -18,9 +18,6 @@
 #include <dirent.h>
 #include <linux/signal.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 
 #include "api.h"
 #include "cpu.h"
@@ -31,8 +28,6 @@
 #include "pal_tcb.h"
 #include "sigreturn.h"
 #include "ucontext.h"
-
-#define MAX_DBG_THREADS 4096
 
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
 static int send_sigusr1_signal_to_children(void);
@@ -196,7 +191,7 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     /* we need this handler to interrupt blocking syscalls in RPC threads */
 }
 
-static int send_sigusr1_signal_to_children() {
+static int send_sigusr1_signal_to_children(void) {
     int signal_counter= 0;
 
     for (size_t i = 1; i < MAX_DBG_THREADS; i++) {
@@ -206,49 +201,52 @@ static int send_sigusr1_signal_to_children() {
             signal_counter++;
         }
     }
+
     return signal_counter;
 }
 
-static void handle_async_sigusr1_signal(int signum, siginfo_t* info, struct ucontext* uc) {
+static void dump_and_reset_stats(void)
+{
+    static atomic_int no_of_children_visited = 0;
+    static const uint64_t LOOP_ATTEMPTS_MAX = 10000;   /* rather arbitrary */
+
+    if(DO_SYSCALL(gettid) == g_host_pid) {
+        int no_of_children = send_sigusr1_signal_to_children();
+        uint64_t loop_attempts = 0;
+
+        /* Wait here until all the children are done processing the signal. */
+        while((no_of_children) > (__atomic_load_n(&no_of_children_visited, __ATOMIC_ACQUIRE))) {
+            if (loop_attempts == LOOP_ATTEMPTS_MAX) {
+                DO_SYSCALL(sched_yield);
+            } else {
+                loop_attempts++;
+                CPU_RELAX();
+            }
+        }
+
+        update_and_print_stats(/*process_wide=*/true);
+        __atomic_store_n(&no_of_children_visited, 0, __ATOMIC_RELEASE);
+    } else {
+        log_always("----- DUMPTING and RESETTING SGX STATS -----");
+        update_and_print_stats(/*process_wide=*/false);
+        __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
+    }
+
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    int ret = pal_host_tcb_reset_stats(tcb);
+    if(ret < 0)
+        return;
+}
+
+static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(signum);
     __UNUSED(info);
     __UNUSED(uc);
 
-    static atomic_int no_of_children_visited = 0;
-    static const uint64_t LOOP_ATTEMPTS_MAX = 10000;   /* rather arbitrary */
-    static const uint64_t SLEEP_MAX    = 100000000; /* nanoseconds (0.1 seconds) */
-    static const uint64_t SLEEP_STEP   = 1000000;   /* 100 steps before capped */
+    if(g_sgx_enable_stats)
+        dump_and_reset_stats();
 
-    if(g_sgx_enable_stats) {
-
-        if(DO_SYSCALL(gettid) == g_host_pid) {
-            int no_of_children = send_sigusr1_signal_to_children();
-            uint64_t loop_attempts = 0;
-            uint64_t sleep_time    = 0;
-
-            while((no_of_children) > (__atomic_load_n(&no_of_children_visited, __ATOMIC_RELAXED))) {
-                if (loop_attempts == LOOP_ATTEMPTS_MAX) {
-                    if (sleep_time < SLEEP_MAX)
-                        sleep_time += SLEEP_STEP;
-                    struct timespec tv = {.tv_sec = 0, .tv_nsec = sleep_time};
-                    (void)DO_SYSCALL(nanosleep, &tv, /*rem=*/NULL);
-                } else {
-                        loop_attempts++;
-                        CPU_RELAX();
-                }
-            }
-            update_and_print_stats(true);
-            __atomic_exchange_n(&no_of_children_visited, 0, __ATOMIC_ACQ_REL);
-        } else {
-            log_always("----- DUMPTING and RESETTING SGX STATS -----");
-            update_and_print_stats(/*process_wide=*/false);
-            PAL_HOST_TCB* tcb = pal_get_host_tcb();
-            int ret = pal_host_tcb_reset_stats(tcb);
-            if(ret < 0)
-                return;
-            __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
-        }
-    }
+    return;
 }
 
 int sgx_signal_setup(void) {
@@ -299,7 +297,7 @@ int sgx_signal_setup(void) {
     if (ret < 0)
         goto err;
 
-    ret = set_signal_handler(SIGUSR1, handle_async_sigusr1_signal);
+    ret = set_signal_handler(SIGUSR1, handle_sigusr1);
     if (ret < 0)
         goto err;
 
