@@ -7,6 +7,7 @@ import click
 import voluptuous
 
 from graminelibos import Manifest
+from tomli import TOMLDecodeError
 
 def validate_define(_ctx, _param, values):
     ret = {}
@@ -30,7 +31,11 @@ def main(ctx, string, define, infile, outfile, check):
     if not bool(string) ^ bool(infile):
         click.get_current_context().fail('specify exactly one of (infile, -c)')
     template = infile.read() if infile else string
-    manifest = Manifest.from_template(template, define)
+    try:
+        manifest = Manifest.from_template(template, define)
+    except TOMLDecodeError as err:
+        click.echo(f'ERROR: failed to parse manifest template: {err!s}', err=True)
+        ctx.exit(1)
 
     if check:
         try:
