@@ -430,14 +430,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
                 goto fail;
         }
     } else {
-        /* Set node-id of active threads to synthesized NUME node with id 0. */
+        /* Set node-id of active threads to the synthesized NUMA node with id 0. */
         for (size_t i = 0; i < threads_cnt; i++) {
             set_node_id(i, &(struct set_node_id_args){
                                .threads   = threads,
                                .cores     = cores,
                                .id_to_set = 0,
                            });
-        };
+        }
         /* As above, set unsupported persistent huge pages to zero for our synthesized NUMA node.
          */
         numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
