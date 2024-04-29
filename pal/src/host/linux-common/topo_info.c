@@ -292,7 +292,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     size_t nodes_cnt = 1;
     /* Get the number of NUMA nodes on the system. By default, the number is 1. */
     ret = iterate_ranges_from_file("/sys/devices/system/node/possible", get_ranges_end, &nodes_cnt);
-    if ((ret < 0) && (ret != -ENOENT)) {
+    if (ret < 0 && ret != -ENOENT) {
         /* Some systems do not have the file, e.g., Windows Subsystem for Linux, for which we
          * ignore the -ENOENT error and synthesize later a corresponding (single) NUMA node
          * instead. */
@@ -430,9 +430,14 @@ int get_topology_info(struct pal_topo_info* topo_info) {
                 goto fail;
         }
     } else {
-        /* Node-id for each CPU core is by default zero, so no need to call set_node_id for
-         * our single synthesized NUMA node. */
-        ;
+        /* Set node-id of active threads to synthesized NUME node with id 0. */
+        for (size_t i = 0; i < threads_cnt; i++) {
+            set_node_id(i, &(struct set_node_id_args){
+                               .threads   = threads,
+                               .cores     = cores,
+                               .id_to_set = 0,
+                           });
+        };
         /* As above, set unsupported persistent huge pages to zero for our synthesized NUMA node.
          */
         numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
