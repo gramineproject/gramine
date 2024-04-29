@@ -211,8 +211,8 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     if (ret < 0) {
         if (ret == -EIO) {
             log_error("Enclave creation IOCTL failed with %s. Probably your manifest requires "
-                      "CPU features (e.g. `sgx.require_avx512`) that are not available on this "
-                      "platform.", unix_strerror(ret));
+                      "CPU features (e.g. `sgx.cpu_features.avx512 = \"required\"`) that are not "
+                      "available on this platform.", unix_strerror(ret));
         } else {
             log_error("Enclave creation IOCTL failed: %s", unix_strerror(ret));
         }
