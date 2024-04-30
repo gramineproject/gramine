@@ -298,7 +298,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
          * instead. */
         return ret;
     }
-    bool cpu_nodes_file_exists = (ret >= 0);
+    bool sys_nodes_file_exists = (ret >= 0);
 
     struct pal_cpu_thread_info* threads = malloc(threads_cnt * sizeof(*threads));
     size_t caches_cnt = 0;
@@ -330,7 +330,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
     if (ret < 0)
         goto fail;
 
-    if (cpu_nodes_file_exists) {
+    if (sys_nodes_file_exists) {
         ret = iterate_ranges_from_file("/sys/devices/system/node/online", set_numa_node_online,
                                        numa_nodes);
         if (ret < 0)
@@ -380,7 +380,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         }
     }
 
-    if (cpu_nodes_file_exists) {
+    if (sys_nodes_file_exists) {
         for (size_t i = 0; i < nodes_cnt; i++) {
             if (!numa_nodes[i].is_online)
                 continue;
@@ -443,7 +443,7 @@ int get_topology_info(struct pal_topo_info* topo_info) {
         numa_nodes[0].nr_hugepages[HUGEPAGES_2M] = 0;
         numa_nodes[0].nr_hugepages[HUGEPAGES_1G] = 0;
 
-        /* Set  distance for synthesized NUMA node to standard node-local value provided by ACPI
+        /* Set distance for synthesized NUMA node to standard node-local value provided by ACPI
          * SLIT */
         distances[0] = 10;
     }
