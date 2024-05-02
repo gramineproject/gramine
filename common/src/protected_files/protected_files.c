@@ -844,7 +844,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     if (pf->encrypted_part_plain.size > MD_USER_DATA_SIZE) {
         // read the root node of the mht
         if (!ipf_read_node(pf, /*node_number=*/1, &pf->root_mht.encrypted.cipher))
-			return false;
+            return false;
 
         // this also verifies the root mht gmac against the gmac in the meta-data encrypted part
         status = g_cb_aes_gcm_decrypt(&pf->encrypted_part_plain.mht_key, &g_empty_iv,
