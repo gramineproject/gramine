@@ -204,12 +204,11 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     bool ret = false;
     file_node_t** mht_array = NULL;
     pf_status_t status;
-    void* data;
 
     // 1. encrypt the changed data nodes
     // 2. set the key + GMAC in the parent MHT nodes
     // 3. set the need_writing flag for all the parent MHT nodes
-    for (data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
         if (((file_node_t*)data)->type != FILE_DATA_NODE_TYPE)
             continue;
 
@@ -243,7 +242,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
     // count dirty mht nodes
     size_t dirty_count = 0;
-    for (data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
             if (((file_node_t*)data)->need_writing)
                 dirty_count++;
@@ -258,7 +257,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     }
 
     uint64_t dirty_idx = 0;
-    for (data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
             file_node_t* file_mht_node = (file_node_t*)data;
 
