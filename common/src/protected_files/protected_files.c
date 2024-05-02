@@ -1356,11 +1356,3 @@ pf_status_t pf_flush(pf_context_t* pf) {
 
     return PF_STATUS_SUCCESS;
 }
-
-pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle) {
-    if (!g_initialized)
-        return PF_STATUS_UNINITIALIZED;
-
-    *handle = pf->file;
-    return PF_STATUS_SUCCESS;
-}

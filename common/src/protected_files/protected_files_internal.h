@@ -8,7 +8,6 @@
 
 #include <limits.h>
 
-#include "list.h"
 #include "lru_cache.h"
 #include "protected_files.h"
 #include "protected_files_format.h"
