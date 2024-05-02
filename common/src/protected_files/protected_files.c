@@ -151,7 +151,7 @@ static bool ipf_import_metadata_key(pf_context_t* pf, bool restore, pf_key_t* ou
     kdf_input_t buf = {0};
     pf_status_t status;
 
-    buf.index = 1;
+    buf.counter = 1;
     if (!strcpy_static(buf.label, METADATA_KEY_NAME, MAX_LABEL_SIZE))
         return false;
 
@@ -560,7 +560,7 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
     }
 
     // even if we didn't get the required data_node, we might have read other nodes in the process
-    while (lruc_size(pf->cache) > MAX_PAGES_IN_CACHE) {
+    while (lruc_size(pf->cache) > MAX_NODES_IN_CACHE) {
         void* data = lruc_get_last(pf->cache);
         assert(data != NULL);
         // for production -
