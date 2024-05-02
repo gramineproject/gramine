@@ -6,6 +6,8 @@
 
 #pragma once
 
+#pragma pack(push, 1)
+
 #ifdef USE_STDLIB
 #include <assert.h>
 #else
@@ -22,10 +24,30 @@
 
 #define METADATA_KEY_NAME "SGX-PROTECTED-FS-METADATA-KEY"
 #define MAX_LABEL_SIZE    64
-
 static_assert(sizeof(METADATA_KEY_NAME) <= MAX_LABEL_SIZE, "label too long");
 
-#pragma pack(push, 1)
+#define PATH_MAX_SIZE (260 + 512)
+
+#define MD_USER_DATA_SIZE (PF_NODE_SIZE * 3 / 4)
+static_assert(MD_USER_DATA_SIZE == 3072, "bad struct size");
+
+#define MAX_PAGES_IN_CACHE 48
+
+enum {
+    FILE_MHT_NODE_TYPE  = 1,
+    FILE_DATA_NODE_TYPE = 2,
+};
+
+typedef struct _data_node_crypto {
+    pf_key_t key;
+    pf_mac_t gmac;
+} gcm_crypto_data_t;
+
+// for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 mht child nodes
+#define ATTACHED_DATA_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 3 / 4)
+#define CHILD_MHT_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 1 / 4)
+static_assert(ATTACHED_DATA_NODES_COUNT == 96, "ATTACHED_DATA_NODES_COUNT");
+static_assert(CHILD_MHT_NODES_COUNT == 32, "CHILD_MHT_NODES_COUNT");
 
 typedef struct _metadata_plain {
     uint64_t   file_id;
@@ -34,13 +56,6 @@ typedef struct _metadata_plain {
     pf_keyid_t metadata_key_id;
     pf_mac_t   metadata_gmac; /* GCM mac */
 } metadata_plain_t;
-
-#define PATH_MAX_SIZE (260 + 512)
-
-// these are all defined as relative to node size, so we can decrease node size in tests
-// and have deeper tree
-#define MD_USER_DATA_SIZE (PF_NODE_SIZE * 3 / 4) // 3072
-static_assert(MD_USER_DATA_SIZE == 3072, "bad struct size");
 
 typedef struct _metadata_encrypted {
     char     path[PATH_MAX_SIZE];
@@ -60,74 +75,50 @@ typedef struct _metadata_node {
     metadata_encrypted_blob_t encrypted_part;
     metadata_padding_t        padding;
 } metadata_node_t;
-
 static_assert(sizeof(metadata_node_t) == PF_NODE_SIZE, "sizeof(metadata_node_t)");
-
-typedef struct _data_node_crypto {
-    pf_key_t key;
-    pf_mac_t gmac;
-} gcm_crypto_data_t;
-
-// for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 mht child nodes
-// for PF_NODE_SIZE == 2048, we have 48 attached data nodes and 16 mht child nodes
-// for PF_NODE_SIZE == 1024, we have 24 attached data nodes and 8 mht child nodes
-// 3/4 of the node size is dedicated to data nodes
-#define ATTACHED_DATA_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 3 / 4)
-static_assert(ATTACHED_DATA_NODES_COUNT == 96, "ATTACHED_DATA_NODES_COUNT");
-// 1/4 of the node size is dedicated to child mht nodes
-#define CHILD_MHT_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 1 / 4)
-static_assert(CHILD_MHT_NODES_COUNT == 32, "CHILD_MHT_NODES_COUNT");
 
 typedef struct _mht_node {
     gcm_crypto_data_t data_nodes_crypto[ATTACHED_DATA_NODES_COUNT];
     gcm_crypto_data_t mht_nodes_crypto[CHILD_MHT_NODES_COUNT];
 } mht_node_t;
-
 static_assert(sizeof(mht_node_t) == PF_NODE_SIZE, "sizeof(mht_node_t)");
 
 typedef struct _data_node {
     uint8_t data[PF_NODE_SIZE];
 } data_node_t;
-
 static_assert(sizeof(data_node_t) == PF_NODE_SIZE, "sizeof(data_node_t)");
 
 typedef struct _encrypted_node {
     uint8_t cipher[PF_NODE_SIZE];
 } encrypted_node_t;
-
 static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");
 
-#define MAX_PAGES_IN_CACHE 48
+static_assert(sizeof(mht_node_t) == sizeof(data_node_t), "sizes of MHT and data nodes differ");
 
-enum {
-    FILE_MHT_NODE_TYPE  = 1,
-    FILE_DATA_NODE_TYPE = 2,
-};
-
-// make sure these are the same size
-static_assert(sizeof(mht_node_t) == sizeof(data_node_t),
-              "sizeof(mht_node_t) == sizeof(data_node_t)");
-
+// Data struct that wraps the 4KB encrypted-node buffer (bounce buffer) and the corresponding 4KB
+// decrypted-data buffer (plain buffer), plus additional fields. This data struct is used for both
+// Data and MHT nodes (but not for Metadata node).
 typedef struct _file_node {
     uint8_t type;
-    uint64_t node_number;
-    struct _file_node* parent;
     bool need_writing;
-    struct {
-        uint64_t physical_node_number;
-        encrypted_node_t encrypted; // the actual data from the disk
-    };
-    union { // decrypted data
+    struct _file_node* parent;
+
+    uint64_t node_number;
+    uint64_t physical_node_number;
+
+    encrypted_node_t encrypted; // encrypted data from storage (bounce buffer)
+    union {                     // decrypted data in private memory (plain buffer)
         mht_node_t mht;
         data_node_t data;
     } decrypted;
 } file_node_t;
 
+// input materials for the KDF construction of NIST-SP800-108
 typedef struct {
-    uint32_t index;
+    uint32_t index;             // always "1"
     char label[MAX_LABEL_SIZE]; // must be NULL terminated
-    pf_keyid_t nonce;
-    uint32_t output_len; // in bits
+    pf_keyid_t nonce;           // salt for key derivation from KDK, stored in metadata node
+    uint32_t output_len;        // in bits; always 128
 } kdf_input_t;
 
 #pragma pack(pop)
