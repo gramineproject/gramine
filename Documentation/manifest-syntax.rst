@@ -70,7 +70,7 @@ Loader entrypoint
 ::
 
    loader.entrypoint = "[URI]"
-    (Default: "<path to libsysdb.so>")
+   (Default: "<path to libsysdb.so>")
 
 This specifies the LibOS component that Gramine will load and run before loading
 the first executable of the user application. **Note**: currently, there is only
