@@ -582,6 +582,8 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
     /* output generated pipe handle, URI, and name */
     *hdl = pipe;
     len = snprintf(uri, size, URI_PREFIX_PIPE "%lu/%s", g_pal_public_state->instance_id, pipename);
+    static_assert(static_strlen(URI_PREFIX_PIPE) < static_strlen(URI_PREFIX_PIPE_SRV),
+                  "pipe prefixes are wrong");
     assert(len < size); /* must hold because above we did the same but with longer prefix */
     if (name)
         memcpy(name, pipename, sizeof(pipename));
