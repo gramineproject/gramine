@@ -62,7 +62,7 @@ static void derive_main_key(const pf_key_t* kdk, const pf_keyid_t* key_id, pf_ke
     kdf_input_t buf = {0};
     pf_status_t status;
 
-    buf.index = 1;
+    buf.counter = 1;
     strncpy(buf.label, METADATA_KEY_NAME, MAX_LABEL_SIZE);
     COPY_ARRAY(buf.nonce, *key_id);
     buf.output_len = 0x80;
