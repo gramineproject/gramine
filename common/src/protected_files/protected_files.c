@@ -204,56 +204,49 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     bool ret = false;
     file_node_t** mht_array = NULL;
     pf_status_t status;
-    void* data = lruc_get_first(pf->cache);
 
-    // 1. encrypt the changed data
-    // 2. set the IV+GMAC in the parent MHT
-    // [3. set the need_writing flag for all the parents]
-    while (data != NULL) {
-        if (((file_node_t*)data)->type == FILE_DATA_NODE_TYPE) {
-            file_node_t* data_node = (file_node_t*)data;
+    // 1. encrypt the changed data nodes
+    // 2. set the key + GMAC in the parent MHT nodes
+    // 3. set the need_writing flag for all the parent MHT nodes
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
+        if (((file_node_t*)data)->type != FILE_DATA_NODE_TYPE)
+            continue;
 
-            if (data_node->need_writing) {
-                gcm_crypto_data_t* gcm_crypto_data =
-                    &data_node->parent->decrypted.mht
-                         .data_nodes_crypto[data_node->node_number % ATTACHED_DATA_NODES_COUNT];
+        file_node_t* data_node = (file_node_t*)data;
+        if (!data_node->need_writing)
+            continue;
 
-                if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
-                    goto out;
+        gcm_crypto_data_t* gcm_crypto_data = &data_node->parent->decrypted.mht
+            .data_nodes_crypto[data_node->node_number % ATTACHED_DATA_NODES_COUNT];
 
-                // encrypt the data, this also saves the gmac of the operation in the mht crypto
-                // node
-                status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
-                                              data_node->decrypted.data.data, PF_NODE_SIZE,
-                                              data_node->encrypted.cipher, &gcm_crypto_data->gmac);
-                if (PF_FAILURE(status)) {
-                    pf->last_error = status;
-                    goto out;
-                }
+        if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
+            goto out;
+
+        // encrypt data node, this also saves the gmac of the operation in the MHT node
+        status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
+                                      data_node->decrypted.data.data, PF_NODE_SIZE,
+                                      data_node->encrypted.cipher, &gcm_crypto_data->gmac);
+        if (PF_FAILURE(status)) {
+            pf->last_error = status;
+            goto out;
+        }
 
 #ifdef DEBUG
-                file_node_t* file_mht_node = data_node->parent;
-                // this loop should do nothing, add it here just to be safe
-                while (file_mht_node->node_number != 0) {
-                    assert(file_mht_node->need_writing == true);
-                    file_mht_node = file_mht_node->parent;
-                }
-#endif
-            }
+        file_node_t* file_mht_node = data_node->parent;
+        while (file_mht_node->node_number != 0) {
+            assert(file_mht_node->need_writing == true);
+            file_mht_node = file_mht_node->parent;
         }
-        data = lruc_get_next(pf->cache);
+#endif
     }
 
-    size_t dirty_count = 0;
-
     // count dirty mht nodes
-    data = lruc_get_first(pf->cache);
-    while (data != NULL) {
+    size_t dirty_count = 0;
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
             if (((file_node_t*)data)->need_writing)
                 dirty_count++;
         }
-        data = lruc_get_next(pf->cache);
     }
 
     // add all the mht nodes that needs writing to a list
@@ -263,17 +256,14 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
         goto out;
     }
 
-    data = lruc_get_first(pf->cache);
     uint64_t dirty_idx = 0;
-    while (data != NULL) {
+    for (void* data = lruc_get_first(pf->cache); data != NULL; data = lruc_get_next(pf->cache)) {
         if (((file_node_t*)data)->type == FILE_MHT_NODE_TYPE) {
             file_node_t* file_mht_node = (file_node_t*)data;
 
             if (file_mht_node->need_writing)
                 mht_array[dirty_idx++] = file_mht_node;
         }
-
-        data = lruc_get_next(pf->cache);
     }
 
     if (dirty_count > 0)
@@ -287,9 +277,8 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
             &file_mht_node->parent->decrypted.mht
                  .mht_nodes_crypto[(file_mht_node->node_number - 1) % CHILD_MHT_NODES_COUNT];
 
-        if (!ipf_generate_random_key(pf, &gcm_crypto_data->key)) {
+        if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
             goto out;
-        }
 
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                       &file_mht_node->decrypted.mht, PF_NODE_SIZE,
