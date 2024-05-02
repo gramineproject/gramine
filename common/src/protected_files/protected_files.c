@@ -321,11 +321,10 @@ out:
     return ret;
 }
 
-static bool ipf_read_node(pf_context_t* pf, pf_handle_t handle, uint64_t node_number, void* buffer,
-                          uint32_t node_size) {
-    uint64_t offset = node_number * node_size;
+static bool ipf_read_node(pf_context_t* pf, uint64_t node_number, void* buffer) {
+    uint64_t offset = node_number * PF_NODE_SIZE;
 
-    pf_status_t status = g_cb_read(handle, buffer, offset, node_size);
+    pf_status_t status = g_cb_read(pf->file, buffer, offset, PF_NODE_SIZE);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         return false;
@@ -334,20 +333,16 @@ static bool ipf_read_node(pf_context_t* pf, pf_handle_t handle, uint64_t node_nu
     return true;
 }
 
-static bool ipf_write_file(pf_context_t* pf, pf_handle_t handle, uint64_t offset, void* buffer,
-                           uint32_t size) {
-    pf_status_t status = g_cb_write(handle, buffer, offset, size);
+static bool ipf_write_node(pf_context_t* pf, uint64_t node_number, void* buffer) {
+    uint64_t offset = node_number * PF_NODE_SIZE;
+
+    pf_status_t status = g_cb_write(pf->file, buffer, offset, PF_NODE_SIZE);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         return false;
     }
 
     return true;
-}
-
-static bool ipf_write_node(pf_context_t* pf, pf_handle_t handle, uint64_t node_number, void* buffer,
-                           uint32_t node_size) {
-    return ipf_write_file(pf, handle, node_number * node_size, buffer, node_size);
 }
 
 // this is a very 'specific' function, tied to the architecture of the file layout,
@@ -408,22 +403,21 @@ static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
             data_to_write = (uint8_t*)&file_node->encrypted;
             node_number = file_node->physical_node_number;
 
-            if (!ipf_write_node(pf, pf->file, node_number, data_to_write, PF_NODE_SIZE)) {
+            if (!ipf_write_node(pf, node_number, data_to_write)) {
                 return false;
             }
 
             file_node->need_writing = false;
         }
 
-        if (!ipf_write_node(pf, pf->file, /*node_number=*/1, &pf->root_mht.encrypted,
-                            PF_NODE_SIZE)) {
+        if (!ipf_write_node(pf, /*node_number=*/1, &pf->root_mht.encrypted)) {
             return false;
         }
 
         pf->root_mht.need_writing = false;
     }
 
-    if (!ipf_write_node(pf, pf->file, /*node_number=*/0, &pf->file_metadata, PF_NODE_SIZE)) {
+    if (!ipf_write_node(pf, /*node_number=*/0, &pf->file_metadata)) {
         return false;
     }
 
@@ -666,8 +660,8 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     file_data_node->physical_node_number = physical_node_number;
     file_data_node->parent = file_mht_node;
 
-    if (!ipf_read_node(pf, pf->file, file_data_node->physical_node_number,
-                       file_data_node->encrypted.cipher, PF_NODE_SIZE)) {
+    if (!ipf_read_node(pf, file_data_node->physical_node_number,
+                       file_data_node->encrypted.cipher)) {
         free(file_data_node);
         return NULL;
     }
@@ -731,8 +725,8 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
     file_mht_node->physical_node_number = physical_node_number;
     file_mht_node->parent               = parent_file_mht_node;
 
-    if (!ipf_read_node(pf, pf->file, file_mht_node->physical_node_number,
-                       file_mht_node->encrypted.cipher, PF_NODE_SIZE)) {
+    if (!ipf_read_node(pf, file_mht_node->physical_node_number,
+                       file_mht_node->encrypted.cipher)) {
         free(file_mht_node);
         return NULL;
     }
@@ -805,8 +799,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     pf_status_t status;
 
     // read meta-data node
-    if (!ipf_read_node(pf, pf->file, /*node_number=*/0, (uint8_t*)&pf->file_metadata,
-                       PF_NODE_SIZE)) {
+    if (!ipf_read_node(pf, /*node_number=*/0, (uint8_t*)&pf->file_metadata)) {
         return false;
     }
 
@@ -850,8 +843,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
 
     if (pf->encrypted_part_plain.size > MD_USER_DATA_SIZE) {
         // read the root node of the mht
-        if (!ipf_read_node(pf, pf->file, /*node_number=*/1, &pf->root_mht.encrypted.cipher,
-                           PF_NODE_SIZE))
+        if (!ipf_read_node(pf, /*node_number=*/1, &pf->root_mht.encrypted.cipher))
             return false;
 
         // this also verifies the root mht gmac against the gmac in the meta-data encrypted part
