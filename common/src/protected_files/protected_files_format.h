@@ -14,7 +14,6 @@
 
 #include <limits.h>
 
-#include "list.h"
 #include "protected_files.h"
 
 #define PF_FILE_ID       0x46505f5346415247 /* GRAFS_PF */
@@ -53,9 +52,7 @@ typedef struct _metadata_encrypted {
 
 typedef uint8_t metadata_encrypted_blob_t[sizeof(metadata_encrypted_t)];
 
-#define METADATA_NODE_SIZE PF_NODE_SIZE
-
-typedef uint8_t metadata_padding_t[METADATA_NODE_SIZE -
+typedef uint8_t metadata_padding_t[PF_NODE_SIZE -
                                    (sizeof(metadata_plain_t) + sizeof(metadata_encrypted_blob_t))];
 
 typedef struct _metadata_node {
@@ -102,18 +99,16 @@ static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t
 
 #define MAX_PAGES_IN_CACHE 48
 
-typedef enum {
+enum {
     FILE_MHT_NODE_TYPE  = 1,
     FILE_DATA_NODE_TYPE = 2,
-} mht_node_type_e;
+};
 
 // make sure these are the same size
 static_assert(sizeof(mht_node_t) == sizeof(data_node_t),
               "sizeof(mht_node_t) == sizeof(data_node_t)");
 
-DEFINE_LIST(_file_node);
 typedef struct _file_node {
-    LIST_TYPE(_file_node) list;
     uint8_t type;
     uint64_t node_number;
     struct _file_node* parent;
@@ -127,7 +122,6 @@ typedef struct _file_node {
         data_node_t data;
     } decrypted;
 } file_node_t;
-DEFINE_LISTP(_file_node);
 
 typedef struct {
     uint32_t index;
