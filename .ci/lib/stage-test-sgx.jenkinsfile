@@ -119,6 +119,10 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/ra-tls-mbedtls
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
             if [ "${RA_TYPE}" = "epid" ]; then \
                 if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
                 then \
@@ -142,6 +146,10 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/ra-tls-secret-prov
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
             if [ "${RA_TYPE}" = "epid" ]; then \
                 if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
                 then \
@@ -162,6 +170,10 @@ stage('test-sgx') {
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/ra-tls-nginx
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
             if [ "${RA_TYPE}" = "epid" ]; then \
                 if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
                 then \

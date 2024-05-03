@@ -314,10 +314,8 @@ SGX measurements:
 - ``RA_TLS_ISV_SVN`` -- verify that the attesting enclave has this or higher
   ``ISV_SVN``. This is a decimal string.
 
-For each of these settings, you may specify the special value ``any`` to skip
-verifying a particular measurement. This used to be the default, which would
-be used if a particular environment variable wasn't present. This behavior
-has been deprecated and will become a hard error in the future.
+Each of these variables has to be explicitly set, but you may specify the
+special value ``any`` to skip verifying a particular measurement.
 
 The four SGX measurements above may be also verified via a user-specified
 callback with the signature ``int (*callback)(char* mrenclave, char* mrsigner,
