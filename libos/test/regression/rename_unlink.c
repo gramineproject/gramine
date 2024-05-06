@@ -156,6 +156,7 @@ static void test_rename_replace(const char* path1, const char* path2) {
         err(1, "rename");
 
     should_not_exist(path1);
+
     should_exist(path2, message1_len);
 
     /* We expect `fd` to still point to old data, even though we replaced the file under its path */
@@ -169,6 +170,94 @@ static void test_rename_replace(const char* path1, const char* path2) {
         err(1, "open %s", path2);
 
     should_contain("file opened after it's replaced", fd, message1, message1_len);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path2);
+
+    if (unlink(path2) != 0)
+        err(1, "unlink %s", path2);
+}
+
+static void test_rename_follow(const char* path1, const char* path2) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path1, message1, message1_len);
+
+    if (fd < 0)
+        err(1, "open %s", path1);
+
+    if (rename(path1, path2) != 0)
+        err(1, "rename");
+
+    should_not_exist(path1);
+    should_exist(path2, message1_len);
+
+    if (lseek(fd, 0, SEEK_SET) != 0)
+        err(1, "lseek");
+
+    ssize_t n = posix_fd_write(fd, message2, message2_len);
+    if (n < 0)
+        errx(1, "posix_fd_write failed");
+    if ((size_t)n != message2_len)
+        errx(1, "wrote less bytes than expected");
+
+    should_contain("file opened before it's renamed", fd, message2, message2_len);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path2);
+
+    fd = open(path2, O_RDONLY, 0);
+    if (fd < 0)
+        err(1, "open %s", path2);
+
+    /* We expect `fd` to point to new data, even though we changed data via old fd after rename */
+    should_contain("file opened after it's renamed", fd, message2, message2_len);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path2);
+
+    if (unlink(path2) != 0)
+        err(1, "unlink %s", path2);
+}
+
+// NOTE: below will _not_ run correctly when directly executed unless you run as root.
+// But it should run properly in gramine when executed as normal user.
+static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path1, message1, message1_len);
+
+    if (fchown(fd, 1, 1))
+        err(1, "fchown before rename");
+    if (fchmod(fd, S_IRWXU | S_IRWXG) != 0)  // Note: no other!
+        err(1, "fchmod before rename");
+    struct stat st;
+    if (stat(path1, &st) != 0)
+        err(1, "Failed to stat file %s", path1);
+    if (st.st_uid != 1 || st.st_gid != 1)
+        err(1, "wrong ownership of file %s", path1);
+    if (st.st_mode & S_IRWXO)
+        err(1, "wrong permissions of file %s", path1);
+
+    if (fd < 0)
+        err(1, "open %s", path1);
+
+    if (rename(path1, path2) != 0)
+        err(1, "rename");
+
+    should_not_exist(path1);
+    should_exist(path2, message1_len);
+
+    if (fchown(fd, 2, 2))
+        err(1, "fchown after rename");
+    if (fchmod(fd, S_IRWXU | S_IRWXG | S_IRWXO) != 0)  // Note: with other now!
+        err(1, "fchmod after rename");
+    if (stat(path2, &st) != 0)
+        err(1, "Failed to stat (renamed) file %s", path2);
+    if (st.st_uid != 2 || st.st_gid != 2)
+        err(1, "wrong ownership of (renamed) file %s", path2);
+    if (!(st.st_mode & S_IRWXO))
+        err(1, "wrong permissions of (renamed) file %s", path2);
 
     if (close(fd) != 0)
         err(1, "close %s", path2);
@@ -271,6 +360,8 @@ int main(int argc, char* argv[]) {
     test_rename_same_file(path1);
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
+    test_rename_follow(path1, path2);
+    test_rename_fchown_fchmod(path1, path2);
     test_rename_open_file(path1, path2);
     test_unlink_and_recreate(path1);
     test_unlink_and_write(path1);

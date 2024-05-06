@@ -355,8 +355,27 @@ static int do_rename(struct libos_dentry* old_dent, struct libos_dentry* new_den
 
     if (new_dent->inode)
         put_inode(new_dent->inode);
+
     new_dent->inode = old_dent->inode;
     old_dent->inode = NULL;
+    // also update dentry of any potentially open fd pointing to old_dent
+    struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
+    rwlock_write_lock(&handle_map->lock);
+
+    for (uint32_t i = 0; handle_map->fd_top != FD_NULL && i <= handle_map->fd_top; i++) {
+        struct libos_fd_handle* fd_handle = handle_map->map[i];
+        if (!HANDLE_ALLOCATED(fd_handle))
+            continue;
+        struct libos_handle* handle = fd_handle->handle;
+        if ((handle->dentry != old_dent) || (handle->inode != new_dent->inode))
+            continue;
+        lock(&handle->lock);
+        handle->dentry = new_dent;
+        put_dentry(old_dent);
+        get_dentry(new_dent);
+        unlock(&handle->lock);
+    }
+    rwlock_write_unlock(&handle_map->lock);
     return 0;
 }
 
