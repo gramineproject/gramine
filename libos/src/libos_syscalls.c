@@ -111,14 +111,13 @@ int init_syscalls(void) {
         toml_raw_t toml_disallowed_syscall_raw = toml_raw_at(toml_disallowed_syscalls, i);
         if (!toml_disallowed_syscall_raw) {
             log_error("Invalid disallowed syscall in manifest at index %ld", i);
-            return -EINVAL;
+            ret = -EINVAL;
             goto out;
         }
 
         ret = toml_rtos(toml_disallowed_syscall_raw, &toml_disallowed_syscall_str);
         if (ret < 0) {
             log_error("Invalid disallowed syscall in manifest at index %ld (not a string)", i);
-            return -EINVAL;
             goto out;
         }
 
@@ -126,7 +125,7 @@ int init_syscalls(void) {
         if (sysno >= LIBOS_SYSCALL_BOUND) {
             log_error("Unrecognized disallowed syscall `%s` in manifest at index %ld",
                       toml_disallowed_syscall_str, i);
-            return -EINVAL;
+            ret = -EINVAL;
             goto out;
         }
 
