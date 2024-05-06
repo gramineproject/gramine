@@ -41,9 +41,11 @@ long libos_syscall_ioctl(unsigned int fd, unsigned int cmd, unsigned long arg) {
     if (!hdl)
         return -EBADF;
 
-    lock(&g_dcache_lock);
+    lock(&g_dcache_lock); /* for dentry->inode */
+    lock(&hdl->lock);     /* for hdl->dentry */
     bool is_host_dev = hdl->type == TYPE_CHROOT && hdl->dentry->inode &&
         hdl->dentry->inode->type == S_IFCHR;
+    unlock(&hdl->lock);
     unlock(&g_dcache_lock);
 
     if (is_host_dev) {
