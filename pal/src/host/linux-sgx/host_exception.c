@@ -14,8 +14,6 @@
                      * ../../../include/arch/x86_64/linux/ucontext.h:136:5: error: unknown type name ‘__sigset_t’
                      *      __sigset_t uc_sigmask;
                      */
-
-#include <dirent.h>
 #include <linux/signal.h>
 #include <stdbool.h>
 
@@ -190,39 +188,31 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     /* we need this handler to interrupt blocking syscalls in RPC threads */
 }
 
-static int send_sigusr1_signal_to_children(void) {
-    int signal_counter= 0;
+static size_t send_sigusr1_signal_to_children(pid_t main_tid) {
+    size_t no_of_signal_sent = 0;
 
-    for (size_t i = 1; i < MAX_DBG_THREADS; i++) {
+    for (size_t i = 0; i < MAX_DBG_THREADS; i++) {
         int child_tid = ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i];
-        if(child_tid > 0) {
+        if (child_tid == main_tid)
+            continue;
+
+        if (child_tid) {
             DO_SYSCALL(tkill, child_tid, SIGUSR1);
-            signal_counter++;
+            no_of_signal_sent++;
         }
     }
-
-    return signal_counter;
+    return no_of_signal_sent;
 }
 
-static void dump_and_reset_stats(void)
-{
-    static atomic_int no_of_children_visited = 0;
-    static const uint64_t LOOP_ATTEMPTS_MAX = 10000;   /* rather arbitrary */
+static void dump_and_reset_stats(void) {
+    static size_t no_of_children_visited = 0;
 
-    if(DO_SYSCALL(gettid) == g_host_pid) {
-        int no_of_children = send_sigusr1_signal_to_children();
-        uint64_t loop_attempts = 0;
+    if (DO_SYSCALL(gettid) == g_host_pid) {
+        size_t no_of_children = send_sigusr1_signal_to_children(g_host_pid);
 
-        /* Wait here until all the children are done processing the signal. */
-        while((no_of_children) > (__atomic_load_n(&no_of_children_visited, __ATOMIC_ACQUIRE))) {
-            if (loop_attempts == LOOP_ATTEMPTS_MAX) {
-                DO_SYSCALL(sched_yield);
-            } else {
-                loop_attempts++;
-                CPU_RELAX();
-            }
+        while ((__atomic_load_n(&no_of_children_visited, __ATOMIC_ACQUIRE)) < (no_of_children)) {
+            DO_SYSCALL(sched_yield);
         }
-
         update_and_print_stats(/*process_wide=*/true);
         __atomic_store_n(&no_of_children_visited, 0, __ATOMIC_RELEASE);
     } else {
@@ -231,10 +221,7 @@ static void dump_and_reset_stats(void)
         __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
     }
 
-    PAL_HOST_TCB* tcb = pal_get_host_tcb();
-    int ret = pal_host_tcb_reset_stats(tcb);
-    if(ret < 0)
-        return;
+    pal_host_tcb_reset_stats();
 }
 
 static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
@@ -242,7 +229,7 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(info);
     __UNUSED(uc);
 
-    if(g_sgx_enable_stats)
+    if (g_sgx_enable_stats)
         dump_and_reset_stats();
 
     return;
