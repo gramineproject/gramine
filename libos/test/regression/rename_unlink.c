@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2024 Intel Corporation
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Michael Steiner <michael.steiner@intel.com>
  */
 
 /*
@@ -156,7 +157,6 @@ static void test_rename_replace(const char* path1, const char* path2) {
         err(1, "rename");
 
     should_not_exist(path1);
-
     should_exist(path2, message1_len);
 
     /* We expect `fd` to still point to old data, even though we replaced the file under its path */
@@ -182,9 +182,8 @@ static void test_rename_follow(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
     int fd = create_file(path1, message1, message1_len);
-
     if (fd < 0)
-        err(1, "open %s", path1);
+        err(1, "create %s", path1);
 
     if (rename(path1, path2) != 0)
         err(1, "rename");
@@ -220,17 +219,20 @@ static void test_rename_follow(const char* path1, const char* path2) {
         err(1, "unlink %s", path2);
 }
 
-// NOTE: below will _not_ run correctly when directly executed unless you run as root.
-// But it should run properly in gramine when executed as normal user.
+/* NOTE: below will _not_ run correctly when directly executed unless you run as root.
+ * But it should run properly in Gramine when executed as normal user. */
 static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
     int fd = create_file(path1, message1, message1_len);
+    if (fd < 0)
+        err(1, "create %s", path1);
 
-    if (fchown(fd, 1, 1))
+    if (fchown(fd, /*owner=*/1, /*group=*/1) != 0) /* dummy owner/group just for testing */
         err(1, "fchown before rename");
-    if (fchmod(fd, S_IRWXU | S_IRWXG) != 0)  // Note: no other!
+    if (fchmod(fd, S_IRWXU | S_IRWXG) != 0) /* note: no "other users" mode bits */
         err(1, "fchmod before rename");
+
     struct stat st;
     if (stat(path1, &st) != 0)
         err(1, "Failed to stat file %s", path1);
@@ -239,19 +241,17 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
     if (st.st_mode & S_IRWXO)
         err(1, "wrong permissions of file %s", path1);
 
-    if (fd < 0)
-        err(1, "open %s", path1);
-
     if (rename(path1, path2) != 0)
         err(1, "rename");
 
     should_not_exist(path1);
     should_exist(path2, message1_len);
 
-    if (fchown(fd, 2, 2))
+    if (fchown(fd, /*owner=*/2, /*group=*/2) != 0) /* different dummy owner/group */
         err(1, "fchown after rename");
-    if (fchmod(fd, S_IRWXU | S_IRWXG | S_IRWXO) != 0)  // Note: with other now!
+    if (fchmod(fd, S_IRWXU | S_IRWXG | S_IRWXO) != 0) /* note: now with "other users" mode bits */
         err(1, "fchmod after rename");
+
     if (stat(path2, &st) != 0)
         err(1, "Failed to stat (renamed) file %s", path2);
     if (st.st_uid != 2 || st.st_gid != 2)
