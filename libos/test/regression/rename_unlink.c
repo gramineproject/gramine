@@ -258,6 +258,24 @@ static void test_unlink_fchmod(const char* path) {
         err(1, "close unlinked %s", path);
 }
 
+/* below will _not_ run correctly when directly executed since we use dummy owner and group */
+static void test_unlink_fchown(const char* path) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path, /*message=*/NULL, /*len=*/0);
+
+    if (unlink(path) != 0)
+        err(1, "unlink");
+
+    should_not_exist(path);
+
+    if (fchown(fd, /*owner=*/123, /*group=*/123) != 0)
+        err(1, "fchown");
+
+    if (close(fd) != 0)
+        err(1, "close unlinked %s", path);
+}
+
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
@@ -275,6 +293,7 @@ int main(int argc, char* argv[]) {
     test_unlink_and_recreate(path1);
     test_unlink_and_write(path1);
     test_unlink_fchmod(path1);
+    test_unlink_fchown(path1);
     printf("TEST OK\n");
     return 0;
 }
