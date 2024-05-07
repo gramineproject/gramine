@@ -162,6 +162,9 @@ int init_devfs(void) {
     tty->dev.dev_ops.flush = &dev_tty_flush;
     tty->dev.dev_ops.poll = &dev_tty_poll;
 
+    struct pseudo_node* fd_link = pseudo_add_link(root, "fd", NULL);
+    fd_link->link.target = "/proc/self/fd";
+
     struct pseudo_node* stdin = pseudo_add_link(root, "stdin", NULL);
     stdin->link.target = "/proc/self/fd/0";
     struct pseudo_node* stdout = pseudo_add_link(root, "stdout", NULL);
