@@ -7,7 +7,7 @@ distributions (e.g. Debian, Ubuntu LTS, AlmaLinux and other CentOS replacements,
 
 Currently officially supported distributions:
 
-- Ubuntu (22.04 LTS, 20.04 LTS, 18.04 LTS);
+- Ubuntu (24.04 LTS, 22.04 LTS, 20.04 LTS);
 - RHEL-8-like distributions (like AlmaLinux 8, Rocky Linux 8, ...);
 - experimentally, RHEL-9-like distros (packages are not fully validated).
 
