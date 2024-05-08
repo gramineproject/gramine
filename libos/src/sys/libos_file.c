@@ -353,7 +353,7 @@ static int do_rename(struct libos_dentry* old_dent, struct libos_dentry* new_den
 
     /* also update dentry of any potentially open fd pointing to old_dent */
     struct libos_handle_map* handle_map = get_thread_handle_map(NULL);
-    assert(handle_libos_call != NULL);
+    assert(handle_map != NULL);
     rwlock_read_lock(&handle_map->lock);
 
     for (uint32_t i = 0; handle_map->fd_top != FD_NULL && i <= handle_map->fd_top; i++) {
