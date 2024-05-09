@@ -741,8 +741,10 @@ int get_dirfd_dentry(int dirfd, struct libos_dentry** dir) {
         return -ENOTDIR;
     }
 
+    lock(&hdl->lock); /* while hdl->is_dir is immutable, hdl->dentry can change due to rename */
     get_dentry(hdl->dentry);
     *dir = hdl->dentry;
+    unlock(&hdl->lock);
     put_handle(hdl);
     return 0;
 }
