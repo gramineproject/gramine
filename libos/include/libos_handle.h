@@ -165,6 +165,9 @@ struct libos_handle {
     refcount_t ref_count;
 
     struct libos_fs* fs;
+    /* dentry can change due to rename, so to secure read-access, aquire g_dcache_lock and/or
+     * handle->lock; to protect updates (unless during creation and deletion where unique use is
+     * guaranteed), acquire first g_dcache_lock and then handle-Lock */
     struct libos_dentry* dentry;
 
     /*

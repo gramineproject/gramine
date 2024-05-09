@@ -312,7 +312,9 @@ static int clear_posix_locks(struct libos_handle* handle) {
             .end = FS_LOCK_EOF,
             .pid = g_process.pid,
         };
+        lock(&handle->lock);
         int ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
+        unlock(&handle->lock);
         if (ret < 0) {
             log_warning("error releasing locks: %s", unix_strerror(ret));
             return ret;
@@ -477,13 +479,17 @@ int set_new_fd_handle_above_fd(uint32_t fd, struct libos_handle* hdl, int fd_fla
 }
 
 static inline __attribute__((unused)) const char* __handle_name(struct libos_handle* hdl) {
+    /* This function seems unused, so probably could be dropped? */
+    const char* ret = "(unknown)";
+    lock(&hdl->lock);
     if (hdl->uri)
-        return hdl->uri;
+        ret = hdl->uri;
     if (hdl->dentry && hdl->dentry->name[0] != '\0')
-        return hdl->dentry->name;
+        ret = hdl->dentry->name;
     if (hdl->fs)
-        return hdl->fs->name;
-    return "(unknown)";
+        ret = hdl->fs->name;
+    unlock(&hdl->lock);
+    return ret;
 }
 
 void get_handle(struct libos_handle* hdl) {
@@ -499,6 +505,8 @@ static void destroy_handle(struct libos_handle* hdl) {
 
 static int clear_flock_locks(struct libos_handle* hdl) {
     /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
+    int ret = 0;
+    lock(&hdl->lock);
     if (hdl && hdl->dentry && hdl->created_by_process) {
         assert(hdl->ref_count == 0);
         struct libos_file_lock file_lock = {
@@ -509,10 +517,10 @@ static int clear_flock_locks(struct libos_handle* hdl) {
         int ret = file_lock_set(hdl->dentry, &file_lock, /*block=*/false);
         if (ret < 0) {
             log_warning("error releasing locks: %s", unix_strerror(ret));
-            return ret;
         }
     }
-    return 0;
+    unlock(&hdl->lock);
+    return ret;
 }
 
 void put_handle(struct libos_handle* hdl) {
