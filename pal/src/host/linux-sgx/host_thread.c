@@ -65,8 +65,10 @@ void update_and_print_stats(bool process_wide) {
                    "  # of AEXs:           %lu\n"
                    "  # of sync signals:   %lu\n"
                    "  # of async signals:  %lu",
-                   pid, __atomic_load_n(&g_eenter_cnt, __ATOMIC_ACQUIRE), __atomic_load_n(&g_eexit_cnt, __ATOMIC_ACQUIRE),
-                   __atomic_load_n(&g_aex_cnt, __ATOMIC_ACQUIRE), __atomic_load_n(&g_sync_signal_cnt, __ATOMIC_ACQUIRE),
+                   pid, __atomic_load_n(&g_eenter_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_eexit_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_aex_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_sync_signal_cnt, __ATOMIC_ACQUIRE),
                    __atomic_load_n(&g_async_signal_cnt, __ATOMIC_ACQUIRE));
 
         __atomic_store_n(&g_eenter_cnt, 0, __ATOMIC_RELEASE);

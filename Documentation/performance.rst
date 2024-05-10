@@ -103,6 +103,15 @@ How to read this output:
    counters should be compared against "golden runs" to deduce any interesting
    trends.
 
+It is also possible to reset the performance statistics interactively, using
+``SIGUSR1`` signal. This helps to collect performance statistics only for a
+particular period e.g., skipping the Gramine startup and application
+initialization time and concentrating only on the actual application processing.
+Send ``SIGUSR1`` using command ``kill -SIGUSR1 <gramine-pid>``  (note the
+minus sign before <gramine-pid>). Sending multiple ``SIGUSR1`` will result
+in a sequential dump and reset of the statistics, each dump and reset of
+statistics will be done after the previous ``SIGUSR1``.
+
 Effects of system calls / ocalls
 --------------------------------
 
