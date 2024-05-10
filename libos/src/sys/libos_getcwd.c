@@ -82,7 +82,9 @@ long libos_syscall_fchdir(int fd) {
     if (!hdl)
         return -EBADF;
 
+    lock(&hdl->lock);
     struct libos_dentry* dent = hdl->dentry;
+    unlock(&hdl->lock);
 
     if (!dent) {
         log_debug("FD=%d has no path in the filesystem", fd);

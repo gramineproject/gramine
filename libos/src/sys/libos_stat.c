@@ -44,8 +44,10 @@ static int do_hstat(struct libos_handle* hdl, struct stat* stat) {
         return ret;
 
     /* Update `st_ino` from dentry */
+    lock(&hdl->lock);
     if (hdl->dentry)
         stat->st_ino = dentry_ino(hdl->dentry);
+    unlock(&hdl->lock);
 
     return 0;
 }
@@ -210,7 +212,9 @@ long libos_syscall_fstatfs(int fd, struct statfs* buf) {
     if (!hdl)
         return -EBADF;
 
+    lock(&hdl->lock);
     struct libos_mount* mount = hdl->dentry ? hdl->dentry->mount : NULL;
+    unlock(&hdl->lock);
     put_handle(hdl);
     return __do_statfs(mount, buf);
 }
