@@ -2107,7 +2107,8 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
 }
 
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
+                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len,
+                    sgx_target_info_t* qe_targetinfo, bool* qe_targetinfo_set) {
     int retval;
     struct ocall_get_quote* ocall_quote_args;
     char* buf = NULL;
@@ -2127,6 +2128,10 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
         COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->is_epid, false);
         memset(&ocall_quote_args->spid, 0, sizeof(ocall_quote_args->spid)); /* for sanity */
     }
+
+    /* for sanity */
+    COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->qe_targetinfo_set, false);
+    memset(&ocall_quote_args->qe_targetinfo, 0, sizeof(ocall_quote_args->qe_targetinfo));
 
     memcpy(&ocall_quote_args->report, report, sizeof(*report));
     memcpy(&ocall_quote_args->nonce, nonce, sizeof(*nonce));
@@ -2177,6 +2182,12 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
 
             *quote     = buf;
             *quote_len = len;
+
+            *qe_targetinfo_set = false;
+            if (quote_copied.qe_targetinfo_set) {
+                *qe_targetinfo_set = true;
+                memcpy(qe_targetinfo, &quote_copied.qe_targetinfo, sizeof(*qe_targetinfo));
+            }
         }
     }
 

@@ -715,8 +715,10 @@ static long sgx_ocall_ioctl(void* args) {
 }
 
 static long sgx_ocall_get_quote(void* args) {
-    int ret;
     struct ocall_get_quote* ocall_quote_args = args;
+
+    int ret;
+    ocall_quote_args->qe_targetinfo_set = false;
 
     int retries = 0;
     while (retries < 5) {
@@ -731,13 +733,16 @@ static long sgx_ocall_get_quote(void* args) {
          * In DCAP attestation, retrieving the SGX quote may return error
          * AESM_ATT_KEY_NOT_INITIALIZED (42), which means that the attestation key is not available
          * and AESM service must re-generate the key. When Gramine sees such error, it must perform
-         * a dummy INIT_QUOTE_REQUEST and then re-try retrieving the SGX quote.
+         * a new INIT_QUOTE_REQUEST and then re-try retrieving the SGX quote. Note that after
+         * INIT_QUOTE_REQUEST, the targetinfo of Quoting Enclave (QE) may change and must be updated
+         * inside the SGX enclave (in `g_pal_linuxsgx_state.qe_targetinfo`).
          */
-        sgx_target_info_t dummy_qe_targetinfo = {0};
-        ret = init_quoting_enclave_targetinfo(ocall_quote_args->is_epid, &dummy_qe_targetinfo);
+        ret = init_quoting_enclave_targetinfo(ocall_quote_args->is_epid,
+                                              &ocall_quote_args->qe_targetinfo);
         if (ret < 0)
             return ret;
 
+        ocall_quote_args->qe_targetinfo_set = true;
         retries++;
     };
 

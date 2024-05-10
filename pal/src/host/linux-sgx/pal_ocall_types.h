@@ -343,6 +343,8 @@ struct ocall_get_quote {
     sgx_quote_nonce_t nonce;
     char*             quote;
     size_t            quote_len;
+    sgx_target_info_t qe_targetinfo;
+    bool              qe_targetinfo_set;
 };
 
 struct ocall_edmm_restrict_pages_perm {

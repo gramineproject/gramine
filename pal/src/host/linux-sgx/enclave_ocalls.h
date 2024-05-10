@@ -112,14 +112,18 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
 /*!
  * \brief Execute untrusted code in PAL to obtain a quote from the Quoting Enclave.
  *
- * \param      spid       Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
- * \param      linkable   Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
- * \param      report     Enclave report to be sent to the Quoting Enclave.
- * \param      nonce      16B nonce to be included in the quote for freshness; ignored if
- *                        DCAP/ECDSA is used.
- * \param[out] quote      Quote returned by the Quoting Enclave (allocated via malloc() in this
- *                        function; the caller gets the ownership of the quote).
- * \param[out] quote_len  Length of the quote returned by the Quoting Enclave.
+ * \param      spid               Software provider ID (SPID); if NULL then DCAP is used.
+ * \param      linkable           Quote type (linkable vs unlinkable); ignored if DCAP is used.
+ * \param      report             Enclave report to be sent to the Quoting Enclave.
+ * \param      nonce              16B nonce to be included in the quote for freshness; ignored if
+ *                                DCAP is used.
+ * \param[out] quote              Quote returned by the Quoting Enclave (allocated via mmap() in
+ *                                this function; the caller gets the ownership of the quote).
+ * \param[out] quote_len          Length of the quote returned by the Quoting Enclave.
+ * \param[out] qe_targetinfo      Retrieved Quoting Enclave's target info; buffer must be submitted
+ *                                by the caller.
+ * \param[out] qe_targetinfo_set  Whether Quoting Enclave's target info (above) was set; if true the
+ *                                caller must update the corresponding qe_targetinfo global var.
  *
  * \returns 0 on success, negative Linux error code otherwise.
  *
@@ -127,7 +131,8 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
  * returned quote corresponds to this enclave or whether its contents make sense).
  */
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
+                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len,
+                    sgx_target_info_t* qe_targetinfo, bool* qe_targetinfo_set);
 
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);

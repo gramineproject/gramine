@@ -4,6 +4,8 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 
+/* this function assumes proper synchronization by callers, such that
+ * g_pal_linuxsgx_state.qe_targetinfo is not racey */
 int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,
                   size_t* quote_len) {
@@ -18,10 +20,18 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
         return -PAL_ERROR_DENIED;
     }
 
-    ret = ocall_get_quote(spid, linkable, &report, nonce, quote, quote_len);
+    sgx_target_info_t qe_targetinfo;
+    bool qe_targetinfo_set = false;
+
+    ret = ocall_get_quote(spid, linkable, &report, nonce, quote, quote_len, &qe_targetinfo,
+                          &qe_targetinfo_set);
     if (ret < 0) {
         log_error("Failed to get quote");
         return unix_to_pal_error(ret);
     }
+
+    if (qe_targetinfo_set)
+        memcpy(&g_pal_linuxsgx_state.qe_targetinfo, &qe_targetinfo, sizeof(qe_targetinfo));
+
     return 0;
 }
