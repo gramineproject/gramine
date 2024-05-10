@@ -715,25 +715,32 @@ static long sgx_ocall_ioctl(void* args) {
 }
 
 static long sgx_ocall_get_quote(void* args) {
+    int ret;
     struct ocall_get_quote* ocall_quote_args = args;
 
-    int ret;
-    ret = retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
-                         ocall_quote_args->linkable, &ocall_quote_args->report,
-                         &ocall_quote_args->nonce, &ocall_quote_args->quote,
-                         &ocall_quote_args->quote_len);
-    if (ret == -EAGAIN) {
-        /* special case, perform init_quoting_enclave_targetinfo() and retry */
+    int retries = 0;
+    while (retries < 5) {
+        ret = retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
+                             ocall_quote_args->linkable, &ocall_quote_args->report,
+                             &ocall_quote_args->nonce, &ocall_quote_args->quote,
+                             &ocall_quote_args->quote_len);
+        if (ocall_quote_args->is_epid || ret != -EAGAIN)
+            break;
+
+        /*
+         * In DCAP attestation, retrieving the SGX quote may return error
+         * AESM_ATT_KEY_NOT_INITIALIZED (42), which means that the attestation key is not available
+         * and AESM service must re-generate the key. When Gramine sees such error, it must perform
+         * a dummy INIT_QUOTE_REQUEST and then re-try retrieving the SGX quote.
+         */
         sgx_target_info_t dummy_qe_targetinfo = {0};
         ret = init_quoting_enclave_targetinfo(ocall_quote_args->is_epid, &dummy_qe_targetinfo);
         if (ret < 0)
             return ret;
 
-        ret = retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
-                             ocall_quote_args->linkable, &ocall_quote_args->report,
-                             &ocall_quote_args->nonce, &ocall_quote_args->quote,
-                             &ocall_quote_args->quote_len);
-    }
+        retries++;
+    };
+
     return ret;
 }
 
