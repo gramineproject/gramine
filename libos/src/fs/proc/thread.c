@@ -29,7 +29,9 @@ int proc_thread_follow_link(struct libos_dentry* dent, char** out_target) {
         dent = g_process.cwd;
         get_dentry(dent);
     } else if (strcmp(name, "exe") == 0) {
+        lock(&g_process.exec->lock);
         dent = g_process.exec->dentry;
+        unlock(&g_process.exec->lock);
         if (dent)
             get_dentry(dent);
     }
@@ -91,11 +93,13 @@ int proc_thread_maps_load(struct libos_dentry* dent, char** out_data, size_t* ou
     retry_emit_vma:
         if (vma->file) {
             int dev_major = 0, dev_minor = 0;
+            lock(&vma->file->lock);
             unsigned long ino = vma->file->dentry ? dentry_ino(vma->file->dentry) : 0;
             char* path = NULL;
 
             if (vma->file->dentry)
                 dentry_abs_path(vma->file->dentry, &path, /*size=*/NULL);
+            unlock(&vma->file->lock);
 
             EMIT(ADDR_FMT(start), start);
             EMIT("-");
@@ -310,6 +314,7 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
     int ret;
     struct libos_handle* hdl = handle_map->map[fd]->handle;
 
+    lock(&hdl->lock);
     if (hdl->dentry) {
         ret = dentry_abs_path(hdl->dentry, out_target, /*size=*/NULL);
     } else {
@@ -318,6 +323,7 @@ int proc_thread_fd_follow_link(struct libos_dentry* dent, char** out_target) {
         *out_target = describe_handle(hdl);
         ret = *out_target ? 0 : -ENOMEM;
     }
+    unlock(&hdl->lock);
 
     rwlock_read_unlock(&handle_map->lock);
 
@@ -457,9 +463,11 @@ int proc_thread_stat_load(struct libos_dentry* dent, char** out_data, size_t* ou
 
     char comm[16] = {0};
     lock(&g_process.fs_lock);
+    lock(&g_process.exec->lock);
     size_t name_length = g_process.exec->dentry->name_len;
     memcpy(comm, g_process.exec->dentry->name,
            name_length > sizeof(comm) - 1 ? sizeof(comm) - 1 : name_length);
+    unlock(&g_process.exec->lock);
     unlock(&g_process.fs_lock);
     size_t virtual_mem_size = get_total_memory_usage();
 

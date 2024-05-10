@@ -199,7 +199,11 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
                 break;
             }
 
-            if (!hdl->dentry) {
+            lock(&hdl->lock);
+            struct libos_dentry* dent = hdl->dentry;
+            unlock(&hdl->lock);
+
+            if (!dent) {
                 /* TODO: Linux allows locks on pipes etc. Our locks work only for "normal" files
                  * that have a dentry. */
                 ret = -EINVAL;
@@ -221,7 +225,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             if (ret < 0)
                 break;
 
-            ret = file_lock_set(hdl->dentry, &file_lock, /*wait=*/cmd == F_SETLKW);
+            ret = file_lock_set(dent, &file_lock, /*wait=*/cmd == F_SETLKW);
             break;
         }
 
@@ -234,7 +238,11 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
                 break;
             }
 
-            if (!hdl->dentry) {
+            lock(&hdl->lock);
+            struct libos_dentry* dent = hdl->dentry;
+            unlock(&hdl->lock);
+
+            if (!dent) {
                 ret = -EINVAL;
                 break;
             }
@@ -250,7 +258,7 @@ long libos_syscall_fcntl(int fd, int cmd, unsigned long arg) {
             }
 
             struct libos_file_lock file_lock2;
-            ret = file_lock_get(hdl->dentry, &file_lock, &file_lock2);
+            ret = file_lock_get(dent, &file_lock, &file_lock2);
             if (ret < 0)
                 break;
 
@@ -342,7 +350,12 @@ long libos_syscall_flock(unsigned int fd, unsigned int cmd) {
         .type = lock_type,
         .handle_id = hdl->id,
     };
-    ret = file_lock_set(hdl->dentry, &file_lock, !(cmd & LOCK_NB));
+    
+    lock(&hdl->lock);
+    struct libos_dentry* dent = hdl->dentry;
+    unlock(&hdl->lock);
+
+    ret = file_lock_set(dent, &file_lock, !(cmd & LOCK_NB));
 out:
     put_handle(hdl);
     return ret;

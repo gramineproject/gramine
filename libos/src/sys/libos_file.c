@@ -361,8 +361,7 @@ static int do_rename(struct libos_dentry* old_dent, struct libos_dentry* new_den
         if (!HANDLE_ALLOCATED(fd_handle))
             continue;
         struct libos_handle* handle = fd_handle->handle;
-        /* TODO (MST): systematically go through all for other uses of handle->dentry as they also
-         * would require locking */
+        /* see comment in libos_handle.h on loocking strategy protecting handle->lock */
         assert(locked(&g_dcache_lock));
         lock(&handle->lock);
         if ((handle->dentry == old_dent) && (handle->inode == new_dent->inode)) {
