@@ -2187,6 +2187,45 @@ out:
     return retval;
 }
 
+int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo) {
+    int retval;
+    struct ocall_get_qe_targetinfo* ocall_qe_ti_args;
+
+    void* old_ustack = sgx_prepare_ustack();
+    ocall_qe_ti_args = sgx_alloc_on_ustack_aligned(sizeof(*ocall_qe_ti_args),
+                                                   alignof(*ocall_qe_ti_args));
+    if (!ocall_qe_ti_args) {
+        sgx_reset_ustack(old_ustack);
+        return -ENOMEM;
+    }
+
+    COPY_VALUE_TO_UNTRUSTED(&ocall_qe_ti_args->is_epid, is_epid);
+    memset(&ocall_qe_ti_args->qe_targetinfo, 0, sizeof(ocall_qe_ti_args->qe_targetinfo));
+
+    do {
+        retval = sgx_exitless_ocall(OCALL_GET_QE_TARGETINFO, ocall_qe_ti_args);
+    } while (retval == -EINTR);
+
+    if (retval < 0 && retval != -EACCES && retval != -EINVAL && retval != -ENOMEM &&
+            retval != -EPERM && retval != -EAGAIN && retval != -ECONNREFUSED) {
+        /* OCALL_GET_QE_TARGETINFO OCALL may return many error codes, but we sanitize all error
+         * codes except the above (most important ones) because PAL/LibOS logic doesn't care about
+         * specific errors */
+        retval = -EPERM;
+    }
+
+    if (!retval) {
+        if (!sgx_copy_to_enclave(qe_targetinfo, sizeof(*qe_targetinfo),
+                                 &ocall_qe_ti_args->qe_targetinfo,
+                                 sizeof(ocall_qe_ti_args->qe_targetinfo))) {
+            retval = -EPERM;
+        }
+    }
+
+    sgx_reset_ustack(old_ustack);
+    return retval;
+}
+
 int ocall_sched_setaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_len) {
     int retval = 0;
     struct ocall_sched_setaffinity* ocall_sched_args;

@@ -722,6 +722,12 @@ static long sgx_ocall_get_quote(void* args) {
                           &ocall_quote_args->quote_len);
 }
 
+static long sgx_ocall_get_qe_targetinfo(void* args) {
+    struct ocall_get_qe_targetinfo* ocall_qe_ti_args = args;
+    return init_quoting_enclave_targetinfo(ocall_qe_ti_args->is_epid,
+                                           &ocall_qe_ti_args->qe_targetinfo);
+}
+
 static long sgx_ocall_edmm_modify_pages_type(void* _args) {
     struct ocall_edmm_modify_pages_type* args = _args;
     return edmm_modify_pages_type(args->addr, args->count, args->type);
@@ -784,6 +790,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EVENTFD]                  = sgx_ocall_eventfd,
     [OCALL_IOCTL]                    = sgx_ocall_ioctl,
     [OCALL_GET_QUOTE]                = sgx_ocall_get_quote,
+    [OCALL_GET_QE_TARGETINFO]        = sgx_ocall_get_qe_targetinfo,
     [OCALL_EDMM_MODIFY_PAGES_TYPE]   = sgx_ocall_edmm_modify_pages_type,
     [OCALL_EDMM_REMOVE_PAGES]        = sgx_ocall_edmm_remove_pages,
     [OCALL_EDMM_RESTRICT_PAGES_PERM] = sgx_ocall_edmm_restrict_pages_perm,

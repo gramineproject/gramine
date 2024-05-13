@@ -17,6 +17,8 @@
 #define AESM_SOCKET_NAME_LEGACY "sgx_aesm_socket_base"
 #define AESM_SOCKET_NAME_NEW    "/var/run/aesmd/aesm.socket"
 
+#define AESM_ATT_KEY_NOT_INITIALIZED 42
+
 /* hard-coded production attestation key of Intel reference QE (the only supported one) */
 /* FIXME: should allow other attestation keys from non-Intel QEs */
 static const sgx_ql_att_key_id_t g_default_ecdsa_p256_att_key_id = {
@@ -254,6 +256,11 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
         }
 
         Response__GetQuoteExResponse* r = res->getquoteexres;
+        if (r->errorcode == AESM_ATT_KEY_NOT_INITIALIZED) {
+            /* special case, the caller must perform init_quoting_enclave_targetinfo() and retry */
+            ret = -EAGAIN;
+            goto out;
+        }
         if (r->errorcode != 0) {
             log_error("AESM service returned error %d", r->errorcode);
             goto out;
