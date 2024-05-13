@@ -115,7 +115,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
      * See also the comment in `fs.c:chroot_lookup` (but note that this case is simpler, because we
      * don't allow "dev:" mounts).
      */
-    int ret = chroot_dentry_uri(dent, S_IFREG, &uri);
+    int ret = dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         goto out;
 
@@ -221,7 +221,7 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
     __UNUSED(flags);
 
     char* uri;
-    int ret = chroot_dentry_uri(dent, S_IFREG, &uri);
+    int ret = dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         return ret;
 
@@ -266,7 +266,7 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
 
     char* uri = NULL;
 
-    int ret = chroot_dentry_uri(dent, S_IFDIR, &uri);
+    int ret = dentry_uri(dent, S_IFDIR, &uri);
     if (ret < 0)
         goto out;
 
@@ -299,7 +299,7 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
     assert(dent->inode);
 
     char* uri;
-    int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
+    int ret = dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
         return ret;
 
@@ -331,7 +331,7 @@ static int chroot_encrypted_rename(struct libos_dentry* old, struct libos_dentry
     int ret;
     char* new_uri = NULL;
 
-    ret = chroot_dentry_uri(new, old->inode->type, &new_uri);
+    ret = dentry_uri(new, old->inode->type, &new_uri);
     if (ret < 0)
         return ret;
 
@@ -364,7 +364,7 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
 
     char* uri = NULL;
 
-    int ret = chroot_dentry_uri(dent, dent->inode->type, &uri);
+    int ret = dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
         goto out;
 

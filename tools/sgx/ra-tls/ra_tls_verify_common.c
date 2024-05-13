@@ -26,20 +26,19 @@
 
 verify_measurements_cb_t g_verify_measurements_cb = NULL;
 
-static char* getenv_critical(const char* name) {
-    char* value = getenv(name);
+static bool getenv_critical(const char* name, const char** out_value) {
+    const char* value = getenv(name);
     if (!value) {
-        INFO("WARNING: The default enclave verification hook is being used, but %s is not set. "
-             "This is deprecated and will become an error in the future. "
-             "If you wish to accept any value, please specify %s=any explicitly.\n",
-             name, name);
+        ERROR("ERROR: A required environment variable %s is not set.\n", name);
+        return false;
     }
 
-    if (value && strcmp(value, "any") == 0) {
+    if (strcmp(value, "any") == 0) {
         value = NULL;
     }
 
-    return value;
+    *out_value = value;
+    return true;
 }
 
 static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* validate_mrsigner,
@@ -57,21 +56,24 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
     const char* isv_svn_dec;
 
     /* any of the below variables may be NULL (and then not used in validation) */
-    mrsigner_hex = getenv_critical(RA_TLS_MRSIGNER);
+    if (!getenv_critical(RA_TLS_MRSIGNER, &mrsigner_hex))
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     if (mrsigner_hex) {
         if (parse_hex(mrsigner_hex, mrsigner, sizeof(*mrsigner), NULL) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrsigner = true;
     }
 
-    mrenclave_hex = getenv_critical(RA_TLS_MRENCLAVE);
+    if (!getenv_critical(RA_TLS_MRENCLAVE, &mrenclave_hex))
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     if (mrenclave_hex) {
         if (parse_hex(mrenclave_hex, mrenclave, sizeof(*mrenclave), NULL) != 0)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_mrenclave = true;
     }
 
-    isv_prod_id_dec = getenv_critical(RA_TLS_ISV_PROD_ID);
+    if (!getenv_critical(RA_TLS_ISV_PROD_ID, &isv_prod_id_dec))
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     if (isv_prod_id_dec) {
         errno = 0;
         *isv_prod_id = strtoul(isv_prod_id_dec, NULL, 10);
@@ -80,7 +82,8 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
         *validate_isv_prod_id = true;
     }
 
-    isv_svn_dec = getenv_critical(RA_TLS_ISV_SVN);
+    if (!getenv_critical(RA_TLS_ISV_SVN, &isv_svn_dec))
+        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
     if (isv_svn_dec) {
         errno = 0;
         *isv_svn = strtoul(isv_svn_dec, NULL, 10);
@@ -295,7 +298,7 @@ int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_
                                       &expected_isv_prod_id, &validate_isv_prod_id,
                                       &expected_isv_svn, &validate_isv_svn);
     if (ret < 0)
-        return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        return ret;
 
     ret = verify_quote_body(quote_body, validate_mrsigner ? (char*)&expected_mrsigner : NULL,
                             validate_mrenclave ? (char*)&expected_mrenclave : NULL,

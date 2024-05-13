@@ -26,11 +26,6 @@ typedef uint8_t pf_mac_t[PF_MAC_SIZE];
 typedef uint8_t pf_key_t[PF_KEY_SIZE];
 typedef uint8_t pf_keyid_t[32]; /* key derivation material */
 
-extern pf_key_t g_pf_mrenclave_key;
-extern pf_key_t g_pf_mrsigner_key;
-extern pf_key_t g_pf_wrap_key;
-extern bool g_pf_wrap_key_set;
-
 typedef enum _pf_status_t {
     PF_STATUS_SUCCESS              = 0,
     PF_STATUS_UNKNOWN_ERROR        = -1,
@@ -295,16 +290,6 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
  * for renaming the underlying file.
  */
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path);
-
-/*!
- * \brief Get underlying handle of a PF.
- *
- * \param      pf      PF context.
- * \param[out] handle  Handle to the backing file.
- *
- * \returns PF status.
- */
-pf_status_t pf_get_handle(pf_context_t* pf, pf_handle_t* handle);
 
 /*!
  * \brief Flush any pending data of a protected file to disk.

@@ -44,7 +44,7 @@ def verify_signature(data, exponent, modulus, signature, key_file, passphrase=No
     numbers = public_key.public_numbers()
     assert numbers.e == exponent
     assert numbers.n == modulus
-    signature_bytes = signature.to_bytes((signature.bit_length() + 7) // 8, byteorder='big')
+    signature_bytes = signature.to_bytes((modulus.bit_length() + 7) // 8, byteorder='big')
     # This will raise a `cryptography.exceptions.InvalidSignature` exception
     # if signature verification fails.
     public_key.verify(signature_bytes, data, padding.PKCS1v15(), hashes.SHA256())

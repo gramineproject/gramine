@@ -4,7 +4,6 @@
 # This is a general manifest template for running Bash and core utility programs,
 # including ls, cat, cp, date, and rm.
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ execdir }}/bash"
 
 loader.log_level = "{{ log_level }}"
@@ -27,7 +26,6 @@ sgx.enclave_size = "512M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ execdir }}/",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/",

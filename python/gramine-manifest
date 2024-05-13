@@ -4,6 +4,12 @@
 #                    Borys Popławski <borysp@invisiblethingslab.com>
 
 import click
+import voluptuous
+
+try:
+    from tomllib import TOMLDecodeError
+except ImportError:
+    from tomli import TOMLDecodeError
 
 from graminelibos import Manifest
 
@@ -20,13 +26,29 @@ def validate_define(_ctx, _param, values):
 @click.command()
 @click.option('--string', '-c')
 @click.option('--define', '-D', multiple=True, callback=validate_define)
+@click.option('--check/--no-check', default=True,
+    help='check the manifest for correctness against builtin schema')
 @click.argument('infile', type=click.File('r'), required=False)
 @click.argument('outfile', type=click.File('wb'), default='-')
-def main(string, define, infile, outfile):
+@click.pass_context
+def main(ctx, string, define, infile, outfile, check):
     if not bool(string) ^ bool(infile):
-        click.get_current_context().fail('specify exactly one of (infile, -c)')
+        ctx.fail('specify exactly one of (infile, -c)')
     template = infile.read() if infile else string
-    manifest = Manifest.from_template(template, define)
+    try:
+        manifest = Manifest.from_template(template, define)
+    except TOMLDecodeError as err:
+        click.echo(f'ERROR: failed to parse manifest template: {err!s}', err=True)
+        ctx.exit(1)
+
+    if check:
+        try:
+            manifest.check()
+        except voluptuous.MultipleInvalid as err:
+            click.echo(f'WARNING: error in manifest (after rendering): {err!s}', err=True)
+            # TODO after 1.7: make this a hard error
+            #ctx.exit(1)
+
     manifest.dump(outfile)
 
 if __name__ == '__main__':

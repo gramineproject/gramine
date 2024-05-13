@@ -1,0 +1,34 @@
+#!/usr/bin/python3
+# SPDX-License-Identifier: LGPL-3.0-or-later
+# Copyright (C) 2024 Intel Corporation
+#                    Wojtek Porczyk <woju@invisiblethingslab.com>
+
+import sys
+
+import click
+import voluptuous
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+from graminelibos.manifest_check import GramineManifestSchema
+
+@click.command()
+@click.argument('file', type=click.File('rb'), default='-')
+@click.pass_context
+def main(ctx, file):
+    with file:
+        try:
+            data = tomllib.load(file)
+        except tomllib.TOMLDecodeError as err:
+            ctx.fail(f'error parsing manifest: {err!s}')
+    try:
+        GramineManifestSchema(data)
+    except voluptuous.MultipleInvalid as err:
+        print(f'error in manifest: {err!s}')
+        ctx.exit(1)
+
+if __name__ == '__main__':
+    main() # pylint: disable=no-value-for-parameter

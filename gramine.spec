@@ -8,7 +8,7 @@
 %endif
 
 Name: gramine
-Version: 1.6.2post~UNRELEASED
+Version: 1.7post~UNRELEASED
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
@@ -43,6 +43,7 @@ Requires: python3-protobuf
 Requires: python3-pyelftools
 Requires: python3-tomli >= 1.1.0
 Requires: python3-tomli-w >= 0.4.0
+Requires: python3-voluptuous
 
 %global debug_package %{nil}
 %global __meson_auto_features disabled

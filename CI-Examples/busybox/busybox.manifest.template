@@ -3,7 +3,6 @@
 
 # Busybox manifest file example
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "/busybox"
 
 loader.log_level = "{{ log_level }}"
@@ -33,5 +32,4 @@ sgx.ra_client_linkable = {{ 'true' if ra_client_linkable == '1' else 'false' }}
 sgx.trusted_files = [
   "file:busybox",
   "file:{{ gramine.runtimedir() }}/",
-  "file:{{ gramine.libos }}",
 ]

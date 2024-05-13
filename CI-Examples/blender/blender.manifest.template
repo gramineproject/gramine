@@ -3,7 +3,6 @@
 
 # Blender manifest example
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "/blender/blender"
 
 loader.log_level = "{{ log_level }}"
@@ -30,7 +29,6 @@ sgx.enclave_size = "2048M"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '64' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ blender_dir }}/blender",
   "file:{{ blender_dir }}/lib/",
   "file:{{ gramine.runtimedir() }}/",

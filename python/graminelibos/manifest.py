@@ -20,6 +20,7 @@ import tomli
 import tomli_w
 
 from . import _env
+from .manifest_check import GramineManifestSchema
 
 DEFAULT_ENCLAVE_SIZE_NO_EDMM = '256M'
 DEFAULT_ENCLAVE_SIZE_WITH_EDMM = '1024G'  # 1TB; note that DebugInfo is at 1TB and ASan at 1.5TB
@@ -313,21 +314,14 @@ class Manifest:
         else:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_NO_EDMM)
 
-        # TODO: below was deprecated in release v1.6, remove this check in v1.7
-        #       (but keep the `if` body)
-        if not 'require_exinfo' in sgx:
-            sgx.setdefault('use_exinfo', False)
+        sgx.setdefault('use_exinfo', False)
 
-        # TODO: below were deprecated in release v1.6, remove this check in v1.7
-        #       (but keep the `if` body)
-        deprecated = ['require_avx', 'require_avx512', 'require_amx', 'require_mpx', 'require_pkru']
-        if not any(key in sgx for key in deprecated):
-            sgx_cpu_features = sgx.setdefault('cpu_features', {})
-            sgx_cpu_features.setdefault('avx', "unspecified")
-            sgx_cpu_features.setdefault('avx512', "unspecified")
-            sgx_cpu_features.setdefault('amx', "unspecified")
-            sgx_cpu_features.setdefault('mpx', "disabled")
-            sgx_cpu_features.setdefault('pkru', "disabled")
+        sgx_cpu_features = sgx.setdefault('cpu_features', {})
+        sgx_cpu_features.setdefault('avx', "unspecified")
+        sgx_cpu_features.setdefault('avx512', "unspecified")
+        sgx_cpu_features.setdefault('amx', "unspecified")
+        sgx_cpu_features.setdefault('mpx', "disabled")
+        sgx_cpu_features.setdefault('pkru', "disabled")
 
         if not isinstance(sgx['trusted_files'], list):
             raise ValueError("Unsupported trusted files syntax, more info: " +
@@ -341,6 +335,13 @@ class Manifest:
                 trusted_files.append({'uri': tf})
             else:
                 raise ManifestError(f'Unknown trusted file format: {tf!r}')
+
+        # for convenience, users are not required to specify `loader.entrypoint` and
+        # `sgx.trusted_files = [ <loader.entrypoint file name> ]`; replace with the default LibOS
+        loader = manifest.setdefault('loader', {})
+        if 'entrypoint' not in loader:
+            loader['entrypoint'] = f'file:{_env.globals["gramine"]["libos"]}'
+            trusted_files.append({'uri': loader['entrypoint']})
 
         sgx['trusted_files'] = trusted_files
 
@@ -382,6 +383,15 @@ class Manifest:
 
     def dump(self, f):
         tomli_w.dump(self._manifest, f)
+
+    def check(self):
+        """Check the manifest against builtin schema
+
+        Raises:
+            voluptuous.error.MultipleInvalid: when check fails
+        """
+
+        return GramineManifestSchema(self._manifest)
 
     def expand_all_trusted_files(self, chroot=None):
         """Expand all trusted files entries.
