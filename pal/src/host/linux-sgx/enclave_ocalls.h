@@ -129,6 +129,20 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
 int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                     const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
 
+/*!
+ * \brief Execute untrusted code in PAL to obtain Target Info of the Quoting Enclave (QE).
+ *
+ * \param      is_epid            True if EPID is used, false if DCAP/ECDSA is used.
+ * \param[out] qe_targetinfo      Retrieved Quoting Enclave's target info; buffer must be provided
+ *                                by the caller.
+ *
+ * \returns 0 on success, negative Linux error code otherwise.
+ *
+ * The obtained QE Target Info is not validated in any way (i.e., this function does not check
+ * whether Target Info contents make sense).
+ */
+int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo);
+
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int ocall_edmm_remove_pages(uint64_t addr, size_t count);
