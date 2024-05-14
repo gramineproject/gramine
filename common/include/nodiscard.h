@@ -8,16 +8,13 @@
  * the nodiscard attribute introduced in C23. However, because Gramine supports
  * older systems that might not have support for C23, we have to wrap it on our
  * own and change it to a no-op on systems that don't support it.
+ * TODO: Remove this after dropping *EL8 and Ubuntu 20.04 support.
  */
 
 #pragma once
 
-#if defined(__has_c_attribute)
-#if __has_c_attribute(nodiscard)
+#if GRAMINE_HAS_NODISCARD
 #define NODISCARD [[nodiscard]]
-#endif
-#endif
-
-#ifndef NODISCARD
+#else
 #define NODISCARD
 #endif
