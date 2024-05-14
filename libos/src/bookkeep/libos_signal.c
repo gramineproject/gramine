@@ -477,12 +477,12 @@ static void illegal_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context)
     /* Emulate syscall instruction, which is prohibited in Linux-SGX PAL and raises a SIGILL. */
     if (!maybe_emulate_syscall(context)) {
         void* rip = (void*)pal_context_get_ip(context);
+        log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
         siginfo_t info = {
-           .si_signo = SIGILL,
-           .si_code = ILL_ILLOPC,
+            .si_signo = SIGILL,
+            .si_code = ILL_ILLOPC,
             .si_addr = (void*)addr,
         };
-        log_debug("Illegal instruction during app execution at %p; delivering to app", rip);
         force_signal(&info);
         handle_signal(context);
     }

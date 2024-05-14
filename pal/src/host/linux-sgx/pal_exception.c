@@ -133,9 +133,12 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
 
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
  *               false if #UD was not handled and exception needs to be raised up to LibOS/app */
-static bool handle_ud(sgx_cpu_context_t* uc, int *event_num_ptr) {
+static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
+    /* most unhandled #UD faults raise up to LibOS/app as "Illegal instruction" signals; however
+     * some #UDs (e.g. triggered due to IN/OUT/INS/OUTS) must raise "Memory fault" signal */
+    *out_event_num = PAL_EVENT_ILLEGAL;
+
     uint8_t* instr = (uint8_t*)uc->rip;
-    *event_num_ptr = PAL_EVENT_ILLEGAL;
     if (instr[0] == 0x0f && instr[1] == 0xa2) {
         /* cpuid */
         unsigned int values[4];
@@ -173,15 +176,18 @@ static bool handle_ud(sgx_cpu_context_t* uc, int *event_num_ptr) {
         }
         return false;
     } else if (is_in_out(instr)) {
-        /* Executing I/O instructions (e.g., in/out) inside an SGX enclave generates a #UD fault.
-         * Gramine's PAL tries to handle this exception and propagates it to LibOS/app as a
-         * SIGILL signal. However, I/O instructions result in a #GP fault (which raises a
-         * SIGSEGV signal) if I/O is not permitted. Let Gramine emulate these instructions as if
-         * they end up in SIGSEGV. This helps some apps, e.g. `lscpu`.
+        /*
+         * Executing I/O instructions (e.g., IN/OUT/INS/OUTS) inside an SGX enclave generates a #UD
+         * fault. Without the below corner-case handling, PAL would propagate this fault to LibOS as
+         * an "Illegal instruction" Gramine signal. However, I/O instructions result in a #GP fault
+         * (which corresponds to "Memory fault" Gramine signal) if I/O is not permitted (which is
+         * true in userspace apps and in SGX enclave). Let PAL emulate these instructions as if they
+         * end up in a memory fault.
          */
-        log_debug("Illegal instruction during app execution at %p, emulated as if "
-                  "throwing SIGSEGV; delivering to app", instr);
-        *event_num_ptr = PAL_EVENT_MEMFAULT;
+        if (FIRST_TIME()) {
+            log_warning("Emulating In/OUT/INS/OUTS instruction as a SIGSEGV signal to app.");
+        }
+        *out_event_num = PAL_EVENT_MEMFAULT;
         return false;
     }
 
@@ -215,11 +221,19 @@ void _PalExceptionHandler(unsigned int exit_info, sgx_cpu_context_t* uc,
                 log_error("Handling #BR exceptions is currently unsupported by Gramine");
                 _PalProcessExit(1);
                 break;
-            case SGX_EXCEPTION_VECTOR_UD:
-                if (handle_ud(uc, &event_num)) {
+            case SGX_EXCEPTION_VECTOR_UD: ;
+                int event_num_from_handle_ud;
+                if (handle_ud(uc, &event_num_from_handle_ud)) {
                     restore_sgx_context(uc, xregs_state);
                     /* NOTREACHED */
                 }
+                if (event_num_from_handle_ud != PAL_EVENT_ILLEGAL) {
+                    /* TODO: fix this after rebase, we must skip all verification and cr2/err logic
+                     *       and just call the LibOS upcall (probably with cr2 == 0x0) */
+                    event_num = event_num_from_handle_ud;
+                    break;
+                }
+                event_num = PAL_EVENT_ILLEGAL;
                 break;
             case SGX_EXCEPTION_VECTOR_DE:
             case SGX_EXCEPTION_VECTOR_MF:
