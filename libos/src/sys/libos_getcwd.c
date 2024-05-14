@@ -82,13 +82,17 @@ long libos_syscall_fchdir(int fd) {
     if (!hdl)
         return -EBADF;
 
-    lock(&hdl->lock);
+    int ret = 0;
+    lock(&g_dcache_lock);
+    /* Note we have to protect hdl->dentry and hdl->dentry->inode, so hdl->lock is not enough and we
+     * have to lock g_dcache_lock (which also protectes hdl->dentry). Also note that
+     * g_process.fs_lock has lower priority than g_dcache_lock, see e.g., do_path_lookupat. */
     struct libos_dentry* dent = hdl->dentry;
-    unlock(&hdl->lock);
 
     if (!dent) {
         log_debug("FD=%d has no path in the filesystem", fd);
-        return -ENOTDIR;
+        ret = -ENOTDIR;
+        goto out_unlock_dcache;
     }
     if (!dent->inode || dent->inode->type != S_IFDIR) {
         char* path = NULL;
@@ -96,7 +100,8 @@ long libos_syscall_fchdir(int fd) {
         log_debug("%s is not a directory", path);
         free(path);
         put_handle(hdl);
-        return -ENOTDIR;
+        ret = -ENOTDIR;
+        goto out_unlock_dcache;
     }
 
     lock(&g_process.fs_lock);
@@ -105,5 +110,7 @@ long libos_syscall_fchdir(int fd) {
     g_process.cwd = dent;
     unlock(&g_process.fs_lock);
     put_handle(hdl);
-    return 0;
+out_unlock_dcache:
+    unlock(&g_dcache_lock);
+    return ret;
 }

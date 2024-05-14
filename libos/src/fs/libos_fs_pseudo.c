@@ -266,11 +266,16 @@ static int pseudo_stat(struct libos_dentry* dent, struct stat* buf) {
 }
 
 static int pseudo_hstat(struct libos_handle* handle, struct stat* buf) {
-    lock(&handle->lock);
-    struct libos_dentry* dent = handle->dentry;
-    unlock(&handle->lock);
-
-    return pseudo_istat(dent, handle->inode, buf);
+    /* some callers, e.g., do_hstat in libos_stat.c, already hold lock but others do not */
+    bool hold_lock = locked(&handle->lock);
+    if (!hold_lock)
+        lock(&handle->lock);
+    int ret = -ENOENT;
+    if (handle->dentry)
+        ret = pseudo_istat(handle->dentry, handle->inode, buf);
+    if (!hold_lock)
+        unlock(&handle->lock);
+    return ret;
 }
 
 static int pseudo_unlink(struct libos_dentry* dent) {

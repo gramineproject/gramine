@@ -31,9 +31,9 @@ int proc_thread_follow_link(struct libos_dentry* dent, char** out_target) {
     } else if (strcmp(name, "exe") == 0) {
         lock(&g_process.exec->lock);
         dent = g_process.exec->dentry;
-        unlock(&g_process.exec->lock);
         if (dent)
             get_dentry(dent);
+        unlock(&g_process.exec->lock);
     }
 
     unlock(&g_process.fs_lock);
