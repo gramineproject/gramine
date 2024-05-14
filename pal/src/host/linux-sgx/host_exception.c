@@ -210,14 +210,14 @@ static void dump_and_reset_stats(void) {
     if (DO_SYSCALL(gettid) == g_host_pid) {
         size_t no_of_children = send_sigusr1_signal_to_children(g_host_pid);
 
+        log_always("----- DUMPING and RESETTING SGX STATS -----");
         while ((__atomic_load_n(&no_of_children_visited, __ATOMIC_ACQUIRE)) < no_of_children) {
             DO_SYSCALL(sched_yield);
         }
-        log_always("----- DUMPING and RESETTING SGX STATS -----");
+
         update_and_print_stats(/*process_wide=*/true);
         __atomic_store_n(&no_of_children_visited, 0, __ATOMIC_RELEASE);
     } else {
-        log_always("----- DUMPING and RESETTING SGX STATS -----");
         update_and_print_stats(/*process_wide=*/false);
         __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
     }
@@ -272,6 +272,10 @@ int sgx_signal_setup(void) {
     if (ret < 0)
         goto err;
 
+    ret = set_signal_handler(SIGUSR1, handle_sigusr1);
+    if (ret < 0)
+        goto err;
+
     /* SIGUSR2 is reserved for Gramine usage: interrupting blocking syscalls in RPC threads.
      * We block SIGUSR2 in enclave threads; it is unblocked by each RPC thread explicitly. */
     ret = set_signal_handler(SIGUSR2, handle_dummy_signal);
@@ -279,10 +283,6 @@ int sgx_signal_setup(void) {
         goto err;
 
     ret = block_signal(SIGUSR2, /*block=*/true);
-    if (ret < 0)
-        goto err;
-
-    ret = set_signal_handler(SIGUSR1, handle_sigusr1);
     if (ret < 0)
         goto err;
 
