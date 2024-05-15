@@ -168,11 +168,11 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
-        ret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
-                            PAL_OPTION_PASSTHROUGH, &pal_handle);
-        if (ret < 0) {
-            log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
-            return pal_to_unix_errno(ret);
+        pal_error_t pret = PalStreamOpen(enc->uri, PAL_ACCESS_RDWR, share_flags, create_mode,
+                                         PAL_OPTION_PASSTHROUGH, &pal_handle);
+        if (pret != PAL_ERROR_SUCCESS) {
+            log_warning("PalStreamOpen failed: %s", pal_strerror(pret));
+            return -pal_to_unix_errno(pret);
         }
     }
 

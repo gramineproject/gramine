@@ -8,9 +8,10 @@ int main(int argc, char** argv, char** envp) {
     /* test regular directory opening */
 
     PAL_HANDLE dir1 = NULL;
-    int ret = PalStreamOpen("dir:dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                            PAL_CREATE_NEVER, /*options=*/0, &dir1);
-    if (ret >= 0 && dir1) {
+    int ret;
+    pal_error_t pret = PalStreamOpen("dir:dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
+                                     PAL_CREATE_NEVER, /*options=*/0, &dir1);
+    if (pret == PAL_ERROR_SUCCESS && dir1) {
         pal_printf("Directory Open Test 1 OK\n");
 
         PAL_STREAM_ATTR attr1;
@@ -31,17 +32,17 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE dir2 = NULL;
-    ret = PalStreamOpen("dir:./dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &dir2);
-    if (ret >= 0 && dir2) {
+    pret = PalStreamOpen("dir:./dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
+                         PAL_CREATE_NEVER, /*options=*/0, &dir2);
+    if (pret == PAL_ERROR_SUCCESS && dir2) {
         pal_printf("Directory Open Test 2 OK\n");
         PalObjectDestroy(dir2);
     }
 
     PAL_HANDLE dir3 = NULL;
-    ret = PalStreamOpen("dir:../regression/dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &dir3);
-    if (ret >= 0 && dir3) {
+    pret = PalStreamOpen("dir:../regression/dir_exist.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
+                         PAL_CREATE_NEVER, /*options=*/0, &dir3);
+    if (pret == PAL_ERROR_SUCCESS && dir3) {
         pal_printf("Directory Open Test 3 OK\n");
         PalObjectDestroy(dir3);
     }
@@ -55,37 +56,37 @@ int main(int argc, char** argv, char** envp) {
     /* test regular directory creation */
 
     PAL_HANDLE dir4 = NULL;
-    ret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDONLY,
-                        PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_X,
-                        PAL_CREATE_ALWAYS, /*options=*/0, &dir4);
-    if (ret >= 0 && dir4) {
+    pret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDONLY,
+                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_X,
+                         PAL_CREATE_ALWAYS, /*options=*/0, &dir4);
+    if (pret == PAL_ERROR_SUCCESS && dir4) {
         pal_printf("Directory Creation Test 1 OK\n");
         PalObjectDestroy(dir4);
     }
 
     PAL_HANDLE dir5 = NULL;
-    ret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDONLY,
+    pret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDONLY,
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_X,
                         PAL_CREATE_ALWAYS, /*options=*/0, &dir5);
-    if (ret >= 0) {
+    if (pret == PAL_ERROR_SUCCESS) {
         PalObjectDestroy(dir5);
     } else {
         pal_printf("Directory Creation Test 2 OK\n");
     }
 
     PAL_HANDLE dir6 = NULL;
-    ret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDWR,
-                        PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_TRY, /*options=*/0,
-                        &dir6);
-    if (ret >= 0 && dir6) {
+    pret = PalStreamOpen("dir:dir_nonexist.tmp", PAL_ACCESS_RDWR,
+                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W, PAL_CREATE_TRY, /*options=*/0,
+                         &dir6);
+    if (pret == PAL_ERROR_SUCCESS && dir6) {
         pal_printf("Directory Creation Test 3 OK\n");
         PalObjectDestroy(dir6);
     }
 
     PAL_HANDLE dir7 = NULL;
-    ret = PalStreamOpen("dir:dir_delete.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
-                        PAL_CREATE_NEVER, /*options=*/0, &dir7);
-    if (ret >= 0 && dir7) {
+    pret = PalStreamOpen("dir:dir_delete.tmp", PAL_ACCESS_RDONLY, /*share_flags=*/0,
+                         PAL_CREATE_NEVER, /*options=*/0, &dir7);
+    if (pret == PAL_ERROR_SUCCESS && dir7) {
         ret = PalStreamDelete(dir7, PAL_DELETE_ALL);
         if (ret < 0) {
             pal_printf("PalStreamDelete failed\n");
@@ -98,7 +99,7 @@ int main(int argc, char** argv, char** envp) {
     ret = PalStreamOpen("dir:dir_rename.tmp", PAL_ACCESS_RDWR,
                         PAL_SHARE_OWNER_R | PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_X,
                         PAL_CREATE_TRY, /*options=*/0, &dir8);
-    if (ret >= 0 && dir8) {
+    if (pret == PAL_ERROR_SUCCESS && dir8) {
         ret = PalStreamChangeName(dir8, "dir:dir_rename_delete.tmp");
         if (ret < 0) {
             pal_printf("PalStreamChangeName failed: %d\n", ret);

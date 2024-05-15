@@ -5,12 +5,14 @@ char str[13] = "Hello World\n";
 
 int main(int argc, char** argv, char** envp) {
     pal_printf("start program: HelloWorld\n");
-
     PAL_HANDLE out = NULL;
-    int ret = PalStreamOpen("console:", PAL_ACCESS_WRONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+    int ret;
+    pal_error_t pret;
+
+    pret = PalStreamOpen("console:", PAL_ACCESS_WRONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                             /*options=*/0, &out);
 
-    if (ret < 0) {
+    if (pret != PAL_ERROR_SUCCESS) {
         pal_printf("PalStreamOpen failed\n");
         return 1;
     }

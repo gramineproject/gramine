@@ -42,6 +42,17 @@ Data types and variables
 Data types
 ^^^^^^^^^^
 
+Return type
+"""""""""""
+
+All new PAL functions should return an error of :type:`pal_error_t`.
+
+.. doxygentypedef:: pal_error_t
+   :project: pal
+
+.. doxygenenum:: _pal_error_t
+   :project: pal
+
 PAL handles
 """""""""""
 

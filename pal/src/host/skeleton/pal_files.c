@@ -10,10 +10,10 @@
 #include "pal_error.h"
 #include "pal_internal.h"
 
-static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                     pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static pal_error_t file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
+                             pal_share_flags_t share, enum pal_create_mode create,
+                             pal_stream_options_t options) {
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
@@ -57,10 +57,10 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                    pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+static pal_error_t dir_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                            enum pal_access access, pal_share_flags_t share,
+                            enum pal_create_mode create, pal_stream_options_t options) {
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf) {

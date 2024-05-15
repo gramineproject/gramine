@@ -8,12 +8,13 @@ int main(int argc, char** argv, char** envp) {
     char buffer3[20];
     char buffer4[20];
     int ret;
+    pal_error_t pret;
 
     PAL_HANDLE pipe1 = NULL;
-    ret = PalStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+    pret = PalStreamOpen("pipe.srv:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                         /*options=*/0, &pipe1);
 
-    if (ret >= 0 && pipe1) {
+    if (pret == PAL_ERROR_SUCCESS && pipe1) {
         pal_printf("Pipe Creation 1 OK\n");
 
         // DEP 10/24/16: Try to read some attributes of the pipe
@@ -29,10 +30,10 @@ int main(int argc, char** argv, char** envp) {
         // Job for another day...
 
         PAL_HANDLE pipe2 = NULL;
-        ret = PalStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+        pret = PalStreamOpen("pipe:1", PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                             /*options=*/0, &pipe2);
 
-        if (ret >= 0 && pipe2) {
+        if (pret == PAL_ERROR_SUCCESS && pipe2) {
             PAL_HANDLE pipe3 = NULL;
             ret = PalStreamWaitForClient(pipe1, &pipe3, /*options=*/0);
 

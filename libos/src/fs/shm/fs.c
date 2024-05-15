@@ -57,6 +57,7 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
     assert(locked(&g_dcache_lock));
 
     char* uri;
+    pal_error_t pret;
     int ret = dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
@@ -66,9 +67,9 @@ static int shm_do_open(struct libos_handle* hdl, struct libos_dentry* dent, mode
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    pret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
 
