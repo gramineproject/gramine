@@ -28,26 +28,26 @@ static inline int eventfd_type(int options) {
 
 /* `type` must be eventfd, `uri` & `access` & `share` are unused, `create` holds eventfd's initval,
  * `options` holds eventfd's flags */
-static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
-                            enum pal_access access, pal_share_flags_t share,
-                            enum pal_create_mode create, pal_stream_options_t options) {
+static pal_error_t eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                                    enum pal_access access, pal_share_flags_t share,
+                                    enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(share);
     __UNUSED(create);
     assert(create == PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_EVENTFD) != 0 || *uri != '\0') {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int fd = ocall_eventfd(eventfd_type(options));
     if (fd < 0)
-        return unix_to_pal_error(fd);
+        return -unix_to_pal_error(fd);
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(eventfd));
     if (!hdl) {
         ocall_close(fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
     init_handle_hdr(hdl, PAL_TYPE_EVENTFD);
 
@@ -58,7 +58,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     hdl->eventfd.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
     *handle = hdl;
 
-    return 0;
+    return PAL_ERROR_SUCCESS;
 }
 
 static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {

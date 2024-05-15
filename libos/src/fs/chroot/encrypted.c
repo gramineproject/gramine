@@ -272,10 +272,11 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
 
     /* This opens a "dir:..." URI */
     PAL_HANDLE palhdl;
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    pal_error_t pret;
+    pret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
+                         PAL_OPTION_PASSTHROUGH, &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
     PalObjectDestroy(palhdl);
@@ -304,10 +305,11 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
         return ret;
 
     PAL_HANDLE palhdl;
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    pal_error_t pret;
+    pret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         PAL_OPTION_PASSTHROUGH, &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
 
@@ -369,10 +371,11 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
         goto out;
 
     PAL_HANDLE palhdl;
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    pal_error_t pret;
+    pret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         PAL_OPTION_PASSTHROUGH, &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
     mode_t host_perm = HOST_PERM(perm);

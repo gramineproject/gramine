@@ -315,7 +315,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * \param      create   Not used.
  * \param      options  May contain PAL_OPTION_NONBLOCK.
  *
- * \returns 0 on success, negative PAL error code otherwise.
+ * \returns PAL_ERROR_SUCCESS on success, PAL error code otherwise.
  *
  * Depending on the combination of `type` and `uri`, the following PAL handles are created:
  *
@@ -326,23 +326,23 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
  * - `type` is URI_TYPE_PIPE: create `pipe` handle (connecting socket) with the name created by
  *                            `get_gramine_unix_socket_addr`.
  */
-static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                     pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+static pal_error_t pipe_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                             enum pal_access access, pal_share_flags_t share,
+                             enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     __UNUSED(create);
     assert(create == PAL_CREATE_IGNORED);
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
-        return pipe_listen(handle, uri, options);
+        return -pipe_listen(handle, uri, options);
 
     if (!strcmp(type, URI_TYPE_PIPE))
-        return pipe_connect(handle, uri, options);
+        return -pipe_connect(handle, uri, options);
 
-    return -PAL_ERROR_INVAL;
+    return PAL_ERROR_INVAL;
 }
 
 /*!

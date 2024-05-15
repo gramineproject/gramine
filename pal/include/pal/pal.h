@@ -339,7 +339,7 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  * \param handle[out]  If the resource is successfully opened or created, a PAL handle is returned
  *                     in `*handle` for further access such as reading or writing.
  *
- * \returns 0 on success, negative error code on failure.
+ * \returns PAL_ERROR_SUCCESS on success, error code on failure.
  *
  * Supported URI types:
  * * `%file:...`, `dir:...`: Files or directories on the host file system. If #PAL_CREATE_TRY or
@@ -351,8 +351,9 @@ typedef uint32_t pal_stream_options_t; /* bitfield */
  *   processes. The server side of a pipe can accept any number of connections. If `pipe:` is given
  *   as the URI (i.e., without a name), it will open an anonymous bidirectional pipe.
  */
-int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share_flags,
-                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle);
+pal_error_t PalStreamOpen(const char* typed_uri, enum pal_access access,
+                          pal_share_flags_t share_flags, enum pal_create_mode create,
+                          pal_stream_options_t options, PAL_HANDLE* handle);
 
 /*!
  * \brief Block until a new connection is accepted and return the PAL handle for the connection.
