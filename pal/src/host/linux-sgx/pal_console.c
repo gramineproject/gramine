@@ -21,30 +21,30 @@
 #include "pal_linux_error.h"
 #include "perm.h"
 
-static int console_open(PAL_HANDLE* handle, const char* type, const char* uri,
-                        enum pal_access access, pal_share_flags_t share,
-                        enum pal_create_mode create, pal_stream_options_t options) {
+static pal_error_t console_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                                enum pal_access access, pal_share_flags_t share,
+                                enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(uri);
     __UNUSED(share);
     __UNUSED(create);
     __UNUSED(options);
 
     if (strcmp(type, URI_TYPE_CONSOLE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (access != PAL_ACCESS_RDONLY && access != PAL_ACCESS_WRONLY)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(console));
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     hdl->hdr.type = PAL_TYPE_CONSOLE;
     hdl->flags = access == PAL_ACCESS_RDONLY ? PAL_HANDLE_FD_READABLE : PAL_HANDLE_FD_WRITABLE;
     hdl->console.fd = access == PAL_ACCESS_RDONLY ? /*host stdin*/0 : /*host stdout*/1;
 
     *handle = hdl;
-    return 0;
+    return PAL_ERROR_SUCCESS;
 }
 
 static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {

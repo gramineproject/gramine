@@ -37,8 +37,8 @@ const struct handle_ops* g_pal_handle_ops[PAL_HANDLE_TYPE_BOUND] = {
 };
 
 /* `out_type` is provided by the caller; `out_uri` is the pointer inside `typed_uri` */
-static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const char** out_uri,
-                                  struct handle_ops** out_ops) {
+static pal_error_t split_uri_and_find_ops(const char* typed_uri, char* out_type,
+                                          const char** out_uri, struct handle_ops** out_ops) {
     if (strstartswith(typed_uri, URI_PREFIX_DIR)) {
         memcpy(out_type, URI_TYPE_DIR, sizeof(URI_TYPE_DIR));
         *out_ops = &g_dir_ops;
@@ -69,14 +69,14 @@ static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const c
         *out_uri = typed_uri + URI_PREFIX_PIPE_SRV_LEN;
     } else {
         /* unknown handle type */
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
-    return 0;
+    return PAL_ERROR_SUCCESS;
 }
 
-int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access access,
-                   pal_share_flags_t share, enum pal_create_mode create,
-                   pal_stream_options_t options) {
+pal_error_t _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access access,
+                           pal_share_flags_t share, enum pal_create_mode create,
+                           pal_stream_options_t options) {
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
@@ -84,8 +84,8 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access ac
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
-    if (ret < 0)
+    pal_error_t ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
+    if (ret != PAL_ERROR_SUCCESS)
         return ret;
 
     assert(ops && ops->open);
@@ -99,8 +99,9 @@ int _PalStreamOpen(PAL_HANDLE* handle, const char* typed_uri, enum pal_access ac
  * FIXME: Currently `share` must match 1-1 to Linux open() `mode` argument. This isn't really
  * portable and will cause problems when implementing other PALs.
  */
-int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share,
-                  enum pal_create_mode create, pal_stream_options_t options, PAL_HANDLE* handle) {
+pal_error_t PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags_t share,
+                          enum pal_create_mode create, pal_stream_options_t options,
+                          PAL_HANDLE* handle) {
     *handle = NULL;
     return _PalStreamOpen(handle, typed_uri, access, share, create, options);
 }
@@ -202,9 +203,9 @@ int _PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
-    if (ret < 0)
-        return ret;
+    pal_error_t ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
+    if (ret != PAL_ERROR_SUCCESS)
+        return -ret;
 
     if (!ops->attrquery)
         return -PAL_ERROR_NOTSUPPORT;
@@ -376,9 +377,9 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
     const char* uri;
     struct handle_ops* ops;
 
-    int ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
-    if (ret < 0)
-        return ret;
+    pal_error_t ret = split_uri_and_find_ops(typed_uri, type, &uri, &ops);
+    if (ret != PAL_ERROR_SUCCESS)
+        return -ret;
 
     const struct handle_ops* hops = HANDLE_OPS(hdl);
     if (!hops || !hops->rename || hops != ops)

@@ -22,16 +22,16 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     return -PAL_ERROR_NOTIMPLEMENTED;
 }
 
-static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                     pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+static pal_error_t pipe_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                             enum pal_access access, pal_share_flags_t share,
+                             enum pal_create_mode create, pal_stream_options_t options) {
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
-        return pipe_listen(handle, uri, options);
+        return -pipe_listen(handle, uri, options);
 
     if (!strcmp(type, URI_TYPE_PIPE))
-        return pipe_connect(handle, uri, options);
+        return -pipe_connect(handle, uri, options);
 
-    return -PAL_ERROR_INVAL;
+    return PAL_ERROR_INVAL;
 }
 
 /* 'read' operation of pipe stream. offset does not apply here. */

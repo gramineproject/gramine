@@ -9,10 +9,12 @@ int main(int argc, char** argv, char** envp) {
     pal_printf("Enter Main Thread\n");
 
     PAL_HANDLE out = NULL;
-    int ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_R,
-                            PAL_CREATE_TRY, /*options=*/0, &out);
+    int ret;
+    pal_error_t pret;
 
-    if (ret < 0) {
+    pret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, PAL_SHARE_OWNER_W | PAL_SHARE_OWNER_R,
+                         PAL_CREATE_TRY, /*options=*/0, &out);
+    if (pret != PAL_ERROR_SUCCESS) {
         pal_printf("first PalStreamOpen failed\n");
         return 1;
     }
@@ -27,9 +29,9 @@ int main(int argc, char** argv, char** envp) {
     PalObjectDestroy(out);
 
     PAL_HANDLE in = NULL;
-    ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, &in);
-    if (ret < 0) {
+    pret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         /*options=*/0, &in);
+    if (pret != PAL_ERROR_SUCCESS) {
         pal_printf("third PalStreamOpen failed\n");
         return 1;
     }
@@ -56,10 +58,9 @@ int main(int argc, char** argv, char** envp) {
     }
 
     PAL_HANDLE del = NULL;
-    ret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, &del);
-
-    if (ret >= 0) {
+    pret = PalStreamOpen(FILE_URI, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         /*options=*/0, &del);
+    if (pret == PAL_ERROR_SUCCESS) {
         pal_printf("PalStreamDelete did not actually delete\n");
         return 1;
     }

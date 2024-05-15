@@ -108,6 +108,7 @@ static int vmid_to_uri(IDTYPE vmid, char* uri, size_t uri_size) {
 static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
     struct libos_ipc_connection dummy = { .vmid = dest };
     int ret = 0;
+    pal_error_t pret;
 
     lock(&g_ipc_connections_lock);
     struct libos_ipc_connection* conn = node2conn(avl_tree_find(&g_ipc_connections, &dummy.node));
@@ -128,11 +129,11 @@ static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
             BUG();
         }
         do {
-            ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                                /*options=*/0, &conn->handle);
-        } while (ret == -PAL_ERROR_INTERRUPTED);
-        if (ret < 0) {
-            ret = pal_to_unix_errno(ret);
+            pret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                                 /*options=*/0, &conn->handle);
+        } while (pret == PAL_ERROR_INTERRUPTED);
+        if (pret != PAL_ERROR_SUCCESS) {
+            ret = -pal_to_unix_errno(pret);
             goto out;
         }
         ret = write_exact(conn->handle, &g_process_ipc_ids.self_vmid,

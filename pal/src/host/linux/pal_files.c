@@ -16,16 +16,17 @@
 #include "path_utils.h"
 #include "stat.h"
 
-static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                     pal_share_flags_t share, enum pal_create_mode create,
-                     pal_stream_options_t options) {
+static pal_error_t file_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                             enum pal_access access, pal_share_flags_t share,
+                             enum pal_create_mode create, pal_stream_options_t options) {
+    pal_error_t pret;
     int ret;
     int fd = -1;
     PAL_HANDLE hdl = NULL;
     char* path = NULL;
 
     if (strcmp(type, URI_TYPE_FILE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
@@ -36,14 +37,14 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
                                 O_CLOEXEC,
                      share);
     if (ret < 0)
-        return unix_to_pal_error(ret);
+        return -unix_to_pal_error(ret);
 
     fd = ret;
 
     size_t uri_size = strlen(uri) + 1;
     hdl = calloc(1, HANDLE_SIZE(file));
     if (!hdl) {
-        ret = -PAL_ERROR_NOMEM;
+        pret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
@@ -53,12 +54,12 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     path = malloc(uri_size);
     if (!path) {
-        ret = -PAL_ERROR_NOMEM;
+        pret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
     if (!get_norm_path(uri, path, &uri_size)) {
-        ret = -PAL_ERROR_INVAL;
+        pret = PAL_ERROR_INVAL;
         goto fail;
     }
 
@@ -67,20 +68,20 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     struct stat st;
     ret = DO_SYSCALL(fstat, hdl->file.fd, &st);
     if (ret < 0) {
-        ret = unix_to_pal_error(ret);
+        pret = -unix_to_pal_error(ret);
         goto fail;
     }
 
     hdl->file.seekable = !S_ISFIFO(st.st_mode);
 
     *handle = hdl;
-    return 0;
+    return PAL_ERROR_SUCCESS;
 fail:
     if (fd >= 0)
         DO_SYSCALL(close, fd);
     free(path);
     free(hdl);
-    return ret;
+    return pret;
 }
 
 static int64_t file_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
@@ -193,35 +194,35 @@ static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     return 0;
 }
 
-static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                    pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
+static pal_error_t dir_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                            enum pal_access access, pal_share_flags_t share,
+                            enum pal_create_mode create, pal_stream_options_t options) {
     __UNUSED(access);
     assert(create != PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_DIR))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (create == PAL_CREATE_TRY || create == PAL_CREATE_ALWAYS) {
         int ret = DO_SYSCALL(mkdir, uri, share);
 
         if (ret < 0) {
             if (ret == -EEXIST && create == PAL_CREATE_ALWAYS)
-                return -PAL_ERROR_STREAMEXIST;
+                return PAL_ERROR_STREAMEXIST;
             if (ret != -EEXIST)
-                return unix_to_pal_error(ret);
+                return -unix_to_pal_error(ret);
             assert(ret == -EEXIST && create == PAL_CREATE_TRY);
         }
     }
 
     int fd = DO_SYSCALL(open, uri, O_DIRECTORY | PAL_OPTION_TO_LINUX_OPEN(options) | O_CLOEXEC, 0);
     if (fd < 0)
-        return unix_to_pal_error(fd);
+        return -unix_to_pal_error(fd);
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         DO_SYSCALL(close, fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(hdl, PAL_TYPE_DIR);
@@ -233,7 +234,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (!path) {
         DO_SYSCALL(close, hdl->dir.fd);
         free(hdl);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     hdl->dir.realpath    = path;
@@ -243,7 +244,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     hdl->dir.endofstream = false;
 
     *handle = hdl;
-    return 0;
+    return PAL_ERROR_SUCCESS;
 }
 
 #define DIRBUF_SIZE 1024
