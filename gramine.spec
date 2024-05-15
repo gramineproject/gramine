@@ -1,11 +1,7 @@
 # Copyright (c) 2021-2022 Wojtek Porczyk <woju@invisiblethingslab.com>
 
 # .el8 has sphinx 1.8 which is too old
-%if (! 0%{rhel}) || 0%{rhel} >= 9
-    %define has_supported_sphinx 1
-%else
-    %define has_supported_sphinx 0
-%endif
+%global has_supported_sphinx %{expr: 0%{?rhel} >= 9}
 
 Name: gramine
 Version: 1.7post~UNRELEASED
