@@ -28,11 +28,11 @@ bool g_sgx_enable_stats = false;
 
 /* this function is called only on thread/process exit (never in the middle of thread exec) */
 void update_and_print_stats(bool process_wide) {
-    static atomic_ulong g_eenter_cnt       = 0;
-    static atomic_ulong g_eexit_cnt        = 0;
-    static atomic_ulong g_aex_cnt          = 0;
-    static atomic_ulong g_sync_signal_cnt  = 0;
-    static atomic_ulong g_async_signal_cnt = 0;
+    static uint64_t g_eenter_cnt       = 0;
+    static uint64_t g_eexit_cnt        = 0;
+    static uint64_t g_aex_cnt          = 0;
+    static uint64_t g_sync_signal_cnt  = 0;
+    static uint64_t g_async_signal_cnt = 0;
 
     if (!g_sgx_enable_stats)
         return;
