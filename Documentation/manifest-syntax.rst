@@ -414,8 +414,8 @@ For example, to skip ``sched_yield`` syscall, specify::
 As another example, to disallow eventfd completely, specify::
 
     sys.mock_syscalls = [
-      { name = "eventfd", return = -38 },
-      { name = "eventfd", return = -38 },
+      { name = "eventfd",  return = -38 },
+      { name = "eventfd2", return = -38 },
     ]
 
 
@@ -425,7 +425,8 @@ As another example, to disallow eventfd completely, specify::
    used to spawn subprocesses by Glibc and many other libraries and runtimes and
    (2) it is also used to create threads in the same process. The
    ``sys.disallow_subprocesses`` manifest option disables only the first usage,
-   whereas ``sys.mock_syscalls = [ name = "clone", ...]`` disables both usages.
+   whereas ``sys.mock_syscalls = [ { name = "clone", ... } ]`` disables both
+   usages.
 
 .. note ::
    This option is *not* a security feature. Its rationale is improving
