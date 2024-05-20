@@ -154,6 +154,25 @@ static void cb_debug(const char* msg) {
 }
 #endif
 
+static int uri_to_normalized_path(const char* uri, char** out_norm_path) {
+    assert(strstartswith(uri, URI_PREFIX_FILE));
+    const char* path = uri + static_strlen(URI_PREFIX_FILE);
+
+    size_t norm_path_size = strlen(path) + 1;
+    char* norm_path       = malloc(norm_path_size);
+    if (!norm_path) {
+        return -ENOMEM;
+    }
+
+    if (!get_norm_path(path, norm_path, &norm_path_size)) {
+        free(norm_path);
+        return -EINVAL;
+    }
+
+    *out_norm_path = norm_path;
+    return 0;
+}
+
 /*
  * The `pal_handle` parameter is used if this is a checkpointed file, and we have received the PAL
  * handle from the parent process. Note that in this case, it would not be safe to attempt opening
@@ -164,7 +183,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     assert(!enc->pf);
 
     int ret;
-    char* normpath = NULL;
+    char* norm_path = NULL;
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
@@ -185,20 +204,9 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     }
     size_t size = pal_attr.pending_size;
 
-    assert(strstartswith(enc->uri, URI_PREFIX_FILE));
-    const char* path = enc->uri + static_strlen(URI_PREFIX_FILE);
-
-    size_t normpath_size = strlen(path) + 1;
-    normpath = malloc(normpath_size);
-    if (!normpath) {
-        ret = -ENOMEM;
+    ret = uri_to_normalized_path(enc->uri, &norm_path);
+    if (ret < 0)
         goto out;
-    }
-
-    if (!get_norm_path(path, normpath, &normpath_size)) {
-        ret = -EINVAL;
-        goto out;
-    }
 
     pf_context_t* pf;
     lock(&g_keys_lock);
@@ -208,7 +216,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = -EACCES;
         goto out;
     }
-    pf_status_t pfs = pf_open(pal_handle, normpath, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
+    pf_status_t pfs = pf_open(pal_handle, norm_path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
                               create, &enc->key->pf_key, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
@@ -221,7 +229,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     enc->pal_handle = pal_handle;
     ret = 0;
 out:
-    free(normpath);
+    free(norm_path);
     if (ret < 0)
         PalObjectDestroy(pal_handle);
     return ret;
@@ -621,32 +629,21 @@ int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
 int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri) {
     assert(enc->pf);
 
-    int ret;
-    char* new_normpath = NULL;
-
     char* new_uri_copy = strdup(new_uri);
     if (!new_uri_copy)
         return -ENOMEM;
 
-    assert(strstartswith(enc->uri, URI_PREFIX_FILE));
-    const char* old_path = enc->uri + static_strlen(URI_PREFIX_FILE);
-
-    assert(strstartswith(new_uri, URI_PREFIX_FILE));
-    const char* new_path = new_uri + static_strlen(URI_PREFIX_FILE);
-
-    size_t new_normpath_size = strlen(new_path) + 1;
-    new_normpath = malloc(new_normpath_size);
-    if (!new_normpath) {
-        ret = -ENOMEM;
+    int ret;
+    char* new_norm_path = NULL;
+    char* old_norm_path = NULL;
+    ret                 = uri_to_normalized_path(enc->uri, &old_norm_path);
+    if (ret < 0)
         goto out;
-    }
-
-    if (!get_norm_path(new_path, new_normpath, &new_normpath_size)) {
-        ret = -EINVAL;
+    ret = uri_to_normalized_path(new_uri, &new_norm_path);
+    if (ret < 0)
         goto out;
-    }
 
-    pf_status_t pfs = pf_rename(enc->pf, new_normpath);
+    pf_status_t pfs = pf_rename(enc->pf, new_norm_path);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_rename failed: %s", pf_strerror(pfs));
         ret = -EACCES;
@@ -658,7 +655,7 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         log_warning("PalStreamChangeName failed: %s", pal_strerror(ret));
 
         /* We failed to rename the file. Try to restore the name in header. */
-        pfs = pf_rename(enc->pf, old_path);
+        pfs = pf_rename(enc->pf, old_norm_path);
         if (PF_FAILURE(pfs)) {
             log_warning("pf_rename (during cleanup) failed, the file might be unusable: %s",
                         pf_strerror(pfs));
@@ -674,7 +671,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     ret = 0;
 
 out:
-    free(new_normpath);
+    free(old_norm_path);
+    free(new_norm_path);
     free(new_uri_copy);
     return ret;
 }
