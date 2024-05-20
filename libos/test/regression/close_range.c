@@ -25,8 +25,8 @@
 
 // Likewise, don't rely on the libc wrapper.
 
-static int my_close_range(unsigned int start, unsigned int end, unsigned int flags) {
-    return syscall(__NR_close_range, start, end, flags);
+static int my_close_range(unsigned int start, unsigned int last, unsigned int flags) {
+    return syscall(__NR_close_range, start, last, flags);
 }
 
 static void open_files(void) {
@@ -137,6 +137,9 @@ static void test_close_range_cloexec_unshare(void) {
 }
 
 int main(void) {
+    // Make sure all FDs from 3 upwards are closed on start.
+    close_files();
+
     test_close_range_plain();
     test_close_range_cloexec();
     test_close_range_plain_unshare();
