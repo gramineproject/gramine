@@ -183,7 +183,7 @@ long libos_syscall_close_range(unsigned int first, unsigned int last, unsigned i
         struct libos_handle_map* new_map = NULL;
 
         int err = dup_handle_map(&new_map, thread->handle_map);
-        if (err) {
+        if (err < 0) {
             return err;
         }
         set_handle_map(thread, new_map);

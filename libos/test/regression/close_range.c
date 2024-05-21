@@ -57,7 +57,7 @@ static void check_cloexec(int fd) {
     }
 }
 
-static void check_open_nocloexec(int fd) {
+static void check_nocloexec(int fd) {
     int res;
     CHECK(res = fcntl(fd, F_GETFD));
     if (res & FD_CLOEXEC) {
@@ -68,8 +68,8 @@ static void check_open_nocloexec(int fd) {
 static void* close_range_thread(void* arg) {
     int flags = *(int*)arg;
     CHECK(my_close_range(5, 7, flags));
-    check_open_nocloexec(3);
-    check_open_nocloexec(4);
+    check_nocloexec(3);
+    check_nocloexec(4);
     if (flags & CLOSE_RANGE_CLOEXEC) {
         check_cloexec(5);
         check_cloexec(6);
@@ -79,8 +79,8 @@ static void* close_range_thread(void* arg) {
         check_closed(6);
         check_closed(7);
     }
-    check_open_nocloexec(8);
-    check_open_nocloexec(9);
+    check_nocloexec(8);
+    check_nocloexec(9);
     return 0;
 }
 
@@ -97,26 +97,26 @@ static void run_thread(int flags) {
 static void test_close_range_plain(void) {
     open_files();
     run_thread(/*flags=*/0);
-    check_open_nocloexec(3);
-    check_open_nocloexec(4);
+    check_nocloexec(3);
+    check_nocloexec(4);
     check_closed(5);
     check_closed(6);
     check_closed(7);
-    check_open_nocloexec(8);
-    check_open_nocloexec(9);
+    check_nocloexec(8);
+    check_nocloexec(9);
     close_files();
 }
 
 static void test_close_range_cloexec(void) {
     open_files();
     run_thread(CLOSE_RANGE_CLOEXEC);
-    check_open_nocloexec(3);
-    check_open_nocloexec(4);
+    check_nocloexec(3);
+    check_nocloexec(4);
     check_cloexec(5);
     check_cloexec(6);
     check_cloexec(7);
-    check_open_nocloexec(8);
-    check_open_nocloexec(9);
+    check_nocloexec(8);
+    check_nocloexec(9);
     close_files();
 }
 
@@ -124,7 +124,7 @@ static void test_close_range_plain_unshare(void) {
     open_files();
     run_thread(CLOSE_RANGE_UNSHARE);
     for (int i = 3; i <= 9; i++)
-        check_open_nocloexec(i);
+        check_nocloexec(i);
     close_files();
 }
 
@@ -132,7 +132,7 @@ static void test_close_range_cloexec_unshare(void) {
     open_files();
     run_thread(CLOSE_RANGE_UNSHARE | CLOSE_RANGE_CLOEXEC);
     for (int i = 3; i <= 9; i++)
-        check_open_nocloexec(i);
+        check_nocloexec(i);
     close_files();
 }
 
