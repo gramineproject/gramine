@@ -53,11 +53,15 @@ Example
     Flexible Launch Control (IA32_SGXPUBKEYHASH{0..3} MSRs): false
     SGX extensions for virtualizers (EINCVIRTCHILD, EDECVIRTCHILD, ESETCONTEXT): false
     Extensions for concurrent memory management (ETRACKC, ELDBC, ELDUC, ERDINFO): false
+    EDECCSSA instruction: false
     CET enclave attributes support (See Table 37-5 in the SDM): false
     Key separation and sharing (KSS) support (CONFIGID, CONFIGSVN, ISVEXTPRODID, ISVFAMILYID report fields): false
+    AEX-Notify: false
     Max enclave size (32-bit): 0x80000000
     Max enclave size (64-bit): 0x1000000000
     EPC size: 0x5d80000
     SGX driver loaded: true
     AESMD installed: true
     SGX PSW/libsgx installed: true
+    #PF/#GP information in EXINFO in MISC region of SSA supported: false
+    #CP information in EXINFO in MISC region of SSA supported: false
