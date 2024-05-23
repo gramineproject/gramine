@@ -1,4 +1,4 @@
-project('curl', 'c', version: '8.7.1')
+project('curl', 'c', version: '8.8.0')
 
 curl_libs_output = [
     'libcurl.a',
