@@ -3,14 +3,10 @@ Contributing to Gramine
 
 .. highlight:: sh
 
-.. see Documentation/howto-doc.rst about |nbsp| versus |~|
-.. |nbsp| unicode:: 0xa0
-   :trim:
-
 First off, thank you for your interest in contributing to Gramine!
 
 In general, code contributions should be submitted to the Gramine project
-using a |nbsp| `pull request <https://github.com/gramineproject/gramine/pulls>`__.
+using a `pull request <https://github.com/gramineproject/gramine/pulls>`__.
 
 To learn more about the knowledge required to start contributing to this project
 as well as some advice on contributing high-quality PRs, read through `the
@@ -20,7 +16,7 @@ onboarding guide
 Reporting Bugs
 --------------
 
-In order to report a |nbsp| problem, please open an issue in the `issue tracker
+In order to report a problem, please open an issue in the `issue tracker
 <https://github.com/gramineproject/gramine/issues>`__.
 
 Reporting Security Vulnerabilities
@@ -52,22 +48,21 @@ newcomers.
 Branch Names
 ------------
 
-For work in progress (for team members), please use your name/userid as
-a |nbsp| prefix in the branch name.  For example, if user ``jane`` is adding
-feature ``foo``, the branch should be named: ``jane/foo``.
+For work in progress (for team members), please use your name/userid as a prefix
+in the branch name. For example, if user ``jane`` is adding feature ``foo``,
+the branch should be named: ``jane/foo``.
 
-For new contributors, the branch will likely be on a |nbsp| fork of the
-repository.
+For new contributors, the branch will likely be on a fork of the repository.
 
-Otherwise, branches without this prefix should only be created for
-a |nbsp| specific purpose, as approved by the maintainers.
+Otherwise, branches without this prefix should only be created for a specific
+purpose, as approved by the maintainers.
 
 Pull Requests
 -------------
 
 The primary mechanism for submitting code changes is with a pull request (PR).
 
-In general, a |nbsp| PR should:
+In general, a PR should:
 
 #. Address a single problem.
 #. Clearly explain the problem and solution in the PR and commit messages, using
@@ -131,7 +126,7 @@ Before a pull request is merged, it must:
    - 3 approving maintainers
    - 2 approving maintainers and 5 days since the PR was created
 
-   If the author is a |nbsp| maintainer the limits are lowered by 1.
+   If the author is a maintainer the limits are lowered by 1.
 
 Additional reviews from anyone are welcome.
 
@@ -235,9 +230,10 @@ The LibOS unit tests work similarly, and are under
 
 LTP
 ^^^
-Gramine passes a |nbsp| subset of the LTP tests. New changes should not break
-currently passing LTP tests (and, ideally, might add new passing tests). LTP is
-currently tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
+
+Gramine passes a subset of the LTP tests. New changes should not break currently
+passing LTP tests (and, ideally, might add new passing tests). LTP is currently
+tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
 
 To run these tests::
 
