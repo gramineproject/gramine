@@ -1,8 +1,6 @@
 Contributing to Gramine
 =======================
 
-.. highlight:: sh
-
 First off, thank you for your interest in contributing to Gramine!
 
 In general, code contributions should be submitted to the Gramine project
@@ -186,7 +184,9 @@ We also have (and are actively growing) PAL and LibOS unit tests.
 
 In order to run tests, Gramine must be installed. The test binaries, which are
 also built by Meson, must be installed as well. To do that, configure your build
-directory with ``-Dtests=enabled`` and install Gramine::
+directory with ``-Dtests=enabled`` and install Gramine:
+
+.. code-block:: sh
 
    # add -Dsgx=enabled and SGX options if necessary
    meson setup build/ --werror -Dtests=enabled -Ddirect=enabled
@@ -194,17 +194,23 @@ directory with ``-Dtests=enabled`` and install Gramine::
    ninja -C build/
    sudo ninja -C build/ install
 
-To run the PAL tests::
+To run the PAL tests:
+
+.. code-block:: sh
 
    cd pal/regression
    gramine-test pytest -v
 
-For SGX, one needs to do the following::
+For SGX, one needs to do the following:
+
+.. code-block:: sh
 
    cd pal/regression
    gramine-test --sgx pytest -v
 
-It is also possible to run a subset of tests::
+It is also possible to run a subset of tests:
+
+.. code-block:: sh
 
    gramine-test pytest -v -k TC_01_Bootstrap
    gramine-test pytest -v -k test_100_basic_boostrapping
@@ -235,7 +241,9 @@ Gramine passes a subset of the LTP tests. New changes should not break currently
 passing LTP tests (and, ideally, might add new passing tests). LTP is currently
 tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
 
-To run these tests::
+To run these tests:
+
+.. code-block:: sh
 
    cd libos/test/ltp
    # consider -j$(nproc) or similar to parallelize and improve the build time.
