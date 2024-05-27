@@ -7,7 +7,7 @@
 
 #pragma once
 
-/* mbedTLS v3.6.0 enables the following TLS 1.3 features:
+/* mbedTLS v3.6.0 by default enables the following TLS 1.3 features:
  *
  * #define MBEDTLS_SSL_PROTO_TLS1_3
  * #define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
