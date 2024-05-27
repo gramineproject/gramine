@@ -142,6 +142,13 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
 
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
+    mbedtls_x509_crt_init(&verifier_ca_chain);
+    mbedtls_pk_init(&my_ratls_key);
+    mbedtls_x509_crt_init(&my_ratls_cert);
+
+    mbedtls_net_init(net);
+    mbedtls_ssl_config_init(conf);
+    mbedtls_ssl_init(ssl);
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_status_t status = psa_crypto_init();
@@ -151,14 +158,6 @@ int secret_provision_start(const char* in_servers, const char* in_ca_chain_path,
         goto out;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
-
-    mbedtls_x509_crt_init(&verifier_ca_chain);
-    mbedtls_pk_init(&my_ratls_key);
-    mbedtls_x509_crt_init(&my_ratls_cert);
-
-    mbedtls_net_init(net);
-    mbedtls_ssl_config_init(conf);
-    mbedtls_ssl_init(ssl);
 
     const char* pers = "secret-provisioning";
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,

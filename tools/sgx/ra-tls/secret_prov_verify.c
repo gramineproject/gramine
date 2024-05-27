@@ -202,6 +202,10 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
     mbedtls_ssl_config_init(&conf);
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
+    mbedtls_pk_init(&srvkey);
+    mbedtls_x509_crt_init(&srvcert);
+    mbedtls_net_init(&client_fd);
+    mbedtls_net_init(&listen_fd);
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
     psa_status_t status = psa_crypto_init();
@@ -211,11 +215,6 @@ int secret_provision_start_server(uint8_t* secret, size_t secret_size, const cha
         goto out;
     }
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
-
-    mbedtls_pk_init(&srvkey);
-    mbedtls_x509_crt_init(&srvcert);
-    mbedtls_net_init(&client_fd);
-    mbedtls_net_init(&listen_fd);
 
     const char* pers = "secret-provisioning-server";
     ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
