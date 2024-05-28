@@ -10,10 +10,18 @@ fs.mounts = [
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
   { path = "/mounted", uri = "file:tmp" },
 
-  { type = "encrypted", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
-  { type = "encrypted", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
-  { type = "encrypted", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
-  { type = "encrypted", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
+{% if entrypoint in [ "open_close", "seek_tell", "delete", "stat", "truncate", "copy_whole", "copy_seq", "copy_rev", "copy_sendfile", "copy_mmap_whole", "copy_mmap_seq", "copy_mmap_rev", "copy_mounted" ] %}
+  {# these tests get already-encrypted files as input, so do not work in strict mode until we perists volumes .. #}
+  { type = "encrypted", protection_mode = "non-strict", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", protection_mode = "non-strict", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+  { type = "encrypted", protection_mode = "non-strict", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", protection_mode = "non-strict", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
+{% else %}
+  { type = "encrypted", protection_mode = "strict", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", protection_mode = "strict", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+  { type = "encrypted", protection_mode = "strict", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
+  { type = "encrypted", protection_mode = "strict", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
+{% endif %}
   { type = "tmpfs", path = "/mnt-tmpfs" },
 ]
 

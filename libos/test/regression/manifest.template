@@ -15,7 +15,12 @@ fs.mounts = [
   { path = "/bin", uri = "file:/bin" },
 
   { type = "tmpfs", path = "/mnt/tmpfs" },
-  { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
+{% if entrypoint in [ "send_handle" ] %}
+  {# these tests work only in non-strict mode until we have full multi-process support for rollback protected files .. #}
+  { type = "encrypted", protection_mode = "non-strict", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
+{% else %}
+  { type = "encrypted", protection_mode = "strict", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
+{% endif %}
   { type = "encrypted", path = "/tmp_enc/mrenclaves", uri = "file:tmp_enc/mrenclaves", key_name = "_sgx_mrenclave" },
   { type = "encrypted", path = "/tmp_enc/mrsigners", uri = "file:tmp_enc/mrsigners", key_name = "_sgx_mrsigner" },
 ]
