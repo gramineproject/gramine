@@ -133,13 +133,13 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
  * \brief Execute untrusted code in PAL to obtain Target Info of the Quoting Enclave (QE).
  *
  * \param      is_epid            True if EPID is used, false if DCAP/ECDSA is used.
- * \param[out] qe_targetinfo      Retrieved Quoting Enclave's target info; buffer must be submitted
+ * \param[out] qe_targetinfo      Retrieved Quoting Enclave's target info; buffer must be provided
  *                                by the caller.
  *
  * \returns 0 on success, negative Linux error code otherwise.
  *
  * The obtained QE Target Info is not validated in any way (i.e., this function does not check
- * Target Info contents make sense).
+ * whether Target Info contents make sense).
  */
 int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo);
 

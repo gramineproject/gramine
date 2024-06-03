@@ -4,8 +4,6 @@
 #include "pal_linux.h"
 #include "pal_linux_error.h"
 
-/* this function assumes proper synchronization by callers, such that
- * g_pal_linuxsgx_state.qe_targetinfo is not racey */
 int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,
                   size_t* quote_len) {

@@ -88,6 +88,9 @@ enum {
  * First create enclave report (sgx_report_t) with target info of the Quoting Enclave, and
  * then call out of the enclave to request the corresponding Quote from the Quoting Enclave.
  * Communication is done via AESM service, in the form of protobuf request/response messages.
+ *
+ * This function assumes proper synchronization by callers, such that accesses to
+ * g_pal_linuxsgx_state.qe_targetinfo do not race.
  */
 int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,

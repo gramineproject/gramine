@@ -2196,7 +2196,7 @@ int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo) {
                                                    alignof(*ocall_qe_ti_args));
     if (!ocall_qe_ti_args) {
         sgx_reset_ustack(old_ustack);
-        return -ENOMEM;
+        return -EPERM;
     }
 
     COPY_VALUE_TO_UNTRUSTED(&ocall_qe_ti_args->is_epid, is_epid);
