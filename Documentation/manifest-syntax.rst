@@ -405,6 +405,11 @@ This syntax specifies the system calls that are mocked when executed in
 Gramine (i.e. they return a specified value without any other side effects).
 If ``return`` field is skipped, then the default value is ``0`` (no-op).
 
+Be warned that returning a success (e.g. ``0``) but skipping the possible side
+effects of the syscall may introduce bugs to the application, if the application
+expects these side effects (e.g. mocking the ``futex`` syscall may lead to
+silent introduction of race conditions or hangs).
+
 For example, to skip ``sched_yield`` syscall, specify::
 
     sys.mock_syscalls = [

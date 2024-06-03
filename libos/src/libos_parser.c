@@ -1656,7 +1656,6 @@ void trace_mock_syscall(unsigned long sysno) {
 
 int get_syscall_number(const char* name, unsigned long* out_sysno) {
     static_assert(LIBOS_SYSCALL_BOUND == ARRAY_SIZE(syscall_parser_table), "oops");
-    assert(out_sysno);
 
     for (size_t i = 0; i < LIBOS_SYSCALL_BOUND; i++) {
         if (!syscall_parser_table[i].name)

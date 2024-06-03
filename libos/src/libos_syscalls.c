@@ -150,6 +150,7 @@ int init_syscalls(void) {
         }
 
         /* add syscall to the table of mocked syscalls */
+        assert(sysno < LIBOS_SYSCALL_BOUND);
         libos_mock_syscall_table[sysno].is_mocked = true;
         libos_mock_syscall_table[sysno].return_value = syscall_return;
 
