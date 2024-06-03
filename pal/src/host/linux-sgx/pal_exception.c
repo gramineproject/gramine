@@ -134,8 +134,9 @@ static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
  *               false if #UD was not handled and exception needs to be raised up to LibOS/app */
 static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
-    /* most unhandled #UD faults raise up to LibOS/app as "Illegal instruction" signals; however
-     * some #UDs (e.g. triggered due to IN/OUT/INS/OUTS) must raise "Memory fault" signal */
+    /* most unhandled #UD faults are translated and sent to LibOS/app as "Illegal instruction"
+     * exceptions; however some #UDs (e.g. triggered due to IN/OUT/INS/OUTS) must be translated as
+     * "Memory fault" exceptions */
     *out_event_num = PAL_EVENT_ILLEGAL;
 
     uint8_t* instr = (uint8_t*)uc->rip;
@@ -175,14 +176,17 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
                        " patching your application to use Gramine syscall API.");
         }
         return false;
-    } else if (is_in_out(instr)) {
+    } else if (is_in_out(instr) && !has_lock_prefix(instr)) {
         /*
          * Executing I/O instructions (e.g., IN/OUT/INS/OUTS) inside an SGX enclave generates a #UD
          * fault. Without the below corner-case handling, PAL would propagate this fault to LibOS as
-         * an "Illegal instruction" Gramine signal. However, I/O instructions result in a #GP fault
-         * (which corresponds to "Memory fault" Gramine signal) if I/O is not permitted (which is
-         * true in userspace apps and in SGX enclave). Let PAL emulate these instructions as if they
-         * end up in a memory fault.
+         * an "Illegal instruction" Gramine exception. However, I/O instructions result in a #GP
+         * fault (which corresponds to "Memory fault" Gramine exception) if I/O is not permitted
+         * (which is true in userspace apps and in SGX enclave). Let PAL emulate these instructions
+         * as if they end up in a memory fault.
+         *
+         * Note that I/O instructions with a LOCK prefix always result in a #UD fault, so they are
+         * special cased here.
          */
         if (FIRST_TIME()) {
             log_warning("Emulating In/OUT/INS/OUTS instruction as a SIGSEGV signal to app.");

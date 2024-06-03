@@ -15,7 +15,6 @@
 #define _GNU_SOURCE
 #include <err.h>
 #include <errno.h>
-#include <setjmp.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -46,7 +45,6 @@ __asm__ (
 ".type inb_instruction_addr, @function\n"
 ".type outb_instruction_addr, @function\n"
 ".type ret, @function\n"
-".type end_of_ret, @function\n"
 "inb_func:\n"
     "mov %rdi, %rdx\n"
 "inb_instruction_addr:\n"
@@ -84,7 +82,7 @@ static void handler(int signum, siginfo_t* si, void* uc) {
 
     g_sigsegv_triggered++;
 
-    /* no need to fixup the context (other than RIP) as we only modified caller-saved RDI and RSI in
+    /* no need to fixup the context (other than RIP) as we only modified caller-saved RDX and RAX in
      * inb_func() and outb_func() */
     ((ucontext_t*)uc)->uc_mcontext.gregs[REG_RIP] = (uint64_t)ret;
 }

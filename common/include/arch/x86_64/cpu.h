@@ -54,6 +54,7 @@ enum extended_state_sub_leaf {
 
 bool is_x86_instr_legacy_prefix(uint8_t op);
 bool is_x86_instr_rex_prefix(uint8_t op);
+bool has_lock_prefix(uint8_t* rip);
 bool is_in_out(uint8_t* rip);
 
 static inline void cpuid(unsigned int leaf, unsigned int subleaf, unsigned int words[static 4]) {
