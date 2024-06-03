@@ -22,12 +22,12 @@ struct pf_context {
 
     pf_key_t user_kdk_key; // KDK installed by user of PF (e.g. from Gramine manifest)
 
-    metadata_node_t file_metadata; // plaintext and encrypted metadata from storage (bound buffer)
+    metadata_node_t file_metadata; // plaintext and encrypted metadata from storage (bounce buffer)
     metadata_encrypted_t encrypted_part_plain; // contains file path, size, etc.
 
-    file_node_t root_mht; // root MHT node is always needed (for files bigger than 3KB)
+    file_node_t root_mht; // root MHT node is needed for files bigger than 3KB
 
-    lruc_context_t* cache; // up to MAX_PAGES_IN_CACHE nodes are cached for each file
+    lruc_context_t* cache; // up to MAX_NODES_IN_CACHE nodes are cached for each file
 #ifdef DEBUG
     char* debug_buffer; // buffer for debug output
 #endif

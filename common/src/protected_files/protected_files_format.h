@@ -31,7 +31,7 @@ static_assert(sizeof(METADATA_KEY_NAME) <= MAX_LABEL_SIZE, "label too long");
 #define MD_USER_DATA_SIZE (PF_NODE_SIZE * 3 / 4)
 static_assert(MD_USER_DATA_SIZE == 3072, "bad struct size");
 
-#define MAX_PAGES_IN_CACHE 48
+#define MAX_NODES_IN_CACHE 48
 
 enum {
     FILE_MHT_NODE_TYPE  = 1,
@@ -107,7 +107,7 @@ typedef struct _file_node {
     uint64_t physical_node_number;
 
     encrypted_node_t encrypted; // encrypted data from storage (bounce buffer)
-    union {                     // decrypted data in private memory (plain buffer)
+    union {                     // decrypted data, supposed to be stored in private memory
         mht_node_t mht;
         data_node_t data;
     } decrypted;
@@ -115,9 +115,9 @@ typedef struct _file_node {
 
 // input materials for the KDF construction of NIST-SP800-108
 typedef struct {
-    uint32_t index;             // always "1"
+    uint32_t counter;           // always "1"
     char label[MAX_LABEL_SIZE]; // must be NULL terminated
-    pf_keyid_t nonce;           // salt for key derivation from KDK, stored in metadata node
+    pf_keyid_t nonce;           // nonce for key derivation from KDK, stored in metadata node
     uint32_t output_len;        // in bits; always 128
 } kdf_input_t;
 
