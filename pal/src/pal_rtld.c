@@ -656,13 +656,14 @@ int load_entrypoint(const char* uri) {
     PAL_STREAM_ATTR attr;
     ret = _PalStreamAttributesQueryByHandle(handle, &attr);
     if (ret < 0) {
-        log_error("Getting size of ELF file failed");
+        log_error("Getting size of loader entrypoint binary failed");
         goto out;
     }
 
     buf = malloc(attr.pending_size);
     if (!buf) {
-        log_error("Allocating buffer to hold ELF file of size %lu failed", attr.pending_size);
+        log_error("Allocating buffer to hold loader entrypoint binary of size %lu failed",
+                  attr.pending_size);
         goto out;
     }
 
@@ -670,11 +671,11 @@ int load_entrypoint(const char* uri) {
     size_t remaining = attr.pending_size;
     while (remaining > 0) {
         int64_t read = _PalStreamRead(handle, buf_offset, remaining, buf + buf_offset);
-        if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN)
+        if (read == -PAL_ERROR_INTERRUPTED || read == -PAL_ERROR_TRYAGAIN)
             continue;
-        if (ret < 0 || read == 0) {
-            log_error("Reading ELF file failed");
-            ret = ret < 0 ? ret : -PAL_ERROR_DENIED;
+        if (read <= 0) {
+            log_error("Reading loader entrypoint binary failed");
+            ret = read < 0 ? read : -PAL_ERROR_DENIED;
             goto out;
         }
 
@@ -686,45 +687,46 @@ int load_entrypoint(const char* uri) {
 
     ret = _PalValidateEntrypoint(buf, attr.pending_size);
     if (ret < 0) {
-        log_error("Validating ELF file failed");
+        log_error("Validating loader entrypoint binary failed");
         goto out;
     }
 
     elf_ehdr_t* ehdr = (elf_ehdr_t*)buf;
     if (attr.pending_size < sizeof(elf_ehdr_t)) {
-        log_error("ELF file is too small (cannot read the ELF header)");
+        log_error("Loader entrypoint binary is too small (cannot read the ELF header)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (memcmp(ehdr->e_ident, g_expected_elf_header, EI_OSABI)) {
-        log_error("ELF file has unexpected header (unexpected first 7 bytes)");
+        log_error("Loader entrypoint binary has unexpected ELF header (unexpected first 7 bytes)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_ident[EI_OSABI] != ELFOSABI_SYSV && ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX) {
-        log_error("ELF file has unexpected OS/ABI: PAL loader currently supports only SYS-V and "
-                  "LINUX");
+        log_error("Loader entrypoint binary has unexpected OS/ABI: PAL loader currently supports "
+                  "only SYS-V and LINUX");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_type != ET_DYN && ehdr->e_type != ET_EXEC) {
-        log_error("ELF file has unexpected type: PAL loader currently supports only DYN and EXEC");
+        log_error("Loader entrypoint binary has unexpected type: PAL loader currently supports "
+                  "only DYN and EXEC");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (attr.pending_size < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
-        log_error("Read too few bytes from the ELF file (not all program headers)");
+        log_error("Read too few bytes from loader entrypoint binary (not all program headers)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     ret = create_and_relocate_entrypoint(uri, buf);
     if (ret < 0) {
-        log_error("Could not map the ELF file into memory and then relocate it");
+        log_error("Could not map loader entrypoint binary into memory and then relocate it");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }

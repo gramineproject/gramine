@@ -828,12 +828,11 @@ int _PalValidateEntrypoint(const void* buf, size_t size) {
 
     if (!entrypoint_sha256_str) {
         log_error("Cannot find 'loader.entrypoint_sha256' in manifest");
-        ret = -PAL_ERROR_INVAL;
-        goto out;
+        return -PAL_ERROR_INVAL;
     }
 
     if (strlen(entrypoint_sha256_str) != sizeof(manifest_sha256_bytes) * 2) {
-        log_error("Hash of an entrypoint is not a SHA256 hash");
+        log_error("Hash in 'loader.entrypoint_sha256' is not a SHA256 hash");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
@@ -841,7 +840,7 @@ int _PalValidateEntrypoint(const void* buf, size_t size) {
     char* bytes = hex2bytes(entrypoint_sha256_str, strlen(entrypoint_sha256_str),
                             manifest_sha256_bytes, sizeof(manifest_sha256_bytes));
     if (!bytes) {
-        log_error("Could not parse hash of entrypoint");
+        log_error("Could not parse hash in 'loader.entrypoint_sha256'");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }

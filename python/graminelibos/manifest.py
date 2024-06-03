@@ -301,7 +301,7 @@ class Manifest:
         loader = manifest['loader']
         if not 'entrypoint_sha256' in loader:
             entrypoint_tf = TrustedFile.from_realpath(uri2path(loader['entrypoint'])).ensure_hash()
-            loader.setdefault('entrypoint_sha256', entrypoint_tf.sha256);
+            loader['entrypoint_sha256'] = entrypoint_tf.sha256
 
         sgx = manifest.setdefault('sgx', {})
         sgx.setdefault('trusted_files', [])
