@@ -693,12 +693,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     /* Now that we have `libpal_path`, set name for PAL map */
     set_pal_binary_name(libpal_path + URI_PREFIX_FILE_LEN);
 
-    /* We can't verify the following arguments from the host. So we copy them directly but need to
-     * be careful when we use them. */
-    if (!sgx_copy_to_enclave(&g_pal_linuxsgx_state.qe_targetinfo,
-                             sizeof(g_pal_linuxsgx_state.qe_targetinfo),
-                             uptr_qe_targetinfo,
-                             sizeof(sgx_target_info_t))) {
+    ret = init_qe_targetinfo(uptr_qe_targetinfo);
+    if (ret < 0) {
         log_error("Copying qe_targetinfo into the enclave failed");
         ocall_exit(1, /*is_exitgroup=*/true);
     }
