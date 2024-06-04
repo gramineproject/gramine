@@ -14,14 +14,14 @@
 
 #define PF_NODE_SIZE 4096U
 
-/*! Size of the AES-GCM encryption key */
-#define PF_KEY_SIZE 16
-
 /*! Size of IV for AES-GCM */
 #define PF_IV_SIZE 12
 
 /*! Size of MAC fields */
 #define PF_MAC_SIZE 16
+
+/*! Size of the AES-GCM encryption key */
+#define PF_KEY_SIZE 16
 
 /*! Size of the nonce used in KDF (Key Derivation Function) */
 #define PF_NONCE_SIZE 32
@@ -29,7 +29,7 @@
 typedef uint8_t pf_iv_t[PF_IV_SIZE];
 typedef uint8_t pf_mac_t[PF_MAC_SIZE];
 typedef uint8_t pf_key_t[PF_KEY_SIZE];
-typedef uint8_t pf_keyid_t[PF_NONCE_SIZE];
+typedef uint8_t pf_nonce_t[PF_NONCE_SIZE];
 
 typedef enum _pf_status_t {
     PF_STATUS_SUCCESS              = 0,
