@@ -67,9 +67,15 @@ bool is_in_out(uint8_t* rip) {
     while (is_x86_instr_legacy_prefix(rip[idx]) && idx < INSTR_SIZE_MAX)
         idx++;
 
+    if (idx == INSTR_SIZE_MAX)
+        return false;
+
     /* skip over the optional REX prefix */
     if (is_x86_instr_rex_prefix(rip[idx]))
         idx++;
+
+    if (idx == INSTR_SIZE_MAX)
+        return false;
 
     switch (rip[idx]) {
         /* INS opcodes */
