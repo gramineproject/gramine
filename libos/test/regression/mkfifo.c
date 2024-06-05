@@ -14,18 +14,18 @@
 int main(int argc, char** argv) {
     int fd;
     char buffer[1024];
+    struct stat stat_buf;
 
     if (mkfifo(FIFO_PATH, S_IRWXU) < 0) {
         perror("mkfifo error");
         return 1;
     }
 
-    struct stat buf;
-    if (stat(FIFO_PATH, &buf) < 0) {
+    if (stat(FIFO_PATH, &stat_buf) < 0) {
         perror("stat error");
         return 1;
     }
-    if (!S_ISFIFO(buf.st_mode)) {
+    if (!S_ISFIFO(stat_buf.st_mode)) {
         fprintf(stderr, "stat returned a non-FIFO mode");
         return 1;
     }
@@ -43,12 +43,11 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        struct stat buf;
-        if (fstat(fd, &buf) < 0) {
+        if (fstat(fd, &stat_buf) < 0) {
             perror("fstat error");
             return 1;
         }
-        if (!S_ISFIFO(buf.st_mode)) {
+        if (!S_ISFIFO(stat_buf.st_mode)) {
             fprintf(stderr, "fstat returned a non-FIFO mode");
             return 1;
         }
