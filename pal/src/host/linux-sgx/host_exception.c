@@ -189,11 +189,11 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
 }
 
 static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
+#ifdef DEBUG
     __UNUSED(signum);
     __UNUSED(info);
     __UNUSED(uc);
 
-#ifdef DEBUG
     if (g_pal_enclave.profile_enable) {
         __atomic_store_n(&g_pal_enclave.profile_delayed_reinit, true, __ATOMIC_RELEASE);
     }

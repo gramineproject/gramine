@@ -37,7 +37,7 @@ char* realpath(const char* path, char* resolved_path);
 #define NSEC_IN_SEC 1000000000
 
 /* Filenames for saved data */
-#define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d-%lu.data"
+#define SGX_PROFILE_FILENAME_WITH_PID_AND_TIME "sgx-perf-%d-%lu.data"
 
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
 static struct perf_data* g_perf_data = NULL;
@@ -46,7 +46,7 @@ static bool g_profile_enabled = false;
 static int g_profile_mode;
 static uint64_t g_profile_period;
 static int g_mem_fd = -1;
-static void sgx_profile_report_elf_thread_unsafe(const char* filename, void* addr);
+static void _sgx_profile_report_elf(const char* filename, void* addr);
 
 /* Read memory from inside enclave (using /proc/self/mem). */
 static ssize_t debug_read(void* dest, void* addr, size_t size) {
@@ -132,7 +132,7 @@ int sgx_profile_init(void) {
     }
 
     snprintf(g_pal_enclave.profile_filename, ARRAY_SIZE(g_pal_enclave.profile_filename),
-             SGX_PROFILE_FILENAME_WITH_PID, (int)g_host_pid, ts.tv_sec);
+             SGX_PROFILE_FILENAME_WITH_PID_AND_TIME, (int)g_host_pid, ts.tv_sec);
 
     struct perf_data* pd = pd_open(g_pal_enclave.profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
@@ -162,7 +162,8 @@ out:
     return ret;
 }
 
-static void sgx_profile_finish_thread_unsafe(void) {
+static void _sgx_profile_finish(void) {
+    assert(spinlock_is_locked(&g_perf_data_lock));
     ssize_t size;
 
     if (!g_profile_enabled)
@@ -180,7 +181,7 @@ static void sgx_profile_finish_thread_unsafe(void) {
 
 void sgx_profile_finish(void) {
     spinlock_lock(&g_perf_data_lock);
-    sgx_profile_finish_thread_unsafe();
+    _sgx_profile_finish();
     spinlock_unlock(&g_perf_data_lock);
 }
 
@@ -189,7 +190,7 @@ static int sgx_profile_reinit(void) {
     assert(spinlock_is_locked(&g_perf_data_lock));
 
     int ret;
-    sgx_profile_finish_thread_unsafe();
+    _sgx_profile_finish();
 
     ret = sgx_profile_init();
     if (ret < 0) {
@@ -200,7 +201,7 @@ static int sgx_profile_reinit(void) {
     /* Report all ELFs already loaded */
     struct debug_map* map = g_debug_map;
     while (map) {
-        sgx_profile_report_elf_thread_unsafe(map->name, map->addr);
+        _sgx_profile_report_elf(map->name, map->addr);
         map = map->next;
     }
 
@@ -338,7 +339,8 @@ void sgx_profile_sample_ocall_outer(void* ocall_func) {
     sample_simple((uint64_t)ocall_func);
 }
 
-static void sgx_profile_report_elf_thread_unsafe(const char* filename, void* addr) {
+static void _sgx_profile_report_elf(const char* filename, void* addr) {
+    assert(spinlock_is_locked(&g_perf_data_lock));
     int ret;
 
     if (!g_profile_enabled && !g_vtune_profile_enabled)
@@ -443,7 +445,7 @@ out_close:
 
 void sgx_profile_report_elf(const char* filename, void* addr) {
     spinlock_lock(&g_perf_data_lock);
-    sgx_profile_report_elf_thread_unsafe(filename, addr);
+    _sgx_profile_report_elf(filename, addr);
     spinlock_unlock(&g_perf_data_lock);
 }
 

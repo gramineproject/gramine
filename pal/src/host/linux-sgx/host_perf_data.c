@@ -294,7 +294,8 @@ ssize_t pd_close(struct perf_data* pd) {
         goto out;
 
 out:
-    if ((dup2_ret = DO_SYSCALL(dup2, g_dev_null_fd, pd->fd)) < 0)
+    dup2_ret = DO_SYSCALL(dup2, g_dev_null_fd, pd->fd);
+    if (dup2_ret < 0)
         log_error("pd_close: dup2 failed: %s", unix_strerror(dup2_ret));
 
     free(pd);
