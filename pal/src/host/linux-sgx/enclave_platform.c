@@ -11,7 +11,7 @@ static sgx_target_info_t g_qe_targetinfo; /* received from untrusted host, use c
 static spinlock_t g_qe_targetinfo_lock = INIT_SPINLOCK_UNLOCKED;
 
 int init_qe_targetinfo(void* uptr_qe_targetinfo) {
-    /* no need to acquire g_qe_targetinfo_lock at this point since there is a single thread */
+    /* no need to acquire g_qe_targetinfo_lock at this point since there is only a single thread */
     if (!sgx_copy_to_enclave(&g_qe_targetinfo,
                              sizeof(g_qe_targetinfo),
                              uptr_qe_targetinfo,
@@ -27,25 +27,33 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
     int ret;
     int retries = 0;
     while (retries < 5) {
-        spinlock_lock(&g_qe_targetinfo_lock);
+        /* must align all arguments to sgx_report() so that EREPORT doesn't complain */
+        __sgx_mem_aligned sgx_target_info_t targetinfo;
+        __sgx_mem_aligned sgx_report_data_t _report_data;
+        __sgx_mem_aligned sgx_report_t report;
 
+        bool new_qe_targetinfo = false;
         if (retries) {
             /* new attempt, need to update QE target info */
-            ret = ocall_get_qe_targetinfo(/*is_epid=*/!!spid, &g_qe_targetinfo);
+            ret = ocall_get_qe_targetinfo(/*is_epid=*/!!spid, &targetinfo);
             if (ret < 0) {
-                spinlock_unlock(&g_qe_targetinfo_lock);
                 log_error("Failed to get QE target info (error code=%d)", ret);
                 return unix_to_pal_error(ret);
             }
+            new_qe_targetinfo = true;
         }
 
-        /* must align all arguments to sgx_report() so that EREPORT doesn't complain */
-        __sgx_mem_aligned sgx_report_t report;
-        __sgx_mem_aligned sgx_target_info_t targetinfo = g_qe_targetinfo;
-        __sgx_mem_aligned sgx_report_data_t _report_data = *report_data;
-
+        spinlock_lock(&g_qe_targetinfo_lock);
+        if (new_qe_targetinfo) {
+            /* got new QE target info into the local stack var, also update the global var */
+            g_qe_targetinfo = targetinfo;
+        } else {
+            /* use old QE target info stored in global var, copy it into local stack var */
+            targetinfo = g_qe_targetinfo;
+        }
         spinlock_unlock(&g_qe_targetinfo_lock);
 
+        _report_data = *report_data;
         ret = sgx_report(&targetinfo, &_report_data, &report);
         if (ret) {
             log_error("Failed to get enclave report (error code=%d)", ret);
