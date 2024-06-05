@@ -13,8 +13,12 @@
 
 #pragma once
 
-#if GRAMINE_HAS_NODISCARD
+#if defined(__has_c_attribute)
+#if __has_c_attribute(nodiscard)
 #define NODISCARD [[nodiscard]]
-#else
+#endif
+#endif
+
+#ifndef NODISCARD
 #define NODISCARD
 #endif
