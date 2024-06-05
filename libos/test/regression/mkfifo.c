@@ -20,6 +20,16 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    struct stat buf;
+    if (stat(FIFO_PATH, &buf) < 0) {
+        perror("stat error");
+        return 1;
+    }
+    if (!S_ISFIFO(buf.st_mode)) {
+        fprintf(stderr, "stat returned a non-FIFO mode");
+        return 1;
+    }
+
     pid_t pid = fork();
 
     if (pid < 0) {
@@ -30,6 +40,16 @@ int main(int argc, char** argv) {
         fd = open(FIFO_PATH, O_NONBLOCK | O_RDONLY);
         if (fd < 0) {
             perror("[child] open error");
+            return 1;
+        }
+
+        struct stat buf;
+        if (fstat(fd, &buf) < 0) {
+            perror("fstat error");
+            return 1;
+        }
+        if (!S_ISFIFO(buf.st_mode)) {
+            fprintf(stderr, "fstat returned a non-FIFO mode");
             return 1;
         }
 
