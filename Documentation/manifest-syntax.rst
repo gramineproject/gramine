@@ -410,7 +410,7 @@ effects of the syscall may introduce bugs to the application, if the application
 expects these side effects (e.g. mocking the ``futex`` syscall may lead to
 silent introduction of race conditions or hangs).
 
-For example, to skip ``sched_yield`` syscall, specify::
+As one example, to skip ``sched_yield`` syscall, specify::
 
     sys.mock_syscalls = [
       { name = "sched_yield", return = 0 },
@@ -433,11 +433,15 @@ As another example, to disallow eventfd completely, specify::
    whereas ``sys.mock_syscalls = [ { name = "clone", ... } ]`` disables both
    usages.
 
-.. note ::
+.. warning ::
    This option is *not* a security feature. Its rationale is improving
    performance (the example of ``sched_yield``), mocking syscalls currently not
    implemented in Gramine, and limiting syscalls exposed to the app.
 
+.. warning ::
+   If used incorrectly, this option may break syscall semantics and make your
+   application unsound! This option is for advanced users only and for
+   experimenting/debugging.
 
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
