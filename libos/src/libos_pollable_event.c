@@ -13,6 +13,7 @@
 int create_pollable_event(struct libos_pollable_event* event) {
     char uri[PIPE_URI_SIZE];
     PAL_HANDLE srv_handle;
+    pal_error_t pret;
     int ret = create_pipe(/*name=*/NULL, uri, sizeof(uri), &srv_handle,
                           /*use_vmid_for_name=*/false);
     if (ret < 0) {
@@ -22,12 +23,12 @@ int create_pollable_event(struct libos_pollable_event* event) {
 
     PAL_HANDLE write_handle;
     do {
-        ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                            PAL_OPTION_NONBLOCK, &write_handle);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
-    if (ret < 0) {
-        log_error("PalStreamOpen failed: %s", pal_strerror(ret));
-        ret = pal_to_unix_errno(ret);
+        pret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                             PAL_OPTION_NONBLOCK, &write_handle);
+    } while (pret == PAL_ERROR_INTERRUPTED);
+    if (pret != PAL_ERROR_SUCCESS) {
+        log_error("PalStreamOpen failed: %s", pal_strerror(pret));
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
 

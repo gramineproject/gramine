@@ -71,18 +71,18 @@ int init_eventfd_mode(void) {
 static int create_eventfd_pal_handle(uint64_t initial_count, int flags,
                                      PAL_HANDLE* out_pal_handle) {
     int ret;
-
+    pal_error_t pret;
     PAL_HANDLE hdl = NULL;
 
     int pal_flags = 0;
     pal_flags |= flags & EFD_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     pal_flags |= flags & EFD_SEMAPHORE ? PAL_OPTION_EFD_SEMAPHORE : 0;
 
-    ret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
-                        PAL_CREATE_IGNORED, pal_flags, &hdl);
-    if (ret < 0) {
+    pret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                         PAL_CREATE_IGNORED, pal_flags, &hdl);
+    if (pret != PAL_ERROR_SUCCESS) {
         log_error("eventfd: creation failure");
-        return pal_to_unix_errno(ret);
+        return -pal_to_unix_errno(pret);
     }
 
     /* set the initial count */

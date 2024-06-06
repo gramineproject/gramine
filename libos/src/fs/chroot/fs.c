@@ -114,14 +114,16 @@ out:
 /* Open a temporary read-only PAL handle for a file (used by `unlink` etc.) */
 static int chroot_temp_open(struct libos_dentry* dent, PAL_HANDLE* out_palhdl) {
     char* uri;
+    pal_error_t pret;
+
     int ret = dentry_uri(dent, dent->inode->type, &uri);
     if (ret < 0)
         return ret;
 
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        /*options=*/0, out_palhdl);
+    pret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                         /*options=*/0, out_palhdl);
     free(uri);
-    return pal_to_unix_errno(ret);
+    return -pal_to_unix_errno(pret);
 }
 
 /* Open a PAL handle, and associate it with a LibOS handle (if provided). */
@@ -130,8 +132,9 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     assert(locked(&g_dcache_lock));
 
     int ret;
-
+    pal_error_t pret;
     char* uri;
+
     ret = dentry_uri(dent, type, &uri);
     if (ret < 0)
         return ret;
@@ -141,9 +144,10 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+
+    pret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         goto out;
     }
 

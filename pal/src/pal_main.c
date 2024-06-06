@@ -311,11 +311,12 @@ static int load_cstring_array(const char* uri, const char*** res) {
     char* buf = NULL;
     const char** array = NULL;
     int ret;
+    pal_error_t pret;
 
-    ret = _PalStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+    pret = _PalStreamOpen(&hdl, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                          /*options=*/0);
-    if (ret < 0)
-        return ret;
+    if (pret != PAL_ERROR_SUCCESS)
+        return -pret;
     ret = _PalStreamAttributesQueryByHandle(hdl, &attr);
     if (ret < 0)
         goto out_fail;

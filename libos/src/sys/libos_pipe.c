@@ -22,6 +22,7 @@
 
 static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int flags, char* name) {
     int ret = 0;
+    pal_error_t pret;
     char uri[PIPE_URI_SIZE];
 
     PAL_HANDLE hdl0 = NULL; /* server pipe (temporary, waits for connect from hdl2) */
@@ -34,10 +35,10 @@ static int create_pipes(struct libos_handle* srv, struct libos_handle* cli, int 
         return ret;
     }
 
-    ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
-                        LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
-    if (ret < 0) {
-        ret = pal_to_unix_errno(ret);
+    pret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
+                         LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags), &hdl2);
+    if (pret != PAL_ERROR_SUCCESS) {
+        ret = -pal_to_unix_errno(pret);
         log_error("pipe connection failure");
         goto out;
     }

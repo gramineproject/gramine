@@ -20,10 +20,11 @@
 #include "path_utils.h"
 #include "perm.h"
 
-static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum pal_access access,
-                    pal_share_flags_t share, enum pal_create_mode create,
-                    pal_stream_options_t options) {
+static pal_error_t dev_open(PAL_HANDLE* handle, const char* type, const char* uri,
+                            enum pal_access access, pal_share_flags_t share,
+                            enum pal_create_mode create, pal_stream_options_t options) {
     int ret;
+    pal_error_t pret;
     char* normpath = NULL;
 
     assert(create != PAL_CREATE_IGNORED);
@@ -32,11 +33,11 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     if (strcmp(type, URI_TYPE_DEV))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dev));
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     init_handle_hdr(hdl, PAL_TYPE_DEV);
 
@@ -48,7 +49,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
                                 O_CLOEXEC,
                      share);
     if (ret < 0) {
-        ret = unix_to_pal_error(ret);
+        pret = -unix_to_pal_error(ret);
         goto fail;
     }
     hdl->dev.fd = ret;
@@ -56,13 +57,13 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     size_t normpath_size = strlen(uri) + 1;
     normpath = malloc(normpath_size);
     if (!normpath) {
-        ret = -PAL_ERROR_NOMEM;
+        pret = PAL_ERROR_NOMEM;
         goto fail;
     }
     ret = get_norm_path(uri, normpath, &normpath_size);
     if (ret < 0) {
         log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
-        ret = -PAL_ERROR_DENIED;
+        pret = PAL_ERROR_DENIED;
         goto fail;
     }
     hdl->dev.realpath = normpath;
@@ -77,11 +78,11 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     }
 
     *handle = hdl;
-    return 0;
+    return PAL_ERROR_SUCCESS;
 fail:
     free(hdl);
     free(normpath);
-    return ret;
+    return pret;
 }
 
 static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void* buffer) {

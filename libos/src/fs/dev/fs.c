@@ -64,11 +64,12 @@ static int dev_tty_open(struct libos_handle* hdl, struct libos_dentry* dent, int
         return -ENOMEM;
 
     PAL_HANDLE palhdl;
-    int ret = PalStreamOpen(uri, LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags), PSEUDO_PERM_FILE_RW,
-                            PAL_CREATE_NEVER, /*options=*/0, &palhdl);
-    if (ret < 0) {
+    pal_error_t pret = PalStreamOpen(uri, LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags),
+                                     PSEUDO_PERM_FILE_RW, PAL_CREATE_NEVER, /*options=*/0,
+                                     &palhdl);
+    if (pret != PAL_ERROR_SUCCESS) {
         free(uri);
-        return pal_to_unix_errno(ret);
+        return -pal_to_unix_errno(pret);
     }
 
     assert(hdl);

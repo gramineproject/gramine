@@ -643,10 +643,12 @@ int load_entrypoint(const char* uri) {
     PAL_HANDLE handle;
 
     char buf[1024]; /* must be enough to hold ELF header and all its program headers */
-    ret = _PalStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+    pal_error_t pret;
+
+    pret = _PalStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                          /*options=*/0);
-    if (ret < 0)
-        return ret;
+    if (pret != PAL_ERROR_SUCCESS)
+        return -pret;
 
     ret = _PalStreamRead(handle, 0, sizeof(buf), buf);
     if (ret < 0) {

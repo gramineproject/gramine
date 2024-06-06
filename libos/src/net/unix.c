@@ -146,10 +146,10 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     unlock(&handle->lock);
 
     PAL_HANDLE pal_handle = NULL;
-    ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                        &pal_handle);
-    if (ret < 0) {
-        return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
+    pal_error_t pret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                     PAL_CREATE_IGNORED, options, &pal_handle);
+    if (pret != PAL_ERROR_SUCCESS) {
+        return (pret == PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : -pal_to_unix_errno(pret);
     }
 
     __atomic_store_n(&handle->info.sock.pal_handle, pal_handle, __ATOMIC_RELEASE);
@@ -243,10 +243,10 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
     unlock(&handle->lock);
 
     PAL_HANDLE pal_handle = NULL;
-    ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
-                        &pal_handle);
-    if (ret < 0) {
-        return (ret == -PAL_ERROR_CONNFAILED) ? -ENOENT : pal_to_unix_errno(ret);
+    pal_error_t pret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                     PAL_CREATE_IGNORED, options, &pal_handle);
+    if (pret != PAL_ERROR_SUCCESS) {
+        return (pret == PAL_ERROR_CONNFAILED) ? -ENOENT : -pal_to_unix_errno(pret);
     }
 
     assert(sock->pal_handle == NULL);

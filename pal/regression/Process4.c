@@ -13,10 +13,10 @@ int main(int argc, char** argv) {
 
     if (argc == 1) {
         PAL_HANDLE pipe_srv = NULL;
-        int ret = PalStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
-        if (ret < 0) {
-            pal_printf("PalStreamOpen(\"pipe.srv\", ...) failed: %d\n", ret);
+        pal_error_t pret = PalStreamOpen("pipe.srv:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                         PAL_CREATE_IGNORED, /*options=*/0, &pipe_srv);
+        if (pret != PAL_ERROR_SUCCESS) {
+            pal_printf("PalStreamOpen(\"pipe.srv\", ...) failed: %d\n", pret);
             return 1;
         }
 
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         const char* newargs[4] = {"Process4", "0", time_arg, NULL};
 
         PAL_HANDLE proc = NULL;
-        ret = PalProcessCreate(newargs, NULL, 0, &proc);
+        int ret = PalProcessCreate(newargs, NULL, 0, &proc);
 
         if (ret < 0)
             pal_printf("Can't create process\n");
@@ -72,10 +72,10 @@ int main(int argc, char** argv) {
             pal_printf("wall time = %ld\n", end - start);
 
             PAL_HANDLE pipe = NULL;
-            int ret = PalStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
-                                    PAL_CREATE_IGNORED, /*options=*/0, &pipe);
-            if (ret < 0) {
-                pal_printf("Failed to open pipe: %d\n", ret);
+            pal_error_t pret = PalStreamOpen("pipe:Process4", PAL_ACCESS_RDWR, /*share_flags=*/0,
+                                             PAL_CREATE_IGNORED, /*options=*/0, &pipe);
+            if (pret != PAL_ERROR_SUCCESS) {
+                pal_printf("Failed to open pipe: %d\n", pret);
                 return 1;
             }
             PalObjectDestroy(pipe);
