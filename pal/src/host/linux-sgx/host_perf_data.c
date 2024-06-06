@@ -174,16 +174,12 @@ struct perf_data* pd_open(const char* file_name, bool with_stack) {
     if (ret < 0)
         goto fail;
 
-    struct perf_data* pd = malloc(sizeof(*pd));
-    if (!pd) {
-        log_error("pd_open: out of memory");
-        goto fail;
-    }
+    static struct perf_data pd;
 
-    pd->fd = fd;
-    pd->buf_count = 0;
-    pd->with_stack = with_stack;
-    return pd;
+    pd.fd = fd;
+    pd.buf_count = 0;
+    pd.with_stack = with_stack;
+    return &pd;
 
 fail:
     ret = DO_SYSCALL(close, fd);
@@ -298,7 +294,6 @@ out:
     if (dup2_ret < 0)
         log_error("pd_close: dup2 failed: %s", unix_strerror(dup2_ret));
 
-    free(pd);
     return ret;
 }
 
