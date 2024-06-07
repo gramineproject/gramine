@@ -14,14 +14,14 @@
 
 #define PF_NODE_SIZE 4096U
 
-/*! Size of the AES-GCM encryption key */
-#define PF_KEY_SIZE 16
-
 /*! Size of IV for AES-GCM */
 #define PF_IV_SIZE 12
 
 /*! Size of MAC fields */
 #define PF_MAC_SIZE 16
+
+/*! Size of the AES-GCM encryption key */
+#define PF_KEY_SIZE 16
 
 /*! Size of the nonce used in KDF (Key Derivation Function) */
 #define PF_NONCE_SIZE 32

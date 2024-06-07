@@ -44,6 +44,7 @@ typedef struct _data_node_crypto {
 } gcm_crypto_data_t;
 
 // for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 mht child nodes
+// 3/4 of the node is dedicated to data nodes, 1/4 to MHT nodes
 #define ATTACHED_DATA_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 3 / 4)
 #define CHILD_MHT_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 1 / 4)
 static_assert(ATTACHED_DATA_NODES_COUNT == 96, "ATTACHED_DATA_NODES_COUNT");
@@ -59,7 +60,7 @@ typedef struct _metadata_plain {
 
 typedef struct _metadata_encrypted {
     char     path[PATH_MAX_SIZE];
-    uint64_t size;
+    uint64_t size; /* file size after decryption */
     pf_key_t mht_key;
     pf_mac_t mht_gmac;
     uint8_t  data[MD_USER_DATA_SIZE];
