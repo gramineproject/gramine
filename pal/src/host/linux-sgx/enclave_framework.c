@@ -325,7 +325,7 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
     int ret = sgx_report(target_info, data, report);
     if (ret) {
         log_error("sgx_report failed: %s", unix_strerror(ret));
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
     return 0;
 }
@@ -342,7 +342,7 @@ int sgx_verify_report(sgx_report_t* report) {
     int ret = sgx_getkey(&keyrequest, &report_key);
     if (ret) {
         log_error("Can't get report key");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     sgx_mac_t check_mac;
@@ -363,7 +363,7 @@ int sgx_verify_report(sgx_report_t* report) {
 
     if (!ct_memequal(&check_mac, &report->mac, sizeof(check_mac))) {
         log_error("Report verification failed");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     return 0;
@@ -395,7 +395,7 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     int ret = sgx_getkey(&key_request, out_seal_key);
     if (ret) {
         log_error("Failed to generate sealing key using SGX EGETKEY");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
     return 0;
 }
@@ -498,7 +498,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     /* trusted files: need integrity, so calculate chunk hashes and compare with hash in manifest */
     if (!file->file.seekable) {
         log_warning("Trusted file '%s' is not seekable, cannot load it", file->file.realpath);
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     sgx_chunk_hash_t* chunk_hashes = NULL;
@@ -527,13 +527,13 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
 
     chunk_hashes = malloc(sizeof(sgx_chunk_hash_t) * UDIV_ROUND_UP(tf->size, TRUSTED_CHUNK_SIZE));
     if (!chunk_hashes) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
     tmp_chunk = malloc(TRUSTED_CHUNK_SIZE);
     if (!tmp_chunk) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
@@ -587,7 +587,7 @@ int load_trusted_or_allowed_file(struct trusted_file* tf, PAL_HANDLE file, bool 
     if (memcmp(&file_hash, &tf->file_hash, sizeof(file_hash))) {
         log_warning("Hash of trusted file '%s' does not match with the reference hash in manifest",
                     file->file.realpath);
-        ret = -PAL_ERROR_DENIED;
+        ret = PAL_ERROR_DENIED;
         goto fail;
     }
 
@@ -634,7 +634,7 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
 
     uint8_t* tmp_chunk = malloc(TRUSTED_CHUNK_SIZE);
     if (!tmp_chunk) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto failed;
     }
 
@@ -693,7 +693,7 @@ int copy_and_verify_trusted_file(const char* path, uint8_t* buf, const void* ume
         if (memcmp(chunk_hashes_item, &chunk_hash[0], sizeof(*chunk_hashes_item))) {
             log_error("Accessing file '%s' is denied: incorrect hash of file chunk at %lu-%lu.",
                       path, chunk_offset, chunk_end);
-            ret = -PAL_ERROR_DENIED;
+            ret = PAL_ERROR_DENIED;
             goto failed;
         }
     }
@@ -710,13 +710,13 @@ failed:
 static int register_file(const char* uri, const char* hash_str, bool check_duplicates) {
     if (hash_str && strlen(hash_str) != sizeof(sgx_file_hash_t) * 2) {
         log_error("Hash (%s) of a trusted file %s is not a SHA256 hash", hash_str, uri);
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     size_t uri_len = strlen(uri);
     if (uri_len >= URI_MAX) {
         log_error("Size of file exceeds maximum %dB: %s", URI_MAX, uri);
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (check_duplicates) {
@@ -736,7 +736,7 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
 
     struct trusted_file* new = malloc(sizeof(*new) + uri_len + 1);
     if (!new)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     INIT_LIST_HEAD(new, list);
     new->size = 0;
@@ -753,7 +753,7 @@ static int register_file(const char* uri, const char* hash_str, bool check_dupli
         if (!bytes) {
             log_error("Could not parse hash of file: %s", uri);
             free(new);
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
     } else {
         memset(&new->file_hash, 0, sizeof(new->file_hash));
@@ -787,19 +787,19 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
     if (hash_str) {
         if (!strstartswith(uri, URI_PREFIX_FILE)) {
             log_error("Invalid URI [%s]: Trusted files must start with 'file:'", uri);
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
     } else {
         if (!strstartswith(uri, URI_PREFIX_FILE) && !strstartswith(uri, URI_PREFIX_DEV)) {
             log_error("Invalid URI [%s]: Allowed files must start with 'file:' or 'dev:'", uri);
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
     }
 
     const size_t norm_uri_size = strlen(uri) + 1;
     char* norm_uri = malloc(norm_uri_size);
     if (!norm_uri) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     const char* uri_prefix;
@@ -817,7 +817,7 @@ static int normalize_and_register_file(const char* uri, const char* hash_str) {
     size_t norm_path_size = norm_uri_size - uri_prefix_len;
     if (!get_norm_path(uri + uri_prefix_len, norm_uri + uri_prefix_len, &norm_path_size)) {
         log_error("Path (%s) normalization failed", uri);
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -840,7 +840,7 @@ int init_trusted_files(void) {
 
     ssize_t toml_trusted_files_cnt = toml_array_nelem(toml_trusted_files);
     if (toml_trusted_files_cnt < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     if (toml_trusted_files_cnt == 0)
         return 0;
 
@@ -852,28 +852,28 @@ int init_trusted_files(void) {
         toml_table_t* toml_trusted_file = toml_table_at(toml_trusted_files, i);
         if (!toml_trusted_file) {
             log_error("Invalid trusted file in manifest at index %ld (not a TOML table)", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
         toml_raw_t toml_trusted_uri_raw = toml_raw_in(toml_trusted_file, "uri");
         if (!toml_trusted_uri_raw) {
             log_error("Invalid trusted file in manifest at index %ld (no 'uri' key)", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
         ret = toml_rtos(toml_trusted_uri_raw, &toml_trusted_uri_str);
         if (ret < 0) {
             log_error("Invalid trusted file in manifest at index %ld ('uri' is not a string)", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
         toml_raw_t toml_trusted_sha256_raw = toml_raw_in(toml_trusted_file, "sha256");
         if (!toml_trusted_sha256_raw) {
             log_error("Invalid trusted file in manifest at index %ld (no 'sha256' key)", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
@@ -881,7 +881,7 @@ int init_trusted_files(void) {
         if (ret < 0 || !toml_trusted_sha256_str) {
             log_error("Invalid trusted file in manifest at index %ld ('sha256' is not a string)",
                       i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
@@ -925,7 +925,7 @@ int init_allowed_files(void) {
 
     ssize_t toml_allowed_files_cnt = toml_array_nelem(toml_allowed_files);
     if (toml_allowed_files_cnt < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     if (toml_allowed_files_cnt == 0)
         return 0;
 
@@ -935,14 +935,14 @@ int init_allowed_files(void) {
         toml_raw_t toml_allowed_file_raw = toml_raw_at(toml_allowed_files, i);
         if (!toml_allowed_file_raw) {
             log_error("Invalid allowed file in manifest at index %ld", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
         ret = toml_rtos(toml_allowed_file_raw, &toml_allowed_file_str);
         if (ret < 0) {
             log_error("Invalid allowed file in manifest at index %ld (not a string)", i);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
 
@@ -971,7 +971,7 @@ int init_file_check_policy(void) {
                          &file_check_policy_str);
     if (ret < 0) {
         log_error("Cannot parse 'sgx.file_check_policy'");
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (!file_check_policy_str)
@@ -985,7 +985,7 @@ int init_file_check_policy(void) {
         log_error("Unknown value for 'sgx.file_check_policy' "
                   "(allowed: `strict`, `allow_all_but_log`)'");
         free(file_check_policy_str);
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     log_debug("File check policy: %s", file_check_policy_str);
@@ -1000,7 +1000,7 @@ static int update_seal_key_mask(const char* mask_name, uint8_t* mask_ptr, size_t
     ret = toml_string_in(g_pal_public_state.manifest_root, mask_name, &mask_str);
     if (ret < 0) {
         log_error("Cannot parse '%s'", mask_name);
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (!mask_str) {
@@ -1010,13 +1010,13 @@ static int update_seal_key_mask(const char* mask_name, uint8_t* mask_ptr, size_t
 
     if (strlen(mask_str) != 2 + mask_size * 2) {
         log_error("Malformed '%s' value in the manifest (wrong size)", mask_name);
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (mask_str[0] != '0' || (mask_str[1] != 'x' && mask_str[1] != 'X')) {
         log_error("Malformed '%s' value in the manifest (must start with '0x')", mask_name);
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -1026,7 +1026,7 @@ static int update_seal_key_mask(const char* mask_name, uint8_t* mask_ptr, size_t
         int8_t val = hex2dec(mask_str[i + 2]); /* skip first two chars (the '0x' prefix) */
         if (val < 0) {
             log_error("Malformed '%s' value in the manifest (not a hex number)", mask_name);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
         uint8_t* mask_byte = &mask_ptr[mask_size - i / 2 - 1];
@@ -1066,7 +1066,7 @@ int init_enclave(void) {
     int ret = sgx_report(&targetinfo, &reportdata, &report);
     if (ret) {
         log_error("Failed to get SGX report for current enclave");
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     memcpy(&g_pal_linuxsgx_state.enclave_info, &report.body,
@@ -1124,7 +1124,7 @@ int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
     for (int64_t bytes = 0, total = 0; total < (int64_t)sizeof(my_public); total += bytes) {
         bytes = _PalStreamWrite(stream, 0, sizeof(my_public) - total, my_public + total);
         if (bytes < 0) {
-            if (bytes == -PAL_ERROR_INTERRUPTED || bytes == -PAL_ERROR_TRYAGAIN) {
+            if (bytes == PAL_ERROR_INTERRUPTED || bytes == PAL_ERROR_TRYAGAIN) {
                 bytes = 0;
                 continue;
             }
@@ -1136,7 +1136,7 @@ int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
     for (int64_t bytes = 0, total = 0; total < (int64_t)sizeof(peer_public); total += bytes) {
         bytes = _PalStreamRead(stream, 0, sizeof(peer_public) - total, peer_public + total);
         if (bytes < 0) {
-            if (bytes == -PAL_ERROR_INTERRUPTED || bytes == -PAL_ERROR_TRYAGAIN) {
+            if (bytes == PAL_ERROR_INTERRUPTED || bytes == PAL_ERROR_TRYAGAIN) {
                 bytes = 0;
                 continue;
             }
@@ -1145,7 +1145,7 @@ int _PalStreamKeyExchange(PAL_HANDLE stream, PAL_SESSION_KEY* out_key,
         }
         if (bytes == 0) {
             /* peer enclave closed the connection prematurely */
-            ret = -PAL_ERROR_DENIED;
+            ret = PAL_ERROR_DENIED;
             goto out;
         }
     }
@@ -1210,14 +1210,14 @@ static int send_report(PAL_HANDLE stream, sgx_report_t* report) {
     while (sent < sizeof(*report)) {
         int64_t ret = _PalStreamWrite(stream, 0, sizeof(*report) - sent, (char*)report + sent);
         if (ret < 0) {
-            if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
+            if (ret == PAL_ERROR_INTERRUPTED || ret == PAL_ERROR_TRYAGAIN) {
                 continue;
             }
             log_error("Failed to send a report: %s", pal_strerror(ret));
             return ret;
         } else if (ret == 0) {
             log_error("Failed to send a report: unexpected EOF");
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         sent += ret;
     }
@@ -1229,14 +1229,14 @@ static int recv_report(PAL_HANDLE stream, sgx_report_t* report) {
     while (got < sizeof(*report)) {
         int64_t ret = _PalStreamRead(stream, 0, sizeof(*report) - got, (char*)report + got);
         if (ret < 0) {
-            if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
+            if (ret == PAL_ERROR_INTERRUPTED || ret == PAL_ERROR_TRYAGAIN) {
                 continue;
             }
             log_error("Failed to send a report: %s", pal_strerror(ret));
             return ret;
         } else if (ret == 0) {
             log_error("Failed to receive a report: unexpected EOF");
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         got += ret;
     }
@@ -1272,7 +1272,7 @@ int _PalStreamReportRequest(PAL_HANDLE stream, sgx_report_data_t* my_report_data
 
     if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
         log_error("Not an allowed enclave");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     log_debug("Local attestation succeeded!");
@@ -1336,7 +1336,7 @@ int _PalStreamReportRespond(PAL_HANDLE stream, sgx_report_data_t* my_report_data
 
     if (!is_peer_enclave_ok(&report.body, peer_report_data)) {
         log_error("Not an allowed enclave");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     log_debug("Local attestation succeeded!");
@@ -1353,11 +1353,11 @@ int _PalStreamSecureInit(PAL_HANDLE stream, bool is_server, PAL_SESSION_KEY* ses
     else if (stream->hdr.type == PAL_TYPE_PIPE || stream->hdr.type == PAL_TYPE_PIPECLI)
         stream_fd = stream->pipe.fd;
     else
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     LIB_SSL_CONTEXT* ssl_ctx = malloc(sizeof(*ssl_ctx));
     if (!ssl_ctx)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     /* mbedTLS init routines are not thread safe, so we use a spinlock to protect them */
     static spinlock_t ssl_init_lock = INIT_SPINLOCK_UNLOCKED;
@@ -1394,11 +1394,11 @@ int _PalStreamSecureFree(LIB_SSL_CONTEXT* ssl_ctx) {
 
 int _PalStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, bool is_blocking) {
     int ret = lib_SSLRead(ssl_ctx, buf, len);
-    if (is_blocking && ret == -PAL_ERROR_TRYAGAIN) {
+    if (is_blocking && ret == PAL_ERROR_TRYAGAIN) {
         /* mbedTLS wrappers collapse host errors `EAGAIN` and `EINTR` into one error PAL
          * (`PAL_ERROR_TRYAGAIN`). We use the fact that blocking reads do not return `EAGAIN` to
          * split it back. */
-        return -PAL_ERROR_INTERRUPTED;
+        return PAL_ERROR_INTERRUPTED;
     }
     return ret;
 }
@@ -1406,9 +1406,9 @@ int _PalStreamSecureRead(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t len, boo
 int _PalStreamSecureWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t len,
                           bool is_blocking) {
     int ret = lib_SSLWrite(ssl_ctx, buf, len);
-    if (is_blocking && ret == -PAL_ERROR_TRYAGAIN) {
+    if (is_blocking && ret == PAL_ERROR_TRYAGAIN) {
         /* See the explanation in `_PalStreamSecureRead`. */
-        return -PAL_ERROR_INTERRUPTED;
+        return PAL_ERROR_INTERRUPTED;
     }
     return ret;
 }
@@ -1421,20 +1421,20 @@ int _PalStreamSecureSave(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t** obuf, size_t*
 
     /* figure out the required buffer size */
     ret = lib_SSLSave(ssl_ctx, NULL, 0, olen);
-    if (ret != 0 && ret != -PAL_ERROR_NOMEM)
+    if (ret != 0 && ret != PAL_ERROR_NOMEM)
         return ret;
 
     /* create the required buffer */
     size_t len   = *olen;
     uint8_t* buf = malloc(len);
     if (!buf)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     /* now have buffer with sufficient size to save serialized context */
     ret = lib_SSLSave(ssl_ctx, buf, len, olen);
     if (ret != 0 || len != *olen) {
         free(buf);
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     *obuf = buf;

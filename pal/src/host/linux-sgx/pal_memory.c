@@ -158,11 +158,11 @@ int init_reserved_ranges(void* urts_ptr, size_t urts_size) {
     }
 
     if (!IS_ALIGNED(urts_size, sizeof(*g_urts_next_reserved_range))) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
     if (!sgx_is_valid_untrusted_ptr(urts_ptr, urts_size,
             alignof(__typeof__(*g_urts_next_reserved_range)))) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     g_urts_next_reserved_range = urts_ptr;

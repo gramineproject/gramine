@@ -42,36 +42,38 @@ noreturn void libos_abort(void) {
     PalProcessExit(1);
 }
 
-static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT + 1] = {
-    [PAL_ERROR_SUCCESS]         = 0,
-    [PAL_ERROR_NOTIMPLEMENTED]  = ENOSYS,
-    [PAL_ERROR_NOTDEFINED]      = ENOSYS,
-    [PAL_ERROR_NOTSUPPORT]      = EACCES,
-    [PAL_ERROR_INVAL]           = EINVAL,
-    [PAL_ERROR_TOOLONG]         = ENAMETOOLONG,
-    [PAL_ERROR_DENIED]          = EACCES,
-    [PAL_ERROR_BADHANDLE]       = EBADF,
-    [PAL_ERROR_STREAMEXIST]     = EEXIST,
-    [PAL_ERROR_STREAMNOTEXIST]  = ENOENT,
-    [PAL_ERROR_STREAMISFILE]    = ENOTDIR,
-    [PAL_ERROR_STREAMISDIR]     = EISDIR,
-    [PAL_ERROR_STREAMISDEVICE]  = ESPIPE,
-    [PAL_ERROR_INTERRUPTED]     = EINTR,
-    [PAL_ERROR_OVERFLOW]        = EFAULT,
-    [PAL_ERROR_BADADDR]         = EFAULT,
-    [PAL_ERROR_NOMEM]           = ENOMEM,
-    [PAL_ERROR_INCONSIST]       = EFAULT,
-    [PAL_ERROR_TRYAGAIN]        = EAGAIN,
-    [PAL_ERROR_NOTSERVER]       = EINVAL,
-    [PAL_ERROR_NOTCONNECTION]   = ENOTCONN,
-    [PAL_ERROR_CONNFAILED]      = ECONNRESET,
-    [PAL_ERROR_ADDRNOTEXIST]    = EADDRNOTAVAIL,
-    [PAL_ERROR_AFNOSUPPORT]     = EAFNOSUPPORT,
-    [PAL_ERROR_CONNFAILED_PIPE] = EPIPE,
+#define IDX(x)	[-(x)]
+static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT] = {
+    IDX(PAL_ERROR_SUCCESS)         = 0,
+    IDX(PAL_ERROR_NOTIMPLEMENTED)  = ENOSYS,
+    IDX(PAL_ERROR_NOTDEFINED)      = ENOSYS,
+    IDX(PAL_ERROR_NOTSUPPORT)      = EACCES,
+    IDX(PAL_ERROR_INVAL)           = EINVAL,
+    IDX(PAL_ERROR_TOOLONG)         = ENAMETOOLONG,
+    IDX(PAL_ERROR_DENIED)          = EACCES,
+    IDX(PAL_ERROR_BADHANDLE)       = EBADF,
+    IDX(PAL_ERROR_STREAMEXIST)     = EEXIST,
+    IDX(PAL_ERROR_STREAMNOTEXIST)  = ENOENT,
+    IDX(PAL_ERROR_STREAMISFILE)    = ENOTDIR,
+    IDX(PAL_ERROR_STREAMISDIR)     = EISDIR,
+    IDX(PAL_ERROR_STREAMISDEVICE)  = ESPIPE,
+    IDX(PAL_ERROR_INTERRUPTED)     = EINTR,
+    IDX(PAL_ERROR_OVERFLOW)        = EFAULT,
+    IDX(PAL_ERROR_BADADDR)         = EFAULT,
+    IDX(PAL_ERROR_NOMEM)           = ENOMEM,
+    IDX(PAL_ERROR_INCONSIST)       = EFAULT,
+    IDX(PAL_ERROR_TRYAGAIN)        = EAGAIN,
+    IDX(PAL_ERROR_NOTSERVER)       = EINVAL,
+    IDX(PAL_ERROR_NOTCONNECTION)   = ENOTCONN,
+    IDX(PAL_ERROR_CONNFAILED)      = ECONNRESET,
+    IDX(PAL_ERROR_ADDRNOTEXIST)    = EADDRNOTAVAIL,
+    IDX(PAL_ERROR_AFNOSUPPORT)     = EAFNOSUPPORT,
+    IDX(PAL_ERROR_CONNFAILED_PIPE) = EPIPE,
 };
+#undef IDX
 
 static unsigned long pal_to_unix_errno_positive(unsigned long err) {
-    return (err <= PAL_ERROR_NATIVE_COUNT) ? pal_errno_to_unix_errno_table[err] : EINVAL;
+    return (err < PAL_ERROR_NATIVE_COUNT) ? pal_errno_to_unix_errno_table[err] : EINVAL;
 }
 
 long pal_to_unix_errno(long err) {
@@ -569,7 +571,7 @@ int create_pipe(char* name, char* uri, size_t size, PAL_HANDLE* hdl, bool use_vm
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                             /*options=*/0, &pipe);
         if (ret < 0) {
-            if (!use_vmid_for_name && ret == -PAL_ERROR_STREAMEXIST) {
+            if (!use_vmid_for_name && ret == PAL_ERROR_STREAMEXIST) {
                 /* tried to create a pipe with random name but it already exists */
                 continue;
             }

@@ -125,7 +125,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     PAL_HANDLE hdl = NULL;
     void* stack = get_thread_stack();
     if (!stack) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto err;
     }
 
@@ -150,7 +150,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
 
     hdl = calloc(1, HANDLE_SIZE(thread));
     if (!hdl) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto err;
     }
     init_handle_hdr(hdl, PAL_TYPE_THREAD);
@@ -170,7 +170,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
                 tcb, &hdl->thread.tid, /*tls=*/NULL, /*child_tid=*/NULL, pal_thread_exit_wrapper);
 
     if (ret < 0) {
-        ret = -PAL_ERROR_DENIED;
+        ret = PAL_ERROR_DENIED;
         goto err;
     }
 
@@ -244,7 +244,7 @@ int _PalThreadResume(PAL_HANDLE thread_handle) {
     int ret = DO_SYSCALL(tgkill, g_pal_linux_state.host_pid, thread_handle->thread.tid, SIGCONT);
 
     if (ret < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     return 0;
 }
@@ -262,7 +262,7 @@ int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t 
         return unix_to_pal_error(ret);
     }
     if (ret % sizeof(*cpu_mask)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return 0;

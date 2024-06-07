@@ -51,7 +51,7 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
                 ret = _PalStreamSecureSave(handle->pipe.ssl_ctx, (const uint8_t**)&field,
                                            &field_size);
                 if (ret < 0)
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
             }
             /* no need to serialize handshake_helper_thread_hdl */
             break;
@@ -85,21 +85,21 @@ static ssize_t handle_serialize(PAL_HANDLE handle, void** data) {
                 ret = _PalStreamSecureSave(handle->process.ssl_ctx, (const uint8_t**)&field,
                                            &field_size);
                 if (ret < 0)
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
             }
             break;
         case PAL_TYPE_EVENTFD:
             /* eventfds have no fields to serialize */
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     size_t hdl_size = handle_size(handle);
     size_t buffer_size = hdl_size + field_size;
     void* buffer = malloc(buffer_size);
     if (!buffer) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -124,7 +124,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
     size_t hdl_size = handle_size((PAL_HANDLE)data);
     PAL_HANDLE hdl = malloc(hdl_size);
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     memcpy(hdl, data, hdl_size);
 
@@ -140,7 +140,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                                        (const uint8_t*)data + hdl_size, size - hdl_size);
             if (ret < 0) {
                 free(hdl);
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
             }
             hdl->pipe.handshake_helper_thread_hdl = NULL;
             break;
@@ -154,7 +154,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->dev.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dev.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             break;
         }
@@ -162,7 +162,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->file.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->file.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             hdl->file.chunk_hashes = hdl->file.umem = NULL; /* set up in below fixup function */
             hdl->file.fd = host_fd;   /* correct host FD must be set for below fixup function */
@@ -173,7 +173,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
             hdl->dir.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dir.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
@@ -189,14 +189,14 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
                                        (const uint8_t*)data + hdl_size, size - hdl_size);
             if (ret < 0) {
                 free(hdl);
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
             }
             break;
         case PAL_TYPE_EVENTFD:
             break;
         default:
             free(hdl);
-            return -PAL_ERROR_BADHANDLE;
+            return PAL_ERROR_BADHANDLE;
     }
 
     *handle = hdl;
@@ -205,7 +205,7 @@ static int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size,
 
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (target_process->hdr.type != PAL_TYPE_PROCESS)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     /* serialize cargo handle into a blob hdl_data */
     void* hdl_data = NULL;
@@ -271,7 +271,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
 
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (source_process->hdr.type != PAL_TYPE_PROCESS)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     ssize_t ret;
     struct hdl_header hdl_hdr;
@@ -287,7 +287,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return unix_to_pal_error(ret);
 
     if ((size_t)ret != sizeof(hdl_hdr)) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
@@ -301,7 +301,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (ret < 0)
         return unix_to_pal_error(ret);
     if (control_buf_size < sizeof(struct cmsghdr)) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* finally receive the serialized cargo as payload (possibly encrypted) */
@@ -320,9 +320,9 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
 
     struct cmsghdr* control_hdr = (struct cmsghdr*)control_buf;
     if (control_hdr->cmsg_type != SCM_RIGHTS)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     if (hdl_hdr.has_fd && control_hdr->cmsg_len != CMSG_LEN(sizeof(int))) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     int host_fd = -1;
@@ -366,12 +366,12 @@ int _PalInitDebugStream(const char* path) {
 
 int _PalDebugLog(const void* buf, size_t size) {
     if (g_log_fd < 0)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     // TODO: add retrying on EINTR
     ssize_t ret = ocall_write(g_log_fd, buf, size);
     if (ret < 0 || (size_t)ret != size) {
-        return ret < 0 ? unix_to_pal_error(ret) : -PAL_ERROR_INTERRUPTED;
+        return ret < 0 ? unix_to_pal_error(ret) : PAL_ERROR_INTERRUPTED;
     }
     return 0;
 }

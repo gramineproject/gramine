@@ -29,7 +29,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     const size_t VENDOR_ID_SIZE = 13;
     vendor_id = malloc(VENDOR_ID_SIZE);
     if (!vendor_id)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     _PalCpuIdRetrieve(CPU_VENDOR_LEAF, 0, words);
     FOUR_CHARS_VALUE(&vendor_id[0], words[CPUID_WORD_EBX]);
@@ -41,7 +41,7 @@ int _PalGetCPUInfo(struct pal_cpu_info* ci) {
     const size_t BRAND_SIZE = 49;
     brand = malloc(BRAND_SIZE);
     if (!brand) {
-        rv = -PAL_ERROR_NOMEM;
+        rv = PAL_ERROR_NOMEM;
         goto out_err;
     }
     _PalCpuIdRetrieve(CPU_BRAND_LEAF, 0, words);

@@ -29,7 +29,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
     } else {
         fds = malloc(count * sizeof(*fds));
         if (!fds) {
-            return -PAL_ERROR_NOMEM;
+            return PAL_ERROR_NOMEM;
         }
     }
     memset(fds, 0, count * sizeof(*fds));
@@ -68,7 +68,7 @@ int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags
         goto out;
     } else if (ret == 0) {
         /* timed out */
-        ret = -PAL_ERROR_TRYAGAIN;
+        ret = PAL_ERROR_TRYAGAIN;
         goto out;
     }
 

@@ -13,7 +13,7 @@
 /* _PalThreadCreate for internal use. Create an internal thread inside the current process. The
  *  arguments callback and param specify the starting function and parameters. */
 int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* PAL call PalThreadYieldExecution. Yield the execution
@@ -29,15 +29,15 @@ noreturn void _PalThreadExit(int* clear_child_tid) {
 }
 
 int _PalThreadResume(PAL_HANDLE thread_handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 int _PalThreadSetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t cpu_mask_len) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 struct handle_ops g_thread_ops = {

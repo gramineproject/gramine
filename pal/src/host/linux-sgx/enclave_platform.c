@@ -16,7 +16,7 @@ int init_qe_targetinfo(void* uptr_qe_targetinfo) {
                              sizeof(g_qe_targetinfo),
                              uptr_qe_targetinfo,
                              sizeof(sgx_target_info_t))) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
     return 0;
 }
@@ -57,7 +57,7 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
         ret = sgx_report(&targetinfo, &_report_data, &report);
         if (ret) {
             log_error("Failed to get enclave report (error code=%d)", ret);
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         }
 
         /*
@@ -86,5 +86,5 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
     }
 
     log_error("Failed to get quote after %d attempts", retries);
-    return -PAL_ERROR_DENIED;
+    return PAL_ERROR_DENIED;
 }

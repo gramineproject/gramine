@@ -30,14 +30,14 @@ static int console_open(PAL_HANDLE* handle, const char* type, const char* uri,
     __UNUSED(options);
 
     if (strcmp(type, URI_TYPE_CONSOLE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (access != PAL_ACCESS_RDONLY && access != PAL_ACCESS_WRONLY)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(console));
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     hdl->hdr.type = PAL_TYPE_CONSOLE;
     hdl->flags = access == PAL_ACCESS_RDONLY ? PAL_HANDLE_FD_READABLE : PAL_HANDLE_FD_WRITABLE;
@@ -51,10 +51,10 @@ static int64_t console_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, v
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     int64_t bytes = ocall_read(handle->console.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -64,10 +64,10 @@ static int64_t console_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, 
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     int64_t bytes = ocall_write(handle->console.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -85,7 +85,7 @@ static int console_flush(PAL_HANDLE handle) {
     assert(handle->hdr.type == PAL_TYPE_CONSOLE);
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     int ret = ocall_fsync(handle->console.fd);
     return ret < 0 ? unix_to_pal_error(ret) : 0;

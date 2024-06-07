@@ -16,9 +16,9 @@ int _PalSegmentBaseGet(enum pal_segment_reg reg, uintptr_t* addr) {
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_GET_FS, (unsigned long*)addr));
         case PAL_SEGMENT_GS:
             // The GS segment is used for the internal TCB of PAL
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 }
 
@@ -28,9 +28,9 @@ int _PalSegmentBaseSet(enum pal_segment_reg reg, uintptr_t addr) {
             return unix_to_pal_error(DO_SYSCALL(arch_prctl, ARCH_SET_FS, (unsigned long)addr));
         case PAL_SEGMENT_GS:
             // The GS segment is used for the internal TCB of PAL
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 }
 

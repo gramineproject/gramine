@@ -975,7 +975,7 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
  * such keys: `_sgx_mrenclave` and `_sgx_mrsigner` (see macros below).
  *
  * If a given key is not supported by the current PAL host, the function will return
- * -PAL_ERROR_NOTIMPLEMENTED.
+ * PAL_ERROR_NOTIMPLEMENTED.
  */
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 

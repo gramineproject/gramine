@@ -149,7 +149,7 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
     ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
                         &pal_handle);
     if (ret < 0) {
-        return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
+        return (ret == PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
 
     __atomic_store_n(&handle->info.sock.pal_handle, pal_handle, __ATOMIC_RELEASE);
@@ -246,7 +246,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
     ret = PalStreamOpen(pipe_name, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED, options,
                         &pal_handle);
     if (ret < 0) {
-        return (ret == -PAL_ERROR_CONNFAILED) ? -ENOENT : pal_to_unix_errno(ret);
+        return (ret == PAL_ERROR_CONNFAILED) ? -ENOENT : pal_to_unix_errno(ret);
     }
 
     assert(sock->pal_handle == NULL);
@@ -369,7 +369,7 @@ static int maybe_force_nonblocking_wrapper(bool force_nonblocking, struct libos_
 again:
     ret = func(pal_handle, /*offset=*/0, size, buf);
     if (ret < 0) {
-        ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
+        ret = (ret == PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
         if (ret == -EAGAIN && !force_nonblocking) {
             lock(&handle->lock);
             bool handle_is_blocking = !(handle->flags & O_NONBLOCK);

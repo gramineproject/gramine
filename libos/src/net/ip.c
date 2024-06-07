@@ -145,7 +145,7 @@ static int bind(struct libos_handle* handle, void* addr, size_t addrlen) {
 
     ret = PalSocketBind(sock->pal_handle, &pal_ip_addr);
     if (ret < 0) {
-        return (ret == -PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
+        return (ret == PAL_ERROR_STREAMEXIST) ? -EADDRINUSE : pal_to_unix_errno(ret);
     }
 
     pal_to_linux_sockaddr(&pal_ip_addr, &sock->local_addr, &sock->local_addrlen);
@@ -224,7 +224,7 @@ static int connect(struct libos_handle* handle, void* addr, size_t addrlen, bool
     bool inprogress;
     ret = PalSocketConnect(sock->pal_handle, &pal_remote_addr, &pal_local_addr, &inprogress);
     if (ret < 0) {
-        return ret == -PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
+        return ret == PAL_ERROR_CONNFAILED ? -ECONNREFUSED : pal_to_unix_errno(ret);
     }
 
     memcpy(&sock->remote_addr, addr, addrlen);
@@ -749,7 +749,7 @@ static int send(struct libos_handle* handle, struct iovec* iov, size_t iov_len, 
 
     int ret = PalSocketSend(sock->pal_handle, iov, iov_len, out_size, addr ? &pal_ip_addr : NULL,
                             force_nonblocking);
-    ret = (ret == -PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
+    ret = (ret == PAL_ERROR_TOOLONG) ? -EMSGSIZE : pal_to_unix_errno(ret);
     return ret;
 }
 

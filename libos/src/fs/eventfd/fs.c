@@ -30,7 +30,7 @@ static void eventfd_dummy_host_read(struct libos_handle* hdl) {
     do {
         ret = PalStreamRead(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                             &buf_dummy_host_val);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
+    } while (ret == PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
         /* must not happen in benign case, consider it an attack and panic */
         BUG();
@@ -44,7 +44,7 @@ static void eventfd_dummy_host_write(struct libos_handle* hdl) {
     do {
         ret = PalStreamWrite(hdl->pal_handle, /*offset=*/0, &dummy_host_val_count,
                              &buf_dummy_host_val);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
+    } while (ret == PAL_ERROR_INTERRUPTED);
     if (ret < 0 || dummy_host_val_count != sizeof(buf_dummy_host_val)) {
         /* must not happen in benign case, consider it an attack and panic */
         BUG();
@@ -55,7 +55,7 @@ static void eventfd_dummy_host_wait(struct libos_handle* hdl) {
     pal_wait_flags_t wait_for_events = PAL_WAIT_READ;
     pal_wait_flags_t ret_events = 0;
     int ret = PalStreamsWaitEvents(1, &hdl->pal_handle, &wait_for_events, &ret_events, NULL);
-    if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED) {
+    if (ret < 0 && ret != PAL_ERROR_INTERRUPTED) {
         BUG();
     }
     (void)ret_events; /* we don't care what events the host returned, we can't trust them anyway */

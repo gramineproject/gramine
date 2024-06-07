@@ -65,7 +65,7 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
     int fd = DO_SYSCALL(open, "/proc/meminfo", O_RDONLY | O_CLOEXEC, 0);
 
     if (fd < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     char buffer[40];
     int ret = 0;
@@ -73,11 +73,11 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
     size_t r = 0;
     size_t len = strlen(key);
 
-    ret = -PAL_ERROR_DENIED;
+    ret = PAL_ERROR_DENIED;
     while (1) {
         ret = DO_SYSCALL(read, fd, buffer + r, 40 - r);
         if (ret < 0) {
-            ret = -PAL_ERROR_DENIED;
+            ret = PAL_ERROR_DENIED;
             break;
         }
 
@@ -87,7 +87,7 @@ static int read_proc_meminfo(const char* key, unsigned long* val) {
 
         r += ret;
         if (n == r + ret || n <= len) {
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             break;
         }
 
@@ -160,7 +160,7 @@ int init_memory_bookkeeping(void) {
 
     if (proc_maps_info.stack_top == 0) {
         log_error("failed to find the stack in \"/proc/self/maps\"");
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
 #ifdef __hppa__
@@ -188,7 +188,7 @@ int init_memory_bookkeeping(void) {
      * mmap address could be different. */
     while (1) {
         if (start_addr >= end_addr) {
-            return -PAL_ERROR_NOMEM;
+            return PAL_ERROR_NOMEM;
         }
 
         ptr = (void*)DO_SYSCALL(mmap, start_addr, PAGE_SIZE, PROT_NONE,
@@ -203,7 +203,7 @@ int init_memory_bookkeeping(void) {
 
         if (start_addr >> (sizeof(start_addr) * 8 - 1)) {
             /* Address would overflow. */
-            return -PAL_ERROR_NOMEM;
+            return PAL_ERROR_NOMEM;
         }
         start_addr <<= 1;
     }

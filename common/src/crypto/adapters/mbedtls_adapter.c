@@ -29,16 +29,16 @@ static int mbedtls_to_pal_error(int error) {
             return 0;
 
         case MBEDTLS_ERR_AES_INVALID_KEY_LENGTH:
-            return -PAL_ERROR_CRYPTO_INVALID_KEY_LENGTH;
+            return PAL_ERROR_CRYPTO_INVALID_KEY_LENGTH;
 
         case MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH:
         case MBEDTLS_ERR_CIPHER_FULL_BLOCK_EXPECTED:
-            return -PAL_ERROR_CRYPTO_INVALID_INPUT_LENGTH;
+            return PAL_ERROR_CRYPTO_INVALID_INPUT_LENGTH;
 
         case MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE:
         case MBEDTLS_ERR_MD_FEATURE_UNAVAILABLE:
         case MBEDTLS_ERR_ECP_FEATURE_UNAVAILABLE:
-            return -PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE;
+            return PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE;
 
         case MBEDTLS_ERR_CIPHER_BAD_INPUT_DATA:
         case MBEDTLS_ERR_DHM_BAD_INPUT_DATA:
@@ -50,11 +50,11 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_RSA_PUBLIC_FAILED:  // see mbedtls_rsa_public()
         case MBEDTLS_ERR_RSA_PRIVATE_FAILED: // see mbedtls_rsa_private()
         case MBEDTLS_ERR_ECP_BAD_INPUT_DATA:
-            return -PAL_ERROR_CRYPTO_BAD_INPUT_DATA;
+            return PAL_ERROR_CRYPTO_BAD_INPUT_DATA;
 
         case MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE:
         case MBEDTLS_ERR_ECP_BUFFER_TOO_SMALL:
-            return -PAL_ERROR_CRYPTO_INVALID_OUTPUT_LENGTH;
+            return PAL_ERROR_CRYPTO_INVALID_OUTPUT_LENGTH;
 
         case MBEDTLS_ERR_CIPHER_ALLOC_FAILED:
         case MBEDTLS_ERR_DHM_ALLOC_FAILED:
@@ -62,60 +62,60 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_SSL_ALLOC_FAILED:
         case MBEDTLS_ERR_PK_ALLOC_FAILED:
         case MBEDTLS_ERR_ECP_ALLOC_FAILED:
-            return -PAL_ERROR_NOMEM;
+            return PAL_ERROR_NOMEM;
 
         case MBEDTLS_ERR_CIPHER_INVALID_PADDING:
         case MBEDTLS_ERR_RSA_INVALID_PADDING:
-            return -PAL_ERROR_CRYPTO_INVALID_PADDING;
+            return PAL_ERROR_CRYPTO_INVALID_PADDING;
 
         case MBEDTLS_ERR_CIPHER_AUTH_FAILED:
-            return -PAL_ERROR_CRYPTO_AUTH_FAILED;
+            return PAL_ERROR_CRYPTO_AUTH_FAILED;
 
         case MBEDTLS_ERR_CIPHER_INVALID_CONTEXT:
-            return -PAL_ERROR_CRYPTO_INVALID_CONTEXT;
+            return PAL_ERROR_CRYPTO_INVALID_CONTEXT;
 
         case MBEDTLS_ERR_DHM_READ_PARAMS_FAILED:
         case MBEDTLS_ERR_DHM_MAKE_PARAMS_FAILED:
         case MBEDTLS_ERR_DHM_READ_PUBLIC_FAILED:
         case MBEDTLS_ERR_DHM_MAKE_PUBLIC_FAILED:
         case MBEDTLS_ERR_DHM_CALC_SECRET_FAILED:
-            return -PAL_ERROR_CRYPTO_INVALID_DH_STATE;
+            return PAL_ERROR_CRYPTO_INVALID_DH_STATE;
 
         case MBEDTLS_ERR_DHM_INVALID_FORMAT:
-            return -PAL_ERROR_CRYPTO_INVALID_FORMAT;
+            return PAL_ERROR_CRYPTO_INVALID_FORMAT;
 
         case MBEDTLS_ERR_DHM_FILE_IO_ERROR:
         case MBEDTLS_ERR_MD_FILE_IO_ERROR:
-            return -PAL_ERROR_CRYPTO_IO_ERROR;
+            return PAL_ERROR_CRYPTO_IO_ERROR;
 
         case MBEDTLS_ERR_RSA_KEY_GEN_FAILED:
-            return -PAL_ERROR_CRYPTO_KEY_GEN_FAILED;
+            return PAL_ERROR_CRYPTO_KEY_GEN_FAILED;
 
         case MBEDTLS_ERR_RSA_KEY_CHECK_FAILED:
         case MBEDTLS_ERR_ECP_INVALID_KEY:
-            return -PAL_ERROR_CRYPTO_INVALID_KEY;
+            return PAL_ERROR_CRYPTO_INVALID_KEY;
 
         case MBEDTLS_ERR_RSA_VERIFY_FAILED:
         case MBEDTLS_ERR_ECP_VERIFY_FAILED:
         case MBEDTLS_ERR_ECP_SIG_LEN_MISMATCH:
-            return -PAL_ERROR_CRYPTO_VERIFY_FAILED;
+            return PAL_ERROR_CRYPTO_VERIFY_FAILED;
 
         case MBEDTLS_ERR_RSA_RNG_FAILED:
         case MBEDTLS_ERR_ECP_RANDOM_FAILED:
-            return -PAL_ERROR_CRYPTO_RNG_FAILED;
+            return PAL_ERROR_CRYPTO_RNG_FAILED;
 
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
         case MBEDTLS_ERR_SSL_ASYNC_IN_PROGRESS:
         case MBEDTLS_ERR_SSL_CRYPTO_IN_PROGRESS:
         case MBEDTLS_ERR_ECP_IN_PROGRESS:
-            return -PAL_ERROR_TRYAGAIN;
+            return PAL_ERROR_TRYAGAIN;
 
         case MBEDTLS_ERR_NET_CONN_RESET:
-            return -PAL_ERROR_CONNFAILED_PIPE;
+            return PAL_ERROR_CONNFAILED_PIPE;
 
         default:
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
     }
 }
 
@@ -129,7 +129,7 @@ int lib_SHA256Update(LIB_SHA256_CONTEXT* context, const uint8_t* data, size_t da
     /* For compatibility with other SHA256 providers, don't support
      * large lengths. */
     if (data_size > UINT32_MAX) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
     mbedtls_sha256_update(context, data, data_size);
     return 0;
@@ -147,7 +147,7 @@ int lib_SHA256Final(LIB_SHA256_CONTEXT* context, uint8_t* output) {
 int lib_AESGCMEncrypt(const uint8_t* key, size_t key_size, const uint8_t* iv, const uint8_t* input,
                       size_t input_size, const uint8_t* aad, size_t aad_size, uint8_t* output,
                       uint8_t* tag, size_t tag_size) {
-    int ret = -PAL_ERROR_INVAL;
+    int ret = PAL_ERROR_INVAL;
 
     mbedtls_gcm_context gcm;
     mbedtls_gcm_init(&gcm);
@@ -175,7 +175,7 @@ out:
 int lib_AESGCMDecrypt(const uint8_t* key, size_t key_size, const uint8_t* iv, const uint8_t* input,
                       size_t input_size, const uint8_t* aad, size_t aad_size, uint8_t* output,
                       const uint8_t* tag, size_t tag_size) {
-    int ret = -PAL_ERROR_INVAL;
+    int ret = PAL_ERROR_INVAL;
 
     mbedtls_gcm_context gcm;
     mbedtls_gcm_init(&gcm);
@@ -215,13 +215,13 @@ int lib_AESCMAC(const uint8_t* key, size_t key_size, const uint8_t* input, size_
             cipher = MBEDTLS_CIPHER_AES_256_ECB;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     const mbedtls_cipher_info_t* cipher_info = mbedtls_cipher_info_from_type(cipher);
 
     if (!cipher_info || mac_size < mbedtls_cipher_info_get_block_size(cipher_info)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int ret = mbedtls_cipher_cmac(cipher_info, key, key_size * BITS_IN_BYTE, input, input_size,
@@ -241,7 +241,7 @@ int lib_AESCMACInit(LIB_AESCMAC_CONTEXT* context, const uint8_t* key, size_t key
             context->cipher = MBEDTLS_CIPHER_AES_256_ECB;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     const mbedtls_cipher_info_t* cipher_info = mbedtls_cipher_info_from_type(context->cipher);
@@ -262,7 +262,7 @@ int lib_AESCMACUpdate(LIB_AESCMAC_CONTEXT* context, const uint8_t* input, size_t
 int lib_AESCMACFinish(LIB_AESCMAC_CONTEXT* context, uint8_t* mac, size_t mac_size) {
     const mbedtls_cipher_info_t* cipher_info = mbedtls_cipher_info_from_type(context->cipher);
 
-    int ret = -PAL_ERROR_INVAL;
+    int ret = PAL_ERROR_INVAL;
     if (!cipher_info || mac_size < mbedtls_cipher_info_get_block_size(cipher_info))
         goto exit;
 
@@ -428,9 +428,9 @@ int lib_SSLWrite(LIB_SSL_CONTEXT* ssl_ctx, const uint8_t* buf, size_t buf_size) 
 int lib_SSLSave(LIB_SSL_CONTEXT* ssl_ctx, uint8_t* buf, size_t buf_size, size_t* out_size) {
     int ret = mbedtls_ssl_context_save(&ssl_ctx->ssl, buf, buf_size, out_size);
     if (ret == MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     } else if (ret < 0) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
     return 0;
 }
@@ -470,7 +470,7 @@ int lib_DhInit(LIB_DH_CONTEXT* context) {
 
 int lib_DhCreatePublic(LIB_DH_CONTEXT* context, uint8_t* public, size_t public_size) {
     if (public_size != DH_SIZE)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int ret = mbedtls_dhm_make_public(context, mbedtls_dhm_get_len(context), public, public_size,
                                       random_wrapper, /*p_rng=*/NULL);
@@ -482,7 +482,7 @@ int lib_DhCalcSecret(LIB_DH_CONTEXT* context, uint8_t* peer, size_t peer_size, u
     int ret;
 
     if (*secret_size != DH_SIZE)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     ret = mbedtls_dhm_read_public(context, peer, peer_size);
     if (ret < 0)

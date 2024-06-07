@@ -42,7 +42,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     struct sockaddr_un addr;
     ret = get_gramine_unix_socket_addr(name, &addr);
     if (ret < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
@@ -65,7 +65,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(pipe));
     if (!hdl) {
         DO_SYSCALL(close, fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(hdl, PAL_TYPE_PIPESRV);
@@ -94,7 +94,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  */
 static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
     if (handle->hdr.type != PAL_TYPE_PIPESRV)
-        return -PAL_ERROR_NOTSERVER;
+        return PAL_ERROR_NOTSERVER;
 
     static_assert(O_NONBLOCK == SOCK_NONBLOCK, "assumed below");
     int flags = PAL_OPTION_TO_LINUX_OPEN(options) | SOCK_CLOEXEC;
@@ -105,7 +105,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     PAL_HANDLE clnt = calloc(1, HANDLE_SIZE(pipe));
     if (!clnt) {
         DO_SYSCALL(close, newfd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(clnt, PAL_TYPE_PIPECLI);
@@ -137,13 +137,13 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     struct sockaddr_un addr;
     ret = get_gramine_unix_socket_addr(name, &addr);
     if (ret < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     int nonblock = options & PAL_OPTION_NONBLOCK ? SOCK_NONBLOCK : 0;
 
     int fd = DO_SYSCALL(socket, AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | nonblock, 0);
     if (fd < 0)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     ret = DO_SYSCALL(connect, fd, &addr, sizeof(addr.sun_path) - 1);
     if (ret < 0) {
@@ -154,7 +154,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(pipe));
     if (!hdl) {
         DO_SYSCALL(close, fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(hdl, PAL_TYPE_PIPE);
@@ -196,7 +196,7 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     assert(create == PAL_CREATE_IGNORED);
 
     if (!WITHIN_MASK(share, PAL_SHARE_MASK) || !WITHIN_MASK(options, PAL_OPTION_MASK))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!strcmp(type, URI_TYPE_PIPE_SRV))
         return pipe_listen(handle, uri, options);
@@ -204,7 +204,7 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     if (!strcmp(type, URI_TYPE_PIPE))
         return pipe_connect(handle, uri, options);
 
-    return -PAL_ERROR_INVAL;
+    return PAL_ERROR_INVAL;
 }
 
 /*!
@@ -219,10 +219,10 @@ static int pipe_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
  */
 static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
-        return -PAL_ERROR_NOTCONNECTION;
+        return PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes = DO_SYSCALL(read, handle->pipe.fd, buffer, len);
     if (bytes < 0)
@@ -243,10 +243,10 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
  */
 static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, size_t len, const void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_PIPECLI && handle->hdr.type != PAL_TYPE_PIPE)
-        return -PAL_ERROR_NOTCONNECTION;
+        return PAL_ERROR_NOTCONNECTION;
 
     ssize_t bytes = DO_SYSCALL(write, handle->pipe.fd, buffer, len);
     if (bytes < 0)
@@ -294,7 +294,7 @@ static int pipe_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             shutdown = SHUT_WR;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     DO_SYSCALL(shutdown, handle->pipe.fd, shutdown);

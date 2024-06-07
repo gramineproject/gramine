@@ -281,7 +281,7 @@ static int libos_async_worker(void* arg) {
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
         ret = PalStreamsWaitEvents(pals_cnt + 1, pals, pal_events, ret_events,
                                    inf_sleep ? NULL : &sleep_time_us);
-        if (ret < 0 && ret != -PAL_ERROR_INTERRUPTED && ret != -PAL_ERROR_TRYAGAIN) {
+        if (ret < 0 && ret != PAL_ERROR_INTERRUPTED && ret != PAL_ERROR_TRYAGAIN) {
             log_error("PalStreamsWaitEvents failed with: %s", pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
             goto out_err;

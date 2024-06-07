@@ -70,7 +70,7 @@ int main(void) {
     // then exit it again including all cleanup.
     uint64_t timeout = 1000000;
     ret = PalEventWait(sleep_handle, &timeout);
-    if (ret != -PAL_ERROR_TRYAGAIN) {
+    if (ret != PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
     }
@@ -88,7 +88,7 @@ int main(void) {
 
     timeout = 1000000;
     ret = PalEventWait(sleep_handle, &timeout);
-    if (ret != -PAL_ERROR_TRYAGAIN) {
+    if (ret != PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
     }
@@ -106,7 +106,7 @@ int main(void) {
 
     timeout = 1000000;
     ret = PalEventWait(sleep_handle, &timeout);
-    if (ret != -PAL_ERROR_TRYAGAIN) {
+    if (ret != PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
     }
