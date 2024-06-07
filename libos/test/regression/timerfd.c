@@ -74,51 +74,74 @@ static void close_timerfds(int fds[NUM_FDS]) {
 
 static void test_select(int fds[NUM_FDS]) {
     fd_set rfds;
-    FD_ZERO(&rfds);
     int max_fd = 0;
+    int ready_fds = 0;
 
     for (int i = 0; i < NUM_FDS; i++) {
-        FD_SET(fds[i], &rfds);
-
         if (fds[i] > max_fd)
             max_fd = fds[i];
     }
 
-    int nfds = select(max_fd + 1, &rfds, NULL, NULL, NULL);
-    if (nfds != NUM_FDS)
-        err(1, "select on read event failed");
+    while (ready_fds < NUM_FDS) {
+        FD_ZERO(&rfds);
+        for (int i = 0; i < NUM_FDS; i++) {
+            FD_SET(fds[i], &rfds);
+        }
 
-    for (int i = 0; i < nfds; i++) {
-        if (FD_ISSET(fds[i], &rfds)) {
-            uint64_t expirations;
-            CHECK(read(fds[i], &expirations, sizeof(expirations)));
-            if (expirations != EXPECTED_EXPIRATIONS)
-                errx(1, "select: unexpected number of expirations (expected 1, got %lu)",
-                     expirations);
+        int nfds = select(max_fd + 1, &rfds, NULL, NULL, NULL);
+        if (nfds <= 0)
+            err(1, "select on read event failed");
+
+        for (int i = 0; i < NUM_FDS; i++) {
+            if (FD_ISSET(fds[i], &rfds)) {
+                uint64_t expirations;
+                CHECK(read(fds[i], &expirations, sizeof(expirations)));
+                if (expirations != EXPECTED_EXPIRATIONS) {
+                    errx(1, "select: unexpected number of expirations (expected %d, got %lu)",
+                         EXPECTED_EXPIRATIONS, expirations);
+                }
+                ready_fds++;
+            }
         }
     }
+
+    if (ready_fds != NUM_FDS)
+        errx(1, "select: unexpected number of ready fds (expected %d, got %d)",
+             NUM_FDS, ready_fds);
 }
 
 static void test_poll(int fds[NUM_FDS]) {
     struct pollfd pfds[NUM_FDS];
+    int ready_fds = 0;
+
     for (int i = 0; i < NUM_FDS; i++) {
         pfds[i].fd = fds[i];
         pfds[i].events = POLLIN;
+        pfds[i].revents = 0;
     }
 
-    int nfds = CHECK(poll(pfds, NUM_FDS, -1));
-    if (nfds != NUM_FDS)
-        err(1, "poll with POLLIN failed");
+    while (ready_fds < NUM_FDS) {
+        int nfds = poll(pfds, NUM_FDS, -1);
+        if (nfds <= 0)
+            err(1, "poll with POLLIN failed");
 
-    for (int i = 0; i < nfds; i++) {
-        if (pfds[i].revents & POLLIN) {
-            uint64_t expirations;
-            CHECK(read(fds[i], &expirations, sizeof(expirations)));
-            if (expirations != EXPECTED_EXPIRATIONS)
-                errx(1, "poll: unexpected number of expirations (expected 1, got %lu)",
-                     expirations);
+        for (int i = 0; i < NUM_FDS; i++) {
+            if (pfds[i].revents & POLLIN) {
+                uint64_t expirations;
+                CHECK(read(pfds[i].fd, &expirations, sizeof(expirations)));
+                if (expirations != EXPECTED_EXPIRATIONS) {
+                    errx(1, "poll: unexpected number of expirations (expected %d, got %lu)",
+                         EXPECTED_EXPIRATIONS, expirations);
+                }
+                ready_fds++;
+                pfds[i].revents = 0;
+            }
         }
     }
+
+    if (ready_fds != NUM_FDS)
+        errx(1, "poll: unexpected number of ready fds (expected %d, got %d)",
+             NUM_FDS, ready_fds);
 }
 
 static void test_epoll(int fds[NUM_FDS]) {
@@ -132,16 +155,27 @@ static void test_epoll(int fds[NUM_FDS]) {
     }
 
     struct epoll_event events[NUM_FDS];
-    int nfds = CHECK(epoll_wait(epfd, events, NUM_FDS, -1));
-    if (nfds != NUM_FDS)
-        err(1, "epoll_wait with EPOLLIN failed");
+    int ready_fds = 0;
 
-    for (int i = 0; i < nfds; ++i) {
-        uint64_t expirations;
-        CHECK(read(events[i].data.fd, &expirations, sizeof(expirations)));
-        if (expirations != EXPECTED_EXPIRATIONS)
-            errx(1, "epoll: unexpected number of expirations (expected 1, got %lu)", expirations);
+    while (ready_fds < NUM_FDS) {
+        int nfds = epoll_wait(epfd, events, NUM_FDS, -1);
+        if (nfds <= 0)
+            err(1, "epoll_wait with EPOLLIN failed");
+
+        for (int i = 0; i < nfds; i++) {
+            uint64_t expirations;
+            CHECK(read(events[i].data.fd, &expirations, sizeof(expirations)));
+            if (expirations != EXPECTED_EXPIRATIONS) {
+                errx(1, "epoll_wait: unexpected number of expirations (expected %d, got %lu)",
+                     EXPECTED_EXPIRATIONS, expirations);
+            }
+            ready_fds++;
+        }
     }
+
+    if (ready_fds != NUM_FDS)
+        errx(1, "epoll_wait: unexpected number of ready fds (expected %d, got %d)",
+             NUM_FDS, ready_fds);
 
     CHECK(close(epfd));
 }
