@@ -24,7 +24,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     do {
         ret = PalStreamOpen(uri, PAL_ACCESS_RDWR, /*share_flags=*/0, PAL_CREATE_IGNORED,
                             PAL_OPTION_NONBLOCK, &write_handle);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
+    } while (ret == PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamOpen failed: %s", pal_strerror(ret));
         ret = pal_to_unix_errno(ret);
@@ -34,7 +34,7 @@ int create_pollable_event(struct libos_pollable_event* event) {
     PAL_HANDLE read_handle;
     do {
         ret = PalStreamWaitForClient(srv_handle, &read_handle, PAL_OPTION_NONBLOCK);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
+    } while (ret == PAL_ERROR_INTERRUPTED);
     if (ret < 0) {
         log_error("PalStreamWaitForClient failed: %s", pal_strerror(ret));
         PalObjectDestroy(write_handle);

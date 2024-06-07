@@ -14,7 +14,7 @@
 
 int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalVirtualMemoryAlloc(addr, size, prot);
@@ -22,7 +22,7 @@ int PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
 
 int PalVirtualMemoryFree(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalVirtualMemoryFree(addr, size);
@@ -30,7 +30,7 @@ int PalVirtualMemoryFree(void* addr, size_t size) {
 
 int PalVirtualMemoryProtect(void* addr, size_t size, pal_prot_flags_t prot) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalVirtualMemoryProtect(addr, size, prot);
@@ -96,7 +96,7 @@ static void insert_range_at(size_t idx, uintptr_t addr, size_t size, pal_prot_fl
 
 int pal_add_initial_range(uintptr_t addr, size_t size, pal_prot_flags_t prot, const char* comment) {
     if (g_pal_public_state.initial_mem_ranges_len >= ARRAY_SIZE(g_initial_mem_ranges)) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     for (size_t i = 0; i < g_pal_public_state.initial_mem_ranges_len; i++) {
@@ -155,7 +155,7 @@ static int remove_initial_range(uintptr_t addr, size_t size) {
         }
     }
 
-    return -PAL_ERROR_INVAL;
+    return PAL_ERROR_INVAL;
 }
 
 static bool find_free_range(size_t size, uintptr_t* out_addr) {
@@ -198,14 +198,14 @@ static int find_non_reserved_range_below(uintptr_t addr, size_t size, uintptr_t*
     static uintptr_t g_last_reserved_range_end = UINTPTR_MAX;
 
     if (addr < size) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     uintptr_t candidate = addr - size;
 
     while (candidate < g_last_reserved_range_end) {
         if (g_last_reserved_range_start < size) {
-            return -PAL_ERROR_NOMEM;
+            return PAL_ERROR_NOMEM;
         }
         candidate = MIN(candidate, g_last_reserved_range_start - size);
         pal_read_next_reserved_range(g_last_reserved_range_start,
@@ -237,7 +237,7 @@ static bool overlaps_existing_range(uintptr_t addr, size_t size, uintptr_t* out_
  * any locking. */
 static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
     if (g_initial_mem_disabled) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (g_last_alloc_addr == UINTPTR_MAX) {
@@ -254,7 +254,7 @@ static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
                 return ret;
             }
             if (addr < (uintptr_t)g_pal_public_state.memory_address_start) {
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             if (!overlaps_existing_range(addr, size, &addr)) {
                 break;
@@ -276,7 +276,7 @@ static int initial_mem_bkeep(size_t size, uintptr_t* out_addr) {
  * any locking. */
 static int initial_mem_free(uintptr_t addr, size_t size) {
     if (g_initial_mem_disabled) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int ret = remove_initial_range(addr, size);
@@ -299,7 +299,7 @@ int pal_internal_memory_bkeep(size_t size, uintptr_t* out_addr) {
     int ret = g_mem_bkeep_alloc_upcall(size, out_addr);
     if (ret < 0) {
         log_warning("failed to bookkeep PAL internal memory: %s", unix_strerror(ret));
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
     return 0;
 }
@@ -325,7 +325,7 @@ int pal_internal_memory_alloc(size_t size, void** out_addr) {
         if (ret < 0) {
             BUG();
         }
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     *out_addr = (void*)addr;

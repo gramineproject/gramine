@@ -133,7 +133,7 @@ int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
         if (ret < 0) {
             log_error("closing socket fd failed: %s", unix_strerror(ret));
         }
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     *out_handle = handle;
@@ -161,7 +161,7 @@ static int do_getsockname(int fd, struct sockaddr_storage* sa_storage) {
 static int bind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != handle->sock.domain) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     union {
@@ -238,7 +238,7 @@ static int tcp_accept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDL
         if (ret < 0) {
             log_error("closing socket fd failed: %s", unix_strerror(ret));
         }
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     if (out_local_addr) {
@@ -266,7 +266,7 @@ static int connect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                    struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (addr->domain != PAL_DISCONNECT && addr->domain != handle->sock.domain) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     struct sockaddr_storage sa_storage;
@@ -334,7 +334,7 @@ static int attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     assert(handle->hdr.type == PAL_TYPE_SOCKET);
     if (attr->handle_type != PAL_TYPE_SOCKET) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (attr->nonblocking != handle->sock.is_nonblocking) {
@@ -357,7 +357,7 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.linger != handle->sock.linger) {
         if (attr->socket.linger > INT_MAX) {
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         struct linger linger = {
             .l_onoff = attr->socket.linger ? 1 : 0,
@@ -373,7 +373,7 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.recv_buf_size != handle->sock.recv_buf_size) {
         if (attr->socket.recv_buf_size > INT_MAX || attr->socket.recv_buf_size % 2) {
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         /* The Linux kernel will double this value. */
         int val = attr->socket.recv_buf_size / 2;
@@ -386,7 +386,7 @@ static int attrsetbyhdl_common(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
     if (attr->socket.send_buf_size != handle->sock.send_buf_size) {
         if (attr->socket.send_buf_size > INT_MAX || attr->socket.send_buf_size % 2) {
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         /* The Linux kernel will double this value. */
         int val = attr->socket.send_buf_size / 2;
@@ -558,7 +558,7 @@ static int send(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* ou
     size_t linux_addrlen = 0;
     if (addr) {
         if (addr->domain != handle->sock.domain) {
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
         pal_to_linux_sockaddr(addr, &sa_storage, &linux_addrlen);
         assert(linux_addrlen <= INT_MAX);
@@ -622,7 +622,7 @@ static int delete_tcp(PAL_HANDLE handle, enum pal_delete_mode mode) {
             how = SHUT_WR;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     int ret = DO_SYSCALL(shutdown, handle->sock.fd, how);
@@ -683,7 +683,7 @@ void fixup_socket_handle_after_deserialization(PAL_HANDLE handle) {
 
 int _PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
     if (!handle->sock.ops->bind) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
 
     return handle->sock.ops->bind(handle, addr);
@@ -691,7 +691,7 @@ int _PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr) {
 
 int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog) {
     if (!handle->sock.ops->listen) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return handle->sock.ops->listen(handle, backlog);
 }
@@ -700,7 +700,7 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
                      struct pal_socket_addr* out_client_addr,
                      struct pal_socket_addr* out_local_addr) {
     if (!handle->sock.ops->accept) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return handle->sock.ops->accept(handle, options, out_client, out_client_addr, out_local_addr);
 }
@@ -708,7 +708,7 @@ int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE
 int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
                       struct pal_socket_addr* out_local_addr, bool* out_inprogress) {
     if (!handle->sock.ops->connect) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return handle->sock.ops->connect(handle, addr, out_local_addr, out_inprogress);
 }
@@ -716,7 +716,7 @@ int _PalSocketConnect(PAL_HANDLE handle, struct pal_socket_addr* addr,
 int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_size,
                    struct pal_socket_addr* addr, bool force_nonblocking) {
     if (!handle->sock.ops->send) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return handle->sock.ops->send(handle, iov, iov_len, out_size, addr, force_nonblocking);
 }
@@ -724,7 +724,7 @@ int _PalSocketSend(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t*
 int _PalSocketRecv(PAL_HANDLE handle, struct iovec* iov, size_t iov_len, size_t* out_total_size,
                    struct pal_socket_addr* addr, bool force_nonblocking) {
     if (!handle->sock.ops->recv) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return handle->sock.ops->recv(handle, iov, iov_len, out_total_size, addr, force_nonblocking);
 }
