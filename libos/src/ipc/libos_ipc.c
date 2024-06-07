@@ -130,7 +130,7 @@ static int ipc_connect(IDTYPE dest, struct libos_ipc_connection** conn_ptr) {
         do {
             ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_IGNORED,
                                 /*options=*/0, &conn->handle);
-        } while (ret == -PAL_ERROR_INTERRUPTED);
+        } while (ret == PAL_ERROR_INTERRUPTED);
         if (ret < 0) {
             ret = pal_to_unix_errno(ret);
             goto out;
@@ -259,7 +259,7 @@ static int wait_for_response(struct ipc_msg_waiter* waiter) {
     int ret = 0;
     do {
         ret = PalEventWait(waiter->event, /*timeout=*/NULL);
-    } while (ret == -PAL_ERROR_INTERRUPTED);
+    } while (ret == PAL_ERROR_INTERRUPTED);
 
     log_debug("Waiting finished: %s", pal_strerror(ret));
     return pal_to_unix_errno(ret);

@@ -7,7 +7,7 @@
 #include "assert.h"
 #include "pal_error.h"
 
-static int unix_to_pal_error_positive(int unix_errno) {
+static int positive_unix_to_pal_error(int unix_errno) {
     assert(unix_errno >= 0);
     switch (unix_errno) {
         case 0:
@@ -63,9 +63,9 @@ static int unix_to_pal_error_positive(int unix_errno) {
  */
 static __attribute__((unused)) int unix_to_pal_error(int unix_errno) {
     if (unix_errno >= 0) {
-        return unix_to_pal_error_positive(unix_errno);
+        return -positive_unix_to_pal_error(unix_errno);
     }
-    return -unix_to_pal_error_positive(-unix_errno);
+    return positive_unix_to_pal_error(-unix_errno);
 }
 
 #endif /* IN_PAL */

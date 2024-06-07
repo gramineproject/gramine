@@ -12,5 +12,5 @@
 
 int _PalStreamsWaitEvents(size_t count, PAL_HANDLE* handle_array, pal_wait_flags_t* events,
                           pal_wait_flags_t* ret_events, uint64_t* timeout_us) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }

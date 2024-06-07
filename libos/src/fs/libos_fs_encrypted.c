@@ -29,7 +29,7 @@ static pf_status_t cb_read(pf_handle_t handle, void* buffer, uint64_t offset, si
     while (remaining > 0) {
         size_t count = remaining;
         int ret = PalStreamRead(pal_handle, offset + buffer_offset, &count, buffer + buffer_offset);
-        if (ret == -PAL_ERROR_INTERRUPTED)
+        if (ret == PAL_ERROR_INTERRUPTED)
             continue;
 
         if (ret < 0) {
@@ -59,7 +59,7 @@ static pf_status_t cb_write(pf_handle_t handle, const void* buffer, uint64_t off
         size_t count = remaining;
         int ret = PalStreamWrite(pal_handle, offset + buffer_offset, &count,
                                  (void*)(buffer + buffer_offset));
-        if (ret == -PAL_ERROR_INTERRUPTED)
+        if (ret == PAL_ERROR_INTERRUPTED)
             continue;
 
         if (ret < 0) {
@@ -410,7 +410,7 @@ int get_or_create_encrypted_files_key(const char* name,
             log_debug("Successfully retrieved special key \"%s\"", name);
             memcpy(&key->pf_key, &pf_key, sizeof(pf_key));
             key->is_set = true;
-        } else if (ret == -PAL_ERROR_NOTIMPLEMENTED) {
+        } else if (ret == PAL_ERROR_NOTIMPLEMENTED) {
             log_debug("Special key \"%s\" is not supported by current PAL. Mounts using this key "
                       "will not work.", name);
             /* proceed without setting value */

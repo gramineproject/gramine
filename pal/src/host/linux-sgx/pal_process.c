@@ -139,7 +139,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 
     PAL_HANDLE child = calloc(1, HANDLE_SIZE(process));
     if (!child)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     init_handle_hdr(child, PAL_TYPE_PROCESS);
     child->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
@@ -184,17 +184,17 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 failed:
     _PalStreamDelete(child, PAL_DELETE_ALL);
     _PalObjectDestroy(child);
-    return ret < 0 ? ret : -PAL_ERROR_DENIED;
+    return ret < 0 ? ret : PAL_ERROR_DENIED;
 }
 
 int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
                        uint64_t* out_instance_id) {
     if (g_pal_linuxsgx_state.enclave_initialized)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     PAL_HANDLE parent = calloc(1, HANDLE_SIZE(process));
     if (!parent)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     init_handle_hdr(parent, PAL_TYPE_PROCESS);
     parent->flags |= PAL_HANDLE_FD_READABLE | PAL_HANDLE_FD_WRITABLE;
@@ -240,7 +240,7 @@ int init_child_process(int parent_stream_fd, PAL_HANDLE* out_parent_handle,
 out_error:
     _PalStreamDelete(parent, PAL_DELETE_ALL);
     _PalObjectDestroy(parent);
-    return ret < 0 ? ret : -PAL_ERROR_DENIED;
+    return ret < 0 ? ret : PAL_ERROR_DENIED;
 }
 
 noreturn void _PalProcessExit(int exitcode) {
@@ -252,7 +252,7 @@ noreturn void _PalProcessExit(int exitcode) {
 
 static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     ssize_t bytes;
     if (handle->process.ssl_ctx) {
@@ -268,7 +268,7 @@ static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
 
 static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     ssize_t bytes;
     if (handle->process.ssl_ctx) {
@@ -312,7 +312,7 @@ static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             shutdown = SHUT_WR;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     ocall_shutdown(handle->process.stream, shutdown);

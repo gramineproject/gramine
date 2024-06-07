@@ -11,15 +11,15 @@
 #include "pal_internal.h"
 
 int _PalVirtualMemoryAlloc(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 int _PalVirtualMemoryFree(void* addr, uint64_t size) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 int _PalVirtualMemoryProtect(void* addr, uint64_t size, pal_prot_flags_t prot) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 unsigned long _PalMemoryQuota(void) {

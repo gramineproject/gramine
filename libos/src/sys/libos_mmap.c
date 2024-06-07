@@ -248,7 +248,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     if (!hdl) {
         ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
         if (ret < 0) {
-            if (ret == -PAL_ERROR_DENIED) {
+            if (ret == PAL_ERROR_DENIED) {
                 ret = -EPERM;
             } else {
                 ret = pal_to_unix_errno(ret);
