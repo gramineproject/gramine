@@ -2877,11 +2877,13 @@ resolved entirely inside Gramine. Each timerfd object is associated with a dummy
 the host. This is purely for triggering read notifications (e.g., in epoll); timerfd data is
 verified inside Gramine and is never exposed to the host. Since the host is used purely for
 notifications, a malicious host can only induce Denial of Service (DoS) attacks.
+`TFD_TIMER_CANCEL_ON_SET` is silently ignored because there are no "discontinuous changes of time"
+in Gramine (via e.g., `settimeofday()`). `TFD_IOC_SET_TICKS` is not supported.
 
-The emulation is currently implemented at the level of a single process. The emulation *may* work for
-multi-process applications, e.g., if the child process inherits the timerfd object but doesn't use
-it. However, all timerfds created in the parent process are marked as invalid in child processes,
-i.e. inter-process timing signals via timerfds are not allowed.
+The emulation is currently implemented at the level of a single process. The emulation *may* work
+for multi-process applications, e.g., if the child process inherits the timerfd object but doesn't
+use it. However, all timerfds created in the parent process are marked as invalid in child
+processes, i.e. inter-process timing signals via timerfds are not allowed.
 
 Gramine does *not* currently implement the POSIX per-process timer: `timer_create()`, etc. Gramine
 could implement it in the future, if need arises.

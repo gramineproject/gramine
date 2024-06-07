@@ -5,10 +5,10 @@
 
 /* Implementation of "timerfd" system calls.
  *
- * The timerfd object is created inside Gramine, and all operations are resolved entirely inside
- * Gramine. Each timerfd object is associated with a dummy eventfd created on the host. This is
+ * The timerfd object is created inside the LibOS, and all operations are resolved entirely inside
+ * the LibOS. Each timerfd object is associated with a dummy eventfd created on the host. This is
  * purely for triggering read notifications (e.g., in epoll); timerfd data is verified inside
- * Gramine and is never exposed to the host. Since the host is used purely for notifications, a
+ * the LibOS and is never exposed to the host. Since the host is used purely for notifications, a
  * malicious host can only induce Denial of Service (DoS) attacks.
  *
  * The emulation is currently implemented at the level of a single process. The emulation *may* work
@@ -16,10 +16,10 @@
  * doesn't use it. However, all timerfds created in the parent process are marked as invalid in
  * child processes, i.e. inter-process timing signals via timerfds are not allowed.
  *
- * The host's timerfd object is "dummy" and used purely for notifications -- to unblock blocking
+ * The host's eventfd object is "dummy" and used purely for notifications -- to unblock blocking
  * read/select/poll/epoll system calls. The read notify logic is already hardened, by
- * double-checking that the object was indeed updated. However, there are three possible attacks on
- * polling mechanisms (select/poll/epoll):
+ * double-checking that the timerfd object indeed expired. However, there are three possible attacks
+ * on polling mechanisms (select/poll/epoll):
  *
  * a. Malicious host may inject the notification too early: POLLIN when no timer expired yet. This
  *    may lead to a synchronization failure of the app. To prevent this, timerfd implements a
@@ -42,8 +42,8 @@
 #include "linux_abi/time.h"
 #include "linux_eventfd.h"
 #include "pal.h"
-#include "toml_utils.h"
 
+/* This implementation is the same as `eventfd_dummy_host_write()` in "fs/eventfd/fs.c". */
 static void timerfd_dummy_host_write(struct libos_handle* hdl) {
     int ret;
     uint64_t buf_dummy_host_val = 1;
@@ -59,12 +59,10 @@ static void timerfd_dummy_host_write(struct libos_handle* hdl) {
 }
 
 static int create_timerfd_pal_handle(PAL_HANDLE* out_pal_handle) {
-    int ret;
-
     PAL_HANDLE hdl = NULL;
 
-    ret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
-                        PAL_CREATE_IGNORED, /*options=*/0, &hdl);
+    int ret = PalStreamOpen(URI_PREFIX_EVENTFD, PAL_ACCESS_RDWR, /*share_flags=*/0,
+                            PAL_CREATE_IGNORED, /*options=*/0, &hdl);
     if (ret < 0) {
         log_error("timerfd: dummy host eventfd creation failure");
         return pal_to_unix_errno(ret);
@@ -98,7 +96,12 @@ long libos_syscall_timerfd_create(int clockid, int flags) {
     hdl->fs = &timerfd_builtin_fs;
     hdl->flags = O_RDONLY | (flags & TFD_NONBLOCK ? O_NONBLOCK : 0);
     hdl->acc_mode = MAY_READ;
+
     hdl->info.timerfd.broken_in_child = false;
+    hdl->info.timerfd.num_expirations = 0;
+    hdl->info.timerfd.dummy_host_val = 0;
+    hdl->info.timerfd.timeout = 0;
+    hdl->info.timerfd.reset = 0;
 
     ret = create_timerfd_pal_handle(&hdl->pal_handle);
     if (ret < 0)
@@ -111,27 +114,19 @@ out:
 }
 
 static void timerfd_update(struct libos_handle* hdl) {
-    if (hdl->info.timerfd.broken_in_child) {
-        log_warning("Child process tried to access timerfd created by parent process. This is "
-                    "disallowed in Gramine.");
-        die_or_inf_loop();
-    }
-
     spinlock_lock(&hdl->info.timerfd.expiration_lock);
 
     /* When the expiration count overflows, the read will saturate at UINT64_MAX while the timer
      * will continue to fire. */
-    if (hdl->info.timerfd.num_expirations < UINT64_MAX) {
+    if (hdl->info.timerfd.num_expirations < UINT64_MAX)
         hdl->info.timerfd.num_expirations++;
-        hdl->info.timerfd.dummy_host_val++;
 
-        /* perform a write (not supposed to block) to send an event to reading/polling threads */
-        timerfd_dummy_host_write(hdl);
-    }
+    hdl->info.timerfd.dummy_host_val++;
+
+    /* perform a write (not supposed to block) to send an event to reading/polling threads */
+    timerfd_dummy_host_write(hdl);
 
     spinlock_unlock(&hdl->info.timerfd.expiration_lock);
-
-    maybe_epoll_et_trigger(hdl, /*ret=*/0, /*in=*/false, /*unused was_partial=*/false);
 }
 
 static void callback_itimer(IDTYPE caller, void* arg) {
@@ -167,6 +162,12 @@ long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itim
     if (!hdl)
         return -EBADF;
 
+    if (hdl->info.timerfd.broken_in_child) {
+        log_warning("Child process tried to access timerfd created by parent process. This is "
+                    "disallowed in Gramine.");
+        return -EIO;
+    }
+
     if (hdl->type != TYPE_TIMERFD) {
         ret = -EINVAL;
         goto out;
@@ -181,6 +182,9 @@ long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itim
         goto out;
     }
 
+    /* `TFD_TIMER_CANCEL_ON_SET` is silently ignored because there are no "discontinuous changes of
+     * time" in Gramine (via e.g., `settimeofday()`). */
+
     if (flags & ~TFD_SETTIME_FLAGS) {
         ret = -EINVAL;
         goto out;
@@ -193,8 +197,8 @@ long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itim
         goto out;
     }
 
-    uint64_t next_value = timespec_to_us(&value->it_value);
-    uint64_t next_reset = timespec_to_us(&value->it_interval);
+    uint64_t new_timeout = timespec_to_us(&value->it_value);
+    uint64_t new_reset = timespec_to_us(&value->it_interval);
 
     spinlock_lock(&hdl->info.timerfd.timer_lock);
 
@@ -205,22 +209,28 @@ long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itim
 
     bool absolute_time = flags & TFD_TIMER_ABSTIME;
     if (absolute_time) {
-        hdl->info.timerfd.timeout = next_value;
+        hdl->info.timerfd.timeout = new_timeout;
     } else {
-        hdl->info.timerfd.timeout = setup_time + next_value;
+        hdl->info.timerfd.timeout = setup_time + new_timeout;
     }
-    hdl->info.timerfd.reset = next_reset;
+    hdl->info.timerfd.reset = new_reset;
 
     spinlock_unlock(&hdl->info.timerfd.timer_lock);
 
-    if (next_value) {
-        int64_t install_ret = install_async_event(ASYNC_EVENT_TYPE_ALARM_TIMER, hdl->pal_handle,
-                                                  next_value, absolute_time,
-                                                  &callback_itimer, (void*)hdl);
-        if (install_ret < 0) {
-            ret = install_ret;
-            goto out;
-        }
+    int64_t install_ret;
+    if (new_timeout) {
+        install_ret = install_async_event(ASYNC_EVENT_TYPE_ALARM_TIMER, hdl->pal_handle,
+                                          new_timeout, absolute_time,
+                                          &callback_itimer, (void*)hdl);
+    } else {
+        /* cancel the pending timerfd object */
+        install_ret = install_async_event(ASYNC_EVENT_TYPE_ALARM_TIMER, hdl->pal_handle,
+                                          /*time_us=*/0, /*absolute_time=*/false,
+                                          /*callback=*/NULL, /*arg=*/NULL);
+    }
+    if (install_ret < 0) {
+        ret = install_ret;
+        goto out;
     }
 
     if (ovalue) {
@@ -242,6 +252,12 @@ long libos_syscall_timerfd_gettime(int fd, struct __kernel_itimerspec* value) {
     struct libos_handle* hdl = get_fd_handle(fd, /*fd_flags=*/NULL, /*map=*/NULL);
     if (!hdl)
         return -EBADF;
+
+    if (hdl->info.timerfd.broken_in_child) {
+        log_warning("Child process tried to access timerfd created by parent process. This is "
+                    "disallowed in Gramine.");
+        return -EIO;
+    }
 
     if (hdl->type != TYPE_TIMERFD) {
         ret = -EINVAL;

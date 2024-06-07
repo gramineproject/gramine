@@ -151,7 +151,7 @@ struct libos_timerfd_handle {
     uint64_t dummy_host_val;
 
     spinlock_t timer_lock; /* protecting below fields */
-    uint64_t timeout;
+    uint64_t timeout; /* always an absolute time */
     uint64_t reset;
 };
 

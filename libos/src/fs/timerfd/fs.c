@@ -24,6 +24,7 @@ static int timerfd_checkin(struct libos_handle* hdl) {
     return 0;
 }
 
+/* This implementation is the same as `eventfd_dummy_host_read()` in "fs/eventfd/fs.c". */
 static void timerfd_dummy_host_read(struct libos_handle* hdl) {
     int ret;
     uint64_t buf_dummy_host_val = 0;
@@ -38,6 +39,7 @@ static void timerfd_dummy_host_read(struct libos_handle* hdl) {
     }
 }
 
+/* This implementation is the same as `eventfd_dummy_host_wait()` in "fs/eventfd/fs.c". */
 static void timerfd_dummy_host_wait(struct libos_handle* hdl) {
     pal_wait_flags_t wait_for_events = PAL_WAIT_READ;
     pal_wait_flags_t ret_events = 0;
@@ -77,8 +79,7 @@ static ssize_t timerfd_read(struct libos_handle* hdl, void* buf, size_t count, f
     memcpy(buf, &hdl->info.timerfd.num_expirations, sizeof(uint64_t));
     hdl->info.timerfd.num_expirations = 0;
 
-    /* perform a read (not supposed to block) to clear the event from polling threads and to send an
-     * event to writing threads */
+    /* perform a read (not supposed to block) to clear the event from polling threads */
     if (hdl->info.timerfd.dummy_host_val) {
         timerfd_dummy_host_read(hdl);
         hdl->info.timerfd.dummy_host_val = 0;
@@ -119,9 +120,23 @@ static void timerfd_post_poll(struct libos_handle* hdl, pal_wait_flags_t* pal_re
     spinlock_unlock(&hdl->info.timerfd.expiration_lock);
 }
 
+static int timerfd_close(struct libos_handle* hdl) {
+    if (hdl->info.timerfd.broken_in_child) {
+        log_warning("Child process tried to access timerfd created by parent process. This is "
+                    "disallowed in Gramine.");
+        return -EIO;
+    }
+
+    /* cancel the pending timerfd object */
+    return install_async_event(ASYNC_EVENT_TYPE_ALARM_TIMER, hdl->pal_handle,
+                               /*time_us=*/0, /*absolute_time=*/false, /*callback=*/NULL,
+                               /*arg=*/NULL);
+}
+
 struct libos_fs_ops timerfd_fs_ops = {
     .checkin   = &timerfd_checkin,
     .read      = &timerfd_read,
+    .close     = &timerfd_close,
     .post_poll = &timerfd_post_poll,
 };
 

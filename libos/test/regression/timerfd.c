@@ -7,8 +7,8 @@
  * Single-process test for `timerfd` syscalls (`timerfd_create()`, `timerfd_settime()` and
  * `timerfd_gettime()`).
  *
- * The tests involve cases including reading a blocking/non-blocking timerfd, poll/epoll/selecting
- * on timerfds, setting up a relative/absolute/periodic timerfd and reading a timerfd from multiple
+ * The tests involve cases including reading a blocking/non-blocking timerfd, poll/epoll/select on
+ * timerfds, setting up a relative/absolute/periodic timerfd and reading a timerfd from multiple
  * threads.
  */
 
@@ -27,8 +27,6 @@
 #include <unistd.h>
 
 #include "common.h"
-
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #define EXPECTED_EXPIRATIONS 1
 #define EXPECTED_PERIODIC_TIMER_EXPIRATION_COUNT 5
@@ -77,18 +75,24 @@ static void close_timerfds(int fds[NUM_FDS]) {
 static void test_select(int fds[NUM_FDS]) {
     fd_set rfds;
     FD_ZERO(&rfds);
+    int max_fd = 0;
+
     for (int i = 0; i < NUM_FDS; i++) {
         FD_SET(fds[i], &rfds);
+
+        if (fds[i] > max_fd)
+            max_fd = fds[i];
     }
 
-    int max_fd = MAX(fds[0], fds[1]) + 1;
-    CHECK(select(max_fd, &rfds, NULL, NULL, NULL));
+    int nfds = select(max_fd + 1, &rfds, NULL, NULL, NULL);
+    if (nfds != NUM_FDS)
+        err(1, "select on read event failed");
 
-    for (int i = 0; i < NUM_FDS; i++) {
+    for (int i = 0; i < nfds; i++) {
         if (FD_ISSET(fds[i], &rfds)) {
             uint64_t expirations;
             CHECK(read(fds[i], &expirations, sizeof(expirations)));
-            if (expirations != 1)
+            if (expirations != EXPECTED_EXPIRATIONS)
                 errx(1, "select: unexpected number of expirations (expected 1, got %lu)",
                      expirations);
         }
@@ -102,13 +106,15 @@ static void test_poll(int fds[NUM_FDS]) {
         pfds[i].events = POLLIN;
     }
 
-    CHECK(poll(pfds, NUM_FDS, -1));
+    int nfds = CHECK(poll(pfds, NUM_FDS, -1));
+    if (nfds != NUM_FDS)
+        err(1, "poll with POLLIN failed");
 
-    for (int i = 0; i < NUM_FDS; i++) {
+    for (int i = 0; i < nfds; i++) {
         if (pfds[i].revents & POLLIN) {
             uint64_t expirations;
             CHECK(read(fds[i], &expirations, sizeof(expirations)));
-            if (expirations != 1)
+            if (expirations != EXPECTED_EXPIRATIONS)
                 errx(1, "poll: unexpected number of expirations (expected 1, got %lu)",
                      expirations);
         }
@@ -127,17 +133,20 @@ static void test_epoll(int fds[NUM_FDS]) {
 
     struct epoll_event events[NUM_FDS];
     int nfds = CHECK(epoll_wait(epfd, events, NUM_FDS, -1));
+    if (nfds != NUM_FDS)
+        err(1, "epoll_wait with EPOLLIN failed");
 
-    for (int n = 0; n < nfds; ++n) {
+    for (int i = 0; i < nfds; ++i) {
         uint64_t expirations;
-        CHECK(read(events[n].data.fd, &expirations, sizeof(expirations)));
-        if (expirations != 1)
+        CHECK(read(events[i].data.fd, &expirations, sizeof(expirations)));
+        if (expirations != EXPECTED_EXPIRATIONS)
             errx(1, "epoll: unexpected number of expirations (expected 1, got %lu)", expirations);
     }
 
-    close(epfd);
+    CHECK(close(epfd));
 }
 
+/* this test expects the timerfd (`fd`) to be a periodic timer */
 static void test_epoll_modes(int fd) {
     int epfd = CHECK(epoll_create1(0));
 
@@ -153,7 +162,7 @@ static void test_epoll_modes(int fd) {
         errx(1, "epoll: unexpected number of fds (expected 1, got %u)", nfds);
 
     /* waiting for another event without reading the expiration count */
-    nfds = CHECK(epoll_wait(epfd, events, 1, /*timeout=*/2000));
+    nfds = CHECK(epoll_wait(epfd, events, 1, /*timeout=*/PERIODIC_INTERVAL * 1000 * 2));
     if (nfds != 1)
         errx(1, "epoll: unexpected number of fds in level-triggered mode without reading "
              "(expected 1, got %u)", nfds);
@@ -166,52 +175,25 @@ static void test_epoll_modes(int fd) {
     if (nfds != 1)
         errx(1, "epoll: unexpected number of fds (expected 1, got %u)", nfds);
 
-    /* waiting for another event without reading the expiration count */
-    nfds = CHECK(epoll_wait(epfd, events, 1, /*timeout=*/2000));
+    /* waiting for another event without reading the expiration count: here, even though the timer
+     * expired at least one, there is no event reported because we're in edge-triggered mode (which
+     * does not "reset" the event since there was no read) */
+    nfds = CHECK(epoll_wait(epfd, events, 1, /*timeout=*/PERIODIC_INTERVAL * 1000 * 2));
     if (nfds != 0)
         errx(1, "epoll: unexpected number of fds in edge-triggered mode without reading "
              "(expected 0, got %u)", nfds);
 
-    close(epfd);
-}
-
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static size_t expiration_count = 0;
-
-static void* timerfd_read_thread_periodic_timer(void* arg) {
-    int fd = *(int*)arg;
-    uint64_t expirations;
-
-    for (;;) {
-        CHECK(read(fd, &expirations, sizeof(expirations)));
-        pthread_mutex_lock(&mutex);
-        expiration_count += expirations;
-        pthread_cond_signal(&cond);
-        pthread_mutex_unlock(&mutex);
-    }
-
-    return NULL;
+    CHECK(close(epfd));
 }
 
 static void test_periodic_timer(int fd) {
-    pthread_t thread;
-    CHECK(pthread_create(&thread, NULL, timerfd_read_thread_periodic_timer, &fd));
+    uint64_t expirations;
+    size_t total_expirations = 0;
 
-    /* wait for at least 5 expirations */
-    pthread_mutex_lock(&mutex);
-    while (expiration_count < EXPECTED_PERIODIC_TIMER_EXPIRATION_COUNT) {
-        pthread_cond_wait(&cond, &mutex);
+    while (total_expirations < EXPECTED_PERIODIC_TIMER_EXPIRATION_COUNT) {
+        CHECK(read(fd, &expirations, sizeof(expirations)));
+        total_expirations += expirations;
     }
-    pthread_mutex_unlock(&mutex);
-
-    if (expiration_count != EXPECTED_PERIODIC_TIMER_EXPIRATION_COUNT)
-        errx(1, "periodic_timer: unexpected number of expirations (expected 5, got %lu)",
-             expiration_count);
-
-    /* cleanup: cancel the read thread and wait for it to exit */
-    CHECK(pthread_cancel(thread));
-    CHECK(pthread_join(thread, NULL));
 }
 
 static void* timerfd_read_thread(void* arg) {
@@ -223,7 +205,8 @@ static void* timerfd_read_thread(void* arg) {
     pthread_exit(NULL);
 }
 
-static void test_threaded_read(int fd) {
+/* a periodic timer is required so that all NUM_THREADS threads have something to read */
+static void test_periodic_timer_threaded_read(int fd) {
     pthread_t threads[NUM_THREADS];
     for (int i = 0; i < NUM_THREADS; i++) {
         CHECK(pthread_create(&threads[i], NULL, timerfd_read_thread, &fd));
@@ -242,6 +225,30 @@ static void test_timerfd_gettime(int fd) {
         errx(1, "timerfd_gettime: unexpected timer value (expected close to 2.0, got %ld.%09ld)",
              curr_value.it_value.tv_sec, curr_value.it_value.tv_nsec);
     }
+}
+
+static void test_disarm_timer(int fd) {
+    struct itimerspec old_value;
+
+    /* immediately disarm the timer and get the old value */
+    struct itimerspec disarm_value = { 0 };
+    CHECK(timerfd_settime(fd, 0, &disarm_value, &old_value));
+
+    /* check that the old value is around 2 seconds */
+    if (old_value.it_value.tv_sec > 2 || old_value.it_value.tv_sec < 1 ||
+        old_value.it_value.tv_nsec < 0 || old_value.it_value.tv_nsec >= 1000000000) {
+        errx(1, "disarm_timer: unexpected old timer value (expected close to 2.0, got %ld.%09ld)",
+             old_value.it_value.tv_sec, old_value.it_value.tv_nsec);
+    }
+
+    /* test poll with a timeout to ensure the timer was disarmed */
+    struct pollfd pfd = {
+        .fd = fd,
+        .events = POLLIN,
+    };
+    int ret = poll(&pfd, 1, /*timeout=*/(TIMEOUT_VALUE + 1) * 1000);
+    if (ret != 0)
+        errx(1, "disarm_timer: poll returned %d, expected 0 (timeout)", ret);
 }
 
 static void test_absolute_time(int fd) {
@@ -280,6 +287,10 @@ static void test_absolute_time(int fd) {
     }
 }
 
+/* This test must be executed twice: first reading from a non-periodic timerfd in blocking mode to
+ * capture its expiration, and then switching to non-blocking mode for a second read, which
+ * immediately returns with EAGAIN because the timer is disarmed and there are no new expiration
+ * events. */
 static void test_read(int fd, bool non_blocking) {
     if (non_blocking) {
         CHECK(fcntl(fd, F_SETFL, O_NONBLOCK));
@@ -306,28 +317,31 @@ int main(void) {
     int fds[NUM_FDS];
     create_timerfds(fds);
 
-    set_timerfds_relative(fds, /*periodic*/false);
+    set_timerfds_relative(fds, /*periodic=*/false);
     test_select(fds);
 
-    set_timerfds_relative(fds, /*periodic*/false);
+    set_timerfds_relative(fds, /*periodic=*/false);
     test_poll(fds);
 
-    set_timerfds_relative(fds, /*periodic*/false);
+    set_timerfds_relative(fds, /*periodic=*/false);
     test_epoll(fds);
 
-    set_timerfd_relative(fds[0], /*periodic*/true);
+    set_timerfd_relative(fds[0], /*periodic=*/true);
     test_epoll_modes(fds[0]);
 
-    set_timerfd_relative(fds[0], /*periodic*/true);
+    set_timerfd_relative(fds[0], /*periodic=*/true);
     test_periodic_timer(fds[0]);
 
-    set_timerfd_relative(fds[0], /*periodic*/true);
-    test_threaded_read(fds[0]);
+    set_timerfd_relative(fds[0], /*periodic=*/true);
+    test_periodic_timer_threaded_read(fds[0]);
 
-    set_timerfd_relative(fds[0], /*periodic*/false);
+    set_timerfd_relative(fds[0], /*periodic=*/false);
     test_timerfd_gettime(fds[0]);
 
-    set_timerfd_relative(fds[0], /*periodic*/false);
+    set_timerfd_relative(fds[0], /*periodic=*/false);
+    test_disarm_timer(fds[0]);
+
+    set_timerfd_relative(fds[0], /*periodic=*/false);
     test_read(fds[0], /*non_blocking=*/false);
     test_read(fds[0], /*non_blocking=*/true);
 
