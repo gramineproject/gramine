@@ -21,7 +21,7 @@ project(
 #       may not be available.
 #       We can change to c2x when we drop *EL8 and Ubuntu 20.04.
 #       We can't change to c23 for any supported versions yet (requires at
-#       leaast gcc 14).
+#       least gcc 14).
 if meson.get_compiler('c').has_argument('-std=c23')
   add_project_arguments('-std=c23', language: 'c')
 elif meson.get_compiler('c').has_argument('-std=c2x')
