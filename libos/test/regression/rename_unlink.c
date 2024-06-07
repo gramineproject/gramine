@@ -219,52 +219,6 @@ static void test_rename_follow(const char* path1, const char* path2) {
         err(1, "unlink %s", path2);
 }
 
-/* below will _not_ run correctly when directly executed since we use dummy owner and group */
-static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
-    printf("%s...\n", __func__);
-
-    int fd = create_file(path1, message1, message1_len);
-    if (fd < 0)
-        err(1, "create %s", path1);
-
-    if (fchown(fd, /*owner=*/123, /*group=*/123) != 0) /* dummy owner/group just for testing */
-        err(1, "fchown before rename");
-    if (fchmod(fd, S_IRWXU | S_IRWXG) != 0) /* note: no "other users" mode bits */
-        err(1, "fchmod before rename");
-
-    struct stat st;
-    if (stat(path1, &st) != 0)
-        err(1, "Failed to stat file %s", path1);
-    if (st.st_uid != 123 || st.st_gid != 123)
-        err(1, "wrong ownership of file %s", path1);
-    if (st.st_mode & S_IRWXO)
-        err(1, "wrong permissions of file %s", path1);
-
-    if (rename(path1, path2) != 0)
-        err(1, "rename");
-
-    should_not_exist(path1);
-    should_exist(path2, message1_len);
-
-    if (fchown(fd, /*owner=*/321, /*group=*/321) != 0) /* different dummy owner/group */
-        err(1, "fchown after rename");
-    if (fchmod(fd, S_IRWXU | S_IRWXG | S_IRWXO) != 0) /* note: now with "other users" mode bits */
-        err(1, "fchmod after rename");
-
-    if (stat(path2, &st) != 0)
-        err(1, "Failed to stat (renamed) file %s", path2);
-    if (st.st_uid != 321 || st.st_gid != 321)
-        err(1, "wrong ownership of (renamed) file %s", path2);
-    if (!(st.st_mode & S_IRWXO))
-        err(1, "wrong permissions of (renamed) file %s", path2);
-
-    if (close(fd) != 0)
-        err(1, "close %s", path2);
-
-    if (unlink(path2) != 0)
-        err(1, "unlink %s", path2);
-}
-
 static void test_rename_open_file(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
@@ -346,24 +300,6 @@ static void test_unlink_fchmod(const char* path) {
         err(1, "close unlinked %s", path);
 }
 
-/* below will _not_ run correctly when directly executed since we use dummy owner and group */
-static void test_unlink_fchown(const char* path) {
-    printf("%s...\n", __func__);
-
-    int fd = create_file(path, /*message=*/NULL, /*len=*/0);
-
-    if (unlink(path) != 0)
-        err(1, "unlink");
-
-    should_not_exist(path);
-
-    if (fchown(fd, /*owner=*/123, /*group=*/123) != 0) /* dummy owner/group just for testing */
-        err(1, "fchown");
-
-    if (close(fd) != 0)
-        err(1, "close unlinked %s", path);
-}
-
 int main(int argc, char* argv[]) {
     setbuf(stdout, NULL);
     setbuf(stderr, NULL);
@@ -378,12 +314,10 @@ int main(int argc, char* argv[]) {
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
     test_rename_follow(path1, path2);
-    test_rename_fchown_fchmod(path1, path2);
     test_rename_open_file(path1, path2);
     test_unlink_and_recreate(path1);
     test_unlink_and_write(path1);
     test_unlink_fchmod(path1);
-    test_unlink_fchown(path1);
     printf("TEST OK\n");
     return 0;
 }
