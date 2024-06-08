@@ -185,7 +185,7 @@ static bool ipf_generate_random_metadata_key(pf_context_t* pf, pf_key_t* output)
     return ipf_generate_metadata_key(pf, /*restore=*/false, output);
 }
 
-static bool ipf_generate_nonced_metadata_key(pf_context_t* pf, pf_key_t* output) {
+static bool ipf_recreate_metadata_key(pf_context_t* pf, pf_key_t* output) {
     return ipf_generate_metadata_key(pf, /*restore=*/true, output);
 }
 
@@ -338,7 +338,7 @@ static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_
                              uint64_t* physical_mht_node_number,
                              uint64_t* physical_data_node_number) {
     // physical nodes (file layout):
-    // node 0 - meta data node
+    // node 0 - metadata node
     // node 1 - root MHT node
     // nodes 2-97 - data nodes (ATTACHED_DATA_NODES_COUNT == 96)
     // node 98 - MHT node
@@ -356,7 +356,7 @@ static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_
     _data_node_number = (offset - MD_USER_DATA_SIZE) / PF_NODE_SIZE;
     _mht_node_number = _data_node_number / ATTACHED_DATA_NODES_COUNT;
     _physical_data_node_number = _data_node_number
-                                 + 1 // meta data node
+                                 + 1 // metadata node
                                  + 1 // MHT root node
                                  + _mht_node_number; // number of MHT nodes in the middle
                                  // (the mht_node_number of root MHT node is 0)
@@ -418,7 +418,7 @@ static bool ipf_update_metadata_node(pf_context_t* pf) {
         return false;
     }
 
-    // encrypt metadata part-to-be-encrypted, also updates the MAC in metadata plaintext header
+    // encrypt metadata part-to-be-encrypted, also updating the MAC in metadata plaintext header
     status = g_cb_aes_gcm_encrypt(&key, &g_empty_iv, NULL, 0, &pf->encrypted_part_plain,
                                   sizeof(metadata_encrypted_t), &pf->file_metadata.encrypted_part,
                                   &pf->file_metadata.plain_part.metadata_gmac);
@@ -495,7 +495,7 @@ static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_numb
     if (parent_file_mht_node == NULL)
         return NULL;
 
-    uint64_t physical_node_number = 1 + // meta data node
+    uint64_t physical_node_number = 1 + // metadata node
                                     // the '1' is for the MHT node preceding every 96 data nodes
                                     mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
 
@@ -547,10 +547,7 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
     // even if we didn't get the required data_node, we might have read other nodes in the process
     while (lruc_size(pf->cache) > MAX_NODES_IN_CACHE) {
         void* node = lruc_get_last(pf->cache);
-        if (node == NULL) {
-            pf->last_error = PF_STATUS_UNKNOWN_ERROR;
-            return NULL;
-        }
+        assert(node);
 
         if (!((file_node_t*)node)->need_writing) {
             lruc_remove_last(pf->cache);
@@ -668,7 +665,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
     if (mht_node_number == 0)
         return &pf->root_mht;
 
-    uint64_t physical_node_number = 1 + // meta data node
+    uint64_t physical_node_number = 1 + // metadata node
                                     // the '1' is for the MHT node preceding every 96 data nodes
                                     mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
 
@@ -765,7 +762,7 @@ static bool ipf_init_fields(pf_context_t* pf) {
 static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     pf_status_t status;
 
-    // read meta-data node
+    // read metadata node
     if (!ipf_read_node(pf, /*node_number=*/0, (uint8_t*)&pf->file_metadata)) {
         return false;
     }
@@ -782,7 +779,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     }
 
     pf_key_t key;
-    if (!ipf_generate_nonced_metadata_key(pf, &key))
+    if (!ipf_recreate_metadata_key(pf, &key))
         return false;
 
     // decrypt the encrypted part of the metadata node
@@ -950,7 +947,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
     size_t data_left_to_write = size;
     const unsigned char* data_to_write = (const unsigned char*)ptr;
 
-    // the first 3KB of user data is written in the metadata node's encrypted part
+    // the first MD_USER_DATA_SIZE bytes of user data are written in metadata node's encrypted part
     if (offset < MD_USER_DATA_SIZE) {
         size_t empty_place_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_md);
@@ -1037,7 +1034,7 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
 
     unsigned char* out_buffer = (unsigned char*)ptr;
 
-    // the first 3KB of user data is read from the metadata node's encrypted part
+    // the first MD_USER_DATA_SIZE bytes of user data are read from metadata node's encrypted part
     if (offset < MD_USER_DATA_SIZE) {
         size_t data_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_read = MIN(data_left_to_read, data_left_in_md);
