@@ -448,22 +448,13 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
     bool has_hw_fault_address = false;
 
     if (trusted_exit_info.valid) {
-        if (is_synthetic_gp) {
-            assert(trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_UD);
-            assert(event_num == PAL_EVENT_MEMFAULT);
-            ctx.trapno = SGX_EXCEPTION_VECTOR_GP;
-            ctx.err = 0x4; /* dummy sane value: U/S=1, W/R=0, P=0, all the rest are zeros */
-            ctx.cr2 = 0x0; /* on #GP, maddr = 0 */
+        ctx.trapno = trusted_exit_info.vector;
+        /* Only these two exceptions save information in EXINFO. */
+        if (!is_synthetic_gp && (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
+                || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF)) {
+            ctx.err = exinfo->error_code_val; /* bits: Present, Write/Read, User/Kernel, etc. */
+            ctx.cr2 = exinfo->maddr;          /* NOTE: on #GP, maddr = 0 */
             has_hw_fault_address = true;
-        } else {
-            ctx.trapno = trusted_exit_info.vector;
-            /* Only these two exceptions save information in EXINFO. */
-            if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
-                    || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
-                ctx.err = exinfo->error_code_val; /* bits: Present, Write/Read, User/Kernel, etc. */
-                ctx.cr2 = exinfo->maddr;          /* NOTE: on #GP, maddr = 0 */
-                has_hw_fault_address = true;
-            }
         }
     }
 
@@ -473,7 +464,8 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
-            if (!has_hw_fault_address && !g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
+            if (!has_hw_fault_address && !is_synthetic_gp
+                    && !g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
                 log_error("Tried to handle a memory fault with no faulting address reported by "
                           "SGX. Please consider enabling 'sgx.use_exinfo' in the manifest.");
                 _PalProcessExit(1);
