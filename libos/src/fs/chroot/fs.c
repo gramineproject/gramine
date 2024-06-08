@@ -243,8 +243,16 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
         unlock(&hdl->inode->lock);
     }
 
-    /* If there are any MAP_SHARED mappings for the file, this will read data from `hdl`. */
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
+        /* If there are any mappings for the file, this will refresh their access protections. */
+        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        if (ret < 0) {
+            log_error("refresh of page protections of mmapped regions of file failed: %s",
+                      unix_strerror(ret));
+            BUG();
+        }
+
+        /* If there are any MAP_SHARED mappings for the file, this will read data from `hdl`. */
         ret = reload_mmaped_from_file_handle(hdl);
         if (ret < 0) {
             log_error("reload mmapped regions of file failed: %s", unix_strerror(ret));

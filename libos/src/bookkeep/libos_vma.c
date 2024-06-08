@@ -1498,7 +1498,7 @@ out:
 static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* arg) {
     struct libos_handle* hdl = arg;
 
-    /* guaranteed to have inode because invoked from `truncate` callback */
+    /* guaranteed to have inode because invoked from `write` or `truncate` callback */
     assert(hdl && hdl->inode);
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS))
@@ -1554,7 +1554,7 @@ static int prot_refresh_vma(struct libos_vma_info* vma_info) {
 }
 
 /* This helper function is to refresh access protections on the VMA pages of a given file handle on
- * file-extend operations (currently only `ftruncate`). */
+ * file-extend operations (`write` and `ftruncate`). */
 int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl) {
     struct libos_vma_info* vma_infos;
     size_t count;
