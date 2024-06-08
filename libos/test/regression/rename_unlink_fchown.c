@@ -4,7 +4,7 @@
  */
 
 /*
- * Tests for fchown after renaming and deleting files. Mostly focus on cases where a file is still
+ * Tests for fchown after renaming and deleting files. Mostly focused on cases where a file is still
  * open. These tests are separate from other renaming/deleting tests in `rename_unlink.c` because
  * these tests require a root user to perform fchown with arbitrary user/group.
  */
@@ -25,8 +25,8 @@
 #include "common.h"
 #include "rw_file.h"
 
-static const char message1[] = "first message\n";
-static const size_t message1_len = sizeof(message1) - 1;
+static const char message[] = "first message\n";
+static const size_t message_len = sizeof(message) - 1;
 
 static void should_not_exist(const char* path) {
     struct stat statbuf;
@@ -72,7 +72,7 @@ static int create_file(const char* path, const char* str, size_t len) {
 static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
-    int fd = create_file(path1, message1, message1_len);
+    int fd = create_file(path1, message, message_len);
     if (fd < 0)
         err(1, "create %s", path1);
 
@@ -86,14 +86,14 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
         err(1, "Failed to stat file %s", path1);
     if (st.st_uid != 123 || st.st_gid != 123)
         err(1, "wrong ownership of file %s", path1);
-    if (st.st_mode & S_IRWXO)
+    if ((st.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != (S_IRWXU | S_IRWXG))
         err(1, "wrong permissions of file %s", path1);
 
     if (rename(path1, path2) != 0)
         err(1, "rename");
 
     should_not_exist(path1);
-    should_exist(path2, message1_len);
+    should_exist(path2, message_len);
 
     if (fchown(fd, /*owner=*/321, /*group=*/321) != 0) /* different dummy owner/group */
         err(1, "fchown after rename");
@@ -104,7 +104,7 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
         err(1, "Failed to stat (renamed) file %s", path2);
     if (st.st_uid != 321 || st.st_gid != 321)
         err(1, "wrong ownership of (renamed) file %s", path2);
-    if (!(st.st_mode & S_IRWXO))
+    if ((st.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO)) != (S_IRWXU | S_IRWXG | S_IRWXO))
         err(1, "wrong permissions of (renamed) file %s", path2);
 
     if (close(fd) != 0)
@@ -126,6 +126,12 @@ static void test_unlink_fchown(const char* path) {
 
     if (fchown(fd, /*owner=*/123, /*group=*/123) != 0) /* dummy owner/group just for testing */
         err(1, "fchown");
+
+    struct stat st;
+    if (fstat(fd, &st) != 0)
+        err(1, "Failed to fstat file %s", path);
+    if (st.st_uid != 123 || st.st_gid != 123)
+        err(1, "wrong ownership of file %s", path);
 
     if (close(fd) != 0)
         err(1, "close unlinked %s", path);

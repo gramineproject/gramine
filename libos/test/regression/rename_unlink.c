@@ -5,7 +5,7 @@
  */
 
 /*
- * Tests for renaming and deleting files. Mostly focus on cases where a file is still open.
+ * Tests for renaming and deleting files. Mostly focused on cases where a file is still open.
  */
 
 #define _DEFAULT_SOURCE /* fchmod */
@@ -30,7 +30,7 @@ static const size_t message1_len = sizeof(message1) - 1;
 static const char message2[] = "second message\n";
 static const size_t message2_len = sizeof(message2) - 1;
 
-static_assert(sizeof(message1) != sizeof(message2), "the messages should have different lengths");
+static_assert(sizeof(message1) < sizeof(message2), "message1 must be smaller than message2");
 
 static void should_not_exist(const char* path) {
     struct stat statbuf;
