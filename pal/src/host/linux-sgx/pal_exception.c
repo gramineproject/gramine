@@ -235,12 +235,12 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
          * Executing I/O instructions (e.g., IN/OUT/INS/OUTS) inside an SGX enclave generates a #UD
          * fault. Without the below corner-case handling, PAL would propagate this fault to LibOS as
          * an "Illegal instruction" Gramine exception. However, I/O instructions result in a #GP
-         * fault (which corresponds to "Memory fault" Gramine exception) if I/O is not permitted
-         * (which is true in userspace apps and in SGX enclave). Let PAL emulate these instructions
-         * as if they end up in a memory fault.
+         * fault outside SGX (which corresponds to "Memory fault" Gramine exception) if I/O is not
+         * permitted (which is true in userspace apps). Let PAL emulate these instructions as if
+         * they ended up in a memory fault.
          *
          * Note that I/O instructions with a LOCK prefix always result in a #UD fault, so they are
-         * special cased here.
+         * special-cased here.
          */
         if (FIRST_TIME()) {
             log_warning("Emulating In/OUT/INS/OUTS instruction as a SIGSEGV signal to app.");
@@ -303,7 +303,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
      * --+-----------------------------+------------------------------------------+------------+
      */
 
-    bool is_synthetic_gp = false; /* IN/OUT/INS/OUTS instructions morth #UD into a synthetic #GP */
+    bool is_synthetic_gp = false; /* IN/OUT/INS/OUTS instructions morph #UD into a synthetic #GP */
 
     uint32_t event_num = 0; /* illegal event */
 
@@ -452,7 +452,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             assert(trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_UD);
             assert(event_num == PAL_EVENT_MEMFAULT);
             ctx.trapno = SGX_EXCEPTION_VECTOR_GP;
-            ctx.err = 0x4; /* dummy sane value: P=0, W/R=0, U/S = 1, all the rest are zeros */
+            ctx.err = 0x4; /* dummy sane value: U/S=1, W/R=0, P=0, all the rest are zeros */
             ctx.cr2 = 0x0; /* on #GP, maddr = 0 */
             has_hw_fault_address = true;
         } else {
