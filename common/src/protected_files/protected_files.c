@@ -220,7 +220,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
         if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
             goto out;
 
-        // encrypt data node, this also saves MAC in the corresponding crypto slot of MHT node
+        // encrypt data node, this also saves MAC in the corresponding array item of MHT node
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
                                       data_node->decrypted.data.data, PF_NODE_SIZE,
                                       data_node->encrypted.cipher, &gcm_crypto_data->gmac);
@@ -636,7 +636,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
         &file_data_node->parent->decrypted.mht
              .data_nodes_crypto[file_data_node->node_number % ATTACHED_DATA_NODES_COUNT];
 
-    // decrypt data and check integrity against the MAC in corresponding slot in MHT node
+    // decrypt data and check integrity against the MAC in corresponding array item in MHT node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                   file_data_node->encrypted.cipher, PF_NODE_SIZE,
                                   file_data_node->decrypted.data.data, &gcm_crypto_data->gmac);
@@ -699,7 +699,8 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
         &file_mht_node->parent->decrypted.mht
              .mht_nodes_crypto[(file_mht_node->node_number - 1) % CHILD_MHT_NODES_COUNT];
 
-    // decrypt data and check integrity against the MAC in corresponding slot in parent MHT node
+    // decrypt data and check integrity against the MAC in corresponding array item in parent MHT
+    // node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                   file_mht_node->encrypted.cipher, PF_NODE_SIZE,
                                   &file_mht_node->decrypted.mht, &gcm_crypto_data->gmac);
