@@ -30,7 +30,7 @@ static const size_t message1_len = sizeof(message1) - 1;
 static const char message2[] = "second message\n";
 static const size_t message2_len = sizeof(message2) - 1;
 
-static_assert(sizeof(message1) < sizeof(message2), "message1 must be smaller than message2");
+static_assert(sizeof(message1) != sizeof(message2), "the messages should have different lengths");
 
 static void should_not_exist(const char* path) {
     struct stat statbuf;
@@ -200,6 +200,7 @@ static void test_rename_follow(const char* path1, const char* path2) {
     if ((size_t)n != message2_len)
         errx(1, "wrote less bytes than expected");
 
+    static_assert(sizeof(message1) < sizeof(message2), "message1 must be smaller than message2");
     should_contain("file opened before it's renamed", fd, message2, message2_len);
 
     if (close(fd) != 0)
