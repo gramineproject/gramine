@@ -133,7 +133,7 @@ int msync_handle(struct libos_handle* hdl);
 /* Reload file mappings of `hdl` */
 int reload_mmaped_from_file_handle(struct libos_handle* hdl);
 
-/* Refresh page protections of file mappings of `hdl` */
+/* Refresh page protections of file mappings of `hdl` when the file size has changed */
 int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl);
 
 void debug_print_all_vmas(void);

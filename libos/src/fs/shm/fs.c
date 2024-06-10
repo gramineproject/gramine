@@ -44,7 +44,7 @@ static int shm_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot,
     if (flags & MAP_ANONYMOUS)
         return -EINVAL;
 
-    int ret = PalStreamMap(hdl->pal_handle, addr, pal_prot, offset, size);
+    int ret = PalDeviceMap(hdl->pal_handle, addr, pal_prot, offset, size);
     if (ret < 0)
         return pal_to_unix_errno(ret);
 

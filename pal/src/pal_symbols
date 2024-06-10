@@ -16,10 +16,10 @@ PalStreamsWaitEvents
 PalStreamOpen
 PalStreamRead
 PalStreamWrite
-PalStreamMap
 PalStreamSetLength
 PalStreamFlush
 PalStreamDelete
+PalDeviceMap
 PalSocketCreate
 PalSocketBind
 PalSocketListen

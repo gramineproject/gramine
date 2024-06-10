@@ -277,7 +277,7 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
         /* If there are any mappings for the file, this will refresh their access protections. */
         int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (refresh_ret < 0) {
-            log_error("refresh of page protections of mmapped regions of file failed: %s",
+            log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(refresh_ret));
             BUG();
         }
@@ -316,7 +316,7 @@ static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
         /* If there are any mappings for the file, this will refresh their access protections. */
         ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (ret < 0) {
-            log_error("refresh of page protections of mmapped regions of file failed: %s",
+            log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));
             BUG();
         }

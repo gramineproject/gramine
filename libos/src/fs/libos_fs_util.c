@@ -138,7 +138,8 @@ int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events)
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                           uint64_t offset) {
-    assert(addr);
+    assert(addr && IS_ALLOC_ALIGNED_PTR(addr));
+    assert(IS_ALLOC_ALIGNED(size));
 
     int ret;
 
@@ -149,11 +150,11 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    size_t to_read_size = size;
+    size_t size_to_read = size;
     char* read_addr = addr;
     file_off_t pos = offset;
-    while (to_read_size > 0) {
-        ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, to_read_size, &pos);
+    while (size_to_read > 0) {
+        ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, size_to_read, &pos);
         if (count < 0) {
             if (count == -EINTR)
                 continue;
@@ -164,8 +165,8 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
         if (count == 0)
             break;
 
-        assert((size_t)count <= to_read_size);
-        to_read_size -= count;
+        assert((size_t)count <= size_to_read);
+        size_to_read -= count;
         read_addr += count;
     }
 
@@ -181,8 +182,8 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
      * last file-backed page must cause SIGBUS. Since we allocated all memory above, let's make the
      * chunk of memory that is beyond the last file-backed page unavailable. Also see checkpointing
      * logic in libos_vma.c for similar emulation in the child process. */
-    assert(to_read_size <= size);
-    size_t trimmed_size = ALLOC_ALIGN_UP(size - to_read_size);
+    assert(size_to_read <= size);
+    size_t trimmed_size = ALLOC_ALIGN_UP(size - size_to_read);
     if (trimmed_size < size) {
         int trimmed_ret = PalVirtualMemoryProtect(addr + trimmed_size, size - trimmed_size,
                                                   /*prot=*/0);
@@ -270,7 +271,7 @@ int generic_truncate(struct libos_handle* hdl, file_off_t size) {
         /* If there are any mappings for the file, this will refresh their access protections. */
         ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (ret < 0) {
-            log_error("refresh of page protections of mmapped regions of file failed: %s",
+            log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));
             BUG();
         }

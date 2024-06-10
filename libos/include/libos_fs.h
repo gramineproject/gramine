@@ -115,7 +115,7 @@ struct libos_fs_ops {
      * \param flags   `mmap` flags (`MAP_*`).
      * \param offset  Offset in file.
      *
-     * Maps the file at given address. This might involve mapping directly (`PalStreamMap`), or
+     * Maps the file at given address. This might involve mapping directly (`PalDeviceMap`), or
      * mapping anonymous memory (`PalVirtualMemoryAlloc`) and writing data.
      *
      * `addr`, `offset` and `size` must be alloc-aligned (see `IS_ALLOC_ALIGNED*` macros in
