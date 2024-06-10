@@ -78,7 +78,7 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
 
     if (fchown(fd, /*owner=*/123, /*group=*/123) != 0) /* dummy owner/group just for testing */
         err(1, "fchown before rename");
-    if (fchmod(fd, (mode_t)0660) != 0) /* note: no "other users" mode bits */
+    if (fchmod(fd, 0660) != 0) /* note: no "other users" mode bits */
         err(1, "fchmod before rename");
 
     struct stat st;
@@ -86,7 +86,7 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
         err(1, "Failed to stat file %s", path1);
     if (st.st_uid != 123 || st.st_gid != 123)
         err(1, "wrong ownership of file %s", path1);
-    if ((st.st_mode & ((mode_t)0777)) != (mode_t)0660)
+    if ((st.st_mode & 0777) != 0660)
         err(1, "wrong permissions of file %s", path1);
 
     if (rename(path1, path2) != 0)
@@ -97,14 +97,14 @@ static void test_rename_fchown_fchmod(const char* path1, const char* path2) {
 
     if (fchown(fd, /*owner=*/321, /*group=*/321) != 0) /* different dummy owner/group */
         err(1, "fchown after rename");
-    if (fchmod(fd, (mode_t)0666) != 0) /* note: now with "other users" mode bits */
+    if (fchmod(fd, 0666) != 0) /* note: now with "other users" mode bits */
         err(1, "fchmod after rename");
 
     if (stat(path2, &st) != 0)
         err(1, "Failed to stat (renamed) file %s", path2);
     if (st.st_uid != 321 || st.st_gid != 321)
         err(1, "wrong ownership of (renamed) file %s", path2);
-    if ((st.st_mode & ((mode_t)0777)) != (mode_t)0666)
+    if ((st.st_mode & 0777) != 0666)
         err(1, "wrong permissions of (renamed) file %s", path2);
 
     if (close(fd) != 0)
