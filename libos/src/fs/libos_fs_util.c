@@ -268,7 +268,7 @@ int generic_truncate(struct libos_handle* hdl, file_off_t size) {
     unlock(&hdl->inode->lock);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
-        /* If there are any mappings for the file, this will refresh their access protections. */
+        /* There are mappings for the file, refresh their access protections. */
         ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",

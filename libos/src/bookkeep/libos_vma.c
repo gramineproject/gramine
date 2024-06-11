@@ -1528,7 +1528,7 @@ static int prot_refresh_vma(struct libos_vma_info* vma_info) {
         size_to_prot = 0;
     } else {
         if (file_size - vma_info->file_offset > vma_info->length) {
-            /* file size exceeds the mmapped part in VMA, all VMA is accessible */
+            /* file size exceeds the mmapped part in VMA, the whole VMA is accessible */
             size_to_prot = vma_info->length;
         } else {
             /* file size is smaller than the mmapped part in VMA, only part of VMA is accessible */
@@ -1537,6 +1537,22 @@ static int prot_refresh_vma(struct libos_vma_info* vma_info) {
     }
     size_to_prot = ALLOC_ALIGN_UP(size_to_prot);
 
+    /*
+     * FIXME: This code logically splits the VMA into a "normal-protections" part and a PROT_NONE
+     *        part. Ideally, the code should have split the VMA into two, to keep the invariant that
+     *        VMAs hold protection info reflecting the real memory, and subsequent write() and
+     *        truncate() should merge the VMAs back. Unfortunately, current VMA code has split_vma()
+     *        func but doesn't have a merge_vmas() func, and using only splits would eventually lead
+     *        to a flood of similar-but-unmerged VMAs. We want to avoid this flooding, thus we do
+     *        not split the VMA.
+     *
+     *        This may lead to e.g. SIGBUS signals on syscalls with user-supplied buffers located in
+     *        PROT_NONE parts of a VMA, instead of an EFAULT. However, we haven't observed such
+     *        behavior in our tests and in real-world apps.
+     *
+     *        Note that the same issue applies to restored-from-checkpoint opened files, see
+     *        BEGIN_CP_FUNC(vma) func below.
+     */
     if (size_to_prot) {
         ret = PalVirtualMemoryProtect(vma_info->addr, size_to_prot,
                                       LINUX_PROT_TO_PAL(vma_info->prot, vma_info->flags));
@@ -1606,7 +1622,7 @@ static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
             size_to_msync = 0;
         } else {
             if (file_size - vma_info->file_offset > vma_info->length) {
-                /* file size exceeds the mmapped part in VMA, all VMA is synced */
+                /* file size exceeds the mmapped part in VMA, the whole VMA is synced */
                 size_to_msync = vma_info->length;
             } else {
                 /* file size is smaller than the mmapped part in VMA, only part of VMA is synced */

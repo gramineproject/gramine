@@ -274,7 +274,7 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     unlock(&inode->lock);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
-        /* If there are any mappings for the file, this will refresh their access protections. */
+        /* There are mappings for the file, refresh their access protections. */
         int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (refresh_ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
@@ -282,7 +282,7 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
             BUG();
         }
 
-        /* If there are any MAP_SHARED mappings for the file, this will read data from `hdl`. */
+        /* There are mappings for the file, read data from `hdl` (only for MAP_SHARED mappings). */
         int reload_ret = reload_mmaped_from_file_handle(hdl);
         if (reload_ret < 0) {
             log_error("reload mmapped regions of file failed: %s", unix_strerror(reload_ret));
@@ -294,14 +294,15 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
 }
 
 static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
+    int ret;
+
     uint64_t time_us;
     if (PalSystemTimeQuery(&time_us) < 0)
         return -EPERM;
 
-    int ret;
+    lock(&hdl->inode->lock);
     struct libos_mem_file* mem = hdl->inode->data;
 
-    lock(&hdl->inode->lock);
     ret = mem_file_truncate(mem, size);
     if (ret < 0) {
         unlock(&hdl->inode->lock);
@@ -313,7 +314,7 @@ static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
     unlock(&hdl->inode->lock);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
-        /* If there are any mappings for the file, this will refresh their access protections. */
+        /* There are mappings for the file, refresh their access protections. */
         ret = prot_refresh_mmaped_from_file_handle(hdl);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
