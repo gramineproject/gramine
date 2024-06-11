@@ -171,9 +171,10 @@ void sgx_profile_report_elf(const char* filename, void* addr);
 struct perf_data;
 
 int pd_open_file(struct perf_data* pd, const char* file_name);
+ssize_t pd_close_file(struct perf_data* pd);
+
 struct perf_data* pd_open(const char* file_name, bool with_stack);
 
-ssize_t pd_close_file(struct perf_data* pd);
 /* Finalize and close; returns resulting file size */
 ssize_t pd_close(struct perf_data* pd);
 
