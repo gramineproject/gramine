@@ -16,7 +16,7 @@ stage('build') {
     }
 
     if (env.SGX_DRIVER == null) {
-        env.SGX_DRIVER = 'oot'
+        env.SGX_DRIVER = 'upstream'
     }
     if (env.SGX_DRIVER == 'oot') {
         sh '''
