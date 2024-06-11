@@ -297,7 +297,7 @@ subdir('tools')
 if get_option('libc') == 'glibc'
     subproject('glibc-2.39-1')
 elif get_option('libc') == 'musl'
-    subproject('musl-1.2.4')
+    subproject('musl-1.2.5')
 endif
 
 if enable_libgomp
