@@ -210,7 +210,7 @@ static void test_epoll_modes(int fd) {
         errx(1, "epoll: unexpected number of fds (expected 1, got %u)", nfds);
 
     /* waiting for another event without reading the expiration count: here, even though the timer
-     * expired at least one, there is no event reported because we're in edge-triggered mode (which
+     * expired at least once, there is no event reported because we're in edge-triggered mode (which
      * does not "reset" the event since there was no read) */
     nfds = CHECK(epoll_wait(epfd, events, 1, /*timeout=*/PERIODIC_INTERVAL * 1000 * 2));
     if (nfds != 0)

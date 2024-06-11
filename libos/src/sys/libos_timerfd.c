@@ -162,15 +162,15 @@ long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itim
     if (!hdl)
         return -EBADF;
 
+    if (hdl->type != TYPE_TIMERFD) {
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (hdl->info.timerfd.broken_in_child) {
         log_warning("Child process tried to access timerfd created by parent process. This is "
                     "disallowed in Gramine.");
         return -EIO;
-    }
-
-    if (hdl->type != TYPE_TIMERFD) {
-        ret = -EINVAL;
-        goto out;
     }
 
     if (!is_user_memory_readable(value, sizeof(*value))) {
@@ -253,15 +253,15 @@ long libos_syscall_timerfd_gettime(int fd, struct __kernel_itimerspec* value) {
     if (!hdl)
         return -EBADF;
 
+    if (hdl->type != TYPE_TIMERFD) {
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (hdl->info.timerfd.broken_in_child) {
         log_warning("Child process tried to access timerfd created by parent process. This is "
                     "disallowed in Gramine.");
         return -EIO;
-    }
-
-    if (hdl->type != TYPE_TIMERFD) {
-        ret = -EINVAL;
-        goto out;
     }
 
     if (!is_user_memory_writable(value, sizeof(*value))) {
