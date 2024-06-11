@@ -777,7 +777,6 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
 
 #ifdef DEBUG
     enclave_info->profile_enable = false;
-    profile_filename[0] = '\0';
 
     if (!profile_str || !strcmp(profile_str, "none")) {
         // do not enable

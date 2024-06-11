@@ -43,11 +43,11 @@ static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
 static struct perf_data* g_perf_data = NULL;
 
 static bool g_profile_enabled = false;
-bool trigger_profile_reinit;
+bool g_trigger_profile_reinit;
 static int g_profile_mode;
 static uint64_t g_profile_period;
 static int g_mem_fd = -1;
-char profile_filename[128];
+char g_profile_filename[128];
 
 static void _sgx_profile_report_elf(const char* filename, void* addr);
 
@@ -132,10 +132,10 @@ int sgx_profile_init(void) {
         goto out;
     }
 
-    snprintf(profile_filename, ARRAY_SIZE(profile_filename),
+    snprintf(g_profile_filename, ARRAY_SIZE(g_profile_filename),
              SGX_PROFILE_FILENAME_WITH_PID_AND_TIME, (int)g_host_pid, ts.tv_sec);
 
-    struct perf_data* pd = pd_open(profile_filename, g_pal_enclave.profile_with_stack);
+    struct perf_data* pd = pd_open(g_profile_filename, g_pal_enclave.profile_with_stack);
     if (!pd) {
         log_error("sgx_profile_init: pd_open failed");
         ret = -EINVAL;
@@ -193,12 +193,11 @@ void sgx_profile_finish(void) {
         log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
     g_mem_fd = -1;
 
-    log_always("Profile data written to %s (%lu bytes)", profile_filename, size);
+    log_always("Profile data written to %s (%lu bytes)", g_profile_filename, size);
 
     g_profile_enabled = false;
 }
 
-/* Re-initialize based on g_pal_enclave settings */
 static int sgx_profile_reinit(void) {
     assert(spinlock_is_locked(&g_perf_data_lock));
 
@@ -207,11 +206,11 @@ static int sgx_profile_reinit(void) {
 
     size = pd_close_file(g_perf_data);
     if (size < 0) {
-        log_error("sgx_profile_reinit: pd_close failed: %s", unix_strerror(size));
-        return -size;
+        log_error("sgx_profile_reinit: pd_close_file failed: %s", unix_strerror(size));
+        return size;
     }
 
-    log_always("Profile data written to %s (%lu bytes)", profile_filename, size);
+    log_always("Profile data written to %s (%lu bytes)", g_profile_filename, size);
 
     struct timespec ts;
     ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
@@ -220,10 +219,10 @@ static int sgx_profile_reinit(void) {
         return ret;
     }
 
-    snprintf(profile_filename, ARRAY_SIZE(profile_filename),
+    snprintf(g_profile_filename, ARRAY_SIZE(g_profile_filename),
              SGX_PROFILE_FILENAME_WITH_PID_AND_TIME, (int)g_host_pid, ts.tv_sec);
 
-    ret = pd_open_file(g_perf_data, profile_filename);
+    ret = pd_open_file(g_perf_data, g_profile_filename);
     if (ret < 0) {
         log_error("sgx_profile_reinit: pd_open_file failed");
         return ret;
@@ -243,7 +242,7 @@ static void sample_simple(uint64_t rip) {
     int ret;
 
     spinlock_lock(&g_perf_data_lock);
-    if (__atomic_exchange_n(&trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
         sgx_profile_reinit();
 
     // Report all events as the same PID so that they are grouped in report.
@@ -269,7 +268,7 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     stack_size = ret;
 
     spinlock_lock(&g_perf_data_lock);
-    if (__atomic_exchange_n(&trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
         sgx_profile_reinit();
 
     // Report all events as the same PID so that they are grouped in report.

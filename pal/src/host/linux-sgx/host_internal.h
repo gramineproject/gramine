@@ -56,8 +56,8 @@ struct pal_enclave {
 };
 
 extern struct pal_enclave g_pal_enclave;
-extern bool trigger_profile_reinit;
-extern char profile_filename[128];
+extern bool g_trigger_profile_reinit;
+extern char g_profile_filename[128];
 
 void* realloc(void* ptr, size_t new_size);
 
@@ -171,11 +171,9 @@ void sgx_profile_report_elf(const char* filename, void* addr);
 struct perf_data;
 
 int pd_open_file(struct perf_data* pd, const char* file_name);
-
 struct perf_data* pd_open(const char* file_name, bool with_stack);
 
 ssize_t pd_close_file(struct perf_data* pd);
-
 /* Finalize and close; returns resulting file size */
 ssize_t pd_close(struct perf_data* pd);
 
