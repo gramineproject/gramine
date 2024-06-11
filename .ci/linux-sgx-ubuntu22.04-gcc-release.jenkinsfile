@@ -2,7 +2,6 @@ node('sgx') {
     checkout scm
 
     env.SGX = '1'
-    env.SGX_DRIVER = 'upstream'
 
     load '.ci/lib/config-docker.jenkinsfile'
     docker.build(
