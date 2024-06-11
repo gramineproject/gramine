@@ -40,7 +40,8 @@ Things that can/will bite us, now or in the future
   sure to ``mkdir -p`` all suspected paths; that's also why we can't ``assert``
   that result is in ``sys.path``.
 - PEP-632 deprecates ``distutils`` package (3.10-3.11 ``DeprecationWarning``,
-  not installed in 3.12).
+  not installed in 3.12). UPDATE 26.09.2024: Ubuntu 24.04 has Python 3.12 with
+  no ``distutils``, but setuptools ships vendored copy for now.
 
 References
 ==========
@@ -53,37 +54,46 @@ References
 '''
 
 import argparse
-import distutils.command.install
-import distutils.sysconfig
-import distutils.util
 import pathlib
 import sys
 import sysconfig
 
+try:
+    import distutils.command.install as distutils_command_install
+    import distutils.sysconfig as distutils_sysconfig
+    import distutils.util as distutils_util
+except ImportError:
+    import setuptools._distutils.command.install as distutils_command_install
+    import setuptools._distutils.sysconfig as distutils_sysconfig
+    import setuptools._distutils.util as distutils_util
 
 def get_platlib(prefix):
     is_debian = (
         'deb_system' in sysconfig.get_scheme_names() or
-        'deb_system' in distutils.command.install.INSTALL_SCHEMES)
+        'deb_system' in distutils_command_install.INSTALL_SCHEMES)
 
     # this takes care of `/` at the end, though not `/usr/../usr/local`
     is_usr_local = pathlib.PurePosixPath(prefix).as_posix() == '/usr/local'
 
     if is_debian and is_usr_local:
         # 1) try sysconfig; it works on bookworm and jammy
-        platlib1 = sysconfig.get_path('platlib')
+        try:
+            platlib1 = sysconfig.get_path('platlib', 'deb_system')
+        except KeyError:
+            platlib1 = None
+
         if platlib1 in sys.path:
             return platlib1
 
         # 2) if system is too old for sysconfig, then distutils should work
-        return distutils.util.subst_vars(
-            distutils.command.install.INSTALL_SCHEMES['unix_local']['platlib'],
+        return distutils_util.subst_vars(
+            distutils_command_install.INSTALL_SCHEMES['unix_local']['platlib'],
             {
                 'platbase': '/usr',
                 'py_version_short': '.'.join(map(str, sys.version_info[:2])),
             })
 
-    return distutils.sysconfig.get_python_lib(plat_specific=True, prefix=prefix)
+    return distutils_sysconfig.get_python_lib(plat_specific=True, prefix=prefix)
 
 
 argparser = argparse.ArgumentParser()
