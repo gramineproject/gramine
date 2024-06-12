@@ -1,0 +1,5 @@
+[wrap-git]
+directory = picohttpparser-066d2b1e9ab820703db0837a7255d92d30f0c9f5
+url = https://github.com/h2o/picohttpparser.git
+revision = 066d2b1e9ab820703db0837a7255d92d30f0c9f5
+patch_directory = picohttpparser
