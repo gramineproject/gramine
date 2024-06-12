@@ -64,9 +64,9 @@ static const char* g_pf_error_list[] = {
 };
 
 /* ipf prefix means "Intel protected files", these are functions from the SGX SDK implementation */
-static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_number);
+static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t logical_mht_node_number);
 static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset);
-static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number);
+static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_node_number);
 static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset);
 
 static void memcpy_or_zero_initialize(void* dest, const void* src, size_t size) {
@@ -98,9 +98,9 @@ static size_t partition(file_node_t** data, size_t low, size_t high) {
     size_t j = high;
 
     while (true) {
-        while (data[i]->node_number < pivot->node_number)
+        while (data[i]->logical_node_number < pivot->logical_node_number)
             i++;
-        while (data[j]->node_number > pivot->node_number)
+        while (data[j]->logical_node_number > pivot->logical_node_number)
             j--;
         if (i >= j)
             return j;
@@ -112,7 +112,7 @@ static size_t partition(file_node_t** data, size_t low, size_t high) {
 
 static void sort_nodes(file_node_t** data, size_t low, size_t high) {
     if (high - low == 1) {
-        if (data[low]->node_number > data[high]->node_number)
+        if (data[low]->logical_node_number > data[high]->logical_node_number)
             swap_nodes(data, low, high);
         return;
     }
@@ -194,7 +194,7 @@ static void ipf_init_root_mht(file_node_t* mht) {
 
     mht->type                 = FILE_MHT_NODE_TYPE;
     mht->physical_node_number = 1;
-    mht->node_number          = 0;
+    mht->logical_node_number  = 0;
     mht->need_writing         = false;
 }
 
@@ -215,7 +215,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
             continue;
 
         gcm_crypto_data_t* gcm_crypto_data = &data_node->parent->decrypted.mht
-            .data_nodes_crypto[data_node->node_number % ATTACHED_DATA_NODES_COUNT];
+            .data_nodes_crypto[data_node->logical_node_number % ATTACHED_DATA_NODES_COUNT];
 
         if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
             goto out;
@@ -231,7 +231,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
 #ifdef DEBUG
         file_node_t* file_mht_node = data_node->parent;
-        while (file_mht_node->node_number != 0) {
+        while (file_mht_node->logical_node_number != 0) {
             assert(file_mht_node->need_writing == true);
             file_mht_node = file_mht_node->parent;
         }
@@ -273,7 +273,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
         gcm_crypto_data_t* gcm_crypto_data =
             &file_mht_node->parent->decrypted.mht
-                 .mht_nodes_crypto[(file_mht_node->node_number - 1) % CHILD_MHT_NODES_COUNT];
+                 .mht_nodes_crypto[(file_mht_node->logical_node_number - 1) % CHILD_MHT_NODES_COUNT];
 
         if (!ipf_generate_random_key(pf, &gcm_crypto_data->key))
             goto out;
@@ -308,8 +308,8 @@ out:
     return ret;
 }
 
-static bool ipf_read_node(pf_context_t* pf, uint64_t node_number, void* buffer) {
-    uint64_t offset = node_number * PF_NODE_SIZE;
+static bool ipf_read_node(pf_context_t* pf, uint64_t physical_node_number, void* buffer) {
+    uint64_t offset = physical_node_number * PF_NODE_SIZE;
 
     pf_status_t status = g_cb_read(pf->file, buffer, offset, PF_NODE_SIZE);
     if (PF_FAILURE(status)) {
@@ -320,8 +320,8 @@ static bool ipf_read_node(pf_context_t* pf, uint64_t node_number, void* buffer) 
     return true;
 }
 
-static bool ipf_write_node(pf_context_t* pf, uint64_t node_number, void* buffer) {
-    uint64_t offset = node_number * PF_NODE_SIZE;
+static bool ipf_write_node(pf_context_t* pf, uint64_t physical_node_number, void* buffer) {
+    uint64_t offset = physical_node_number * PF_NODE_SIZE;
 
     pf_status_t status = g_cb_write(pf->file, buffer, offset, PF_NODE_SIZE);
     if (PF_FAILURE(status)) {
@@ -334,7 +334,8 @@ static bool ipf_write_node(pf_context_t* pf, uint64_t node_number, void* buffer)
 
 // this is a very 'specific' function, tied to the architecture of the file layout,
 // returning the node numbers according to the data offset in the file
-static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_t* data_node_number,
+static void get_node_numbers(uint64_t offset, uint64_t* logical_mht_node_number,
+                             uint64_t* logical_data_node_number,
                              uint64_t* physical_mht_node_number,
                              uint64_t* physical_data_node_number) {
     // physical nodes (file layout):
@@ -348,27 +349,27 @@ static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_
     uint64_t _physical_data_node_number;
 
     // "logical" nodes: sequential index of the corresponding MHT/data node in all MHT/data nodes
-    uint64_t _mht_node_number;
-    uint64_t _data_node_number;
+    uint64_t _logical_mht_node_number;
+    uint64_t _logical_data_node_number;
 
     assert(offset >= MD_USER_DATA_SIZE);
 
-    _data_node_number = (offset - MD_USER_DATA_SIZE) / PF_NODE_SIZE;
-    _mht_node_number = _data_node_number / ATTACHED_DATA_NODES_COUNT;
-    _physical_data_node_number = _data_node_number
+    _logical_data_node_number = (offset - MD_USER_DATA_SIZE) / PF_NODE_SIZE;
+    _logical_mht_node_number = _logical_data_node_number / ATTACHED_DATA_NODES_COUNT;
+    _physical_data_node_number = _logical_data_node_number
                                  + 1 // metadata node
                                  + 1 // MHT root node
-                                 + _mht_node_number; // number of MHT nodes in the middle
+                                 + _logical_mht_node_number; // number of MHT nodes in the middle
                                  // (the mht_node_number of root MHT node is 0)
     _physical_mht_node_number = _physical_data_node_number
-                                - _data_node_number % ATTACHED_DATA_NODES_COUNT
+                                - _logical_data_node_number % ATTACHED_DATA_NODES_COUNT
                                 // now we are at the first data node attached to this MHT node
                                 - 1; // and now at the MHT node itself
 
-    if (mht_node_number != NULL)
-        *mht_node_number = _mht_node_number;
-    if (data_node_number != NULL)
-        *data_node_number = _data_node_number;
+    if (logical_mht_node_number != NULL)
+        *logical_mht_node_number = _logical_mht_node_number;
+    if (logical_data_node_number != NULL)
+        *logical_data_node_number = _logical_data_node_number;
     if (physical_mht_node_number != NULL)
         *physical_mht_node_number = _physical_mht_node_number;
     if (physical_data_node_number != NULL)
@@ -377,32 +378,30 @@ static void get_node_numbers(uint64_t offset, uint64_t* mht_node_number, uint64_
 
 static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
     if (pf->encrypted_part_plain.size > MD_USER_DATA_SIZE && pf->root_mht.need_writing) {
-        uint8_t* data_to_write;
-        uint64_t node_number;
-        file_node_t* file_node;
+        uint64_t physical_node_number;
 
         void* node;
         for (node = lruc_get_first(pf->cache); node != NULL; node = lruc_get_next(pf->cache)) {
-            file_node = (file_node_t*)node;
+            file_node_t* file_node = (file_node_t*)node;
             if (!file_node->need_writing)
                 continue;
 
-            data_to_write = (uint8_t*)&file_node->encrypted;
-            node_number = file_node->physical_node_number;
+            uint8_t* data_to_write = (uint8_t*)&file_node->encrypted;
+            physical_node_number = file_node->physical_node_number;
 
-            if (!ipf_write_node(pf, node_number, data_to_write))
+            if (!ipf_write_node(pf, physical_node_number, data_to_write))
                 return false;
 
             file_node->need_writing = false;
         }
 
-        if (!ipf_write_node(pf, /*node_number=*/1, &pf->root_mht.encrypted))
+        if (!ipf_write_node(pf, /*physical_node_number=*/1, &pf->root_mht.encrypted))
             return false;
 
         pf->root_mht.need_writing = false;
     }
 
-    if (!ipf_write_node(pf, /*node_number=*/0, &pf->file_metadata))
+    if (!ipf_write_node(pf, /*physical_node_number=*/0, &pf->file_metadata))
         return false;
 
     return true;
@@ -464,7 +463,7 @@ static bool ipf_internal_flush(pf_context_t* pf) {
 
 static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset) {
     file_node_t* file_mht_node;
-    uint64_t mht_node_number;
+    uint64_t logical_mht_node_number;
     uint64_t physical_mht_node_number;
 
     if (offset < MD_USER_DATA_SIZE) {
@@ -472,32 +471,32 @@ static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset) {
         return NULL;
     }
 
-    get_node_numbers(offset, &mht_node_number, NULL, &physical_mht_node_number, NULL);
+    get_node_numbers(offset, &logical_mht_node_number, NULL, &physical_mht_node_number, NULL);
 
-    if (mht_node_number == 0)
+    if (logical_mht_node_number == 0)
         return &pf->root_mht;
 
     if ((offset - MD_USER_DATA_SIZE) % (ATTACHED_DATA_NODES_COUNT * PF_NODE_SIZE) == 0 &&
             offset == pf->encrypted_part_plain.size) {
-        file_mht_node = ipf_append_mht_node(pf, mht_node_number);
+        file_mht_node = ipf_append_mht_node(pf, logical_mht_node_number);
     } else {
-        file_mht_node = ipf_read_mht_node(pf, mht_node_number);
+        file_mht_node = ipf_read_mht_node(pf, logical_mht_node_number);
     }
 
     return file_mht_node;
 }
 
-static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_number) {
-    assert(mht_node_number > 0);
+static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t logical_mht_node_number) {
+    assert(logical_mht_node_number > 0);
     file_node_t* parent_file_mht_node =
-        ipf_read_mht_node(pf, (mht_node_number - 1) / CHILD_MHT_NODES_COUNT);
+        ipf_read_mht_node(pf, (logical_mht_node_number - 1) / CHILD_MHT_NODES_COUNT);
 
     if (parent_file_mht_node == NULL)
         return NULL;
 
     uint64_t physical_node_number = 1 + // metadata node
                                     // the '1' is for the MHT node preceding every 96 data nodes
-                                    mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
+                                    logical_mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
 
     file_node_t* new_file_mht_node = calloc(1, sizeof(*new_file_mht_node));
     if (!new_file_mht_node) {
@@ -507,7 +506,7 @@ static file_node_t* ipf_append_mht_node(pf_context_t* pf, uint64_t mht_node_numb
 
     new_file_mht_node->type = FILE_MHT_NODE_TYPE;
     new_file_mht_node->parent = parent_file_mht_node;
-    new_file_mht_node->node_number = mht_node_number;
+    new_file_mht_node->logical_node_number = logical_mht_node_number;
     new_file_mht_node->physical_node_number = physical_node_number;
 
     if (!lruc_add(pf->cache, new_file_mht_node->physical_node_number, new_file_mht_node)) {
@@ -537,7 +536,7 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
     // bump all the parent MHT nodes to reside before the data node in the cache
     if (file_data_node != NULL) {
         file_node_t* file_mht_node = file_data_node->parent;
-        while (file_mht_node->node_number != 0) {
+        while (file_mht_node->logical_node_number != 0) {
             // bump the MHT node to the head of the LRU
             lruc_get(pf->cache, file_mht_node->physical_node_number);
             file_mht_node = file_mht_node->parent;
@@ -581,12 +580,12 @@ static file_node_t* ipf_append_data_node(pf_context_t* pf, uint64_t offset) {
         return NULL;
     }
 
-    uint64_t node_number, physical_node_number;
-    get_node_numbers(offset, NULL, &node_number, NULL, &physical_node_number);
+    uint64_t logical_node_number, physical_node_number;
+    get_node_numbers(offset, NULL, &logical_node_number, NULL, &physical_node_number);
 
     new_file_data_node->type = FILE_DATA_NODE_TYPE;
     new_file_data_node->parent = file_mht_node;
-    new_file_data_node->node_number = node_number;
+    new_file_data_node->logical_node_number = logical_node_number;
     new_file_data_node->physical_node_number = physical_node_number;
 
     if (!lruc_add(pf->cache, new_file_data_node->physical_node_number, new_file_data_node)) {
@@ -602,9 +601,9 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     file_node_t* file_mht_node;
     pf_status_t status;
 
-    uint64_t data_node_number;
+    uint64_t logical_data_node_number;
     uint64_t physical_node_number;
-    get_node_numbers(offset, NULL, &data_node_number, NULL, &physical_node_number);
+    get_node_numbers(offset, NULL, &logical_data_node_number, NULL, &physical_node_number);
 
     file_node_t* file_data_node = (file_node_t*)lruc_get(pf->cache, physical_node_number);
     if (file_data_node != NULL)
@@ -623,7 +622,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
 
     file_data_node->type = FILE_DATA_NODE_TYPE;
     file_data_node->parent = file_mht_node;
-    file_data_node->node_number = data_node_number;
+    file_data_node->logical_node_number = logical_data_node_number;
     file_data_node->physical_node_number = physical_node_number;
 
     if (!ipf_read_node(pf, file_data_node->physical_node_number,
@@ -634,7 +633,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
 
     gcm_crypto_data_t* gcm_crypto_data =
         &file_data_node->parent->decrypted.mht
-             .data_nodes_crypto[file_data_node->node_number % ATTACHED_DATA_NODES_COUNT];
+             .data_nodes_crypto[file_data_node->logical_node_number % ATTACHED_DATA_NODES_COUNT];
 
     // decrypt data and check integrity against the MAC in corresponding array item in MHT node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
@@ -659,22 +658,22 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     return file_data_node;
 }
 
-static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number) {
+static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_node_number) {
     pf_status_t status;
 
-    if (mht_node_number == 0)
+    if (logical_mht_node_number == 0)
         return &pf->root_mht;
 
     uint64_t physical_node_number = 1 + // metadata node
                                     // the '1' is for the MHT node preceding every 96 data nodes
-                                    mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
+                                    logical_mht_node_number * (1 + ATTACHED_DATA_NODES_COUNT);
 
     file_node_t* file_mht_node = (file_node_t*)lruc_find(pf->cache, physical_node_number);
     if (file_mht_node != NULL)
         return file_mht_node;
 
     file_node_t* parent_file_mht_node =
-        ipf_read_mht_node(pf, (mht_node_number - 1) / CHILD_MHT_NODES_COUNT);
+        ipf_read_mht_node(pf, (logical_mht_node_number - 1) / CHILD_MHT_NODES_COUNT);
 
     if (parent_file_mht_node == NULL)
         return NULL;
@@ -687,7 +686,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
 
     file_mht_node->type                 = FILE_MHT_NODE_TYPE;
     file_mht_node->parent               = parent_file_mht_node;
-    file_mht_node->node_number          = mht_node_number;
+    file_mht_node->logical_node_number  = logical_mht_node_number;
     file_mht_node->physical_node_number = physical_node_number;
 
     if (!ipf_read_node(pf, file_mht_node->physical_node_number, file_mht_node->encrypted.cipher)) {
@@ -697,7 +696,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t mht_node_number
 
     gcm_crypto_data_t* gcm_crypto_data =
         &file_mht_node->parent->decrypted.mht
-             .mht_nodes_crypto[(file_mht_node->node_number - 1) % CHILD_MHT_NODES_COUNT];
+             .mht_nodes_crypto[(file_mht_node->logical_node_number - 1) % CHILD_MHT_NODES_COUNT];
 
     // decrypt data and check integrity against the MAC in corresponding array item in parent MHT
     // node
@@ -764,7 +763,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     pf_status_t status;
 
     // read metadata node
-    if (!ipf_read_node(pf, /*node_number=*/0, (uint8_t*)&pf->file_metadata)) {
+    if (!ipf_read_node(pf, /*physical_node_number=*/0, (uint8_t*)&pf->file_metadata)) {
         return false;
     }
 
@@ -808,7 +807,7 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
 
     if (pf->encrypted_part_plain.size > MD_USER_DATA_SIZE) {
         // read the root MHT node
-        if (!ipf_read_node(pf, /*node_number=*/1, &pf->root_mht.encrypted.cipher))
+        if (!ipf_read_node(pf, /*physical_node_number=*/1, &pf->root_mht.encrypted.cipher))
             return false;
 
         // also verifies root MHT node's MAC against the MAC in metadata node's decrypted header
@@ -994,7 +993,7 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
         if (!file_data_node->need_writing) {
             file_data_node->need_writing = true;
             file_node_t* file_mht_node = file_data_node->parent;
-            while (file_mht_node->node_number != 0) {
+            while (file_mht_node->logical_node_number != 0) {
                 // set all the MHT parent nodes as 'need writing'
                 file_mht_node->need_writing = true;
                 file_mht_node = file_mht_node->parent;
