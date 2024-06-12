@@ -104,7 +104,7 @@ typedef struct _file_node {
     bool need_writing;
     struct _file_node* parent;
 
-    uint64_t node_number;
+    uint64_t logical_node_number;
     uint64_t physical_node_number;
 
     encrypted_node_t encrypted; // encrypted data from storage (bounce buffer)
