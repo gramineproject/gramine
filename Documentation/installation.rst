@@ -111,7 +111,7 @@ for your SGX applications.
 
 To run the Gramine image via Docker, the recommended command is::
 
-    docker run --device /dev/sgx_enclave -it gramineproject/gramine
+    docker run --device /dev/sgx_enclave --device /dev/sgx_provision -it gramineproject/gramine
 
 If you want to run :program:`gramine-direct` in addition to
 :program:`gramine-sgx`, then you should run Docker with our custom seccomp
