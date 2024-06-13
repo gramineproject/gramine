@@ -11,6 +11,8 @@ option('libc', type: 'combo', choices: ['none', 'glibc', 'musl'],
 
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
+option('force_sgx_tests', type: 'combo', choices: ['disabled', 'enabled'],
+    description: 'Build sgx tests even if sgx is not enabled')
 
 option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build additional utilities linked against DCAP library')

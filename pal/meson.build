@@ -1,8 +1,10 @@
-subdir('include')
-subdir('src')
+if src_build
+  subdir('include')
+  subdir('src')
 
-if enable_tests
-    subdir('regression')
+  if enable_tests
+      subdir('regression')
+  endif
 endif
 
 if debug

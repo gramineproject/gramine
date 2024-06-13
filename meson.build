@@ -50,6 +50,9 @@ vtune = get_option('vtune') == 'enabled'
 
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
+force_sgx_tests = get_option('force_sgx_tests') == 'enabled'
+
+src_build = skeleton or direct or sgx
 
 cc = meson.get_compiler('c')
 host_has_glibc = cc.get_define('__GLIBC__', prefix: '#include <features.h>') != ''
@@ -230,19 +233,22 @@ endif
 #
 # Dependencies
 #
+if src_build
+	tomlc99_proj = subproject('tomlc99-208203af46bdbdb29ba199660ed78d09c220b6c5')
+	tomlc99_dep = tomlc99_proj.get_variable('tomlc99_dep')
+	tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
 
-tomlc99_proj = subproject('tomlc99-208203af46bdbdb29ba199660ed78d09c220b6c5')
-tomlc99_dep = tomlc99_proj.get_variable('tomlc99_dep')
-tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
-
-uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
+	uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
+endif
 
 mbedtls_proj = subproject('mbedtls-3.6.0')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
-curl_proj = subproject('curl-8.8.0')
-cjson_proj = subproject('cJSON-1.7.12')
+if src_build
+	curl_proj = subproject('curl-8.8.0')
+	cjson_proj = subproject('cJSON-1.7.12')
+endif
 
 if sgx
     # XXX: do not call subproject() from under "if sgx" conditional, because it
@@ -288,16 +294,22 @@ endif
 # The compilation
 #
 
-subdir('common')
-subdir('pal')
+if src_build
+  subdir('common')
+  subdir('pal')
+endif
 subdir('libos')
 subdir('python')
-subdir('tools')
+if src_build
+  subdir('tools')
+endif
 
-if get_option('libc') == 'glibc'
-    subproject('glibc-2.39-1')
-elif get_option('libc') == 'musl'
-    subproject('musl-1.2.4')
+if src_build
+  if get_option('libc') == 'glibc'
+      subproject('glibc-2.39-1')
+  elif get_option('libc') == 'musl'
+      subproject('musl-1.2.4')
+  endif
 endif
 
 if enable_libgomp
