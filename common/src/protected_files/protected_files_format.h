@@ -54,7 +54,7 @@ typedef struct _metadata_plain {
     uint64_t   file_id;
     uint8_t    major_version;
     uint8_t    minor_version;
-    pf_keyid_t metadata_key_id;
+    pf_nonce_t metadata_key_nonce;
     pf_mac_t   metadata_gmac; /* GCM mac */
 } metadata_plain_t;
 
@@ -118,7 +118,7 @@ typedef struct _file_node {
 typedef struct {
     uint32_t counter;           // always "1"
     char label[MAX_LABEL_SIZE]; // must be NULL terminated
-    pf_keyid_t nonce;           // nonce for key derivation from KDK, stored in metadata node
+    pf_nonce_t nonce;           // nonce for key derivation from KDK, stored in metadata node
     uint32_t output_len;        // in bits; always 128
 } kdf_input_t;
 

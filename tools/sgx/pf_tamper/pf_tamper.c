@@ -58,13 +58,13 @@ pf_key_t g_meta_key;
 
 static pf_iv_t g_empty_iv = {0};
 
-static void derive_main_key(const pf_key_t* kdk, const pf_keyid_t* key_id, pf_key_t* out_key) {
+static void derive_main_key(const pf_key_t* kdk, const pf_nonce_t* nonce, pf_key_t* out_key) {
     kdf_input_t buf = {0};
     pf_status_t status;
 
     buf.counter = 1;
     strncpy(buf.label, METADATA_KEY_NAME, MAX_LABEL_SIZE);
-    COPY_ARRAY(buf.nonce, *key_id);
+    COPY_ARRAY(buf.nonce, *nonce);
     buf.output_len = 0x80;
 
     status = mbedtls_aes_cmac(kdk, &buf, sizeof(buf), out_key);
@@ -119,9 +119,9 @@ static void tamper_truncate(void) {
         offsetof(metadata_plain_t, major_version), FIELD_SIZEOF(metadata_plain_t, major_version));
     DBG("metadata_plain_t.minor_version     : 0x%04lx (0x%04lx)\n",
         offsetof(metadata_plain_t, minor_version), FIELD_SIZEOF(metadata_plain_t, minor_version));
-    DBG("metadata_plain_t.metadata_key_id   : 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, metadata_key_id),
-        FIELD_SIZEOF(metadata_plain_t, metadata_key_id));
+    DBG("metadata_plain_t.metadata_key_nonce: 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plain_t, metadata_key_nonce),
+        FIELD_SIZEOF(metadata_plain_t, metadata_key_nonce));
     DBG("metadata_plain_t.metadata_gmac     : 0x%04lx (0x%04lx)\n",
         offsetof(metadata_plain_t, metadata_gmac),
         FIELD_SIZEOF(metadata_plain_t, metadata_gmac));
@@ -151,8 +151,8 @@ static void tamper_truncate(void) {
     truncate_file("trunc_meta_plain_1", FIELD_TRUNCATED(metadata_plain_t, file_id));
     truncate_file("trunc_meta_plain_2", offsetof(metadata_plain_t, major_version));
     truncate_file("trunc_meta_plain_3", offsetof(metadata_plain_t, minor_version));
-    truncate_file("trunc_meta_plain_4", offsetof(metadata_plain_t, metadata_key_id));
-    truncate_file("trunc_meta_plain_5", FIELD_TRUNCATED(metadata_plain_t, metadata_key_id));
+    truncate_file("trunc_meta_plain_4", offsetof(metadata_plain_t, metadata_key_nonce));
+    truncate_file("trunc_meta_plain_5", FIELD_TRUNCATED(metadata_plain_t, metadata_key_nonce));
     truncate_file("trunc_meta_plain_6", offsetof(metadata_plain_t, metadata_gmac));
     truncate_file("trunc_meta_plain_7", FIELD_TRUNCATED(metadata_plain_t, metadata_gmac));
 
@@ -308,12 +308,12 @@ static void tamper_modify(void) {
     BREAK_PF("meta_plain_version_2", /*update=*/false,
              { meta->plain_part.minor_version = 0xff; });
 
-    /* metadata_key_id is the keying material for encrypted metadata key derivation, so create also
-     * PFs with updated MACs */
-    BREAK_PF("meta_plain_keyid_0", /*update=*/true,
-             { meta->plain_part.metadata_key_id[0] ^= 1; });
-    BREAK_PF("meta_plain_keyid_1", /*update=*/true,
-             { LAST_BYTE(meta->plain_part.metadata_key_id) ^= 0xfe; });
+    /* metadata_key_nonce is the keying material for encrypted metadata key derivation, so create
+     * also PFs with updated MACs */
+    BREAK_PF("meta_plain_nonce_0", /*update=*/true,
+             { meta->plain_part.metadata_key_nonce[0] ^= 1; });
+    BREAK_PF("meta_plain_nonce_1", /*update=*/true,
+             { LAST_BYTE(meta->plain_part.metadata_key_nonce) ^= 0xfe; });
     BREAK_PF("meta_plain_mac_0", /*update=*/true,
              { meta->plain_part.metadata_gmac[0] ^= 0xfe; });
     BREAK_PF("meta_plain_mac_1", /*update=*/true,
@@ -461,7 +461,7 @@ int main(int argc, char* argv[]) {
     }
 
     load_wrap_key(wrap_key_path, &g_wrap_key);
-    derive_main_key(&g_wrap_key, &((metadata_plain_t*)g_input_data)->metadata_key_id,
+    derive_main_key(&g_wrap_key, &((metadata_plain_t*)g_input_data)->metadata_key_nonce,
                     &g_meta_key);
 
     g_input_name = basename(input_path);
