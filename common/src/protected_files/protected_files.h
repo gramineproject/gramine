@@ -29,7 +29,7 @@
 typedef uint8_t pf_iv_t[PF_IV_SIZE];
 typedef uint8_t pf_mac_t[PF_MAC_SIZE];
 typedef uint8_t pf_key_t[PF_KEY_SIZE];
-typedef uint8_t pf_keyid_t[PF_NONCE_SIZE];
+typedef uint8_t pf_nonce_t[PF_NONCE_SIZE];
 
 typedef enum _pf_status_t {
     PF_STATUS_SUCCESS              = 0,
