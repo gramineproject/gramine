@@ -17,8 +17,10 @@ if host_machine.cpu_family() == 'x86_64'
     cflags_libos += ['-mfxsr', '-mxsave']
 endif
 
-subdir('include')
-subdir('src')
+if src_build
+  subdir('include')
+  subdir('src')
+endif
 
 if enable_tests
     subdir('test')
