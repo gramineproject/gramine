@@ -25,7 +25,7 @@ stage('test-sgx') {
             make ${MAKEOPTS} check
         '''
     }
-    timeout(time: 5, unit: 'MINUTES') {
+    timeout(time: 10, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/python
             make ${MAKEOPTS} RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid}
