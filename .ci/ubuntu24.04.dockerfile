@@ -37,13 +37,40 @@ RUN apt-get update && apt-get satisfy -y \
 # dependencies for various tests, CI-Examples, etc.
 # git: scripts/gitignore-test (among others)
 # libunwind8: libos/test/regression/bootstrap_cpp.manifest.template
+# musl-tools: for compilation with musl (not done in deb/rpm)
 # nginx: CI-Examples/ra-tls-nginx
 # shellcheck: .ci/run-shellcheck
+# cargo: CI-Examples/rust
+# clang: asan and ubsan builds
+# jq: used in jenkinsfiles
+# cpio dwarves kmod qemu-kvm: for building kernel modules and running VMs
+# wget: scripts/download
+# python3-pytest: for running tests
+# python3-pytest-xdist: for pytest -n option, to run in parallel
+# python3-numpy python3-scipy: imported by script in CI-Examples/python
+# gdb: tested in libos suite
+# ncat: used in scripts/wait_for_server
+# linux-libc-dev: among others, needed to compile busybox (CI-Examples/busybox)
 RUN apt-get update && apt-get install -y \
+    cargo \
+    clang \
+    cpio \
+    dwarves \
+    gdb \
     git \
+    jq \
+    kmod \
     libunwind8 \
+    linux-libc-dev \
+    musl-tools \
+    ncat \
     nginx \
+    python3-numpy \
     python3-pytest \
-    shellcheck
+    python3-pytest-xdist \
+    python3-scipy \
+    qemu-kvm \
+    shellcheck \
+    wget
 
 CMD ["bash"]
