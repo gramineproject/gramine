@@ -38,7 +38,6 @@
 #define MBEDTLS_HAVE_X86_64
 #endif
 #define MBEDTLS_HKDF_C
-#define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 #define MBEDTLS_MD_C
 #define MBEDTLS_NET_C
 #define MBEDTLS_NO_PLATFORM_ENTROPY
@@ -49,9 +48,15 @@
 #define MBEDTLS_PLATFORM_ZEROIZE_ALT
 #define MBEDTLS_RSA_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_CONTEXT_SERIALIZATION
 #define MBEDTLS_SSL_PROTO_TLS1_2
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
+
+/* below features are to implement DHE-PSK based secure-pipe sessions */
+#define MBEDTLS_KEY_EXCHANGE_DHE_PSK_ENABLED
+/* We use DHE (slightly weaker than ECDHE) because it's the strongest PSK ciphersuite that offers
+ * AES-128 and GCM; note that there is no GCM or CCM support for ECDHE-PSK yet. See issue
+ * https://github.com/Mbed-TLS/mbedtls/issues/8170 that tracks ECDHE-AES-GCM support status. */
+#define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_DHE_PSK_WITH_AES_128_GCM_SHA256
