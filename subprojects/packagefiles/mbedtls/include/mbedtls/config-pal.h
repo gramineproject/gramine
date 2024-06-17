@@ -38,7 +38,6 @@
 #define MBEDTLS_HAVE_X86_64
 #endif
 #define MBEDTLS_HKDF_C
-#define MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
 #define MBEDTLS_MD_C
 #define MBEDTLS_NET_C
 #define MBEDTLS_NO_PLATFORM_ENTROPY
@@ -49,9 +48,18 @@
 #define MBEDTLS_PLATFORM_ZEROIZE_ALT
 #define MBEDTLS_RSA_C
 #define MBEDTLS_SHA256_C
-#define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256
 #define MBEDTLS_SSL_CLI_C
 #define MBEDTLS_SSL_CONTEXT_SERIALIZATION
 #define MBEDTLS_SSL_PROTO_TLS1_2
 #define MBEDTLS_SSL_SRV_C
 #define MBEDTLS_SSL_TLS_C
+
+/* below features are to implement ECDHE-PSK based secure-pipe sessions */
+#define MBEDTLS_ECP_C
+#define MBEDTLS_ECP_DP_SECP521R1_ENABLED
+#define MBEDTLS_ECDH_C
+#define MBEDTLS_CIPHER_MODE_CBC
+#define MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED
+/* AES-128 with CBC and SHA256 is the strongest combination that current version of mbedTLS can
+ * offer with ephemeral key exchange for PSK; there is no GCM or CCM support for ECDHE-PSK yet */
+#define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256

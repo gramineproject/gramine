@@ -343,7 +343,7 @@ int lib_SSLInit(LIB_SSL_CONTEXT* ssl_ctx, int stream_fd, bool is_server, const u
 
     memset(ssl_ctx, 0, sizeof(*ssl_ctx));
 
-    ssl_ctx->ciphersuites[0] = MBEDTLS_TLS_PSK_WITH_AES_128_GCM_SHA256;
+    ssl_ctx->ciphersuites[0] = MBEDTLS_TLS_ECDHE_PSK_WITH_AES_128_CBC_SHA256;
     memset(&ssl_ctx->ciphersuites[1], 0, sizeof(ssl_ctx->ciphersuites[1]));
 
     ssl_ctx->pal_recv_cb = pal_recv_cb;
