@@ -15,7 +15,7 @@ commands
 python
 from shutil import copyfile
 from gdb_helper import adversary_do
-adversary_do(lambda external_path, external_path_saved: copyfile(external_path, external_path_saved))
+adversary_do(lambda external_path, external_path_saved, external_path2: copyfile(external_path, external_path_saved))
 end
 
 continue
@@ -27,7 +27,19 @@ commands
 python
 from shutil import move
 from gdb_helper import adversary_do
-adversary_do(lambda external_path, external_path_saved: move(external_path_saved, external_path))
+adversary_do(lambda external_path, external_path_saved, external_path2: move(external_path_saved, external_path))
+end
+
+continue
+end
+
+
+break adversary_reset_file_as
+commands
+python
+from shutil import move
+from gdb_helper import adversary_do
+adversary_do(lambda external_path, external_path_saved, external_path2: move(external_path_saved, external_path2))
 end
 
 continue
@@ -39,7 +51,7 @@ commands
 python
 from pathlib import Path
 from gdb_helper import adversary_do
-adversary_do(lambda external_path, external_path_saved: Path.unlink(external_path))
+adversary_do(lambda external_path, external_path_saved, external_path2: Path.unlink(external_path))
 end
 
 continue

@@ -48,6 +48,10 @@ static void adversary_save_file(const char* path) {
 static void adversary_reset_file(const char* path) {
     __UNUSED(path); /* neeed in gdb though! */
 }
+static void adversary_reset_file_as(const char* path, const char* path2) {
+    __UNUSED(path);  /* neeed in gdb though! */
+    __UNUSED(path2); /* neeed in gdb though! */
+}
 static void adversary_delete_file(const char* path) {
     __UNUSED(path); /* neeed in gdb though! */
     /* NOTE: as of 2024-06-14 this attack will never work as the dcache never
@@ -453,6 +457,77 @@ static void test_rollback_after_rename_non_exclusive(const char* work_dir) {
     }
 }
 
+static void test_rename_rollback_after_rename_base(const char* path1, const char* path2) {
+    int fd = open(path1, O_RDWR | O_EXCL | O_CREAT, 0600);
+    if (fd < 0) {
+        err(1, "open %s", path1);
+    }
+
+    ssize_t n = write(fd, message, message_len);
+    if (n < 0)
+        err(1, "write %s", path1);
+    if ((size_t)n != message_len)
+        errx(1, "written less bytes than expected into %s", path1);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path1);
+
+    adversary_save_file(path1);
+
+    if (rename(path1, path2) != 0)
+        err(1, "rename");
+
+    adversary_reset_file_as(path1, path2);
+}
+
+static void test_rename_rollback_after_rename_rw(const char* work_dir) {
+    char path1[MAX_FILE_NAME_SIZE];
+    snprintf(path1, MAX_FILE_NAME_SIZE, "%s/%s", work_dir, __func__);
+    char path2[MAX_FILE_NAME_SIZE];
+    snprintf(path2, MAX_FILE_NAME_SIZE, "%s/%s.renamed", work_dir, __func__);
+
+    test_rename_rollback_after_rename_base(path1, path2);
+
+    int fd = open(path2, O_RDWR);
+    if (fd < 0) {
+        test_report("OK");
+    } else {
+        test_report("FAIL");
+    }
+}
+
+static void test_rename_rollback_after_rename_exclusive(const char* work_dir) {
+    char path1[MAX_FILE_NAME_SIZE];
+    snprintf(path1, MAX_FILE_NAME_SIZE, "%s/%s", work_dir, __func__);
+    char path2[MAX_FILE_NAME_SIZE];
+    snprintf(path2, MAX_FILE_NAME_SIZE, "%s/%s.renamed", work_dir, __func__);
+
+    test_rename_rollback_after_rename_base(path1, path2);
+
+    int fd = open(path2, O_RDWR | O_CREAT | O_EXCL, 0600);
+    if (fd < 0) {
+        test_report("OK");
+    } else {
+        test_report("FAIL");
+    }
+}
+
+static void test_rename_rollback_after_rename_non_exclusive(const char* work_dir) {
+    char path1[MAX_FILE_NAME_SIZE];
+    snprintf(path1, MAX_FILE_NAME_SIZE, "%s/%s", work_dir, __func__);
+    char path2[MAX_FILE_NAME_SIZE];
+    snprintf(path2, MAX_FILE_NAME_SIZE, "%s/%s.renamed", work_dir, __func__);
+
+    test_rename_rollback_after_rename_base(path1, path2);
+
+    int fd = open(path2, O_RDWR | O_CREAT, 0600);
+    if (fd < 0) {
+        test_report("OK");
+    } else {
+        test_report("FAIL");
+    }
+}
+
 static void test_delete_rollback_after_rename_base(const char* path1, const char* path2) {
     int fd = open(path1, O_RDWR | O_EXCL | O_CREAT, 0600);
     if (fd < 0) {
@@ -612,6 +687,9 @@ static void run_tests(const char* work_dir, const char* input_file) {
     test_rollback_after_rename_rw(work_dir);
     test_rollback_after_rename_exclusive(work_dir);
     test_rollback_after_rename_non_exclusive(work_dir);
+    test_rename_rollback_after_rename_rw(work_dir);
+    test_rename_rollback_after_rename_exclusive(work_dir);
+    test_rename_rollback_after_rename_non_exclusive(work_dir);
     test_delete_rollback_after_rename_rw(work_dir);
     test_delete_rollback_after_rename_exclusive(work_dir);
     test_delete_rollback_after_rename_non_exclusive(work_dir);
