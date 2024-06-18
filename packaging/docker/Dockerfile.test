@@ -22,7 +22,7 @@ RUN git clone --depth 1 --branch v$(gramine-direct --version | cut -d' ' -f2) \
     cd gramine && \
     meson setup \
         build/ \
-	--prefix=/usr \
+        --prefix=/usr \
         -Ddirect=disabled \
         -Dsgx=disabled \
         -Dtests=enabled \
