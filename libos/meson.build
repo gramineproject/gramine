@@ -18,8 +18,8 @@ if host_machine.cpu_family() == 'x86_64'
 endif
 
 if src_build
-  subdir('include')
-  subdir('src')
+    subdir('include')
+    subdir('src')
 endif
 
 if enable_tests

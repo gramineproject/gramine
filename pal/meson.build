@@ -1,10 +1,10 @@
 if src_build
-  subdir('include')
-  subdir('src')
+    subdir('include')
+    subdir('src')
 
-  if enable_tests
-      subdir('regression')
-  endif
+    if enable_tests
+        subdir('regression')
+    endif
 endif
 
 if debug
