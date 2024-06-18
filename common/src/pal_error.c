@@ -4,7 +4,7 @@
 #include "api.h"
 #include "pal_error.h"
 
-#define IDX(x)	[-(x)]
+#define IDX(x) [-(x)]
 static const char* g_pal_error_list[] = {
     IDX(PAL_ERROR_SUCCESS) = "Success (PAL_ERROR_SUCCESS)",
     IDX(PAL_ERROR_NOTIMPLEMENTED) = "Function not implemented (PAL_ERROR_NOTIMPLEMENTED)",

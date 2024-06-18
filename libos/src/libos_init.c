@@ -42,7 +42,7 @@ noreturn void libos_abort(void) {
     PalProcessExit(1);
 }
 
-#define IDX(x)	[-(x)]
+#define IDX(x) [-(x)]
 static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT] = {
     IDX(PAL_ERROR_SUCCESS)         = 0,
     IDX(PAL_ERROR_NOTIMPLEMENTED)  = ENOSYS,
