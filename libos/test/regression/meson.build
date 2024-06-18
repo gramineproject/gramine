@@ -192,7 +192,7 @@ if host_machine.cpu_family() == 'x86_64'
     }
 endif
 
-if sgx
+if sgx or force_sgx_tests
     tests += {
         'attestation': {
             # for `sgx_arch.h`

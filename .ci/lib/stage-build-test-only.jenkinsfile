@@ -1,0 +1,23 @@
+stage('build') {
+    try {
+        sh '''
+            meson setup build/ \
+                --werror \
+                --prefix="$PREFIX" \
+                --buildtype="$BUILDTYPE" \
+                -Dskeleton=disabled \
+                -Ddirect=disabled \
+                -Dsgx=disabled \
+                -Dtests=enabled \
+                $MESON_OPTIONS
+            ninja -vC build/
+        '''
+    } finally {
+        archiveArtifacts '''
+            build/meson-logs/**/*,
+        '''
+    }
+
+    sh 'rm -rf build'
+    sh 'git clean -Xf subprojects'
+}
