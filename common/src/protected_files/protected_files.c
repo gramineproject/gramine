@@ -1137,7 +1137,7 @@ pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_si
 
     pf_status_t status;
     *context = ipf_open(path, mode, create, handle, underlying_size, key, &status);
-    if (opening_root_gmac != NULL) {
+    if ((*context != NULL) && (opening_root_gmac != NULL)) {
         memcpy(*opening_root_gmac, (*context)->file_metadata.plain_part.metadata_gmac,
                sizeof(pf_mac_t));
     }
