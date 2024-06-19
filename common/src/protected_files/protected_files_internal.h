@@ -23,7 +23,7 @@ struct pf_context {
     pf_key_t user_kdk_key;         // KDK installed by user of PF (e.g. from Gramine manifest)
 
     metadata_node_t metadata_node; // plaintext and encrypted metadata from storage (bounce buffer)
-    metadata_encrypted_t metadata_decrypted; // contains file path, size, etc.
+    metadata_decrypted_t metadata_decrypted; // contains file path, size, etc.
 
     file_node_t root_mht_node;     // needed for files bigger than MD_USER_DATA_SIZE bytes
 

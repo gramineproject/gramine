@@ -38,9 +38,9 @@ enum {
     FILE_DATA_NODE_TYPE = 2,
 };
 
-typedef struct _data_node_crypto {
+typedef struct {
     pf_key_t key;
-    pf_mac_t gmac;
+    pf_mac_t mac;
 } gcm_crypto_data_t;
 
 // for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 mht child nodes
@@ -50,46 +50,47 @@ typedef struct _data_node_crypto {
 static_assert(ATTACHED_DATA_NODES_COUNT == 96, "ATTACHED_DATA_NODES_COUNT");
 static_assert(CHILD_MHT_NODES_COUNT == 32, "CHILD_MHT_NODES_COUNT");
 
-typedef struct _metadata_plain {
+typedef struct {
     uint64_t   file_id;
     uint8_t    major_version;
     uint8_t    minor_version;
     pf_nonce_t metadata_key_nonce;
-    pf_mac_t   metadata_gmac; /* GCM mac */
-} metadata_plain_t;
+    pf_mac_t   metadata_mac; /* GCM mac */
+} metadata_plaintext_t;
 
-typedef struct _metadata_encrypted {
+typedef struct {
     char     path[PATH_MAX_SIZE];
     uint64_t size; /* file size after decryption */
     pf_key_t mht_key;
-    pf_mac_t mht_gmac;
+    pf_mac_t mht_mac;
     uint8_t  data[MD_USER_DATA_SIZE];
-} metadata_encrypted_t;
+} metadata_decrypted_t;
 
-typedef uint8_t metadata_encrypted_blob_t[sizeof(metadata_encrypted_t)];
+typedef uint8_t metadata_encrypted_blob_t[sizeof(metadata_decrypted_t)];
 
 typedef uint8_t metadata_padding_t[PF_NODE_SIZE -
-                                   (sizeof(metadata_plain_t) + sizeof(metadata_encrypted_blob_t))];
+                                   (sizeof(metadata_plaintext_t) +
+                                    sizeof(metadata_encrypted_blob_t))];
 
-typedef struct _metadata_node {
-    metadata_plain_t          plain_part;
+typedef struct {
+    metadata_plaintext_t      plaintext_part;
     metadata_encrypted_blob_t encrypted_part;
     metadata_padding_t        padding;
 } metadata_node_t;
 static_assert(sizeof(metadata_node_t) == PF_NODE_SIZE, "sizeof(metadata_node_t)");
 
-typedef struct _mht_node {
+typedef struct {
     gcm_crypto_data_t data_nodes_crypto[ATTACHED_DATA_NODES_COUNT];
     gcm_crypto_data_t mht_nodes_crypto[CHILD_MHT_NODES_COUNT];
 } mht_node_t;
 static_assert(sizeof(mht_node_t) == PF_NODE_SIZE, "sizeof(mht_node_t)");
 
-typedef struct _data_node {
+typedef struct {
     uint8_t data[PF_NODE_SIZE];
 } data_node_t;
 static_assert(sizeof(data_node_t) == PF_NODE_SIZE, "sizeof(data_node_t)");
 
-typedef struct _encrypted_node {
+typedef struct {
     uint8_t cipher[PF_NODE_SIZE];
 } encrypted_node_t;
 static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");

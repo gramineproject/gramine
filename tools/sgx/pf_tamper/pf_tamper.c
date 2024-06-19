@@ -79,8 +79,8 @@ static void make_output_path(const char* suffix) {
 
 /* PF layout (node size is PF_NODE_SIZE):
  * - Node 0: metadata (metadata_node_t)
- *   - metadata_plain_t
- *   - metadata_encrypted_t (may include MD_USER_DATA_SIZE bytes of data)
+ *   - metadata_plaintext_t
+ *   - metadata_decrypted_t (may include MD_USER_DATA_SIZE bytes of data)
  *   - metadata_padding_t
  * - Node 1: MHT (mht_node_t)
  * - Node 2-97: data (ATTACHED_DATA_NODES_COUNT == 96)
@@ -111,66 +111,68 @@ out:
 #define DATA_CRYPTO_SIZE (FIELD_SIZEOF(mht_node_t, data_nodes_crypto))
 
 static void tamper_truncate(void) {
-    size_t mdps = sizeof(metadata_plain_t);
-    DBG("size(metadata_plain_t)             = 0x%04lx\n", sizeof(metadata_plain_t));
-    DBG("metadata_plain_t.file_id           : 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, file_id), FIELD_SIZEOF(metadata_plain_t, file_id));
-    DBG("metadata_plain_t.major_version     : 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, major_version), FIELD_SIZEOF(metadata_plain_t, major_version));
-    DBG("metadata_plain_t.minor_version     : 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, minor_version), FIELD_SIZEOF(metadata_plain_t, minor_version));
-    DBG("metadata_plain_t.metadata_key_nonce: 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, metadata_key_nonce),
-        FIELD_SIZEOF(metadata_plain_t, metadata_key_nonce));
-    DBG("metadata_plain_t.metadata_gmac     : 0x%04lx (0x%04lx)\n",
-        offsetof(metadata_plain_t, metadata_gmac),
-        FIELD_SIZEOF(metadata_plain_t, metadata_gmac));
+    size_t mdps = sizeof(metadata_plaintext_t);
+    DBG("size(metadata_plaintext_t)             = 0x%04lx\n", sizeof(metadata_plaintext_t));
+    DBG("metadata_plaintext_t.file_id           : 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plaintext_t, file_id), FIELD_SIZEOF(metadata_plaintext_t, file_id));
+    DBG("metadata_plaintext_t.major_version     : 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plaintext_t, major_version),
+        FIELD_SIZEOF(metadata_plaintext_t, major_version));
+    DBG("metadata_plaintext_t.minor_version     : 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plaintext_t, minor_version),
+        FIELD_SIZEOF(metadata_plaintext_t, minor_version));
+    DBG("metadata_plaintext_t.metadata_key_nonce: 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plaintext_t, metadata_key_nonce),
+        FIELD_SIZEOF(metadata_plaintext_t, metadata_key_nonce));
+    DBG("metadata_plaintext_t.metadata_mac     : 0x%04lx (0x%04lx)\n",
+        offsetof(metadata_plaintext_t, metadata_mac),
+        FIELD_SIZEOF(metadata_plaintext_t, metadata_mac));
 
-    DBG("size(metadata_encrypted_t)         = 0x%04lx\n", sizeof(metadata_encrypted_t));
-    DBG("metadata_encrypted_t.path          : 0x%04lx (0x%04lx)\n",
-        mdps + offsetof(metadata_encrypted_t, path),
-        FIELD_SIZEOF(metadata_encrypted_t, path));
-    DBG("metadata_encrypted_t.size          : 0x%04lx (0x%04lx)\n",
-        mdps + offsetof(metadata_encrypted_t, size), FIELD_SIZEOF(metadata_encrypted_t, size));
-    DBG("metadata_encrypted_t.mht_key       : 0x%04lx (0x%04lx)\n",
-        mdps + offsetof(metadata_encrypted_t, mht_key),
-        FIELD_SIZEOF(metadata_encrypted_t, mht_key));
-    DBG("metadata_encrypted_t.mht_gmac      : 0x%04lx (0x%04lx)\n",
-        mdps + offsetof(metadata_encrypted_t, mht_gmac),
-        FIELD_SIZEOF(metadata_encrypted_t, mht_gmac));
-    DBG("metadata_encrypted_t.data          : 0x%04lx (0x%04lx)\n",
-        mdps + offsetof(metadata_encrypted_t, data), FIELD_SIZEOF(metadata_encrypted_t, data));
+    DBG("size(metadata_decrypted_t)         = 0x%04lx\n", sizeof(metadata_decrypted_t));
+    DBG("metadata_decrypted_t.path          : 0x%04lx (0x%04lx)\n",
+        mdps + offsetof(metadata_decrypted_t, path),
+        FIELD_SIZEOF(metadata_decrypted_t, path));
+    DBG("metadata_decrypted_t.size          : 0x%04lx (0x%04lx)\n",
+        mdps + offsetof(metadata_decrypted_t, size), FIELD_SIZEOF(metadata_decrypted_t, size));
+    DBG("metadata_decrypted_t.mht_key       : 0x%04lx (0x%04lx)\n",
+        mdps + offsetof(metadata_decrypted_t, mht_key),
+        FIELD_SIZEOF(metadata_decrypted_t, mht_key));
+    DBG("metadata_decrypted_t.mht_mac      : 0x%04lx (0x%04lx)\n",
+        mdps + offsetof(metadata_decrypted_t, mht_mac),
+        FIELD_SIZEOF(metadata_decrypted_t, mht_mac));
+    DBG("metadata_decrypted_t.data          : 0x%04lx (0x%04lx)\n",
+        mdps + offsetof(metadata_decrypted_t, data), FIELD_SIZEOF(metadata_decrypted_t, data));
 
     DBG("size(metadata_padding_t)           = 0x%04lx\n", sizeof(metadata_padding_t));
     DBG("metadata_padding_t                 : 0x%04lx (0x%04lx)\n",
-        mdps + sizeof(metadata_encrypted_t), sizeof(metadata_padding_t));
+        mdps + sizeof(metadata_decrypted_t), sizeof(metadata_padding_t));
 
     /* node 0: metadata + 3k of user data */
     /* plain metadata */
     truncate_file("trunc_meta_plain_0", 0);
-    truncate_file("trunc_meta_plain_1", FIELD_TRUNCATED(metadata_plain_t, file_id));
-    truncate_file("trunc_meta_plain_2", offsetof(metadata_plain_t, major_version));
-    truncate_file("trunc_meta_plain_3", offsetof(metadata_plain_t, minor_version));
-    truncate_file("trunc_meta_plain_4", offsetof(metadata_plain_t, metadata_key_nonce));
-    truncate_file("trunc_meta_plain_5", FIELD_TRUNCATED(metadata_plain_t, metadata_key_nonce));
-    truncate_file("trunc_meta_plain_6", offsetof(metadata_plain_t, metadata_gmac));
-    truncate_file("trunc_meta_plain_7", FIELD_TRUNCATED(metadata_plain_t, metadata_gmac));
+    truncate_file("trunc_meta_plain_1", FIELD_TRUNCATED(metadata_plaintext_t, file_id));
+    truncate_file("trunc_meta_plain_2", offsetof(metadata_plaintext_t, major_version));
+    truncate_file("trunc_meta_plain_3", offsetof(metadata_plaintext_t, minor_version));
+    truncate_file("trunc_meta_plain_4", offsetof(metadata_plaintext_t, metadata_key_nonce));
+    truncate_file("trunc_meta_plain_5", FIELD_TRUNCATED(metadata_plaintext_t, metadata_key_nonce));
+    truncate_file("trunc_meta_plain_6", offsetof(metadata_plaintext_t, metadata_mac));
+    truncate_file("trunc_meta_plain_7", FIELD_TRUNCATED(metadata_plaintext_t, metadata_mac));
 
     /* encrypted metadata */
-    truncate_file("trunc_meta_enc_0", mdps + offsetof(metadata_encrypted_t, path));
-    truncate_file("trunc_meta_enc_1", mdps + FIELD_TRUNCATED(metadata_encrypted_t, path));
-    truncate_file("trunc_meta_enc_2", mdps + offsetof(metadata_encrypted_t, size));
-    truncate_file("trunc_meta_enc_3", mdps + FIELD_TRUNCATED(metadata_encrypted_t, size));
-    truncate_file("trunc_meta_enc_4", mdps + offsetof(metadata_encrypted_t, mht_key));
-    truncate_file("trunc_meta_enc_5", mdps + FIELD_TRUNCATED(metadata_encrypted_t, mht_key));
-    truncate_file("trunc_meta_enc_6", mdps + offsetof(metadata_encrypted_t, mht_gmac));
-    truncate_file("trunc_meta_enc_7", mdps + FIELD_TRUNCATED(metadata_encrypted_t, mht_gmac));
-    truncate_file("trunc_meta_enc_8", mdps + offsetof(metadata_encrypted_t, data));
-    truncate_file("trunc_meta_enc_9", mdps + FIELD_TRUNCATED(metadata_encrypted_t, data));
+    truncate_file("trunc_meta_enc_0", mdps + offsetof(metadata_decrypted_t, path));
+    truncate_file("trunc_meta_enc_1", mdps + FIELD_TRUNCATED(metadata_decrypted_t, path));
+    truncate_file("trunc_meta_enc_2", mdps + offsetof(metadata_decrypted_t, size));
+    truncate_file("trunc_meta_enc_3", mdps + FIELD_TRUNCATED(metadata_decrypted_t, size));
+    truncate_file("trunc_meta_enc_4", mdps + offsetof(metadata_decrypted_t, mht_key));
+    truncate_file("trunc_meta_enc_5", mdps + FIELD_TRUNCATED(metadata_decrypted_t, mht_key));
+    truncate_file("trunc_meta_enc_6", mdps + offsetof(metadata_decrypted_t, mht_mac));
+    truncate_file("trunc_meta_enc_7", mdps + FIELD_TRUNCATED(metadata_decrypted_t, mht_mac));
+    truncate_file("trunc_meta_enc_8", mdps + offsetof(metadata_decrypted_t, data));
+    truncate_file("trunc_meta_enc_9", mdps + FIELD_TRUNCATED(metadata_decrypted_t, data));
 
     /* padding */
-    truncate_file("trunc_meta_pad_0", mdps + sizeof(metadata_encrypted_t));
-    truncate_file("trunc_meta_pad_1", mdps + sizeof(metadata_encrypted_t)
+    truncate_file("trunc_meta_pad_0", mdps + sizeof(metadata_decrypted_t));
+    truncate_file("trunc_meta_pad_1", mdps + sizeof(metadata_decrypted_t)
                   + sizeof(metadata_padding_t) / 2);
 
     /* node 1: mht root */
@@ -180,9 +182,9 @@ static void tamper_truncate(void) {
     truncate_file("trunc_mht_1", PF_NODE_SIZE + PF_KEY_SIZE / 2);
     /* after data_nodes_crypto[0].key */
     truncate_file("trunc_mht_2", PF_NODE_SIZE + PF_KEY_SIZE);
-    /* middle of data_nodes_crypto[0].gmac */
+    /* middle of data_nodes_crypto[0].mac */
     truncate_file("trunc_mht_3", PF_NODE_SIZE + PF_KEY_SIZE + PF_MAC_SIZE / 2);
-    /* after data_nodes_crypto[0].gmac */
+    /* after data_nodes_crypto[0].mac */
     truncate_file("trunc_mht_4", PF_NODE_SIZE + PF_KEY_SIZE + PF_MAC_SIZE);
     /* after data_nodes_crypto */
     truncate_file("trunc_mht_5", PF_NODE_SIZE + DATA_CRYPTO_SIZE);
@@ -190,9 +192,9 @@ static void tamper_truncate(void) {
     truncate_file("trunc_mht_6", PF_NODE_SIZE + DATA_CRYPTO_SIZE + PF_KEY_SIZE / 2);
     /* after mht_nodes_crypto[0].key */
     truncate_file("trunc_mht_7", PF_NODE_SIZE + DATA_CRYPTO_SIZE + PF_KEY_SIZE);
-    /* middle of mht_nodes_crypto[0].gmac */
+    /* middle of mht_nodes_crypto[0].mac */
     truncate_file("trunc_mht_8", PF_NODE_SIZE + DATA_CRYPTO_SIZE + PF_KEY_SIZE + PF_MAC_SIZE / 2);
-    /* after mht_nodes_crypto[0].gmac */
+    /* after mht_nodes_crypto[0].mac */
     truncate_file("trunc_mht_9", PF_NODE_SIZE + DATA_CRYPTO_SIZE + PF_KEY_SIZE + PF_MAC_SIZE);
 
     /* node 2-3: data #0, #1 */
@@ -256,9 +258,9 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
     meta = create_output(g_output_path); \
     out = (uint8_t*)meta; \
     pf_decrypt(&meta->encrypted_part, sizeof(meta->encrypted_part), &g_meta_key, \
-               &meta->plain_part.metadata_gmac, meta_dec, "metadata"); \
+               &meta->plaintext_part.metadata_mac, meta_dec, "metadata"); \
     mht_enc = (mht_node_t*)(out + PF_NODE_SIZE); \
-    pf_decrypt(mht_enc, sizeof(*mht_enc), &meta_dec->mht_key, &meta_dec->mht_gmac, mht_dec, \
+    pf_decrypt(mht_enc, sizeof(*mht_enc), &meta_dec->mht_key, &meta_dec->mht_mac, mht_dec, \
                "mht"); \
     __VA_ARGS__ \
     munmap(meta, g_input_size); \
@@ -270,7 +272,7 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
     if (update) { \
         __BREAK_PF(suffix "_fixed", __VA_ARGS__ { \
                        pf_encrypt(meta_dec, sizeof(*meta_dec), &g_meta_key, \
-                                  &meta->plain_part.metadata_gmac, meta->encrypted_part, \
+                                  &meta->plaintext_part.metadata_mac, meta->encrypted_part, \
                                   "metadata"); \
                    } ); \
     } \
@@ -278,7 +280,7 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
 
 #define BREAK_MHT(suffix, ...) do { \
     __BREAK_PF(suffix, __VA_ARGS__ { \
-                   pf_encrypt(mht_dec, sizeof(*mht_dec), &meta_dec->mht_key, &meta_dec->mht_gmac, \
+                   pf_encrypt(mht_dec, sizeof(*mht_dec), &meta_dec->mht_key, &meta_dec->mht_mac, \
                               mht_enc, "mht"); \
                } ); \
 } while (0)
@@ -288,7 +290,7 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
 static void tamper_modify(void) {
     metadata_node_t* meta = NULL;
     uint8_t* out = NULL;
-    metadata_encrypted_t* meta_dec = malloc(sizeof(*meta_dec));
+    metadata_decrypted_t* meta_dec = malloc(sizeof(*meta_dec));
     if (!meta_dec)
         FATAL("Out of memory\n");
     mht_node_t* mht_enc = NULL;
@@ -298,26 +300,26 @@ static void tamper_modify(void) {
 
     /* plain part of the metadata isn't covered by the MAC so no point updating it */
     BREAK_PF("meta_plain_id_0", /*update=*/false,
-             { meta->plain_part.file_id = 0; });
+             { meta->plaintext_part.file_id = 0; });
     BREAK_PF("meta_plain_id_1", /*update=*/false,
-             { meta->plain_part.file_id = UINT64_MAX; });
+             { meta->plaintext_part.file_id = UINT64_MAX; });
     BREAK_PF("meta_plain_version_0", /*update=*/false,
-             { meta->plain_part.major_version = 0; });
+             { meta->plaintext_part.major_version = 0; });
     BREAK_PF("meta_plain_version_1", /*update=*/false,
-             { meta->plain_part.major_version = 0xff; });
+             { meta->plaintext_part.major_version = 0xff; });
     BREAK_PF("meta_plain_version_2", /*update=*/false,
-             { meta->plain_part.minor_version = 0xff; });
+             { meta->plaintext_part.minor_version = 0xff; });
 
     /* metadata_key_nonce is the keying material for encrypted metadata key derivation, so create
      * also PFs with updated MACs */
     BREAK_PF("meta_plain_nonce_0", /*update=*/true,
-             { meta->plain_part.metadata_key_nonce[0] ^= 1; });
+             { meta->plaintext_part.metadata_key_nonce[0] ^= 1; });
     BREAK_PF("meta_plain_nonce_1", /*update=*/true,
-             { LAST_BYTE(meta->plain_part.metadata_key_nonce) ^= 0xfe; });
+             { LAST_BYTE(meta->plaintext_part.metadata_key_nonce) ^= 0xfe; });
     BREAK_PF("meta_plain_mac_0", /*update=*/true,
-             { meta->plain_part.metadata_gmac[0] ^= 0xfe; });
+             { meta->plaintext_part.metadata_mac[0] ^= 0xfe; });
     BREAK_PF("meta_plain_mac_1", /*update=*/true,
-             { LAST_BYTE(meta->plain_part.metadata_gmac) &= 1; });
+             { LAST_BYTE(meta->plaintext_part.metadata_mac) &= 1; });
 
     BREAK_PF("meta_enc_filename_0", /*update=*/true,
              { meta_dec->path[0] = 0; });
@@ -338,9 +340,9 @@ static void tamper_modify(void) {
     BREAK_PF("meta_enc_mht_key_1", /*update=*/true,
              { LAST_BYTE(meta_dec->mht_key) ^= 0xfe; });
     BREAK_PF("meta_enc_mht_mac_0", /*update=*/true,
-             { meta_dec->mht_gmac[0] ^= 1; });
+             { meta_dec->mht_mac[0] ^= 1; });
     BREAK_PF("meta_enc_mht_mac_1", /*update=*/true,
-             { LAST_BYTE(meta_dec->mht_gmac) ^= 0xfe; });
+             { LAST_BYTE(meta_dec->mht_mac) ^= 0xfe; });
     BREAK_PF("meta_enc_data_0", /*update=*/true,
              { meta_dec->data[0] ^= 0xfe; });
     BREAK_PF("meta_enc_data_1", /*update=*/true,
@@ -353,13 +355,13 @@ static void tamper_modify(void) {
              { LAST_BYTE(meta->padding) ^= 0xfe; });
 
     BREAK_MHT("mht_0", { mht_dec->data_nodes_crypto[0].key[0] ^= 1; });
-    BREAK_MHT("mht_1", { mht_dec->data_nodes_crypto[0].gmac[0] ^= 1; });
+    BREAK_MHT("mht_1", { mht_dec->data_nodes_crypto[0].mac[0] ^= 1; });
     BREAK_MHT("mht_2", { mht_dec->mht_nodes_crypto[0].key[0] ^= 1; });
-    BREAK_MHT("mht_3", { mht_dec->mht_nodes_crypto[0].gmac[0] ^= 1; });
+    BREAK_MHT("mht_3", { mht_dec->mht_nodes_crypto[0].mac[0] ^= 1; });
     BREAK_MHT("mht_4", { mht_dec->data_nodes_crypto[ATTACHED_DATA_NODES_COUNT - 1].key[0] ^= 1; });
-    BREAK_MHT("mht_5", { mht_dec->data_nodes_crypto[ATTACHED_DATA_NODES_COUNT - 1].gmac[0] ^= 1; });
+    BREAK_MHT("mht_5", { mht_dec->data_nodes_crypto[ATTACHED_DATA_NODES_COUNT - 1].mac[0] ^= 1; });
     BREAK_MHT("mht_6", { mht_dec->mht_nodes_crypto[CHILD_MHT_NODES_COUNT - 1].key[0] ^= 1; });
-    BREAK_MHT("mht_7", { mht_dec->mht_nodes_crypto[CHILD_MHT_NODES_COUNT - 1].gmac[0] ^= 1; });
+    BREAK_MHT("mht_7", { mht_dec->mht_nodes_crypto[CHILD_MHT_NODES_COUNT - 1].mac[0] ^= 1; });
     BREAK_MHT("mht_8", {
         gcm_crypto_data_t crypto;
         memcpy(&crypto, &mht_dec->data_nodes_crypto[0], sizeof(crypto));
@@ -461,7 +463,7 @@ int main(int argc, char* argv[]) {
     }
 
     load_wrap_key(wrap_key_path, &g_wrap_key);
-    derive_main_key(&g_wrap_key, &((metadata_plain_t*)g_input_data)->metadata_key_nonce,
+    derive_main_key(&g_wrap_key, &((metadata_plaintext_t*)g_input_data)->metadata_key_nonce,
                     &g_meta_key);
 
     g_input_name = basename(input_path);
