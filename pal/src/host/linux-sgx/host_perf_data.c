@@ -162,10 +162,11 @@ int pd_open_file(struct perf_data* pd, const char* file_name) {
     if (ret < 0)
         goto fail;
 
+    assert(pd->fd == -1);
     pd->fd = fd;
     return 0;
 
-fail: ;
+fail:;
     int close_ret = DO_SYSCALL(close, fd);
     if (close_ret < 0)
         log_error("pd_open_file: close failed: %s", unix_strerror(close_ret));
@@ -292,11 +293,12 @@ ssize_t pd_close_file(struct perf_data* pd) {
     if (ret < 0)
         goto out;
 
-out: ;
+out:;
     int close_ret = DO_SYSCALL(close, pd->fd);
     if (close_ret < 0)
         log_error("pd_close_file: close failed: %s", unix_strerror(close_ret));
 
+    pd->fd = -1;
     /* Returns the size of the finalized perf-data file on success */
     return ret;
 }

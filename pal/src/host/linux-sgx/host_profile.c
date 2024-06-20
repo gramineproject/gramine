@@ -36,7 +36,7 @@ char* realpath(const char* path, char* resolved_path);
 
 #define NSEC_IN_SEC 1000000000
 
-/* Filenames for saved data */
+/* Filename for saved data */
 #define SGX_PROFILE_FILENAME_WITH_PID_AND_TIME "sgx-perf-%d-%lu.data"
 
 static spinlock_t g_perf_data_lock = INIT_SPINLOCK_UNLOCKED;
@@ -153,7 +153,7 @@ int sgx_profile_init(void) {
     return 0;
 
 out:
-    if (g_mem_fd > 0) {
+    if (g_mem_fd >= 0) {
         int close_ret = DO_SYSCALL(close, g_mem_fd);
         if (close_ret < 0) {
             log_error("sgx_profile_init: closing /proc/self/mem failed: %s",
@@ -242,8 +242,11 @@ static void sample_simple(uint64_t rip) {
     int ret;
 
     spinlock_lock(&g_perf_data_lock);
-    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
+        /* No error checking since we're in exception handler and the function already prints
+           errors */
         sgx_profile_reinit();
+    }
 
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_simple(g_perf_data, rip, g_host_pid, /*tid=*/g_host_pid,
@@ -268,8 +271,11 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
     stack_size = ret;
 
     spinlock_lock(&g_perf_data_lock);
-    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true)
+    if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
+        /* No error checking since we're in exception handler and the function already prints
+           errors */
         sgx_profile_reinit();
+    }
 
     // Report all events as the same PID so that they are grouped in report.
     ret = pd_event_sample_stack(g_perf_data, gpr->rip, g_host_pid, /*tid=*/g_host_pid,
