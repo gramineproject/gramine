@@ -59,11 +59,11 @@ typedef struct {
 } metadata_plaintext_t;
 
 typedef struct {
-    char     path[PATH_MAX_SIZE];
-    uint64_t size; /* file size after decryption */
-    pf_key_t mht_key;
-    pf_mac_t mht_mac;
-    uint8_t  data[MD_USER_DATA_SIZE];
+    char     file_path[PATH_MAX_SIZE];
+    uint64_t file_size; /* file size after decryption */
+    pf_key_t root_mht_node_key;
+    pf_mac_t root_mht_node_mac;
+    uint8_t  file_data[MD_USER_DATA_SIZE];
 } metadata_decrypted_t;
 
 typedef uint8_t metadata_encrypted_blob_t[sizeof(metadata_decrypted_t)];
@@ -86,12 +86,12 @@ typedef struct {
 static_assert(sizeof(mht_node_t) == PF_NODE_SIZE, "sizeof(mht_node_t)");
 
 typedef struct {
-    uint8_t data[PF_NODE_SIZE];
+    uint8_t bytes[PF_NODE_SIZE];
 } data_node_t;
 static_assert(sizeof(data_node_t) == PF_NODE_SIZE, "sizeof(data_node_t)");
 
 typedef struct {
-    uint8_t cipher[PF_NODE_SIZE];
+    uint8_t bytes[PF_NODE_SIZE];
 } encrypted_node_t;
 static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");
 

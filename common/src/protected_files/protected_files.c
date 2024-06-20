@@ -222,8 +222,8 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
         // encrypt data node, this also saves MAC in the corresponding array item of MHT node
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,  // aad
-                                      data_node->decrypted.data.data, PF_NODE_SIZE,
-                                      data_node->encrypted.cipher, &gcm_crypto_data->mac);
+                                      data_node->decrypted.data.bytes, PF_NODE_SIZE,
+                                      data_node->encrypted.bytes, &gcm_crypto_data->mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             goto out;
@@ -280,7 +280,7 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
 
         status = g_cb_aes_gcm_encrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
                                       &file_mht_node->decrypted.mht, PF_NODE_SIZE,
-                                      &file_mht_node->encrypted.cipher, &gcm_crypto_data->mac);
+                                      &file_mht_node->encrypted.bytes, &gcm_crypto_data->mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             goto out;
@@ -288,14 +288,14 @@ static bool ipf_update_all_data_and_mht_nodes(pf_context_t* pf) {
     }
 
     // update root MHT node's key and MAC in the metadata node's headers
-    if (!ipf_generate_random_key(pf, &pf->metadata_decrypted.mht_key))
+    if (!ipf_generate_random_key(pf, &pf->metadata_decrypted.root_mht_node_key))
         goto out;
 
-    status = g_cb_aes_gcm_encrypt(&pf->metadata_decrypted.mht_key, &g_empty_iv,
+    status = g_cb_aes_gcm_encrypt(&pf->metadata_decrypted.root_mht_node_key, &g_empty_iv,
                                   NULL, 0,
                                   &pf->root_mht_node.decrypted.mht, PF_NODE_SIZE,
-                                  &pf->root_mht_node.encrypted.cipher,
-                                  &pf->metadata_decrypted.mht_mac);
+                                  &pf->root_mht_node.encrypted.bytes,
+                                  &pf->metadata_decrypted.root_mht_node_mac);
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         goto out;
@@ -377,7 +377,7 @@ static void get_node_numbers(uint64_t offset, uint64_t* logical_mht_node_number,
 }
 
 static bool ipf_write_all_changes_to_disk(pf_context_t* pf) {
-    if (pf->metadata_decrypted.size > MD_USER_DATA_SIZE && pf->root_mht_node.need_writing) {
+    if (pf->metadata_decrypted.file_size > MD_USER_DATA_SIZE && pf->root_mht_node.need_writing) {
         uint64_t physical_node_number;
 
         void* node;
@@ -435,7 +435,7 @@ static bool ipf_internal_flush(pf_context_t* pf) {
         return true;
     }
 
-    if (pf->metadata_decrypted.size > MD_USER_DATA_SIZE && pf->root_mht_node.need_writing) {
+    if (pf->metadata_decrypted.file_size > MD_USER_DATA_SIZE && pf->root_mht_node.need_writing) {
         if (!ipf_update_all_data_and_mht_nodes(pf)) {
             // this is something that shouldn't happen, can't fix this...
             pf->file_status = PF_STATUS_CRYPTO_ERROR;
@@ -477,7 +477,7 @@ static file_node_t* ipf_get_mht_node(pf_context_t* pf, uint64_t offset) {
         return &pf->root_mht_node;
 
     if ((offset - MD_USER_DATA_SIZE) % (ATTACHED_DATA_NODES_COUNT * PF_NODE_SIZE) == 0 &&
-            offset == pf->metadata_decrypted.size) {
+            offset == pf->metadata_decrypted.file_size) {
         file_mht_node = ipf_append_mht_node(pf, logical_mht_node_number);
     } else {
         file_mht_node = ipf_read_mht_node(pf, logical_mht_node_number);
@@ -527,7 +527,7 @@ static file_node_t* ipf_get_data_node(pf_context_t* pf, uint64_t offset) {
     }
 
     if ((offset - MD_USER_DATA_SIZE) % PF_NODE_SIZE == 0
-            && offset == pf->metadata_decrypted.size) {
+            && offset == pf->metadata_decrypted.file_size) {
         file_data_node = ipf_append_data_node(pf, offset);
     } else {
         file_data_node = ipf_read_data_node(pf, offset);
@@ -626,7 +626,7 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     file_data_node->physical_node_number = physical_node_number;
 
     if (!ipf_read_node(pf, file_data_node->physical_node_number,
-                       file_data_node->encrypted.cipher)) {
+                       file_data_node->encrypted.bytes)) {
         free(file_data_node);
         return NULL;
     }
@@ -637,8 +637,8 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
 
     // decrypt data and check integrity against the MAC in corresponding array item in MHT node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
-                                  file_data_node->encrypted.cipher, PF_NODE_SIZE,
-                                  file_data_node->decrypted.data.data, &gcm_crypto_data->mac);
+                                  file_data_node->encrypted.bytes, PF_NODE_SIZE,
+                                  file_data_node->decrypted.data.bytes, &gcm_crypto_data->mac);
 
     if (PF_FAILURE(status)) {
         free(file_data_node);
@@ -689,7 +689,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_nod
     file_mht_node->logical_node_number  = logical_mht_node_number;
     file_mht_node->physical_node_number = physical_node_number;
 
-    if (!ipf_read_node(pf, file_mht_node->physical_node_number, file_mht_node->encrypted.cipher)) {
+    if (!ipf_read_node(pf, file_mht_node->physical_node_number, file_mht_node->encrypted.bytes)) {
         free(file_mht_node);
         return NULL;
     }
@@ -701,7 +701,7 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_nod
     // decrypt data and check integrity against the MAC in corresponding array item in parent MHT
     // node
     status = g_cb_aes_gcm_decrypt(&gcm_crypto_data->key, &g_empty_iv, NULL, 0,
-                                  file_mht_node->encrypted.cipher, PF_NODE_SIZE,
+                                  file_mht_node->encrypted.bytes, PF_NODE_SIZE,
                                   &file_mht_node->decrypted.mht, &gcm_crypto_data->mac);
     if (PF_FAILURE(status)) {
         free(file_mht_node);
@@ -727,7 +727,7 @@ static bool ipf_init_new_file(pf_context_t* pf, const char* path) {
     pf->metadata_node.plaintext_part.minor_version = PF_MINOR_VERSION;
 
     // path length is checked in ipf_open()
-    memcpy(pf->metadata_decrypted.path, path, strlen(path) + 1);
+    memcpy(pf->metadata_decrypted.file_path, path, strlen(path) + 1);
 
     pf->need_writing = true;
     if (!ipf_internal_flush(pf))
@@ -794,28 +794,28 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
         return false;
     }
 
-    DEBUG_PF("data size %lu", pf->metadata_decrypted.size);
+    DEBUG_PF("data size %lu", pf->metadata_decrypted.file_size);
 
     if (path) {
-        size_t path_len = strlen(pf->metadata_decrypted.path);
+        size_t path_len = strlen(pf->metadata_decrypted.file_path);
         if (path_len != strlen(path)
-                || memcmp(path, pf->metadata_decrypted.path, path_len) != 0) {
+                || memcmp(path, pf->metadata_decrypted.file_path, path_len) != 0) {
             pf->last_error = PF_STATUS_INVALID_PATH;
             return false;
         }
     }
 
-    if (pf->metadata_decrypted.size > MD_USER_DATA_SIZE) {
+    if (pf->metadata_decrypted.file_size > MD_USER_DATA_SIZE) {
         // read the root MHT node
-        if (!ipf_read_node(pf, /*physical_node_number=*/1, &pf->root_mht_node.encrypted.cipher))
+        if (!ipf_read_node(pf, /*physical_node_number=*/1, &pf->root_mht_node.encrypted.bytes))
             return false;
 
         // also verifies root MHT node's MAC against the MAC in metadata node's decrypted header
-        status = g_cb_aes_gcm_decrypt(&pf->metadata_decrypted.mht_key, &g_empty_iv,
+        status = g_cb_aes_gcm_decrypt(&pf->metadata_decrypted.root_mht_node_key, &g_empty_iv,
                                       NULL, 0, // aad
-                                      &pf->root_mht_node.encrypted.cipher, PF_NODE_SIZE,
+                                      &pf->root_mht_node.encrypted.bytes, PF_NODE_SIZE,
                                       &pf->root_mht_node.decrypted.mht,
-                                      &pf->metadata_decrypted.mht_mac);
+                                      &pf->metadata_decrypted.root_mht_node_mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
             return false;
@@ -902,7 +902,7 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     }
 
     pf->last_error = pf->file_status = PF_STATUS_SUCCESS;
-    DEBUG_PF("OK (data size %lu)", pf->metadata_decrypted.size);
+    DEBUG_PF("OK (data size %lu)", pf->metadata_decrypted.file_size);
 
 out:
     if (pf)
@@ -952,15 +952,15 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
         size_t empty_place_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_md);
 
-        memcpy_or_zero_initialize(&pf->metadata_decrypted.data[offset], data_to_write,
+        memcpy_or_zero_initialize(&pf->metadata_decrypted.file_data[offset], data_to_write,
                                   size_to_write);
         offset += size_to_write;
         if (data_to_write)
             data_to_write += size_to_write;
         data_left_to_write -= size_to_write;
 
-        if (offset > pf->metadata_decrypted.size)
-            pf->metadata_decrypted.size = offset; // file grew, update the new file size
+        if (offset > pf->metadata_decrypted.file_size)
+            pf->metadata_decrypted.file_size = offset; // file grew, update the new file size
 
         pf->need_writing = true;
     }
@@ -979,15 +979,15 @@ static size_t ipf_write(pf_context_t* pf, const void* ptr, uint64_t offset, size
         size_t empty_place_left_in_node = PF_NODE_SIZE - offset_in_node;
         size_t size_to_write = MIN(data_left_to_write, empty_place_left_in_node);
 
-        memcpy_or_zero_initialize(&file_data_node->decrypted.data.data[offset_in_node],
+        memcpy_or_zero_initialize(&file_data_node->decrypted.data.bytes[offset_in_node],
                                   data_to_write, size_to_write);
         offset += size_to_write;
         if (data_to_write)
             data_to_write += size_to_write;
         data_left_to_write -= size_to_write;
 
-        if (offset > pf->metadata_decrypted.size) {
-            pf->metadata_decrypted.size = offset; // file grew, update the new file size
+        if (offset > pf->metadata_decrypted.file_size) {
+            pf->metadata_decrypted.file_size = offset; // file grew, update the new file size
         }
 
         if (!file_data_node->need_writing) {
@@ -1024,9 +1024,9 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
 
     size_t data_left_to_read = size;
 
-    if (((uint64_t)data_left_to_read) > (uint64_t)(pf->metadata_decrypted.size - offset)) {
+    if (((uint64_t)data_left_to_read) > (uint64_t)(pf->metadata_decrypted.file_size - offset)) {
         // the request is bigger than what's left in the file
-        data_left_to_read = (size_t)(pf->metadata_decrypted.size - offset);
+        data_left_to_read = (size_t)(pf->metadata_decrypted.file_size - offset);
     }
 
     // used at the end to return how much we actually read
@@ -1039,7 +1039,7 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
         size_t data_left_in_md = MD_USER_DATA_SIZE - (size_t)offset;
         size_t size_to_read = MIN(data_left_to_read, data_left_in_md);
 
-        memcpy(out_buffer, &pf->metadata_decrypted.data[offset], size_to_read);
+        memcpy(out_buffer, &pf->metadata_decrypted.file_data[offset], size_to_read);
         offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
@@ -1057,7 +1057,7 @@ static size_t ipf_read(pf_context_t* pf, void* ptr, uint64_t offset, size_t size
         size_t data_left_in_node = PF_NODE_SIZE - offset_in_node;
         size_t size_to_read = MIN(data_left_to_read, data_left_in_node);
 
-        memcpy(out_buffer, &file_data_node->decrypted.data.data[offset_in_node], size_to_read);
+        memcpy(out_buffer, &file_data_node->decrypted.data.bytes[offset_in_node], size_to_read);
         offset += size_to_read;
         out_buffer += size_to_read;
         data_left_to_read -= size_to_read;
@@ -1153,7 +1153,7 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    *size = pf->metadata_decrypted.size;
+    *size = pf->metadata_decrypted.file_size;
     return PF_STATUS_SUCCESS;
 }
 
@@ -1164,11 +1164,11 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (!(pf->mode & PF_FILE_MODE_WRITE))
         return PF_STATUS_INVALID_MODE;
 
-    if (size == pf->metadata_decrypted.size)
+    if (size == pf->metadata_decrypted.file_size)
         return PF_STATUS_SUCCESS;
 
-    if (size > pf->metadata_decrypted.size) {
-        uint64_t offset = pf->metadata_decrypted.size;
+    if (size > pf->metadata_decrypted.file_size) {
+        uint64_t offset = pf->metadata_decrypted.file_size;
         DEBUG_PF("extending the file from %lu to %lu", offset, size);
         if (ipf_write(pf, NULL, offset, size - offset) != size - offset)
             return pf->last_error;
@@ -1203,7 +1203,7 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     if (PF_FAILURE(status))
         return status;
     // If successfully truncated, update our bookkeeping.
-    pf->metadata_decrypted.size = size;
+    pf->metadata_decrypted.file_size = size;
     pf->need_writing = true;
     return PF_STATUS_SUCCESS;
 }
@@ -1219,8 +1219,8 @@ pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
     if (new_path_size > PATH_MAX_SIZE)
         return PF_STATUS_PATH_TOO_LONG;
 
-    memset(pf->metadata_decrypted.path, 0, sizeof(pf->metadata_decrypted.path));
-    memcpy(pf->metadata_decrypted.path, new_path, new_path_size);
+    memset(pf->metadata_decrypted.file_path, 0, sizeof(pf->metadata_decrypted.file_path));
+    memcpy(pf->metadata_decrypted.file_path, new_path, new_path_size);
     pf->need_writing = true;
     if (!ipf_internal_flush(pf))
         return pf->last_error;
@@ -1243,7 +1243,7 @@ pf_status_t pf_read(pf_context_t* pf, uint64_t offset, size_t size, void* output
         return pf->last_error;
     }
 
-    if (offset >= pf->metadata_decrypted.size) {
+    if (offset >= pf->metadata_decrypted.file_size) {
         *bytes_read = 0;
         return PF_STATUS_SUCCESS;
     }
@@ -1263,7 +1263,7 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
     if (!ipf_check_writable(pf))
         return pf->last_error;
 
-    if (offset > pf->metadata_decrypted.size) {
+    if (offset > pf->metadata_decrypted.file_size) {
         pf_status_t ret = pf_set_size(pf, offset);
         if (!PF_SUCCESS(ret)) {
             pf->last_error = ret;
