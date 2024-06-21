@@ -271,11 +271,12 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     inode->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
+    size_t new_size = inode->size;
     unlock(&inode->lock);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl);
+        int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl, new_size);
         if (refresh_ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(refresh_ret));
@@ -315,7 +316,7 @@ static int tmpfs_truncate(struct libos_handle* hdl, file_off_t size) {
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        ret = prot_refresh_mmaped_from_file_handle(hdl, size);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));

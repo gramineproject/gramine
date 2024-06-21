@@ -108,21 +108,28 @@ struct libos_fs_ops {
     /*
      * \brief Map file at an address.
      *
-     * \param hdl     File handle.
-     * \param addr    Address of the memory region. Cannot be NULL.
-     * \param size    Size of the memory region.
-     * \param prot    Permissions for the memory region (`PROT_*`).
-     * \param flags   `mmap` flags (`MAP_*`).
-     * \param offset  Offset in file.
+     * \param hdl                  File handle.
+     * \param addr                 Address of the memory region. Cannot be NULL.
+     * \param size                 Size of the memory region.
+     * \param prot                 Permissions for the memory region (`PROT_*`).
+     * \param flags                `mmap` flags (`MAP_*`).
+     * \param offset               Offset in file.
+     * \param[out] out_valid_size  Valid size (i.e. backed by file).
      *
      * Maps the file at given address. This might involve mapping directly (`PalDeviceMap`), or
      * mapping anonymous memory (`PalVirtualMemoryAlloc`) and writing data.
+     *
+     * The contents of the mapping are initialized using `size` bytes starting at `offset` offset in
+     * the file. For a file size that is not a multiple of the page size, the remaining bytes on the
+     * last page are zeroed. Pages that are not backed by file contents are inaccessible
+     * (effectively they have PROT_NONE permissions). This function returns the valid size (i.e. the
+     * pages backed by file contents) in `out_valid_size`.
      *
      * `addr`, `offset` and `size` must be alloc-aligned (see `IS_ALLOC_ALIGNED*` macros in
      * `libos_internal.h`).
      */
     int (*mmap)(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                uint64_t offset);
+                uint64_t offset, size_t* out_valid_size);
 
     /*
      * \brief Write back mapped memory to file.
@@ -968,7 +975,7 @@ file_off_t generic_inode_seek(struct libos_handle* hdl, file_off_t offset, int o
 int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events);
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                          uint64_t offset);
+                          uint64_t offset, size_t* valid_size);
 int generic_emulated_msync(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
                            uint64_t offset);
 int generic_truncate(struct libos_handle* hdl, file_off_t size);

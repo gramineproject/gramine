@@ -137,7 +137,7 @@ int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events)
 }
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                          uint64_t offset) {
+                          uint64_t offset, size_t* out_valid_size) {
     assert(addr && IS_ALLOC_ALIGNED_PTR(addr));
     assert(IS_ALLOC_ALIGNED(size));
 
@@ -178,19 +178,22 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
         }
     }
 
-    /* Underlying file may be shorter than the requested mmap size. In this case access beyond the
+    /*
+     * Underlying file may be shorter than the requested mmap size. In this case access beyond the
      * last file-backed page must cause SIGBUS. Since we allocated all memory above, let's make the
      * chunk of memory that is beyond the last file-backed page unavailable. Also see checkpointing
-     * logic in libos_vma.c for similar emulation in the child process. */
+     * logic in libos_vma.c for similar emulation in the child process.
+     */
     assert(size_to_read <= size);
-    size_t trimmed_size = ALLOC_ALIGN_UP(size - size_to_read);
-    if (trimmed_size < size) {
-        int trimmed_ret = PalVirtualMemoryProtect(addr + trimmed_size, size - trimmed_size,
-                                                  /*prot=*/0);
-        if (trimmed_ret < 0)
+    size_t valid_size = ALLOC_ALIGN_UP(size - size_to_read);
+    if (valid_size < size) {
+        int valid_ret = PalVirtualMemoryProtect(addr + valid_size, size - valid_size,
+                                                /*prot=*/0);
+        if (valid_ret < 0)
             BUG();
     }
 
+    *out_valid_size = valid_size;
     return 0;
 
 err:;
@@ -269,7 +272,7 @@ int generic_truncate(struct libos_handle* hdl, file_off_t size) {
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        ret = prot_refresh_mmaped_from_file_handle(hdl, size);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));

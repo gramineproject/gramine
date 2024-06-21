@@ -234,18 +234,21 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
         return pal_to_unix_errno(ret);
     }
     assert(actual_count <= count);
+
+    size_t new_size = 0;
     if (hdl->inode->type == S_IFREG) {
         *pos += actual_count;
         /* Update file size if we just wrote past the end of file */
         lock(&hdl->inode->lock);
         if (hdl->inode->size < *pos)
             hdl->inode->size = *pos;
+        new_size = hdl->inode->size;
         unlock(&hdl->inode->lock);
     }
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        ret = prot_refresh_mmaped_from_file_handle(hdl, new_size);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));

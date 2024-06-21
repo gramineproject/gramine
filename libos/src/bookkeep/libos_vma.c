@@ -43,6 +43,7 @@ static int filter_saved_flags(int flags) {
 struct libos_vma {
     uintptr_t begin;
     uintptr_t end;
+    uintptr_t valid_end; // memory accesses beyond valid_end result in SIGBUS/EFAULT
     int prot;
     int flags;
     struct libos_handle* file;
@@ -64,11 +65,13 @@ static void copy_comment(struct libos_vma* vma, const char* comment) {
 }
 
 static void copy_vma(struct libos_vma* old_vma, struct libos_vma* new_vma) {
-    new_vma->begin = old_vma->begin;
-    new_vma->end   = old_vma->end;
-    new_vma->prot  = old_vma->prot;
-    new_vma->flags = old_vma->flags;
-    new_vma->file  = old_vma->file;
+    new_vma->begin     = old_vma->begin;
+    new_vma->end       = old_vma->end;
+    new_vma->valid_end = old_vma->valid_end;
+    new_vma->prot      = old_vma->prot;
+    new_vma->flags     = old_vma->flags;
+
+    new_vma->file = old_vma->file;
     if (new_vma->file) {
         if (new_vma->file->inode)
             (void)__atomic_add_fetch(&new_vma->file->inode->num_mmapped, 1, __ATOMIC_RELAXED);
@@ -186,8 +189,9 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
     if (!vma || end <= vma->begin)
         return false;
 
+    assert(vma->begin <= begin);
     struct libos_vma* prev = NULL;
-    bool is_continuous = vma->begin <= begin;
+    bool is_continuous = true;
 
     while (1) {
         if (!visitor(vma, visitor_arg))
@@ -196,11 +200,11 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
         prev = vma;
         vma = _get_next_vma(vma);
         if (!vma || end <= vma->begin) {
-            is_continuous &= end <= prev->end;
+            is_continuous &= end <= prev->valid_end;
             break;
         }
 
-        is_continuous &= prev->end == vma->begin;
+        is_continuous &= prev->valid_end == vma->begin;
     }
 
     return is_continuous;
@@ -213,9 +217,18 @@ static void split_vma(struct libos_vma* old_vma, struct libos_vma* new_vma, uint
     new_vma->begin = addr;
     if (new_vma->file) {
         new_vma->offset += new_vma->begin - old_vma->begin;
+        if (new_vma->valid_end < new_vma->begin) {
+            new_vma->valid_end = new_vma->begin;
+        }
     }
 
     old_vma->end = addr;
+    if (old_vma->valid_end > old_vma->end) {
+        old_vma->valid_end = old_vma->end;
+    }
+
+    assert(old_vma->begin <= old_vma->valid_end && old_vma->valid_end <= old_vma->end);
+    assert(new_vma->begin <= new_vma->valid_end && new_vma->valid_end <= new_vma->end);
 }
 
 /*
@@ -265,6 +278,9 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
 
             split_vma(vma, new_vma, end);
             vma->end = begin;
+            if (vma->valid_end > vma->end) {
+                vma->valid_end = vma->end;
+            }
 
             avl_tree_insert(&vma_tree, &new_vma->tree_node);
             total_memory_size_sub(end - begin);
@@ -274,6 +290,9 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
 
         total_memory_size_sub(vma->end - begin);
         vma->end = begin;
+        if (vma->valid_end > vma->end) {
+            vma->valid_end = vma->end;
+        }
 
         vma = _get_next_vma(vma);
         if (!vma) {
@@ -304,6 +323,9 @@ static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
         }
         total_memory_size_sub(end - vma->begin);
         vma->begin = end;
+        if (vma->valid_end < vma->begin) {
+            vma->valid_end = vma->begin;
+        }
     }
 
     return 0;
@@ -582,8 +604,10 @@ int init_vma(void) {
             continue;
         }
 
-        init_vmas[1 + idx].begin  = g_pal_public_state->initial_mem_ranges[i].start;
-        init_vmas[1 + idx].end    = g_pal_public_state->initial_mem_ranges[i].end;
+        init_vmas[1 + idx].begin     = g_pal_public_state->initial_mem_ranges[i].start;
+        init_vmas[1 + idx].end       = g_pal_public_state->initial_mem_ranges[i].end;
+        init_vmas[1 + idx].valid_end = g_pal_public_state->initial_mem_ranges[i].end;
+
         init_vmas[1 + idx].prot   = PAL_PROT_TO_LINUX(g_pal_public_state->initial_mem_ranges[i].prot);
         init_vmas[1 + idx].flags  = MAP_PRIVATE | MAP_ANONYMOUS | VMA_INTERNAL;
         init_vmas[1 + idx].file   = NULL;
@@ -704,8 +728,10 @@ int init_vma(void) {
 static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* vma) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
-    vma->begin  = begin;
-    vma->end    = end;
+    vma->begin     = begin;
+    vma->end       = end;
+    vma->valid_end = end;
+
     vma->prot   = PROT_NONE;
     vma->flags  = VMA_INTERNAL | VMA_UNMAPPED;
     vma->file   = NULL;
@@ -801,8 +827,10 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     /* Unmapping may succeed even without this vma, so if this allocation fails we move on. */
     struct libos_vma* vma1 = alloc_vma();
 
-    new_vma->begin = (uintptr_t)addr;
-    new_vma->end   = new_vma->begin + length;
+    new_vma->begin     = (uintptr_t)addr;
+    new_vma->end       = new_vma->begin + length;
+    new_vma->valid_end = new_vma->begin + length;
+
     new_vma->prot  = prot;
     new_vma->flags = filter_saved_flags(flags) | ((file && (prot & PROT_WRITE)) ? VMA_TAINTED : 0);
     new_vma->file  = file;
@@ -1094,8 +1122,9 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     }
 
 out_found:
-    new_vma->end   = max_addr;
-    new_vma->begin = new_vma->end - length;
+    new_vma->end       = max_addr;
+    new_vma->valid_end = max_addr;
+    new_vma->begin     = new_vma->end - length;
 
     avl_tree_insert(&vma_tree, &new_vma->tree_node);
     total_memory_size_add(new_vma->end - new_vma->begin);
@@ -1133,6 +1162,28 @@ int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle*
     return bkeep_mmap_any(length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
+int bkeep_vma_update_valid_length(void* addr, size_t valid_length) {
+    int ret;
+
+    spinlock_lock(&vma_tree_lock);
+    struct libos_vma* vma = _lookup_vma((uintptr_t)addr);
+    if (!vma || !is_addr_in_vma((uintptr_t)addr, vma)) {
+        ret = -ENOENT;
+        goto out;
+    }
+
+    if (valid_length > vma->end - vma->begin) {
+        ret = -EINVAL;
+        goto out;
+    }
+
+    vma->valid_end = vma->begin + valid_length;
+    ret = 0;
+out:
+    spinlock_unlock(&vma_tree_lock);
+    return ret;
+}
+
 static int pal_mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
     void* addr;
     int ret = bkeep_mmap_any(size, PROT_READ | PROT_WRITE,
@@ -1157,12 +1208,13 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
 }
 
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
-    vma_info->addr        = (void*)vma->begin;
-    vma_info->length      = vma->end - vma->begin;
-    vma_info->prot        = vma->prot;
-    vma_info->flags       = vma->flags;
-    vma_info->file_offset = vma->offset;
-    vma_info->file        = vma->file;
+    vma_info->addr         = (void*)vma->begin;
+    vma_info->length       = vma->end - vma->begin;
+    vma_info->valid_length = vma->valid_end - vma->begin;
+    vma_info->prot         = vma->prot;
+    vma_info->flags        = vma->flags;
+    vma_info->file_offset  = vma->offset;
+    vma_info->file         = vma->file;
     if (vma_info->file) {
         get_handle(vma_info->file);
     }
@@ -1327,7 +1379,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
     }
 
     uintptr_t zero_start = MAX(ctx->begin, vma->begin);
-    uintptr_t zero_end = MIN(ctx->end, vma->end);
+    uintptr_t zero_end = MIN(ctx->end, vma->valid_end);
 
     pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags);
     pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
@@ -1371,27 +1423,9 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     return ctx.error;
 }
 
-static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
-    struct libos_handle* hdl = arg;
-
-    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
-        return false;
-
-    assert(vma->file);
-
-    if (hdl && vma->file != hdl)
-        return false;
-
-    if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
-        return false;
-
-    if (!(vma->file->acc_mode & MAY_WRITE))
-        return false;
-
-    return true;
-}
-
 static bool vma_filter_needs_reload(struct libos_vma* vma, void* arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
     struct libos_handle* hdl = arg;
     assert(hdl && hdl->inode); /* guaranteed to have inode because invoked from `write` callback */
 
@@ -1420,7 +1454,7 @@ static int reload_vma(struct libos_vma_info* vma_info) {
     /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
      * another thread by the time we get to `read`. */
     uintptr_t read_begin = (uintptr_t)vma_info->addr;
-    uintptr_t read_end = (uintptr_t)vma_info->addr + vma_info->length;
+    uintptr_t read_end = (uintptr_t)vma_info->addr + vma_info->valid_length;
     assert(IS_ALLOC_ALIGNED(read_begin));
     assert(IS_ALLOC_ALIGNED(read_end));
 
@@ -1495,73 +1529,62 @@ out:
     return ret;
 }
 
-static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* arg) {
-    struct libos_handle* hdl = arg;
+struct vma_filter_needs_prot_refresh_args {
+    struct libos_handle* hdl;
+    size_t file_size;
+};
+
+static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* _args) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
+    struct vma_filter_needs_prot_refresh_args* args = _args;
 
     /* guaranteed to have inode because invoked from `write` or `truncate` callback */
-    assert(hdl && hdl->inode);
+    assert(args->hdl && args->hdl->inode);
 
     if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS))
         return false;
 
     assert(vma->file); /* check above filtered out non-file-backed mappings */
 
-    if (!vma->file->inode || vma->file->inode != hdl->inode)
+    if (!vma->file->inode || vma->file->inode != args->hdl->inode)
         return false;
+
+    /* by default, assume that file got smaller than the offset from which VMA is mapped, all VMA is
+     * then inaccessible (PROT_NONE) */
+    size_t valid_length = 0;
+    if (args->file_size >= vma->offset) {
+        size_t vma_length = vma->end - vma->begin;
+        if (args->file_size - vma->offset > vma_length) {
+            /* file size exceeds the mmapped part in VMA, the whole VMA is accessible */
+            valid_length = vma_length;
+        } else {
+            /* file size is smaller than the mmapped part in VMA, only part of VMA is accessible */
+            valid_length = args->file_size - vma->offset;
+        }
+    }
+    valid_length = ALLOC_ALIGN_UP(valid_length);
+
+    vma->valid_end = vma->begin + valid_length;
+    assert(vma->valid_end <= vma->end);
 
     return true;
 }
 
 static int prot_refresh_vma(struct libos_vma_info* vma_info) {
     int ret;
-    struct libos_handle* file = vma_info->file;
 
     /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
      * another thread by the time we get to `PalVirtualMemoryProtect`. */
-    lock(&file->inode->lock);
-    uint64_t file_size = (uint64_t)file->inode->size;
-    unlock(&file->inode->lock);
-
-    size_t size_to_prot;
-    if (file_size < vma_info->file_offset) {
-        /* file got smaller than the offset from which VMA is mapped, all VMA is inaccessible */
-        size_to_prot = 0;
-    } else {
-        if (file_size - vma_info->file_offset > vma_info->length) {
-            /* file size exceeds the mmapped part in VMA, the whole VMA is accessible */
-            size_to_prot = vma_info->length;
-        } else {
-            /* file size is smaller than the mmapped part in VMA, only part of VMA is accessible */
-            size_to_prot = file_size - vma_info->file_offset;
-        }
-    }
-    size_to_prot = ALLOC_ALIGN_UP(size_to_prot);
-
-    /*
-     * FIXME: This code logically splits the VMA into a "normal-protections" part and a PROT_NONE
-     *        part. Ideally, the code should have split the VMA into two, to keep the invariant that
-     *        VMAs hold protection info reflecting the real memory, and subsequent write() and
-     *        truncate() should merge the VMAs back. Unfortunately, current VMA code has split_vma()
-     *        func but doesn't have a merge_vmas() func, and using only splits would eventually lead
-     *        to a flood of similar-but-unmerged VMAs. We want to avoid this flooding, thus we do
-     *        not split the VMA.
-     *
-     *        This may lead to e.g. SIGBUS signals on syscalls with user-supplied buffers located in
-     *        PROT_NONE parts of a VMA, instead of an EFAULT. However, we haven't observed such
-     *        behavior in our tests and in real-world apps.
-     *
-     *        Note that the same issue applies to restored-from-checkpoint opened files, see
-     *        BEGIN_CP_FUNC(vma) func below.
-     */
-    if (size_to_prot) {
-        ret = PalVirtualMemoryProtect(vma_info->addr, size_to_prot,
+    if (vma_info->valid_length) {
+        ret = PalVirtualMemoryProtect(vma_info->addr, vma_info->valid_length,
                                       LINUX_PROT_TO_PAL(vma_info->prot, vma_info->flags));
         if (ret < 0)
             BUG();
     }
-    if (vma_info->length - size_to_prot) {
-        ret = PalVirtualMemoryProtect(vma_info->addr + size_to_prot,
-                                      vma_info->length - size_to_prot, /*prot=*/0);
+    if (vma_info->length - vma_info->valid_length) {
+        ret = PalVirtualMemoryProtect(vma_info->addr + vma_info->valid_length,
+                                      vma_info->length - vma_info->valid_length, /*prot=*/0);
         if (ret < 0)
             BUG();
     }
@@ -1571,12 +1594,14 @@ static int prot_refresh_vma(struct libos_vma_info* vma_info) {
 
 /* This helper function is to refresh access protections on the VMA pages of a given file handle on
  * file-extend operations (`write` and `ftruncate`). */
-int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl) {
+int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_size) {
     struct libos_vma_info* vma_infos;
     size_t count;
 
+    struct vma_filter_needs_prot_refresh_args args = { .hdl = hdl, .file_size = file_size };
+
     int ret = dump_vmas(&vma_infos, &count, /*begin=*/0, /*end=*/UINTPTR_MAX,
-                        vma_filter_needs_prot_refresh, hdl);
+                        vma_filter_needs_prot_refresh, &args);
     if (ret < 0)
         return ret;
 
@@ -1592,6 +1617,27 @@ out:
     return ret;
 }
 
+static bool vma_filter_needs_msync(struct libos_vma* vma, void* arg) {
+    assert(spinlock_is_locked(&vma_tree_lock));
+
+    struct libos_handle* hdl = arg;
+
+    if (vma->flags & (VMA_UNMAPPED | VMA_INTERNAL | MAP_ANONYMOUS | MAP_PRIVATE))
+        return false;
+
+    assert(vma->file);
+
+    if (hdl && vma->file != hdl)
+        return false;
+
+    if (!vma->file->fs || !vma->file->fs->fs_ops || !vma->file->fs->fs_ops->msync)
+        return false;
+
+    if (!(vma->file->acc_mode & MAY_WRITE))
+        return false;
+
+    return true;
+}
 
 static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
     assert(IS_ALLOC_ALIGNED(begin));
@@ -1612,30 +1658,11 @@ static int msync_all(uintptr_t begin, uintptr_t end, struct libos_handle* hdl) {
 
         /* NOTE: Unfortunately there's a data race here: the memory can be unmapped, or remapped, by
          * another thread by the time we get to `msync`. */
-        lock(&file->inode->lock);
-        uint64_t file_size = (uint64_t)file->inode->size;
-        unlock(&file->inode->lock);
-
-        size_t size_to_msync;
-        if (file_size < vma_info->file_offset) {
-            /* file is smaller than the offset from which VMA is mapped, nothing to sync */
-            size_to_msync = 0;
-        } else {
-            if (file_size - vma_info->file_offset > vma_info->length) {
-                /* file size exceeds the mmapped part in VMA, the whole VMA is synced */
-                size_to_msync = vma_info->length;
-            } else {
-                /* file size is smaller than the mmapped part in VMA, only part of VMA is synced */
-                size_to_msync = file_size - vma_info->file_offset;
-            }
-        }
-        size_to_msync = ALLOC_ALIGN_UP(size_to_msync);
-
-        if (!size_to_msync)
+        if (!vma_info->valid_length)
             continue;
 
         uintptr_t msync_begin = MAX(begin, (uintptr_t)vma_info->addr);
-        uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + size_to_msync);
+        uintptr_t msync_end = MIN(end, (uintptr_t)vma_info->addr + vma_info->valid_length);
         assert(IS_ALLOC_ALIGNED(msync_begin));
         assert(IS_ALLOC_ALIGNED(msync_end));
 
@@ -1696,31 +1723,26 @@ BEGIN_CP_FUNC(vma) {
             if (!vma->file) {
                 /* Send anonymous memory region. */
                 struct libos_mem_entry* mem;
-                DO_CP_SIZE(memory, vma->addr, vma->length, &mem);
+                assert(vma->valid_length == vma->length);
+                DO_CP_SIZE(memory, vma->addr, vma->valid_length, &mem);
                 mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
             } else {
-                /* Send file-backed memory region. */
-                uint64_t file_size = 0;
-                int ret = get_file_size(vma->file, &file_size);
-                if (ret < 0)
-                    return ret;
-
-                /* Access beyond the last file-backed page will cause SIGBUS. For reducing fork
-                 * latency, we send only those memory contents of VMA that are backed by the file,
-                 * round up to pages. Rest of VMA memory region will be inaccessible in the child
-                 * process. */
-                size_t send_size = vma->length;
-                if (vma->file_offset + vma->length > file_size) {
-                    send_size = file_size > vma->file_offset ? file_size - vma->file_offset : 0;
-                    send_size = ALLOC_ALIGN_UP(send_size);
-                }
-
-                /* It may happen that the whole file-backed memory is beyond the file size (e.g.,
+                /*
+                 * Send file-backed memory region.
+                 *
+                 * Access beyond the last file-backed page (reflected via vma->valid_length) will
+                 * cause SIGBUS. For reducing fork latency, we send only those memory contents of
+                 * VMA that are backed by the file, round up to pages. Rest of VMA memory region
+                 * will be inaccessible in the child process.
+                 *
+                 * It may happen that the whole file-backed memory is beyond the file size (e.g.,
                  * the file was truncated after the memory was allocated). In this case we consider
-                 * the whole memory region to be inaccessible. */
-                if (send_size > 0) {
+                 * the whole memory region to be inaccessible in the child process.
+                 */
+                assert(vma->valid_length <= vma->length);
+                if (vma->valid_length > 0) {
                     struct libos_mem_entry* mem;
-                    DO_CP_SIZE(memory, vma->addr, send_size, &mem);
+                    DO_CP_SIZE(memory, vma->addr, vma->valid_length, &mem);
                     mem->prot = LINUX_PROT_TO_PAL(vma->prot, /*map_flags=*/0);
                 }
             }
@@ -1761,6 +1783,8 @@ BEGIN_RS_FUNC(vma) {
     if (ret < 0)
         return ret;
 
+    size_t valid_length = vma->valid_length;
+
     if (!(vma->flags & VMA_UNMAPPED) && vma->file) {
         struct libos_fs* fs = vma->file->fs;
         get_handle(vma->file);
@@ -1770,12 +1794,17 @@ BEGIN_RS_FUNC(vma) {
             if (!fs || !fs->fs_ops || !fs->fs_ops->mmap)
                 return -EINVAL;
 
-            int ret = fs->fs_ops->mmap(vma->file, vma->addr, vma->length, vma->prot,
-                                       vma->flags | MAP_FIXED, vma->file_offset);
+            ret = fs->fs_ops->mmap(vma->file, vma->addr, vma->length, vma->prot,
+                                   vma->flags | MAP_FIXED, vma->file_offset, &valid_length);
             if (ret < 0)
                 return ret;
         }
     }
+
+    assert(valid_length <= vma->length);
+    ret = bkeep_vma_update_valid_length(vma->addr, vma->valid_length);
+    if (ret < 0)
+        return ret;
 }
 END_RS_FUNC(vma)
 
@@ -1808,16 +1837,17 @@ END_CP_FUNC_NO_RS(all_vmas)
 
 
 static void debug_print_vma(struct libos_vma* vma) {
-    log_always("[0x%lx-0x%lx] prot=0x%x flags=0x%x%s%s file=%p (offset=%ld)%s%s",
-               vma->begin, vma->end,
-               vma->prot,
-               vma->flags & ~(VMA_INTERNAL | VMA_UNMAPPED),
-               vma->flags & VMA_INTERNAL ? "(INTERNAL " : "(",
-               vma->flags & VMA_UNMAPPED ? "UNMAPPED)" : ")",
-               vma->file,
-               vma->offset,
-               vma->comment[0] ? " comment=" : "",
-               vma->comment[0] ? vma->comment : "");
+    log_always(
+        "[all=0x%lx-0x%lx; valid=0x%lx-0x%lx] prot=0x%x flags=0x%x%s%s file=%p (offset=%ld)%s%s",
+        vma->begin, vma->end, vma->begin, vma->valid_end,
+        vma->prot,
+        vma->flags & ~(VMA_INTERNAL | VMA_UNMAPPED),
+        vma->flags & VMA_INTERNAL ? "(INTERNAL " : "(",
+        vma->flags & VMA_UNMAPPED ? "UNMAPPED)" : ")",
+        vma->file,
+        vma->offset,
+        vma->comment[0] ? " comment=" : "",
+        vma->comment[0] ? vma->comment : "");
 }
 
 void debug_print_all_vmas(void) {

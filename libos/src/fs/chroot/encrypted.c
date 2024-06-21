@@ -490,11 +490,12 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
     if (hdl->inode->size < *pos)
         hdl->inode->size = *pos;
 
+    size_t new_size = hdl->inode->size;
     unlock(&hdl->inode->lock);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        ret = prot_refresh_mmaped_from_file_handle(hdl, new_size);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));
@@ -535,7 +536,7 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
         /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl);
+        ret = prot_refresh_mmaped_from_file_handle(hdl, size);
         if (ret < 0) {
             log_error("refreshing page protections of mmapped regions of file failed: %s",
                       unix_strerror(ret));
