@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 usage() {
     echo "Usage: test.sh [ubuntu20,ubuntu22]"
     exit 1
@@ -9,7 +10,6 @@ if [ $# -ne 1 ]; then
     usage
 fi
 
-image=""
 codename=""
 
 case "$1" in
@@ -39,18 +39,14 @@ docker build \
 
 docker run \
     --rm \
-    -ti \
-    --device /dev/sgx_enclave \
-    --volume /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket \
-    --cap-add SYS_ADMIN \
-    --cap-add SYS_PTRACE \
+    -t \
     --security-opt seccomp=unconfined \
     "${tag}" \
     -C /root/gramine/libos/test/regression pytest
 
 docker run \
     --rm \
-    -ti \
+    -t \
     --device /dev/sgx_enclave \
     --volume /var/run/aesmd/aesm.socket:/var/run/aesmd/aesm.socket \
     "${tag}" \
