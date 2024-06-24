@@ -266,6 +266,9 @@ if sgx
 
     protobuf_dep = dependency('libprotobuf-c')
 
+    # NOTE: For libcbor build we use a custom_target (see subprojects/packagefiles/libcbor), because
+    #       CMake integration in Meson doesn't work correctly with PIC static libraries, see
+    #       https://github.com/mesonbuild/meson/issues/10764.
     libcbor_dep = libcbor_proj.get_variable('libcbor_dep')
 
     if dcap

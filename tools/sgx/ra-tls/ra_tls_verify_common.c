@@ -336,7 +336,7 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
     uint8_t* evidence_buf;
     size_t evidence_buf_size;
     int ret = find_oid_in_cert_extensions(crt->v3_ext.p, crt->v3_ext.len, g_evidence_oid_raw,
-                                          g_evidence_oid_raw_size, &evidence_buf,
+                                          sizeof(g_evidence_oid_raw), &evidence_buf,
                                           &evidence_buf_size);
     if (ret < 0)
         return ret;
@@ -498,7 +498,7 @@ static int extract_legacy_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quo
     sgx_quote_t* quote;
     size_t quote_size;
     int ret = find_oid_in_cert_extensions(crt->v3_ext.p, crt->v3_ext.len, g_quote_oid,
-                                          g_quote_oid_size, (uint8_t**)&quote, &quote_size);
+                                          sizeof(g_quote_oid), (uint8_t**)&quote, &quote_size);
     if (ret < 0)
         return ret;
 
@@ -526,7 +526,7 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
                                     size_t* out_quote_size) {
     bool found_oid = false;
     int ret = extract_standard_quote_and_verify_claims(crt, &found_oid, out_quote, out_quote_size);
-    if (!ret)
+    if (ret == 0)
         return 0;
     if (found_oid) {
         /* TCG DICE 'tagged evidence' OID was found, but verification failed for other reasons */
