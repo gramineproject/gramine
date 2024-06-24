@@ -140,13 +140,14 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
      *   - legacy non-standard "SGX quote" OID (used from Gramine v1.0)
      *   - new standard TCG DICE "tagged evidence" OID (2.23.133.5.4.9)
      */
-    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid, g_quote_oid_size,
-                                              /*critical=*/0, quote, quote_size);
+    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid,
+                                              sizeof(g_quote_oid), /*critical=*/0, quote,
+                                              quote_size);
     if (ret < 0)
         goto out;
 
     ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_evidence_oid,
-                                              g_evidence_oid_size, /*critical=*/0, evidence,
+                                              sizeof(g_evidence_oid), /*critical=*/0, evidence,
                                               evidence_size);
     if (ret < 0)
         goto out;
@@ -278,7 +279,8 @@ static int generate_serialized_pk_hash_entry(mbedtls_pk_context* pk, uint8_t** o
 /*! generate claims -- CBOR map with { "pubkey-hash" = <serialized CBOR array hash-entry> } */
 static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_claims_buf,
                                       size_t* out_claims_buf_size) {
-    /* TODO: currently implement only claim "pubkey-hash", but there may be more (e.g. "nonce") */
+    /* TODO: currently, only claim "pubkey-hash" is implemented, but in the future there may be more
+     *       (e.g. "nonce") */
     cbor_item_t* cbor_claims = cbor_new_definite_map(1);
     if (!cbor_claims)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
@@ -501,7 +503,8 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
     if (ret < 0)
         goto out;
 
-    /* TODO: currently don't implement the Endorsement extension (contains TCB info, CRL, etc.) */
+    /* TODO: currently, the Endorsement extension is not implemented (contains TCB info, CRL, etc.);
+     *       should be added in the future */
 
     ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt);
 out:
