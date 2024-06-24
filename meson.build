@@ -50,7 +50,6 @@ vtune = get_option('vtune') == 'enabled'
 
 enable_libgomp = get_option('libgomp') == 'enabled'
 enable_tests = get_option('tests') == 'enabled'
-force_sgx_tests = get_option('force_sgx_tests') == 'enabled'
 
 src_build = skeleton or direct or sgx
 
@@ -241,6 +240,7 @@ if src_build
     uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 endif
 
+# Build Mbed TLS because some tests, such as attestation tests, require it.
 mbedtls_proj = subproject('mbedtls-3.6.0')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')

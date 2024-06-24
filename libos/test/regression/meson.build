@@ -192,20 +192,18 @@ if host_machine.cpu_family() == 'x86_64'
     }
 endif
 
-if sgx or force_sgx_tests
-    tests += {
-        'attestation': {
-            # for `sgx_arch.h`
-            'include_directories': include_directories('../../../pal/src/host/linux-sgx'),
-            'source': [
-                'attestation.c',
-                '../../../pal/src/host/linux-sgx/enclave_api.S',
-            ],
+tests += {
+    'attestation': {
+        # for `sgx_arch.h`
+        'include_directories': include_directories('../../../pal/src/host/linux-sgx'),
+        'source': [
+            'attestation.c',
+            '../../../pal/src/host/linux-sgx/enclave_api.S',
+        ],
 
-            'dependencies': mbedtls_static_dep,
-        },
-    }
-endif
+        'dependencies': mbedtls_static_dep,
+    },
+}
 
 install_dir = pkglibdir / 'tests' / 'libos' / 'regression'
 

@@ -1,4 +1,4 @@
-node('nonsgx_slave && aesni') {
+node('nonsgx_slave') {
     checkout scm
 
     load '.ci/lib/config-docker.jenkinsfile'
