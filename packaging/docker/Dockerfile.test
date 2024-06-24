@@ -42,7 +42,7 @@ RUN git clone --depth 1 --branch v$(gramine-direct --version | cut -d' ' -f2) \
         --prefix=/usr \
         -Ddirect=disabled \
         -Dsgx=disabled \
-        -Dtests=enabled \
+        -Dtests=enabled && \
     meson compile -C build/ && \
     meson install -C build/
 
