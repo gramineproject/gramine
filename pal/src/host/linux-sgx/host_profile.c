@@ -193,7 +193,7 @@ void sgx_profile_finish(void) {
         log_error("sgx_profile_finish: closing /proc/self/mem failed: %s", unix_strerror(ret));
     g_mem_fd = -1;
 
-    log_always("Profile data written to %s (%lu bytes)", g_profile_filename, size);
+    log_error("[INFO] Profile data written to %s (%lu bytes)", g_profile_filename, size);
 
     g_profile_enabled = false;
 }
@@ -210,7 +210,7 @@ static int sgx_profile_reinit(void) {
         return size;
     }
 
-    log_always("Profile data written to %s (%lu bytes)", g_profile_filename, size);
+    log_error("[INFO] Profile data written to %s (%lu bytes)", g_profile_filename, size);
 
     struct timespec ts;
     ret = DO_SYSCALL(clock_gettime, CLOCK_REALTIME, &ts);
@@ -243,9 +243,11 @@ static void sample_simple(uint64_t rip) {
 
     spinlock_lock(&g_perf_data_lock);
     if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
-        /* No error checking since we're in exception handler and the function already prints
-           errors */
-        sgx_profile_reinit();
+        ret = sgx_profile_reinit();
+        if (ret < 0) {
+            /* No need to print error message since sgx_profile_init() already prints it */
+            BUG();
+        }
     }
 
     // Report all events as the same PID so that they are grouped in report.
@@ -272,9 +274,11 @@ static void sample_stack(sgx_pal_gpr_t* gpr) {
 
     spinlock_lock(&g_perf_data_lock);
     if (__atomic_exchange_n(&g_trigger_profile_reinit, false, __ATOMIC_ACQ_REL) == true) {
-        /* No error checking since we're in exception handler and the function already prints
-           errors */
-        sgx_profile_reinit();
+        ret = sgx_profile_reinit();
+        if (ret < 0) {
+            /* No need to print error message since sgx_profile_init() already prints it */
+            BUG();
+        }
     }
 
     // Report all events as the same PID so that they are grouped in report.
