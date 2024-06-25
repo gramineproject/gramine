@@ -75,7 +75,7 @@ static int read_distances_from_file(const char* path, size_t* out_arr,
     const char* end;
     char last_separator = ' ';
     size_t node_i = 0;
-    for (size_t input_i = 0; /* no condition */; input_i++) {
+    while (true) {
         /* Find next online node (only these are listed in `distance` file). */
         while (node_i < nodes_cnt && !numa_nodes[node_i].is_online)
             node_i++;
