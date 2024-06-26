@@ -173,13 +173,23 @@ typedef bool (*traverse_visitor)(struct libos_vma* vma, void* visitor_arg);
  * `visitor` returns whether to continue iteration. It must be as simple as possible, because
  * it's called with the VMA lock held.
  *
- * Returns whether the traversed range was continuously covered by VMAs (note that this ignores
- * `vma->valid_end`, to preserve Linux semantics). This is useful for emulating errors in memory
- * management syscalls.
+ * Returns whether the traversed range was continuously covered by VMAs (takes into account
+ * `vma->valid_end` if asked by the caller). This is useful:
+ *
+ *   - For emulating errors in memory management syscalls. To avoid memory faults during deep copy
+ *     of user-supplied buffers in syscalls (e.g., in case of SGX OCALLs), callers must set
+ *     `use_only_valid_part = true`. This deviates slightly from Linux behavior: e.g., on
+ *     `write(partially-valid-vma)` Linux does not return -EFAULT but instead uses the buffer until
+ *     the first invalid address. This behavior is too cumbersome to implement in Gramine + SGX,
+ *     thus on `write(partially-valid-vma)` Gramine immediately returns -EFAULT.
+ *
+ *   - For deciding whether to return ENOMEM in madvise(MADV_DONTNEED). E.g., on
+ *     `madvise(partially-valid-vma, MADV_DONTNEED)` Linux returns success (even though there is a
+ *     part that is invalid). Callers must set `use_only_valid_part = false` to comply with this
+ *     Linux behavior.
  */
-// TODO: Probably other VMA functions could make use of this helper.
-static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_visitor visitor,
-                                    void* visitor_arg) {
+static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, bool use_only_valid_part,
+                                    traverse_visitor visitor, void* visitor_arg) {
     assert(spinlock_is_locked(&vma_tree_lock));
     assert(begin <= end);
 
@@ -200,11 +210,13 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
         prev = vma;
         vma = _get_next_vma(vma);
         if (!vma || end <= vma->begin) {
-            is_continuous &= end <= prev->end;
+            uintptr_t prev_end = use_only_valid_part ? prev->valid_end : prev->end;
+            is_continuous &= end <= prev_end;
             break;
         }
 
-        is_continuous &= prev->end == vma->begin;
+        uintptr_t prev_end = use_only_valid_part ? prev->valid_end : prev->end;
+        is_continuous &= prev_end == vma->begin;
     }
 
     return is_continuous;
@@ -1178,7 +1190,7 @@ int bkeep_vma_update_valid_length(void* begin_addr, size_t valid_length) {
         goto out;
     }
 
-    if (vma->begin != begin_addr || valid_length > vma->end - vma->begin) {
+    if (vma->begin != (uintptr_t)begin_addr || valid_length > vma->end - vma->begin) {
         ret = -EINVAL;
         goto out;
     }
@@ -1270,7 +1282,8 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot) {
     };
 
     spinlock_lock(&vma_tree_lock);
-    bool is_continuous = _traverse_vmas_in_range(begin, end, adj_visitor, &ctx);
+    bool is_continuous = _traverse_vmas_in_range(begin, end, /*use_only_valid_part=*/true,
+                                                 adj_visitor, &ctx);
     spinlock_unlock(&vma_tree_lock);
 
     return is_continuous && ctx.is_ok;
@@ -1421,7 +1434,8 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     };
 
     spinlock_lock(&vma_tree_lock);
-    bool is_continuous = _traverse_vmas_in_range(begin, end, madvise_dontneed_visitor, &ctx);
+    bool is_continuous = _traverse_vmas_in_range(begin, end, /*use_only_valid_part=*/false,
+                                                 madvise_dontneed_visitor, &ctx);
     spinlock_unlock(&vma_tree_lock);
 
     if (!is_continuous)
