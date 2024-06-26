@@ -173,8 +173,9 @@ typedef bool (*traverse_visitor)(struct libos_vma* vma, void* visitor_arg);
  * `visitor` returns whether to continue iteration. It must be as simple as possible, because
  * it's called with the VMA lock held.
  *
- * Returns whether the traversed range was continuously covered by VMAs. This is useful for
- * emulating errors in memory management syscalls.
+ * Returns whether the traversed range was continuously covered by VMAs (note that this ignores
+ * `vma->valid_end`, to preserve Linux semantics). This is useful for emulating errors in memory
+ * management syscalls.
  */
 // TODO: Probably other VMA functions could make use of this helper.
 static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_visitor visitor,
@@ -189,9 +190,8 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
     if (!vma || end <= vma->begin)
         return false;
 
-    assert(vma->begin <= begin);
     struct libos_vma* prev = NULL;
-    bool is_continuous = true;
+    bool is_continuous = vma->begin <= begin;
 
     while (1) {
         if (!visitor(vma, visitor_arg))
@@ -200,11 +200,11 @@ static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_vis
         prev = vma;
         vma = _get_next_vma(vma);
         if (!vma || end <= vma->begin) {
-            is_continuous &= end <= prev->valid_end;
+            is_continuous &= end <= prev->end;
             break;
         }
 
-        is_continuous &= prev->valid_end == vma->begin;
+        is_continuous &= prev->end == vma->begin;
     }
 
     return is_continuous;
@@ -827,8 +827,11 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
     /* Unmapping may succeed even without this vma, so if this allocation fails we move on. */
     struct libos_vma* vma1 = alloc_vma();
 
-    new_vma->begin     = (uintptr_t)addr;
-    new_vma->end       = new_vma->begin + length;
+    new_vma->begin = (uintptr_t)addr;
+    new_vma->end   = new_vma->begin + length;
+
+    /* valid_end is potentially incorrect now (if there is a file-backed mapping with a part that
+     * exceeds the file); it should be updated in the mmap syscall (for file-backed mappings) */
     new_vma->valid_end = new_vma->begin + length;
 
     new_vma->prot  = prot;
@@ -1122,9 +1125,12 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     }
 
 out_found:
-    new_vma->end       = max_addr;
+    new_vma->end   = max_addr;
+    new_vma->begin = new_vma->end - length;
+
+    /* valid_end is potentially incorrect now (if there is a file-backed mapping with a part that
+     * exceeds the file); it should be updated in the mmap syscall (for file-backed mappings) */
     new_vma->valid_end = max_addr;
-    new_vma->begin     = new_vma->end - length;
 
     avl_tree_insert(&vma_tree, &new_vma->tree_node);
     total_memory_size_add(new_vma->end - new_vma->begin);
@@ -1162,17 +1168,17 @@ int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle*
     return bkeep_mmap_any(length, prot, flags, file, offset, comment, ret_val_ptr);
 }
 
-int bkeep_vma_update_valid_length(void* addr, size_t valid_length) {
+int bkeep_vma_update_valid_length(void* begin_addr, size_t valid_length) {
     int ret;
 
     spinlock_lock(&vma_tree_lock);
-    struct libos_vma* vma = _lookup_vma((uintptr_t)addr);
-    if (!vma || !is_addr_in_vma((uintptr_t)addr, vma)) {
+    struct libos_vma* vma = _lookup_vma((uintptr_t)begin_addr);
+    if (!vma || !is_addr_in_vma((uintptr_t)begin_addr, vma)) {
         ret = -ENOENT;
         goto out;
     }
 
-    if (valid_length > vma->end - vma->begin) {
+    if (vma->begin != begin_addr || valid_length > vma->end - vma->begin) {
         ret = -EINVAL;
         goto out;
     }
@@ -1529,15 +1535,15 @@ out:
     return ret;
 }
 
-struct vma_filter_needs_prot_refresh_args {
+struct vma_needs_prot_refresh_args {
     struct libos_handle* hdl;
     size_t file_size;
 };
 
-static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* _args) {
+static bool vma_needs_prot_refresh(struct libos_vma* vma, void* _args) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
-    struct vma_filter_needs_prot_refresh_args* args = _args;
+    struct vma_needs_prot_refresh_args* args = _args;
 
     /* guaranteed to have inode because invoked from `write` or `truncate` callback */
     assert(args->hdl && args->hdl->inode);
@@ -1553,6 +1559,7 @@ static bool vma_filter_needs_prot_refresh(struct libos_vma* vma, void* _args) {
     /* by default, assume that file got smaller than the offset from which VMA is mapped, all VMA is
      * then inaccessible (PROT_NONE) */
     size_t valid_length = 0;
+
     if (args->file_size >= vma->offset) {
         size_t vma_length = vma->end - vma->begin;
         if (args->file_size - vma->offset > vma_length) {
@@ -1598,10 +1605,10 @@ int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_s
     struct libos_vma_info* vma_infos;
     size_t count;
 
-    struct vma_filter_needs_prot_refresh_args args = { .hdl = hdl, .file_size = file_size };
+    struct vma_needs_prot_refresh_args args = { .hdl = hdl, .file_size = file_size };
 
     int ret = dump_vmas(&vma_infos, &count, /*begin=*/0, /*end=*/UINTPTR_MAX,
-                        vma_filter_needs_prot_refresh, &args);
+                        vma_needs_prot_refresh, &args);
     if (ret < 0)
         return ret;
 
@@ -1731,9 +1738,9 @@ BEGIN_CP_FUNC(vma) {
                  * Send file-backed memory region.
                  *
                  * Access beyond the last file-backed page (reflected via vma->valid_length) will
-                 * cause SIGBUS. For reducing fork latency, we send only those memory contents of
-                 * VMA that are backed by the file, round up to pages. Rest of VMA memory region
-                 * will be inaccessible in the child process.
+                 * cause SIGBUS. So we send only those memory contents of VMA that are backed by the
+                 * file, round up to pages. Rest of VMA memory region will be inaccessible in the
+                 * child process.
                  *
                  * It may happen that the whole file-backed memory is beyond the file size (e.g.,
                  * the file was truncated after the memory was allocated). In this case we consider

@@ -194,8 +194,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
             for (struct libos_vma_info* vma = vmas; vma < vmas + vmas_length; vma++) {
                 uintptr_t begin = MAX((uintptr_t)addr, (uintptr_t)vma->addr);
-                uintptr_t end = MIN((uintptr_t)vma->addr + vma->length,
-                                    (uintptr_t)addr + length);
+                uintptr_t end = MIN((uintptr_t)vma->addr + vma->length, (uintptr_t)addr + length);
                 /* `vma` contains at least one byte from `[addr; addr + length)` range, so: */
                 assert(begin < end);
 
@@ -262,7 +261,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             int update_valid_length_ret = bkeep_vma_update_valid_length(addr, valid_length);
             if (update_valid_length_ret < 0) {
                 log_error("[mmap] Failed to update valid length to %lu of bookkeeped memory %p-%p!",
-                        valid_length, addr, (char*)addr + length);
+                          valid_length, addr, (char*)addr + length);
                 BUG();
             }
         }

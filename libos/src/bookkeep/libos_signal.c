@@ -360,11 +360,7 @@ static void memfault_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context
         }
         struct libos_handle* file = vma_info.file;
         if (file && file->type == TYPE_CHROOT) {
-            /*
-             * If the mapping exceeds end of a file then return a SIGBUS. Actually, the host
-             * environment would most probably raise SIGBUS anyway, but Gramine PAL API fuses both
-             * SIGBUS and SIGSEGV onto a single PAL_EVENT_MEMFAULT, so here we "un-fuse" it back.
-             */
+            /* If the mapping exceeds end of a file then return a SIGBUS. */
             uintptr_t eof_in_vma = (uintptr_t)vma_info.addr + vma_info.valid_length;
             if (addr >= eof_in_vma) {
                 info.si_signo = SIGBUS;
