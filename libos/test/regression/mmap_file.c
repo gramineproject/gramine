@@ -1,4 +1,8 @@
-/* TODO: Hans, get ze flammenwerfer... */
+/*
+ * TODO: - Hans, get ze flammenwerfer...
+ *       - Now we have mmap_file_sigbus.c which largely supersedes this test, so can burn this one
+ *         with ze flammenwerfer
+ */
 #define _GNU_SOURCE
 #include <signal.h>
 #include <stdio.h>

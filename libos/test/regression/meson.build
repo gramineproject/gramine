@@ -73,6 +73,7 @@ tests = {
     'mmap_file': {},
     'mmap_file_backed': {},
     'mmap_file_emulated': {},
+    'mmap_file_sigbus': {},
     'mprotect_file_fork': {},
     'mprotect_prot_growsdown': {},
     'multi_pthread': {},

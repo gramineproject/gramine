@@ -100,8 +100,8 @@ int bkeep_mmap_any(size_t length, int prot, int flags, struct libos_handle* file
 int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr);
 
-/* Looks up VMA that contains `addr` and if found, updates `vma->valid_length`. */
-int bkeep_vma_update_valid_length(void* addr, size_t valid_length);
+/* Looks up VMA that starts at `begin_addr` and if found, updates `vma->valid_length`. */
+int bkeep_vma_update_valid_length(void* begin_addr, size_t valid_length);
 
 /* Looking up VMA that contains `addr`. If one is found, returns its description in `vma_info`.
  * This function increases ref-count of `vma_info->file` by one (if it is not NULL). */

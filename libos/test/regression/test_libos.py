@@ -797,6 +797,21 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn('mmap test 5 passed', stdout)
         self.assertIn('mmap test 8 passed', stdout)
 
+    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
+        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
+    def test_051a_mmap_file_sigbus(self):
+        read_path = 'tmp/__mmaptestreadfile__'
+        if not os.path.exists(read_path):
+            with open(read_path, "wb") as f:
+                f.truncate(os.sysconf("SC_PAGE_SIZE"))
+
+        write_path = 'tmp/__mmaptestfilewrite__'
+        if os.path.exists(write_path):
+            os.unlink(write_path)
+
+        stdout, _ = self.run_binary(['mmap_file_sigbus'])
+        self.assertIn('TEST OK', stdout)
+
     @unittest.skipUnless(HAS_SGX,
         'Trusted files are only available with SGX')
     def test_052_mmap_file_backed_trusted(self):
