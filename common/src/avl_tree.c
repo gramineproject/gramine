@@ -514,6 +514,16 @@ struct avl_tree_node* avl_tree_find(struct avl_tree* tree, struct avl_tree_node*
     return avl_tree_find_fn_to(tree, node, tree->cmp);
 }
 
+#ifdef UBSAN
+/*
+ * Function pointer cmp is of type `bool (*)(void*, struct avl_tree_node*)` but the caller
+ * avl_tree_lower_bound() passes cmp as `bool (*)(struct avl_tree_node*, struct avl_tree_node*)`.
+ * UBSan complains about "Indirect call of a function through a function pointer of the wrong type"
+ * because of this mismatch. However, allowing the first argument to be a pointer to any type was
+ * done on purpose; see corresponding comment in avl_tree.h. So, silence this particular complaint.
+ */
+__attribute__((no_sanitize("function")))
+#endif
 struct avl_tree_node* avl_tree_lower_bound_fn(struct avl_tree* tree, void* cmp_arg,
                                               bool cmp(void*, struct avl_tree_node*)) {
     struct avl_tree_node* node = tree->root;

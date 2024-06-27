@@ -26,6 +26,11 @@
 
 /* Type definitions (adapted from libubsan) */
 
+/*
+ * NOTE: TypeDescriptor contains information about the type of the variable/function, in particular,
+ * `char* TypeName`. Unfortunately, TypeDescriptor is implemented as C++ class in GCC/Clang so we
+ * can't easily represent it in C. Thus, we declare it as opaque struct and can't use TypeName.
+ */
 struct type_descriptor;
 
 struct source_location {
@@ -39,6 +44,11 @@ struct type_mismatch_data {
     const struct type_descriptor* type;
     uint8_t log_alignment;
     uint8_t type_check_kind;
+};
+
+struct function_type_mismatch_data {
+    struct source_location loc;
+    const struct type_descriptor* type;
 };
 
 typedef uintptr_t value_handle;
@@ -131,6 +141,7 @@ UBSAN_SIMPLE_HANDLER_1(invalid_builtin,
 
 /* More complex handlers, displaying additional information. */
 
+/* type mismatch handlers */
 void __ubsan_handle_type_mismatch_v1(struct type_mismatch_data* data, value_handle pointer);
 void __ubsan_handle_type_mismatch_v1_abort(struct type_mismatch_data* data, value_handle pointer);
 
@@ -149,5 +160,30 @@ void __ubsan_handle_type_mismatch_v1(struct type_mismatch_data* data, value_hand
 
 void __ubsan_handle_type_mismatch_v1_abort(struct type_mismatch_data* data, value_handle pointer) {
     __ubsan_handle_type_mismatch_v1(data, pointer);
+    abort();
+}
+
+/* function type mismatch handlers */
+void __ubsan_handle_function_type_mismatch(struct function_type_mismatch_data* data,
+                                           value_handle function_pointer);
+void __ubsan_handle_function_type_mismatch_abort(struct function_type_mismatch_data* data,
+                                                 value_handle function_pointer);
+
+void __ubsan_handle_function_type_mismatch(struct function_type_mismatch_data* data,
+                                           value_handle function_pointer) {
+    /*
+     * NOTE: UBSan in GCC/Clang prints "call to function {getSymbolizedLocation(function_pointer)}
+     * through pointer to incorrect function type {data->type->TypeName}". Unfortunately we can't
+     * learn the name of the func based on the address, and we can't use TypeName (see comment at
+     * the top of this file).
+     */
+    log_error("ubsan: call to function at 0x%lx through pointer to incorrect function type",
+              function_pointer);
+    ubsan_log_location(&data->loc);
+}
+
+void __ubsan_handle_function_type_mismatch_abort(struct function_type_mismatch_data* data,
+                                                 value_handle function_pointer) {
+    __ubsan_handle_function_type_mismatch(data, function_pointer);
     abort();
 }

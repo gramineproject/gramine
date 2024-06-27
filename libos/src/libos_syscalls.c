@@ -23,6 +23,14 @@ typedef arch_syscall_arg_t (*six_args_syscall_t)(arch_syscall_arg_t, arch_syscal
  * `context` is expected to be placed at the bottom of Gramine-internal stack.
  * If you change this function please also look at `libos_syscall_rt_sigsuspend`!
  */
+#ifdef UBSAN
+/*
+ * Variable syscall_func is of type six_args_syscall_t but points to item inside libos_syscall_table
+ * array, which has a type libos_syscall_t, thus UBSan complains about "Indirect call of a function
+ * through a function pointer of the wrong type". Silence this particular complaint.
+ */
+__attribute__((no_sanitize("function")))
+#endif
 noreturn void libos_emulate_syscall(PAL_CONTEXT* context) {
     LIBOS_TCB_SET(context.regs, context);
 
