@@ -359,6 +359,28 @@ void __asan_unregister_globals(struct __asan_global* globals, size_t n) {
     __UNUSED(n);
 }
 
+void __asan_register_elf_globals(uintptr_t* flag, void* start, void* stop) {
+    if (*flag || start == stop)
+        return;
+
+    assert(IS_ALIGNED((uintptr_t)stop - (uintptr_t)start, sizeof(struct __asan_global)));
+    struct __asan_global* globals_start = start;
+    struct __asan_global* globals_stop  = stop;
+    __asan_register_globals(globals_start, globals_stop - globals_start);
+    *flag = 1;
+}
+
+void __asan_unregister_elf_globals(uintptr_t* flag, void* start, void* stop) {
+    if (!*flag || start == stop)
+        return;
+
+    assert(IS_ALIGNED((uintptr_t)stop - (uintptr_t)start, sizeof(struct __asan_global)));
+    struct __asan_global* globals_start = start;
+    struct __asan_global* globals_stop  = stop;
+    __asan_unregister_globals(globals_start, globals_stop - globals_start);
+    *flag = 0;
+}
+
 #define DEFINE_ASAN_SET_SHADOW(name, value)                         \
     __attribute__((noinline))                                       \
     void __asan_set_shadow_ ## name (uintptr_t addr, size_t size) { \
