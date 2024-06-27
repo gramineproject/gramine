@@ -39,7 +39,4 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 cp -ar "$CURRENT_BUILD_DIR"/include/. "$CURRENT_BUILD_DIR"
 cp -ar "$CURRENT_BUILD_DIR"/lib/. "$CURRENT_BUILD_DIR"
 
-log "ls -la $CURRENT_BUILD_DIR"
-ls -la $CURRENT_BUILD_DIR
-
 log "done"

@@ -243,7 +243,7 @@ mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
 curl_proj = subproject('curl-8.8.0')
 cjson_proj = subproject('cJSON-1.7.12')
-libcbor_proj = subproject('libcbor-0.10.2')
+libcbor_proj = subproject('libcbor-0.11.0')
 
 if sgx
     # XXX: do not call subproject() from under "if sgx" conditional, because it

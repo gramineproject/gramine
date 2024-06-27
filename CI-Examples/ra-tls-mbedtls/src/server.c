@@ -195,13 +195,12 @@ int main(int argc, char** argv) {
 
             /* user asks to maliciously modify the embedded SGX quote (for testing purposes); we
              * have two quotes currently (with legacy OID and with standard TCG DICE OID), so we
-             * modify them both */
+             * modify both of them */
             mbedtls_printf("  . Maliciously modifying SGX quote embedded in RA-TLS cert...");
             fflush(stdout);
 
-            uint8_t legacy_oid[] = {0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39,
-                                    0x06};
-            uint8_t standard_oid[] = { 0x06, 0x06, 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 };
+            uint8_t legacy_oid[] = NON_STANDARD_INTEL_SGX_QUOTE_OID;
+            uint8_t standard_oid[] = TCG_DICE_TAGGED_EVIDENCE_OID_RAW;
             struct {
                 uint8_t* oid;
                 size_t size;
