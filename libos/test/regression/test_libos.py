@@ -773,43 +773,30 @@ class TC_30_Syscall(RegressionTestCase):
 
         self.assertIn('Test successful!', stdout)
 
-    def test_050_mmap(self):
-        stdout, _ = self.run_binary(['mmap_file'], timeout=60)
-
-        # Private mmap beyond file range
-        self.assertIn('mmap test 6 passed', stdout)
-        self.assertIn('mmap test 7 passed', stdout)
-
-        # Private mmap beyond file range (after fork)
-        self.assertIn('mmap test 1 passed', stdout)
-        self.assertIn('mmap test 2 passed', stdout)
-        self.assertIn('mmap test 3 passed', stdout)
-        self.assertIn('mmap test 4 passed', stdout)
-
-        # "test 5" and "test 8" are checked below, in test_051_mmap_sgx
-
-    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
-        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
-    def test_051_mmap_sgx(self):
-        stdout, _ = self.run_binary(['mmap_file'], timeout=60)
-
-        # SIGBUS test
-        self.assertIn('mmap test 5 passed', stdout)
-        self.assertIn('mmap test 8 passed', stdout)
-
-    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
-        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
-    def test_051a_mmap_file_sigbus(self):
+    def _prepare_mmap_file_sigbus_files(self):
         read_path = 'tmp/__mmaptestreadfile__'
         if not os.path.exists(read_path):
             with open(read_path, "wb") as f:
                 f.truncate(os.sysconf("SC_PAGE_SIZE"))
-
         write_path = 'tmp/__mmaptestfilewrite__'
         if os.path.exists(write_path):
             os.unlink(write_path)
+        return read_path, write_path
 
-        stdout, _ = self.run_binary(['mmap_file_sigbus'])
+    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
+        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
+    def test_050_mmap_file_sigbus(self):
+        read_path, write_path = self._prepare_mmap_file_sigbus_files()
+        stdout, _ = self.run_binary(['mmap_file_sigbus', read_path, write_path, 'nofork'])
+        self.assertIn('TEST OK', stdout)
+
+    @unittest.skipIf(HAS_SGX and not HAS_EDMM,
+        'On SGX without EDMM, SIGBUS cannot be triggered for lack of dynamic memory protection.')
+    def test_051_mmap_file_sigbus_child(self):
+        read_path, write_path = self._prepare_mmap_file_sigbus_files()
+        stdout, _ = self.run_binary(['mmap_file_sigbus', read_path, write_path, 'fork'], timeout=60)
+        self.assertIn('PARENT OK', stdout)
+        self.assertIn('CHILD OK', stdout)
         self.assertIn('TEST OK', stdout)
 
     @unittest.skipUnless(HAS_SGX,

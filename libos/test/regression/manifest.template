@@ -24,12 +24,12 @@ fs.mounts = [
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}  # for mmap_file test
+sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.allowed_files = [
   "file:tmp/",
   "file:root",     # for getdents test
-  "file:testfile", # for mmap_file test
+  "file:testfile", # for large_mmap test
   "file:scripts/", # for exec_script test
 ]
 

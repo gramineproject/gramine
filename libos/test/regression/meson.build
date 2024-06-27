@@ -70,7 +70,6 @@ tests = {
     'large_mmap': {},
     'madvise': {},
     'mkfifo': {},
-    'mmap_file': {},
     'mmap_file_backed': {},
     'mmap_file_emulated': {},
     'mmap_file_sigbus': {},

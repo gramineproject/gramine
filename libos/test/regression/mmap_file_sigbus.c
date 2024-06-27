@@ -16,30 +16,26 @@
  *   - Behavior when using the mmapped regions with madvise(MADV_DONTNEED)
  *     - madvise(MADV_DONTNEED) on the first 1-page region succeeds
  *     - madvise(MADV_DONTNEED) on the second 1-page region succeeds (yes, that's how Linux works)
- *     - accessing the first 1-page region succeeds
- *     - accessing the second 1-page region results in SIGBUS
+ *     - accessing the first 1-page region after madvise(MADV_DONTNEED) succeeds
+ *     - accessing the second 1-page region after madvise(MADV_DONTNEED) results in SIGBUS
+ *
+ * This test can be run as single-process (last argument == "nofork") or as multi-process (last
+ * argument == "fork"). In the latter case, mmap happens in the parent process and all tests happen
+ * in the child process, i.e. the test verifies that mmaped region was correctly sent to child.
  */
 
 #define _GNU_SOURCE
-#include <err.h>
-#include <sys/mman.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/types.h>
-#include <ucontext.h>
-#include <unistd.h>
+#include <sys/wait.h>
 
 #include "common.h"
-
-#define TEST_DIR  "tmp"
-#define TEST_READFILE "__mmaptestreadfile__"
-#define TEST_WRITEFILE "__mmaptestfilewrite__"
 
 /* this test can be augmented to run on any arch, but we currently only care about x86-64 */
 #ifndef __x86_64__
@@ -54,7 +50,6 @@ __asm__ (
 ".type ret, @function\n"
 "mem_read:\n"
     "movq (%rdi), %rax\n"
-    "ret\n"
 "ret:\n"
     "ret\n"
 ".popsection\n"
@@ -78,28 +73,8 @@ static void sigbus_handler(int signum, siginfo_t* si, void* uc) {
     ((ucontext_t*)uc)->uc_mcontext.gregs[REG_RIP] = (uint64_t)ret;
 }
 
-int main(void) {
+static void run_tests(char* m, const char* write_path) {
     size_t page_size = getpagesize();
-
-    struct sigaction sa = {
-        .sa_sigaction = sigbus_handler,
-        .sa_flags = SA_RESTART | SA_SIGINFO,
-    };
-    CHECK(sigaction(SIGBUS, &sa, NULL));
-
-    /* we assume that Pytest creates the 1-page file before running this test; note that we can't
-     * create the file and ftruncate it as it would require the file to be writable -- this won't
-     * allow to test madvise(MADV_DONTNEED) as Gramine doesn't support it on writable files */
-    int fd = CHECK(open(TEST_DIR "/" TEST_READFILE, O_RDONLY));
-
-    struct stat st;
-    CHECK(stat(TEST_DIR "/" TEST_READFILE, &st));
-    if (st.st_size != (ssize_t)page_size)
-        errx(1, "stat: got 0x%lx, expected 0x%lx", st.st_size, page_size);
-
-    char* m = (char*)mmap(NULL, page_size * 2, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (m == MAP_FAILED)
-        err(1, "mmap()");
 
     void* addr_page1 = &m[0];
     void* addr_page2 = &m[page_size];
@@ -110,15 +85,17 @@ int main(void) {
     uint64_t x;
     x = mem_read(addr_page1);
     if (x == 0xdeadbeef)
-        errx(1, "unexpected value in successful read from file-backed mmap region: %lx", x);
+        errx(1, "read returned value reserved for invalid accesses: %lx", x);
+    if (g_sigbus_triggered != 0)
+        errx(1, "expected no SIGBUS, got %d", g_sigbus_triggered);
     x = mem_read(addr_page2);
     if (x != 0xdeadbeef)
-        errx(1, "unexpected value in failing read from file-backed mmap region: %lx", x);
+        errx(1, "read did not return value reserved for invalid accesses but instead: %lx", x);
     if (g_sigbus_triggered != 1)
         errx(1, "expected 1 SIGBUS, got %d", g_sigbus_triggered);
 
     /* test 2: specify memory regions as buffer to a syscall */
-    int write_fd = CHECK(open(TEST_DIR "/" TEST_WRITEFILE, O_WRONLY | O_CREAT | O_TRUNC, 0660));
+    int write_fd = CHECK(open(write_path, O_WRONLY | O_CREAT | O_TRUNC, 0660));
 
     ssize_t ret;
 #if 0
@@ -126,12 +103,14 @@ int main(void) {
      * FIXME: Linux writes until the first memory fault, i.e. until the second page. Gramine
      *        on SGX (with EDMM) doesn't currently comply with this behavior: this would require
      *        intercepting memory faults, realizing that we're inside a system call and that a
-     *        user-supplied buffer raise this fault, and instructing the syscall to return a partial
-     *        success. Instead, Gramine returns -EFAULT when a buffer with an invalid memory region
-     *        is detected.
+     *        user-supplied buffer raised this fault, and instructing the syscall to return a
+     *        partial success. Instead, Gramine returns -EFAULT when a buffer with an invalid memory
+     *        region is detected.
      *
      *        Note that Linux returns -EFAULT if the memory fault is raised before any data was
      *        written, see write(write_fd, addr_page2, page_size) below. This is similar to Gramine.
+     *
+     *        Also see https://yarchive.net/comp/linux/partial_reads_writes.html for Linux history.
      */
     ret = write(write_fd, addr_page1, page_size * 2);
     if (ret != (ssize_t)page_size)
@@ -145,7 +124,7 @@ int main(void) {
         errx(1, "write(invalid page): expected EFAULT, got ret=%ld, errno=%d", ret, errno);
 
     CHECK(close(write_fd));
-    CHECK(unlink(TEST_DIR "/" TEST_WRITEFILE));
+    CHECK(unlink(write_path));
 
     /* test 3: specify memory regions in madvise(MADV_DONTNEED) and access them */
     ret = madvise(addr_page1, page_size, MADV_DONTNEED);
@@ -158,14 +137,65 @@ int main(void) {
     g_sigbus_triggered = 0;
     x = mem_read(addr_page1);
     if (x == 0xdeadbeef)
-        errx(1, "unexpected value in successful read after madvise(MADV_DONTNEED): %lx", x);
+        errx(1, "(after madvise) read returned value reserved for invalid accesses: %lx", x);
+    if (g_sigbus_triggered != 0)
+        errx(1, "expected no SIGBUS, got %d", g_sigbus_triggered);
     x = mem_read(addr_page2);
     if (x != 0xdeadbeef)
-        errx(1, "unexpected value in failing read after madvise(MADV_DONTNEED): %lx", x);
+        errx(1, "(after madvise) read did not return value reserved for invalid accesses but "
+                "instead: %lx", x);
     if (g_sigbus_triggered != 1)
         errx(1, "expected 1 SIGBUS, got %d", g_sigbus_triggered);
+}
 
-    /* done with all tests */
+int main(int argc, char** argv) {
+    size_t page_size = getpagesize();
+
+    if (argc != 4)
+        errx(1, "Usage: %s <path1: read-only file> <path2:write-only file> <fork?>", argv[0]);
+
+    const char* path1 = argv[1];
+    const char* path2 = argv[2];
+    bool do_fork = strcmp(argv[3], "fork") == 0;
+
+    struct sigaction sa = {
+        .sa_sigaction = sigbus_handler,
+        .sa_flags = SA_RESTART | SA_SIGINFO,
+    };
+    CHECK(sigaction(SIGBUS, &sa, NULL));
+
+    /* we assume that Pytest creates the 1-page file before running this test; note that we can't
+     * create the file and ftruncate it as it would require the file to be writable -- this won't
+     * allow to test madvise(MADV_DONTNEED) as Gramine doesn't support it on writable files */
+    int fd = CHECK(open(path1, O_RDONLY));
+
+    struct stat st;
+    CHECK(stat(path1, &st));
+    if (st.st_size != (ssize_t)page_size)
+        errx(1, "stat: got 0x%lx, expected 0x%lx", st.st_size, page_size);
+
+    char* m = (char*)mmap(NULL, page_size * 2, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (m == MAP_FAILED)
+        err(1, "mmap()");
+
+    if (!do_fork) {
+        /* single-process test: run all tests in this main (and only) process */
+        run_tests(m, path2);
+    } else {
+        /* multi-process test: run all tests in the child process */
+        int pid = CHECK(fork());
+        if (pid == 0) {
+            run_tests(m, path2);
+            puts("CHILD OK");
+        } else {
+            int status = 0;
+            CHECK(wait(&status));
+            if (!WIFEXITED(status) || WEXITSTATUS(status))
+                errx(1, "child wait status: %#x", status);
+            puts("PARENT OK");
+        }
+    }
+
     CHECK(close(fd));
     puts("TEST OK");
     return 0;
