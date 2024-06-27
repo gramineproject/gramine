@@ -99,6 +99,22 @@ struct loadcmd {
     pal_prot_flags_t prot;
 };
 
+static int pal_stream_read_exact(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf) {
+    size_t got = 0;
+    while (got < count) {
+        int64_t ret = _PalStreamRead(handle, offset, count - got, (char*)buf + got);
+        if (ret < 0) {
+            if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN)
+                continue;
+            return ret;
+        } else if (ret == 0) {
+            return -PAL_ERROR_INVAL;
+        }
+        got += ret;
+    }
+    return 0;
+}
+
 static pal_prot_flags_t elf_segment_prot_to_pal_prot(int elf_segment_prot) {
     pal_prot_flags_t pal_prot = 0;
     pal_prot |= (elf_segment_prot & PF_R) ? PAL_PROT_READ : 0;
@@ -555,7 +571,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
             log_error("Failed to prepare mapping for segment from ELF file");
             goto out;
         }
-        ret = _PalStreamRead(handle, c->map_off, map_size, map_addr);
+        ret = pal_stream_read_exact(handle, c->map_off, map_size, map_addr);
         if (ret < 0) {
             log_error("Failed to read segment from ELF file");
             goto out;
