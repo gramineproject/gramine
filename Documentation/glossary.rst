@@ -22,11 +22,22 @@ Glossary
       for example, the Linux-SGX PAL.
 
    RA-TLS
+   Interoperable RA-TLS
       A library to augment classic SSL/TLS sessions with
       :term:`Remote Attestation`. RA-TLS extends the SSL/TLS handshake protocol
       to force one endpoint into verifying the :term:`SGX Quote` embedded into
       the other endpoint's certificate chain. RA-TLS is designed to be a drop-in
       replacement for classic SSL/TLS libraries.
+
+      Starting from v1.8, Gramine's RA-TLS library supports `Interoperable
+      RA-TLS <https://github.com/CCC-Attestation/interoperable-ra-tls/>`__, a
+      specification that modifies the original RA-TLS format for
+      interoperability between different TEE frameworks. For example, Gramine
+      applications can now establish secure connections with Occlum and
+      OpenEnclave applications thanks to Interoperable RA-TLS. Previously, the
+      RA-TLS library in Gramine was *not* interoperable with remote-attestation
+      libraries from other projects, because RA-TLS used its own ad-hoc format
+      of the X.509 certificate and embedded the SGX Quote in a non-standard way.
 
       .. seealso::
 
