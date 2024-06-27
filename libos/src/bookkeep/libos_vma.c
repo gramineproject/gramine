@@ -188,6 +188,7 @@ typedef bool (*traverse_visitor)(struct libos_vma* vma, void* visitor_arg);
  *     part that is invalid). Callers must set `use_only_valid_part = false` to comply with this
  *     Linux behavior.
  */
+// TODO: Probably other VMA functions could make use of this helper.
 static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, bool use_only_valid_part,
                                     traverse_visitor visitor, void* visitor_arg) {
     assert(spinlock_is_locked(&vma_tree_lock));
@@ -1549,15 +1550,16 @@ out:
     return ret;
 }
 
-struct vma_needs_prot_refresh_args {
+struct vma_update_valid_end_args {
     struct libos_handle* hdl;
     size_t file_size;
 };
 
-static bool vma_needs_prot_refresh(struct libos_vma* vma, void* _args) {
+/* returns whether prot_refresh_vma() must be applied on a VMA */
+static bool vma_update_valid_end(struct libos_vma* vma, void* _args) {
     assert(spinlock_is_locked(&vma_tree_lock));
 
-    struct vma_needs_prot_refresh_args* args = _args;
+    struct vma_update_valid_end_args* args = _args;
 
     /* guaranteed to have inode because invoked from `write` or `truncate` callback */
     assert(args->hdl && args->hdl->inode);
@@ -1570,10 +1572,7 @@ static bool vma_needs_prot_refresh(struct libos_vma* vma, void* _args) {
     if (!vma->file->inode || vma->file->inode != args->hdl->inode)
         return false;
 
-    /* by default, assume that file got smaller than the offset from which VMA is mapped, all VMA is
-     * then inaccessible (PROT_NONE) */
-    size_t valid_length = 0;
-
+    size_t valid_length;
     if (args->file_size >= vma->offset) {
         size_t vma_length = vma->end - vma->begin;
         if (args->file_size - vma->offset > vma_length) {
@@ -1583,6 +1582,9 @@ static bool vma_needs_prot_refresh(struct libos_vma* vma, void* _args) {
             /* file size is smaller than the mmapped part in VMA, only part of VMA is accessible */
             valid_length = args->file_size - vma->offset;
         }
+    } else {
+        /* file got smaller than the offset from which VMA is mapped, all VMA is inaccessible */
+        valid_length = 0;
     }
     valid_length = ALLOC_ALIGN_UP(valid_length);
 
@@ -1619,10 +1621,10 @@ int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_s
     struct libos_vma_info* vma_infos;
     size_t count;
 
-    struct vma_needs_prot_refresh_args args = { .hdl = hdl, .file_size = file_size };
+    struct vma_update_valid_end_args args = { .hdl = hdl, .file_size = file_size };
 
     int ret = dump_vmas(&vma_infos, &count, /*begin=*/0, /*end=*/UINTPTR_MAX,
-                        vma_needs_prot_refresh, &args);
+                        vma_update_valid_end, &args);
     if (ret < 0)
         return ret;
 
@@ -1751,7 +1753,7 @@ BEGIN_CP_FUNC(vma) {
                 /*
                  * Send file-backed memory region.
                  *
-                 * Access beyond the last file-backed page (reflected via vma->valid_length) will
+                 * Access beyond the last file-backed page (reflected via vma->valid_length) should
                  * cause SIGBUS. So we send only those memory contents of VMA that are backed by the
                  * file, round up to pages. Rest of VMA memory region will be inaccessible in the
                  * child process.
