@@ -255,6 +255,9 @@ void __asan_register_globals(struct __asan_global* globals, size_t n);
  * implementation does nothing (and we don't even handle `.fini_array`). */
 void __asan_unregister_globals(struct __asan_global* globals, size_t n);
 
+void __asan_register_elf_globals(uintptr_t* flag, void* start, void* stop);
+void __asan_unregister_elf_globals(uintptr_t* flag, void* start, void* stop);
+
 /* Callbacks for setting the shadow memory to specific values. As with load/store callbacks, LLVM
  * normally generates inline stores and calls these functions only for bigger areas. This is
  * controlled by `-mllvm -asan-max-inline-poisoning-size=N`. */
