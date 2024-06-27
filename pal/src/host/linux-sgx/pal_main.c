@@ -903,7 +903,7 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     init_handle_hdr(first_thread, PAL_TYPE_THREAD);
-    first_thread->thread.tcs = (void*)(g_enclave_base + GET_ENCLAVE_TCB(tcs_offset));
+    first_thread->thread.tcs = (void*)((uintptr_t)g_enclave_base + GET_ENCLAVE_TCB(tcs_offset));
     g_pal_public_state.first_thread = first_thread;
     SET_ENCLAVE_TCB(thread, &first_thread->thread);
 
