@@ -102,7 +102,7 @@ struct loadcmd {
 static int pal_stream_read_exact(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buf) {
     size_t got = 0;
     while (got < count) {
-        int64_t ret = _PalStreamRead(handle, offset, count - got, (char*)buf + got);
+        int64_t ret = _PalStreamRead(handle, offset + got, count - got, (char*)buf + got);
         if (ret < 0) {
             if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN)
                 continue;
