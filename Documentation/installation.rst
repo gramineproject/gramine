@@ -25,6 +25,9 @@ option on a dedicated page.
 Install Gramine packages
 ------------------------
 
+For instructions how to verify cryptographic signatures, please see
+:ref:`verifying-cryptographic-signatures`.
+
 Debian 12
 ^^^^^^^^^
 
