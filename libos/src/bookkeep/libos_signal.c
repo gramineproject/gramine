@@ -361,12 +361,8 @@ static void memfault_upcall(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context
         struct libos_handle* file = vma_info.file;
         if (file && file->type == TYPE_CHROOT) {
             /* If the mapping exceeds end of a file then return a SIGBUS. */
-            lock(&file->inode->lock);
-            file_off_t size = file->inode->size;
-            unlock(&file->inode->lock);
-
-            uintptr_t eof_in_vma = (uintptr_t)vma_info.addr + (size - vma_info.file_offset);
-            if (addr > eof_in_vma) {
+            uintptr_t eof_in_vma = (uintptr_t)vma_info.addr + vma_info.valid_length;
+            if (addr >= eof_in_vma) {
                 info.si_signo = SIGBUS;
                 info.si_code = BUS_ADRERR;
             } else {

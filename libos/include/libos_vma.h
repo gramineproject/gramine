@@ -26,6 +26,7 @@
 struct libos_vma_info {
     void* addr;
     size_t length;
+    size_t valid_length; // memory accesses beyond valid_length result in SIGBUS/EFAULT
     int prot;  // memory protection flags: PROT_*
     int flags; // MAP_* and VMA_*
     struct libos_handle* file;
@@ -99,6 +100,9 @@ int bkeep_mmap_any(size_t length, int prot, int flags, struct libos_handle* file
 int bkeep_mmap_any_aslr(size_t length, int prot, int flags, struct libos_handle* file,
                         uint64_t offset, const char* comment, void** ret_val_ptr);
 
+/* Looks up VMA that starts at `begin_addr` and if found, updates `vma->valid_length`. */
+int bkeep_vma_update_valid_length(void* begin_addr, size_t valid_length);
+
 /* Looking up VMA that contains `addr`. If one is found, returns its description in `vma_info`.
  * This function increases ref-count of `vma_info->file` by one (if it is not NULL). */
 int lookup_vma(void* addr, struct libos_vma_info* vma_info);
@@ -132,6 +136,9 @@ int msync_handle(struct libos_handle* hdl);
 
 /* Reload file mappings of `hdl` */
 int reload_mmaped_from_file_handle(struct libos_handle* hdl);
+
+/* Refresh page protections of file mappings of `hdl` when the file size has changed */
+int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_size);
 
 void debug_print_all_vmas(void);
 

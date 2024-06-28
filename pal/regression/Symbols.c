@@ -24,9 +24,9 @@ int main(int argc, char** argv, char** envp) {
     PRINT_SYMBOL(PalStreamRead);
     PRINT_SYMBOL(PalStreamWrite);
     PRINT_SYMBOL(PalStreamDelete);
-    PRINT_SYMBOL(PalStreamMap);
     PRINT_SYMBOL(PalStreamSetLength);
     PRINT_SYMBOL(PalStreamFlush);
+    PRINT_SYMBOL(PalDeviceMap);
     PRINT_SYMBOL(PalSendHandle);
     PRINT_SYMBOL(PalReceiveHandle);
     PRINT_SYMBOL(PalStreamAttributesQuery);

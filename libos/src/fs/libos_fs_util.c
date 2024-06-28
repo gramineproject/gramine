@@ -7,6 +7,7 @@
 #include "libos_flags_conv.h"
 #include "libos_fs.h"
 #include "libos_lock.h"
+#include "libos_vma.h"
 #include "stat.h"
 
 int generic_seek(file_off_t pos, file_off_t size, file_off_t offset, int origin,
@@ -136,8 +137,9 @@ int generic_inode_poll(struct libos_handle* hdl, int in_events, int* out_events)
 }
 
 int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int prot, int flags,
-                          uint64_t offset) {
-    assert(addr);
+                          uint64_t offset, size_t* out_valid_size) {
+    assert(addr && IS_ALLOC_ALIGNED_PTR(addr));
+    assert(IS_ALLOC_ALIGNED(size));
 
     int ret;
 
@@ -148,11 +150,11 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
     if (ret < 0)
         return pal_to_unix_errno(ret);
 
-    size_t read_size = size;
+    size_t size_to_read = size;
     char* read_addr = addr;
     file_off_t pos = offset;
-    while (read_size > 0) {
-        ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, read_size, &pos);
+    while (size_to_read > 0) {
+        ssize_t count = hdl->fs->fs_ops->read(hdl, read_addr, size_to_read, &pos);
         if (count < 0) {
             if (count == -EINTR)
                 continue;
@@ -163,8 +165,8 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
         if (count == 0)
             break;
 
-        assert((size_t)count <= read_size);
-        read_size -= count;
+        assert((size_t)count <= size_to_read);
+        size_to_read -= count;
         read_addr += count;
     }
 
@@ -176,6 +178,22 @@ int generic_emulated_mmap(struct libos_handle* hdl, void* addr, size_t size, int
         }
     }
 
+    /*
+     * Underlying file may be shorter than the requested mmap size. In this case access beyond the
+     * last file-backed page must cause SIGBUS. Since we allocated all memory above, let's make the
+     * chunk of memory that is beyond the last file-backed page unavailable. Also see checkpointing
+     * logic in libos_vma.c for similar emulation in the child process.
+     */
+    assert(size_to_read <= size);
+    size_t valid_size = ALLOC_ALIGN_UP(size - size_to_read);
+    if (valid_size < size) {
+        int valid_ret = PalVirtualMemoryProtect(addr + valid_size, size - valid_size,
+                                                /*prot=*/0);
+        if (valid_ret < 0)
+            BUG();
+    }
+
+    *out_valid_size = valid_size;
     return 0;
 
 err:;
@@ -244,11 +262,23 @@ out:
 int generic_truncate(struct libos_handle* hdl, file_off_t size) {
     lock(&hdl->inode->lock);
     int ret = PalStreamSetLength(hdl->pal_handle, size);
-    if (ret == 0) {
-        hdl->inode->size = size;
-    } else {
-        ret = pal_to_unix_errno(ret);
+    if (ret < 0) {
+        unlock(&hdl->inode->lock);
+        return pal_to_unix_errno(ret);
     }
+
+    hdl->inode->size = size;
     unlock(&hdl->inode->lock);
-    return ret;
+
+    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
+        /* There are mappings for the file, refresh their access protections. */
+        ret = prot_refresh_mmaped_from_file_handle(hdl, size);
+        if (ret < 0) {
+            log_error("refreshing page protections of mmapped regions of file failed: %s",
+                      unix_strerror(ret));
+            BUG();
+        }
+    }
+
+    return 0;
 }

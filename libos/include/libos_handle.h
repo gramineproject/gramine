@@ -303,8 +303,6 @@ int init_exec_handle(const char* const* argv, char*** out_new_argv);
 
 int open_executable(struct libos_handle* hdl, const char* path);
 
-int get_file_size(struct libos_handle* file, uint64_t* size);
-
 ssize_t do_handle_read(struct libos_handle* hdl, void* buf, size_t count);
 ssize_t do_handle_write(struct libos_handle* hdl, const void* buf, size_t count);
 

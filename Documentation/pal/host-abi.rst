@@ -175,9 +175,6 @@ applications.
 .. doxygenfunction:: PalStreamDelete
    :project: pal
 
-.. doxygenfunction:: PalStreamMap
-   :project: pal
-
 .. doxygenfunction:: PalStreamSetLength
    :project: pal
 
@@ -365,4 +362,7 @@ random bits, to obtain an attestation report and quote, etc.
    :project: pal
 
 .. doxygenfunction:: PalGetSpecialKey
+   :project: pal
+
+.. doxygenfunction:: PalDeviceMap
    :project: pal
