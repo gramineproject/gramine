@@ -215,6 +215,7 @@ struct ocall_bind {
     struct sockaddr* addr;
     size_t addrlen;
     uint16_t new_port;
+    uint32_t new_nl_pid;
 };
 
 struct ocall_listen_simple {

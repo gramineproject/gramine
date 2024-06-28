@@ -76,6 +76,9 @@ struct libos_handle* get_new_socket_handle(int family, int type, int protocol,
         case AF_INET6:
             sock->ops = &sock_ip_ops;
             break;
+        case AF_NETLINK:
+            sock->ops = &sock_nl_ops;
+            break;
     }
 
     if (!create_lock(&sock->lock) || !create_lock(&sock->recv_lock)) {
@@ -129,6 +132,7 @@ long libos_syscall_socket(int family, int type, int protocol) {
         case AF_UNIX:
         case AF_INET:
         case AF_INET6:
+        case AF_NETLINK:
             break;
         default:
             log_warning("unsupported socket domain %d", family);
@@ -146,6 +150,7 @@ long libos_syscall_socket(int family, int type, int protocol) {
     switch (type) {
         case SOCK_STREAM:
         case SOCK_DGRAM:
+        case SOCK_RAW:
             break;
         default:
             log_warning("unsupported socket type %d", type);

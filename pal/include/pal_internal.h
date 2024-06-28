@@ -183,7 +183,8 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo);
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo);
 
 int _PalSocketCreate(enum pal_socket_domain domain, enum pal_socket_type type,
-                     pal_stream_options_t options, PAL_HANDLE* out_handle);
+                     pal_socket_protocol protocol, pal_stream_options_t options,
+                     PAL_HANDLE* out_handle);
 int _PalSocketBind(PAL_HANDLE handle, struct pal_socket_addr* addr);
 int _PalSocketListen(PAL_HANDLE handle, unsigned int backlog);
 int _PalSocketAccept(PAL_HANDLE handle, pal_stream_options_t options, PAL_HANDLE* out_client,

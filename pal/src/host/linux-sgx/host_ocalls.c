@@ -325,6 +325,11 @@ static long sgx_ocall_bind(void* args) {
                    (char*)&addr + offsetof(struct sockaddr_in6, sin6_port),
                    sizeof(ocall_bind_args->new_port));
             break;
+        case AF_NETLINK:
+            memcpy(&ocall_bind_args->new_nl_pid,
+                   (char*)&addr + offsetof(struct sockaddr_nl, nl_pid),
+                   sizeof(ocall_bind_args->new_nl_pid));
+            break;
         default:
             log_error("unknown address family: %d", addr.ss_family);
             DO_SYSCALL(exit_group, 1);
