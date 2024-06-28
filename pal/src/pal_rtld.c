@@ -542,7 +542,7 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
         struct loadcmd* c = &loadcmds[i];
 
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
-        size_t map_size = c->map_end - c->start;
+        size_t map_size = c->alloc_end - c->start;
         size_t cpy_size = c->data_end - c->start;
         assert(cpy_size <= map_size);
 
@@ -563,15 +563,6 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
         c->map_end   += g_entrypoint_map.l_base_diff;
         c->data_end  += g_entrypoint_map.l_base_diff;
         c->alloc_end += g_entrypoint_map.l_base_diff;
-
-        if (c->alloc_end == c->map_end)
-            continue;
-
-        ret = _PalVirtualMemoryAlloc((void*)c->map_end, c->alloc_end - c->map_end, c->prot);
-        if (ret < 0) {
-            log_error("Failed to zero-fill the rest of segment from ELF file");
-            goto out;
-        }
     }
 
     /* adjust shared object's virtual addresses (p_vaddr) to actual virtual addresses in memory */
@@ -590,8 +581,8 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
     if (ret < 0)
         goto out;
 
-    /* zero out the unused parts of loaded segments and perform relocations on loaded segments
-     * (need to first change memory permissions to writable and then revert permissions back) */
+    /* perform relocations on loaded segments (need to first change memory permissions to writable
+     * and then revert permissions back) */
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
         ret = _PalVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start,
@@ -600,11 +591,6 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
             log_error("Failed to add write memory protection on the segment from ELF file");
             goto out;
         }
-
-        /* zero out uninitialized but allocated part of the loaded segment (note that part of
-         * segment allocated via _PalVirtualMemoryAlloc() is already zeroed out) */
-        if (ALLOC_ALIGN_UP(c->data_end) > c->data_end)
-            memset((void*)c->data_end, 0, ALLOC_ALIGN_UP(c->data_end) - c->data_end);
     }
 
     ret = perform_relocations(&g_entrypoint_map);
