@@ -18,11 +18,11 @@
 #include "libos_handle.h"
 #include "libos_internal.h"
 #include "libos_lock.h"
+#include "libos_rwlock.h"
 #include "libos_tcb.h"
 #include "libos_utils.h"
 #include "libos_vma.h"
 #include "linux_abi/memory.h"
-#include "spinlock.h"
 
 /* The amount of total memory usage, all accesses must be protected by `vma_tree_lock`. */
 static size_t g_total_memory_size = 0;
@@ -102,10 +102,57 @@ static bool cmp_addr_to_vma(void* addr, struct avl_tree_node* node) {
  * to be revisited as there might be some optimizations that would break due to it.
  */
 static struct avl_tree vma_tree = {.cmp = vma_tree_cmp};
-static spinlock_t vma_tree_lock = INIT_SPINLOCK_UNLOCKED;
+static struct libos_rwlock vma_tree_lock;
+static bool vma_tree_lock_created = false;
+
+static inline void vma_rwlock_read_lock(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return;
+    rwlock_read_lock(l);
+}
+
+static inline void vma_rwlock_read_unlock(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return;
+    rwlock_read_unlock(l);
+}
+
+static inline void vma_rwlock_write_lock(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return;
+    rwlock_write_lock(l);
+}
+
+static inline void vma_rwlock_write_unlock(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return;
+    rwlock_write_unlock(l);
+}
+
+#ifdef DEBUG
+static inline bool vma_rwlock_is_read_locked(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return true;
+    return rwlock_is_read_locked(l);
+}
+
+static inline bool vma_rwlock_is_write_locked(struct libos_rwlock* l) {
+    if (!vma_tree_lock_created)
+        return true;
+    return rwlock_is_write_locked(l);
+}
+#endif
+
+/* VMA code is supposed to use the vma_* wrappers of RW lock; hide the actual RW lock funcs */
+#define rwlock_is_write_locked(x) false
+#define rwlock_is_read_locked(x) false
+#define rwlock_read_lock(x) static_assert(false, "hidden func")
+#define rwlock_read_unlock(x) static_assert(false, "hidden func")
+#define rwlock_write_lock(x) static_assert(false, "hidden func")
+#define rwlock_write_unlock(x) static_assert(false, "hidden func")
 
 static void total_memory_size_add(size_t length) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
 
     g_total_memory_size += length;
 
@@ -117,7 +164,7 @@ static void total_memory_size_add(size_t length) {
 }
 
 static void total_memory_size_sub(size_t length) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
     assert(g_total_memory_size >= length);
 
     g_total_memory_size -= length;
@@ -131,29 +178,29 @@ static struct libos_vma* node2vma(struct avl_tree_node* node) {
 }
 
 static struct libos_vma* _get_next_vma(struct libos_vma* vma) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
     return node2vma(avl_tree_next(&vma->tree_node));
 }
 
 static struct libos_vma* _get_prev_vma(struct libos_vma* vma) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
     return node2vma(avl_tree_prev(&vma->tree_node));
 }
 
 static struct libos_vma* _get_last_vma(void) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
     return node2vma(avl_tree_last(&vma_tree));
 }
 
 static struct libos_vma* _get_first_vma(void) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
     return node2vma(avl_tree_first(&vma_tree));
 }
 
 /* Returns the vma that contains `addr`. If there is no such vma, returns the closest vma with
  * higher address. */
 static struct libos_vma* _lookup_vma(uintptr_t addr) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
 
     struct avl_tree_node* node = avl_tree_lower_bound_fn(&vma_tree, (void*)addr, cmp_addr_to_vma);
     if (!node) {
@@ -176,7 +223,7 @@ typedef bool (*traverse_visitor)(struct libos_vma* vma, void* visitor_arg);
 // TODO: Probably other VMA functions could make use of this helper.
 static bool _traverse_vmas_in_range(uintptr_t begin, uintptr_t end, traverse_visitor visitor,
                                     void* visitor_arg) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock) || vma_rwlock_is_write_locked(&vma_tree_lock));
     assert(begin <= end);
 
     if (begin == end)
@@ -228,7 +275,7 @@ static void split_vma(struct libos_vma* old_vma, struct libos_vma* new_vma, uint
  */
 static int _vma_bkeep_remove(uintptr_t begin, uintptr_t end, bool is_internal,
                              struct libos_vma** new_vma_ptr, struct libos_vma** vmas_to_free) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
     assert(!new_vma_ptr || *new_vma_ptr);
     assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
 
@@ -325,11 +372,11 @@ static void* _vma_malloc(size_t size) {
     if (ret < 0) {
         struct libos_vma* vmas_to_free = NULL;
 
-        spinlock_lock(&vma_tree_lock);
+        vma_rwlock_write_lock(&vma_tree_lock);
         /* Since we are freeing a range we just created, additional vma is not needed. */
         ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + size, /*is_internal=*/true, NULL,
                                 &vmas_to_free);
-        spinlock_unlock(&vma_tree_lock);
+        vma_rwlock_write_unlock(&vma_tree_lock);
         if (ret < 0) {
             log_error("Removing a vma we just created failed: %s", unix_strerror(ret));
             BUG();
@@ -483,7 +530,7 @@ static struct libos_vma* alloc_vma(void) {
             BUG();
         }
 
-        spinlock_lock(&vma_tree_lock);
+        vma_rwlock_write_lock(&vma_tree_lock);
         /* Currently `tmp_vma` is always used (added to `vma_tree`), but this assumption could
          * easily be changed (e.g. if we implement VMAs merging).*/
         struct avl_tree_node* node = &tmp_vma.tree_node;
@@ -493,7 +540,7 @@ static struct libos_vma* alloc_vma(void) {
             avl_tree_swap_node(&vma_tree, node, &vma_migrate->tree_node);
             vma_migrate = NULL;
         }
-        spinlock_unlock(&vma_tree_lock);
+        vma_rwlock_write_unlock(&vma_tree_lock);
 
         if (vma_migrate) {
             free_mem_obj_to_mgr(vma_mgr, vma_migrate);
@@ -541,7 +588,7 @@ static void free_vmas_freelist(struct libos_vma* vma) {
 }
 
 static int _bkeep_initial_vma(struct libos_vma* new_vma) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
 
     struct libos_vma* tmp_vma = _lookup_vma(new_vma->begin);
     if (tmp_vma && tmp_vma->begin < new_vma->end) {
@@ -596,7 +643,7 @@ int init_vma(void) {
     }
     assert(1 + idx == ARRAY_SIZE(init_vmas));
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     int ret = 0;
     /* First of init_vmas is reserved for later usage. */
     for (size_t i = 1; i < ARRAY_SIZE(init_vmas); i++) {
@@ -622,7 +669,7 @@ int init_vma(void) {
         log_debug("Initial VMA region 0x%lx-0x%lx (%s) bookkeeped", init_vmas[i].begin,
                   init_vmas[i].end, init_vmas[i].comment);
     }
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
     /* From now on if we return with an error we might leave a structure local to this function in
      * vma_tree. We do not bother with removing them - this is initialization of VMA subsystem, if
      * it fails the whole application startup fails and we should never call any of functions in
@@ -671,6 +718,11 @@ int init_vma(void) {
         return -ENOMEM;
     }
 
+    if (!rwlock_create(&vma_tree_lock)) {
+        return -ENOMEM;
+    }
+    vma_tree_lock_created = true;
+
     /* Now we need to migrate temporary initial vmas. */
     struct libos_vma* vmas_to_migrate_to[ARRAY_SIZE(init_vmas)];
     for (size_t i = 0; i < ARRAY_SIZE(vmas_to_migrate_to); i++) {
@@ -680,7 +732,7 @@ int init_vma(void) {
         }
     }
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     for (size_t i = 0; i < ARRAY_SIZE(init_vmas); i++) {
         /* Skip empty areas. */
         if (init_vmas[i].begin == init_vmas[i].end) {
@@ -690,7 +742,7 @@ int init_vma(void) {
         avl_tree_swap_node(&vma_tree, &init_vmas[i].tree_node, &vmas_to_migrate_to[i]->tree_node);
         vmas_to_migrate_to[i] = NULL;
     }
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 
     for (size_t i = 0; i < ARRAY_SIZE(vmas_to_migrate_to); i++) {
         if (vmas_to_migrate_to[i]) {
@@ -702,7 +754,7 @@ int init_vma(void) {
 }
 
 static void _add_unmapped_vma(uintptr_t begin, uintptr_t end, struct libos_vma* vma) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
 
     vma->begin  = begin;
     vma->end    = end;
@@ -733,7 +785,7 @@ int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr
 
     struct libos_vma* vmas_to_free = NULL;
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     int ret = _vma_bkeep_remove((uintptr_t)addr, (uintptr_t)addr + length, is_internal,
                                 vma2 ? &vma2 : NULL, &vmas_to_free);
     if (ret >= 0) {
@@ -741,7 +793,7 @@ int bkeep_munmap(void* addr, size_t length, bool is_internal, void** tmp_vma_ptr
         *tmp_vma_ptr = (void*)vma1;
         vma1 = NULL;
     }
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 
     free_vmas_freelist(vmas_to_free);
     if (vma1) {
@@ -765,10 +817,10 @@ void bkeep_remove_tmp_vma(void* _vma) {
 
     assert(vma->flags == (VMA_INTERNAL | VMA_UNMAPPED));
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     avl_tree_delete(&vma_tree, &vma->tree_node);
     total_memory_size_sub(vma->end - vma->begin);
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 
     free_vma(vma);
 }
@@ -776,10 +828,10 @@ void bkeep_remove_tmp_vma(void* _vma) {
 void bkeep_convert_tmp_vma_to_user(void* _vma) {
     struct libos_vma* vma = (struct libos_vma*)_vma;
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     assert(vma->flags == (VMA_INTERNAL | VMA_UNMAPPED));
     vma->flags &= ~VMA_INTERNAL;
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 }
 
 static bool is_file_prot_matching(struct libos_handle* file_hdl, int prot) {
@@ -816,7 +868,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
 
     struct libos_vma* vmas_to_free = NULL;
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     int ret = 0;
     if (flags & MAP_FIXED_NOREPLACE) {
         struct libos_vma* tmp_vma = _lookup_vma(new_vma->begin);
@@ -831,7 +883,7 @@ int bkeep_mmap_fixed(void* addr, size_t length, int prot, int flags, struct libo
         avl_tree_insert(&vma_tree, &new_vma->tree_node);
         total_memory_size_add(new_vma->end - new_vma->begin);
     }
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 
     free_vmas_freelist(vmas_to_free);
     if (vma1) {
@@ -853,7 +905,7 @@ static void vma_update_prot(struct libos_vma* vma, int prot) {
 
 static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_internal,
                              struct libos_vma** new_vma_ptr1, struct libos_vma** new_vma_ptr2) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_write_locked(&vma_tree_lock));
     assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
     assert(begin < end);
 
@@ -982,10 +1034,10 @@ int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal) {
         return -ENOMEM;
     }
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
     int ret = _vma_bkeep_change((uintptr_t)addr, (uintptr_t)addr + length, prot, is_internal, &vma1,
                                 &vma2);
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
 
     if (vma1) {
         free_vma(vma1);
@@ -1065,7 +1117,7 @@ int bkeep_mmap_any_in_range(void* _bottom_addr, void* _top_addr, size_t length, 
     new_vma->offset = file ? offset : 0;
     copy_comment(new_vma, comment ?: "");
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_write_lock(&vma_tree_lock);
 
     struct libos_vma* vma = _lookup_vma(top_addr);
     uintptr_t max_addr;
@@ -1104,7 +1156,7 @@ out_found:
     new_vma = NULL;
 
 out:
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_write_unlock(&vma_tree_lock);
     if (new_vma) {
         free_vma(new_vma);
     }
@@ -1174,7 +1226,7 @@ int lookup_vma(void* addr, struct libos_vma_info* vma_info) {
     assert(vma_info);
     int ret = 0;
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
     struct libos_vma* vma = _lookup_vma((uintptr_t)addr);
     if (!vma || !is_addr_in_vma((uintptr_t)addr, vma)) {
         ret = -ENOENT;
@@ -1184,7 +1236,7 @@ int lookup_vma(void* addr, struct libos_vma_info* vma_info) {
     dump_vma(vma_info, vma);
 
 out:
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
     return ret;
 }
 
@@ -1211,9 +1263,9 @@ bool is_in_adjacent_user_vmas(const void* addr, size_t length, int prot) {
         .is_ok = true,
     };
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
     bool is_continuous = _traverse_vmas_in_range(begin, end, adj_visitor, &ctx);
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
 
     return is_continuous && ctx.is_ok;
 }
@@ -1224,7 +1276,7 @@ static size_t dump_vmas_with_buf(struct libos_vma_info* infos, size_t max_count,
     size_t size = 0;
     struct libos_vma_info* vma_info = infos;
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
     struct libos_vma* vma;
 
     for (vma = _lookup_vma(begin); vma && vma->begin < end; vma = _get_next_vma(vma)) {
@@ -1237,7 +1289,7 @@ static size_t dump_vmas_with_buf(struct libos_vma_info* infos, size_t max_count,
         size++;
     }
 
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
 
     return size;
 }
@@ -1266,14 +1318,14 @@ static int dump_vmas(struct libos_vma_info** out_infos, size_t* out_count,
 }
 
 static bool vma_filter_all(struct libos_vma* vma, void* arg) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock));
     __UNUSED(arg);
 
     return !(vma->flags & VMA_INTERNAL);
 }
 
 static bool vma_filter_exclude_unmapped(struct libos_vma* vma, void* arg) {
-    assert(spinlock_is_locked(&vma_tree_lock));
+    assert(vma_rwlock_is_read_locked(&vma_tree_lock));
     __UNUSED(arg);
 
     return !(vma->flags & (VMA_INTERNAL | VMA_UNMAPPED));
@@ -1362,9 +1414,9 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
         .error = 0,
     };
 
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
     bool is_continuous = _traverse_vmas_in_range(begin, end, madvise_dontneed_visitor, &ctx);
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
 
     if (!is_continuous)
         return -ENOMEM;
@@ -1701,7 +1753,7 @@ static void debug_print_vma(struct libos_vma* vma) {
 }
 
 void debug_print_all_vmas(void) {
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
 
     struct libos_vma* vma = _get_first_vma();
     while (vma) {
@@ -1709,7 +1761,7 @@ void debug_print_all_vmas(void) {
         vma = _get_next_vma(vma);
     }
 
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
 }
 
 size_t get_peak_memory_usage(void) {
@@ -1717,9 +1769,9 @@ size_t get_peak_memory_usage(void) {
 }
 
 size_t get_total_memory_usage(void) {
-    spinlock_lock(&vma_tree_lock);
+    vma_rwlock_read_lock(&vma_tree_lock);
     size_t total_memory_size = g_total_memory_size;
-    spinlock_unlock(&vma_tree_lock);
+    vma_rwlock_read_unlock(&vma_tree_lock);
     /* This memory accounting is just a simple heuristic, which does not account swap, reserved
      * memory, unmapped VMAs etc. */
     return MIN(total_memory_size, g_pal_public_state->mem_total);
