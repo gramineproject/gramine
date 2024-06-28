@@ -207,3 +207,7 @@ long libos_syscall_getrandom(char* buf, size_t count, unsigned int flags);
 long libos_syscall_mlock2(unsigned long start, size_t len, int flags);
 long libos_syscall_sysinfo(struct sysinfo* info);
 long libos_syscall_close_range(unsigned int first, unsigned int last, unsigned int flags);
+long libos_syscall_timerfd_create(int clockid, int flags);
+long libos_syscall_timerfd_settime(int fd, int flags, const struct __kernel_itimerspec* value,
+                                   struct __kernel_itimerspec* ovalue);
+long libos_syscall_timerfd_gettime(int fd, struct __kernel_itimerspec* value);

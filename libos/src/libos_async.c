@@ -18,12 +18,13 @@
 
 DEFINE_LIST(async_event);
 struct async_event {
+    enum async_event_type type;
     IDTYPE caller; /* thread installing this event */
     LIST_TYPE(async_event) list;
     LIST_TYPE(async_event) triggered_list;
     void (*callback)(IDTYPE caller, void* arg);
     void* arg;
-    PAL_HANDLE object;       /* handle (async IO) to wait on */
+    PAL_HANDLE object;       /* handle (async IO or timerfd) to wait on */
     uint64_t expire_time_us; /* alarm/timer to wait on */
 };
 DEFINE_LISTP(async_event);
@@ -40,25 +41,26 @@ static struct libos_pollable_event install_new_event;
 
 static int create_async_worker(void);
 
-/* Threads register async events like alarm(), setitimer(), ioctl(FIOASYNC)
- * using this function. These events are enqueued in async_list and delivered
- * to async worker thread by triggering install_new_event. When event is
- * triggered in async worker thread, the corresponding event's callback with
- * arguments `arg` is called. This callback typically sends a signal to the
+/* Threads register async events like alarm(), setitimer(), timerfd_settime(), ioctl(FIOASYNC) using
+ * this function. These events are enqueued in async_list and delivered to async worker thread by
+ * triggering install_new_event. When event is triggered in async worker thread, the corresponding
+ * event's callback with arguments `arg` is called. This callback typically sends a signal to the
  * thread which registered the event (saved in `event->caller`).
  *
- * We distinguish between alarm/timer events and async IO events:
- *   - alarm/timer events set object = NULL and time_us = microseconds
- *     (time_us = 0 cancels all pending alarms/timers).
+ * The async event type is specified in `type`. Alarm/timer events and async IO events are currently
+ * supported:
+ *   - alarm/timer events set time_us = microsseconds (time_us = 0 cancels all pending
+ *     alarms/timers). Specfically when object != NULL, this indicates a timerfd event.
  *   - async IO events set object = handle and time_us = 0.
  *
- * Function returns remaining usecs for alarm/timer events (same as alarm())
- * or 0 for async IO events. On error, it returns a negated error code.
+ * Function returns remaining usecs for alarm/timer events (same as alarm()) or 0 for async IO
+ * events. On error, it returns a negated error code.
  */
-int64_t install_async_event(PAL_HANDLE object, uint64_t time_us,
+int64_t install_async_event(enum async_event_type type, PAL_HANDLE object,
+                            uint64_t time_us, bool absolute_time,
                             void (*callback)(IDTYPE caller, void* arg), void* arg) {
-    /* if event happens on object, time_us must be zero */
-    assert(!object || (object && !time_us));
+    assert((type == ASYNC_EVENT_TYPE_ALARM_TIMER) ||
+           (type == ASYNC_EVENT_TYPE_IO && (!object || !time_us)));
 
     uint64_t now_us = 0;
     int ret = PalSystemTimeQuery(&now_us);
@@ -73,21 +75,22 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time_us,
         return -ENOMEM;
     }
 
+    event->type           = type;
     event->callback       = callback;
     event->arg            = arg;
     event->caller         = get_cur_tid();
     event->object         = object;
-    event->expire_time_us = time_us ? now_us + time_us : 0;
+    event->expire_time_us = time_us ? (absolute_time ? time_us : now_us + time_us) : 0;
 
     lock(&async_worker_lock);
 
-    if (callback != &cleanup_thread && !object) {
-        /* This is alarm() or setitimer() emulation, treat both according to
-         * alarm() syscall semantics: cancel any pending alarm/timer. */
+    if (callback != &cleanup_thread && type == ASYNC_EVENT_TYPE_ALARM_TIMER) {
+        /* This is alarm(), setitimer(), timerfd_settime() emulation, treat all according to alarm()
+         * syscall semantics: cancel any pending alarm/timer. */
         struct async_event* tmp;
         struct async_event* n;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-            if (tmp->expire_time_us) {
+            if (tmp->object == object && tmp->expire_time_us) {
                 /* this is a pending alarm/timer, cancel it and save its expiration time */
                 if (max_prev_expire_time_us < tmp->expire_time_us)
                     max_prev_expire_time_us = tmp->expire_time_us;
@@ -208,7 +211,7 @@ static int libos_async_worker(void* arg) {
         bool other_event = false;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
             /* repopulate `pals` with IO events and find the next expiring alarm/timer */
-            if (tmp->object) {
+            if (tmp->type == ASYNC_EVENT_TYPE_IO && tmp->object) {
                 if (pals_cnt == pals_max_cnt) {
                     /* grow `pals` to accommodate more objects */
                     PAL_HANDLE* tmp_pals = malloc(sizeof(*tmp_pals) * (1 + pals_max_cnt * 2));
@@ -244,7 +247,8 @@ static int libos_async_worker(void* arg) {
                 pal_events[pals_cnt + 1] = PAL_WAIT_READ;
                 ret_events[pals_cnt + 1] = 0;
                 pals_cnt++;
-            } else if (tmp->expire_time_us && tmp->expire_time_us > now_us) {
+            } else if (tmp->type == ASYNC_EVENT_TYPE_ALARM_TIMER && tmp->expire_time_us &&
+                       tmp->expire_time_us > now_us) {
                 if (!next_expire_time_us || next_expire_time_us > tmp->expire_time_us) {
                     /* use time of the next expiring alarm/timer */
                     next_expire_time_us = tmp->expire_time_us;
@@ -312,7 +316,7 @@ static int libos_async_worker(void* arg) {
 
                 /* check if this event is an IO event found in async_list */
                 LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
-                    if (tmp->object == pals[i]) {
+                    if (tmp->type == ASYNC_EVENT_TYPE_IO && tmp->object == pals[i]) {
                         log_debug("Async IO event triggered at %lu", now_us);
                         LISTP_ADD_TAIL(tmp, &triggered, triggered_list);
                         break;
@@ -342,7 +346,7 @@ static int libos_async_worker(void* arg) {
             LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &triggered, triggered_list) {
                 LISTP_DEL(tmp, &triggered, triggered_list);
                 tmp->callback(tmp->caller, tmp->arg);
-                if (!tmp->object) {
+                if (tmp->type == ASYNC_EVENT_TYPE_ALARM_TIMER) {
                     /* this is a one-off exit-child or alarm/timer event */
                     free(tmp);
                 }
