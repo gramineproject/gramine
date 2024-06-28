@@ -23,6 +23,7 @@ libra_tls_attest = shared_library('ra_tls_attest',
     link_args: ra_tls_link_args,
     include_directories: pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
     dependencies: [
+        libcbor_dep,
         mbedtls_static_dep,
     ],
     install: true,
@@ -40,8 +41,9 @@ libra_tls_verify = static_library('ra_tls_verify',
 
     include_directories: pal_sgx_inc,
     dependencies: [
-        sgx_util_dep,
+        libcbor_dep,
         mbedtls_static_dep,
+        sgx_util_dep,
     ],
     install: true,
     install_rpath: get_option('prefix') / get_option('libdir'),
@@ -86,6 +88,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
     link_args: secret_prov_link_args,
     include_directories: pal_sgx_inc,
     dependencies: [
+        libcbor_dep,
         mbedtls_static_dep,
         sgx_util_dep,
     ],
@@ -104,6 +107,7 @@ libsecret_prov_verify = static_library('secret_prov_verify',
     'secret_prov_common.c',
 
     dependencies: [
+        libcbor_dep,
         libra_tls_verify_dep,
         mbedtls_static_dep,
         sgx_util_dep,
@@ -150,6 +154,7 @@ if dcap
 
         link_args: ra_tls_link_args,
         dependencies: [
+            libcbor_dep,
             libra_tls_verify_dep.as_link_whole(),
             mbedtls_static_dep,
             sgx_dcap_quoteverify_dep,
@@ -171,6 +176,7 @@ if dcap
 
         link_args: ra_tls_link_args,
         dependencies: [
+            libcbor_dep,
             libra_tls_verify_dep.as_link_whole(),
             mbedtls_static_dep,
             sgx_dcap_quoteverify_dep,
@@ -192,6 +198,7 @@ if dcap
         link_args: secret_prov_link_args,
         include_directories: pal_sgx_inc,
         dependencies: [
+            libcbor_dep,
             libsecret_prov_verify_dep.as_link_whole(),
             mbedtls_static_dep,
             sgx_dcap_quoteverify_dep,

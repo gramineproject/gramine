@@ -46,10 +46,16 @@ RUN apt-get update && apt-get satisfy -y \
 RUN apt-get update && apt-get install -y \
     cargo \
     clang \
+    cmake \
     cpio \
+    curl \
     dwarves \
+    flex \
     g++-12 \
+    gawk \
     gcc-12 \
+    gdb \
+    gettext \
     git \
     jq \
     kmod \

@@ -87,7 +87,7 @@ If your current kernel version is lower than 5.11, then you have two options:
 """"""""""""""""""""
 Run the following commands on Ubuntu to install SGX-related dependencies::
 
-    sudo apt-get install -y libprotobuf-c-dev protobuf-c-compiler \
+    sudo apt-get install -y cmake libprotobuf-c-dev protobuf-c-compiler \
         protobuf-compiler python3-cryptography python3-pip python3-protobuf
 
 2. Install Intel SGX SDK/PSW

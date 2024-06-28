@@ -193,25 +193,41 @@ int main(int argc, char** argv) {
                 return 1;
             }
 
-            /* user asks to maliciously modify the embedded SGX quote (for testing purposes) */
+            /* user asks to maliciously modify the embedded SGX quote (for testing purposes); we
+             * have two quotes currently (with legacy OID and with standard TCG DICE OID), so we
+             * modify both of them */
             mbedtls_printf("  . Maliciously modifying SGX quote embedded in RA-TLS cert...");
             fflush(stdout);
 
-            uint8_t oid[] = {0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, 0x06};
-            uint8_t* p = memmem(srvcert.v3_ext.p, srvcert.v3_ext.len, oid, sizeof(oid));
-            if (!p) {
-                mbedtls_printf(" failed\n  !  No embedded SGX quote found\n\n");
-                goto exit;
+            uint8_t legacy_oid[] = NON_STANDARD_INTEL_SGX_QUOTE_OID;
+            uint8_t standard_oid[] = TCG_DICE_TAGGED_EVIDENCE_OID_RAW;
+            struct {
+                uint8_t* oid;
+                size_t size;
+                size_t offset;
+            } oids[2] = {
+                { .oid = legacy_oid, .size = sizeof(legacy_oid), .offset = 5},
+                { .oid = standard_oid, .size = sizeof(standard_oid), .offset = 10},
+            };
+
+            for (size_t i = 0; i < 2; i++) {
+                uint8_t* p = memmem(srvcert.v3_ext.p, srvcert.v3_ext.len, oids[i].oid,
+                                    oids[i].size);
+                if (!p) {
+                    mbedtls_printf(" failed\n  !  No embedded SGX quote found\n\n");
+                    goto exit;
+                }
+
+                p += oids[i].size;
+                p += oids[i].offset; /* jump somewhere in the middle of the SGX quote */
+                if (p + sizeof(MALICIOUS_STR) > srvcert.v3_ext.p + srvcert.v3_ext.len) {
+                    mbedtls_printf(" failed\n  !  Size of embedded SGX quote is too small\n\n");
+                    goto exit;
+                }
+
+                memcpy(p, MALICIOUS_STR, sizeof(MALICIOUS_STR));
             }
 
-            p += sizeof(oid);
-            p += 5; /* jump somewhere in the middle of the SGX quote */
-            if (p + sizeof(MALICIOUS_STR) > srvcert.v3_ext.p + srvcert.v3_ext.len) {
-                mbedtls_printf(" failed\n  !  Size of embedded SGX quote is too small\n\n");
-                goto exit;
-            }
-
-            memcpy(p, MALICIOUS_STR, sizeof(MALICIOUS_STR));
             mbedtls_printf(" ok\n");
         }
     } else {
