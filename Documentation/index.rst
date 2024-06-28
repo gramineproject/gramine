@@ -139,6 +139,8 @@ technology and a glossary to help you with any questions you may have.
 - :doc:`devel/features` -- This page has a comprehensive description of
   implemented and unimplemented features of Gramine, including the lists of
   available system calls and pseudo-files.
+- :doc:`devel/encfiles` -- This page has a description of the Encrypted Files
+  feature of Gramine.
 - :doc:`management-team` - This page lists maintainers of Gramine.
 - :doc:`gramine-users` - See what companies use Gramine for their confidential
   computing needs.
@@ -226,6 +228,7 @@ Indices and tables
    :maxdepth: 1
 
    devel/features
+   devel/encfiles
    management-team
    gramine-users
    sgx-intro
