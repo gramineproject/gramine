@@ -546,6 +546,9 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
         size_t cpy_size = c->data_end - c->start;
         assert(cpy_size <= map_size);
 
+        assert(IS_ALLOC_ALIGNED_PTR(map_addr));
+        assert(IS_ALLOC_ALIGNED(map_size));
+
         ret = _PalVirtualMemoryAlloc(map_addr, map_size, c->prot | PAL_PROT_WRITE);
         if (ret < 0) {
             log_error("Failed to prepare mapping for segment from ELF file");
