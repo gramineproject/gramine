@@ -77,7 +77,7 @@ int sys_print_as_bitmask(char* buf, size_t buf_size, size_t count,
     uint32_t word = 0;
     while (1) {
         if (is_present(pos, callback_arg))
-            word |= 1 << pos % 32;
+            word |= 1U << pos % 32;
         if (pos % 32 == 0) {
             if (count <= 32) {
                 /* Linux sysfs quirk: small bitmasks are printed without leading zeroes. */

@@ -404,7 +404,7 @@ static int perform_relocations(struct link_map* map) {
     }
 
     /* perform PLT relocs: supported binaries may have only R_X86_64_JUMP_SLOT relas */
-    elf_rela_t* plt_relas_addr_end = (void*)plt_relas_addr + plt_relas_size;
+    elf_rela_t* plt_relas_addr_end = (elf_rela_t*)((uintptr_t)plt_relas_addr + plt_relas_size);
     for (elf_rela_t* plt_rela = plt_relas_addr; plt_rela < plt_relas_addr_end; plt_rela++) {
         if (ELF_R_TYPE(plt_rela->r_info) != R_X86_64_JUMP_SLOT) {
             log_error("Unrecognized relocation type; PAL loader currently supports only "
