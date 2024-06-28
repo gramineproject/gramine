@@ -548,7 +548,7 @@ SGX terminology
 
       This model can be contrasted with the :term:`background check model`.
 
-      Currently, Gramine does *not* provide libraries or tools to support hte
+      Currently, Gramine does *not* provide libraries or tools to support the
       passport model. Instead, Gramine supports the background check model.
 
    Intel Provisioning Certification Service
@@ -732,7 +732,7 @@ SGX terminology
       directly from the :term:`attester` (in :term:`passport model`) or
       indirectly from the :term:`relying party` (in :term:`background check
       model`), as well as the :term:`endorsements<endorsement>` from the
-      :term:`endorser<endorsers>`, and sends the :term:`attestation result` to
+      :term:`endorsers<endorser>`, and sends the :term:`attestation result` to
       the :term:`relying party`. The verifier evaluates the evidence to
       determine attester's trustworthiness.
 
