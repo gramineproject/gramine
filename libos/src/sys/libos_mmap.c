@@ -302,33 +302,9 @@ long libos_syscall_mprotect(void* addr, size_t length, int prot) {
         return -EINVAL;
     }
 
-    /* `bkeep_mprotect` and then `PalVirtualMemoryProtect` is racy, but it's hard to do it properly.
-     * On the other hand if this race happens, it means user app is buggy, so not a huge problem. */
-
     ret = bkeep_mprotect(addr, length, prot, /*is_internal=*/false);
     if (ret < 0) {
         return ret;
-    }
-
-    if (prot & PROT_GROWSDOWN) {
-        struct libos_vma_info vma_info = {0};
-        if (lookup_vma(addr, &vma_info) >= 0) {
-            assert(vma_info.addr <= addr);
-            length += addr - vma_info.addr;
-            addr = vma_info.addr;
-            if (vma_info.file) {
-                put_handle(vma_info.file);
-            }
-        } else {
-            log_warning("Memory that was about to be mprotected was unmapped, your program is "
-                        "buggy!");
-            return -ENOTRECOVERABLE;
-        }
-    }
-
-    ret = PalVirtualMemoryProtect(addr, length, LINUX_PROT_TO_PAL(prot, /*map_flags=*/0));
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
     }
 
     return 0;

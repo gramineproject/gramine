@@ -851,151 +851,6 @@ static void vma_update_prot(struct libos_vma* vma, int prot) {
     }
 }
 
-static int _vma_bkeep_change(uintptr_t begin, uintptr_t end, int prot, bool is_internal,
-                             struct libos_vma** new_vma_ptr1, struct libos_vma** new_vma_ptr2) {
-    assert(spinlock_is_locked(&vma_tree_lock));
-    assert(IS_ALLOC_ALIGNED_PTR(begin) && IS_ALLOC_ALIGNED_PTR(end));
-    assert(begin < end);
-
-    struct libos_vma* vma = _lookup_vma(begin);
-    if (!vma) {
-        return -ENOMEM;
-    }
-
-    struct libos_vma* prev = NULL;
-    struct libos_vma* first_vma = vma;
-
-    if (begin < vma->begin) {
-        return -ENOMEM;
-    }
-
-    bool is_continuous = true;
-
-    while (1) {
-        if (!!(vma->flags & VMA_INTERNAL) != is_internal) {
-            return -EACCES;
-        }
-        if (prot & PROT_GROWSDOWN) {
-            if (!(vma->flags & MAP_GROWSDOWN)) {
-                return -EINVAL;
-            }
-        }
-        if (vma->file && (vma->flags & MAP_SHARED)) {
-            if (!is_file_prot_matching(vma->file, prot)) {
-                return -EACCES;
-            }
-        }
-
-        if (end <= vma->end) {
-            break;
-        }
-
-        prev = vma;
-
-        vma = _get_next_vma(vma);
-        if (!vma) {
-            is_continuous = false;
-            break;
-        }
-
-        is_continuous &= prev->end == vma->begin;
-    }
-
-    if (!is_continuous) {
-        /* When Linux fails with such an error, it still changes permissions of the first
-         * continuous fragment, but we just return an error. */
-        return -ENOMEM;
-    }
-
-    vma = first_vma;
-
-    /* For PROT_GROWSDOWN we just pretend that `vma->begin == begin`. */
-    if (vma->begin < begin && !(prot & PROT_GROWSDOWN)) {
-        struct libos_vma* new_vma1 = *new_vma_ptr1;
-        *new_vma_ptr1 = NULL;
-
-        split_vma(vma, new_vma1, begin);
-        vma_update_prot(new_vma1, prot);
-
-        struct libos_vma* next = _get_next_vma(vma);
-
-        avl_tree_insert(&vma_tree, &new_vma1->tree_node);
-
-        if (end < new_vma1->end) {
-            struct libos_vma* new_vma2 = *new_vma_ptr2;
-            *new_vma_ptr2 = NULL;
-
-            split_vma(new_vma1, new_vma2, end);
-            vma_update_prot(new_vma2, vma->prot);
-
-            avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-
-            return 0;
-        }
-
-        /* Error checking at the begining ensures we always have the next node. */
-        assert(next);
-        vma = next;
-    }
-
-    while (vma->end <= end) {
-        vma_update_prot(vma, prot);
-
-#ifdef DEBUG
-        struct libos_vma* prev = vma;
-#endif
-        vma = _get_next_vma(vma);
-        if (!vma) {
-            /* We've reached the very last vma. */
-            assert(prev->end == end);
-            return 0;
-        }
-    }
-
-    if (end <= vma->begin) {
-        return 0;
-    }
-
-    struct libos_vma* new_vma2 = *new_vma_ptr2;
-    *new_vma_ptr2 = NULL;
-
-    split_vma(vma, new_vma2, end);
-    vma_update_prot(vma, prot);
-
-    avl_tree_insert(&vma_tree, &new_vma2->tree_node);
-
-    return 0;
-}
-
-int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal) {
-    if (!length || !IS_ALLOC_ALIGNED(length) || !IS_ALLOC_ALIGNED_PTR(addr)) {
-        return -EINVAL;
-    }
-
-    struct libos_vma* vma1 = alloc_vma();
-    if (!vma1) {
-        return -ENOMEM;
-    }
-    struct libos_vma* vma2 = alloc_vma();
-    if (!vma2) {
-        free_vma(vma1);
-        return -ENOMEM;
-    }
-
-    spinlock_lock(&vma_tree_lock);
-    int ret = _vma_bkeep_change((uintptr_t)addr, (uintptr_t)addr + length, prot, is_internal, &vma1,
-                                &vma2);
-    spinlock_unlock(&vma_tree_lock);
-
-    if (vma1) {
-        free_vma(vma1);
-    }
-    if (vma2) {
-        free_vma(vma2);
-    }
-
-    return ret;
-}
 
 /* TODO consider:
  * maybe it's worth to keep another tree, complementary to `vma_tree`, that would hold free areas.
@@ -1368,6 +1223,128 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
 
     if (!is_continuous)
         return -ENOMEM;
+    return ctx.error;
+}
+
+struct mprotect_ctx {
+    uintptr_t begin;
+    uintptr_t end;
+    int prot;
+    bool is_internal;
+    struct libos_vma* new_vma1;
+    struct libos_vma* new_vma2;
+    int error;
+};
+
+static bool mprotect_check_visitor(struct libos_vma* vma, void* visitor_arg) {
+    struct mprotect_ctx* ctx = visitor_arg;
+    if (vma->flags & VMA_UNMAPPED) {
+        ctx->error = -EINVAL;
+        return false;
+    }
+    if ((ctx->is_internal && !(vma->flags & VMA_INTERNAL)) ||
+            (!ctx->is_internal && (vma->flags & VMA_INTERNAL))) {
+        ctx->error = -EINVAL;
+        return false;
+    }
+    if (ctx->prot & PROT_GROWSDOWN) {
+        if (!(vma->flags & MAP_GROWSDOWN)) {
+            ctx->error = -EINVAL;
+            return false;
+        }
+    }
+    if (vma->file && (vma->flags & MAP_SHARED)) {
+        if (!is_file_prot_matching(vma->file, ctx->prot)) {
+            ctx->error = -EACCES;
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool mprotect_visitor(struct libos_vma* vma, void* visitor_arg) {
+    struct mprotect_ctx* ctx = (struct mprotect_ctx*)visitor_arg;
+    if (vma->prot == (ctx->prot & (PROT_READ | PROT_WRITE | PROT_EXEC))) {
+        return true;
+    }
+
+    if (vma->begin < ctx->begin && !(ctx->prot & PROT_GROWSDOWN)) {
+        struct libos_vma* new_vma1 = ctx->new_vma1;
+        ctx->new_vma1 = NULL;
+
+        split_vma(vma, new_vma1, ctx->begin);
+        avl_tree_insert(&vma_tree, &new_vma1->tree_node);
+        vma = new_vma1;
+    }
+
+    if (ctx->end < vma->end) {
+        struct libos_vma* new_vma2 = ctx->new_vma2;
+        ctx->new_vma2 = NULL;
+
+        split_vma(vma, new_vma2, ctx->end);
+        avl_tree_insert(&vma_tree, &new_vma2->tree_node);
+    }
+
+    vma_update_prot(vma, ctx->prot);
+
+    int ret = PalVirtualMemoryProtect((void*)vma->begin, vma->end - vma->begin,
+                                      LINUX_PROT_TO_PAL(ctx->prot, /*map_flags=*/0));
+    if (ret < 0) {
+        ctx->error = pal_to_unix_errno(ret);
+        return false;
+    }
+    return true;
+}
+
+int bkeep_mprotect(void* addr, size_t length, int prot, bool is_internal) {
+    struct libos_vma* vma1 = alloc_vma();
+    if (!vma1) {
+        return -ENOMEM;
+    }
+    struct libos_vma* vma2 = alloc_vma();
+    if (!vma2) {
+        free_vma(vma1);
+        return -ENOMEM;
+    }
+
+    struct mprotect_ctx ctx = {
+        .begin       = (uintptr_t)addr,
+        .end         = (uintptr_t)addr + length,
+        .prot        = prot,
+        .is_internal = is_internal,
+        .new_vma1    = vma1,
+        .new_vma2    = vma2,
+        .error       = 0,
+    };
+
+    spinlock_lock(&vma_tree_lock);
+
+    bool is_continuous = _traverse_vmas_in_range(ctx.begin, ctx.end, mprotect_check_visitor, &ctx);
+    if (!is_continuous) {
+        spinlock_unlock(&vma_tree_lock);
+        ctx.error = -ENOMEM;
+        goto out;
+    }
+    if (ctx.error) {
+        spinlock_unlock(&vma_tree_lock);
+        goto out;
+    }
+
+    is_continuous = _traverse_vmas_in_range(ctx.begin, ctx.end, mprotect_visitor, &ctx);
+    spinlock_unlock(&vma_tree_lock);
+    if (!is_continuous) {
+        log_error("Walks through all VMAs failed");
+        BUG();
+    }
+
+out:
+    if (ctx.new_vma1) {
+        free_vma(ctx.new_vma1);
+    }
+    if (ctx.new_vma2) {
+        free_vma(ctx.new_vma2);
+    }
+
     return ctx.error;
 }
 
