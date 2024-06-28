@@ -99,8 +99,6 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                           uint32_t untrusted_external_event, sgx_cpu_context_t* uc,
                           PAL_XREGS_STATE* xregs_state, sgx_arch_exinfo_t* exinfo);
 
-void init_tsc(void);
-
 int init_cpuid(void);
 
 int init_enclave(void);
