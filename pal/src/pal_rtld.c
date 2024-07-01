@@ -70,27 +70,23 @@ struct loadcmd {
     /*
      * Load command for a single segment. The following properties are true:
      *
-     *   - start <= data_end <= map_end <= alloc_end
-     *   - start, map_end, alloc_end are page-aligned
+     *   - start <= alloc_end; both are page-aligned
+     *   - [start + filesz, alloc_end) is zeroed out (corresponds to the BSS section)
      *   - map_off is page-aligned
      *
      *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
-     *   The same struct is used also in libos/src/libos_rtld.c code.
+     *   A similar struct is used also in libos/src/libos_rtld.c code.
      */
 
     /* Start of memory area */
     elf_addr_t start;
 
-    /* End of file data (data_end .. alloc_end should be zeroed out) */
-    elf_addr_t data_end;
-
-    /* End of mapped file data (data_end rounded up to page size, so that we can mmap
-     * start .. map_end) */
-    elf_addr_t map_end;
-
     /* End of memory area */
     elf_addr_t alloc_end;
+
+    /* Segment's file-image size, i.e. the exact size of the segment in ELF file */
+    elf_addr_t filesz;
 
     /* Offset from the beginning of file at which the first byte of the segment resides */
     elf_off_t map_off;
@@ -474,9 +470,8 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
 
                 struct loadcmd* c = &loadcmds[loadcmds_cnt++];
                 c->start     = ALLOC_ALIGN_DOWN(ph->p_vaddr);
-                c->map_end   = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_filesz);
                 c->map_off   = ALLOC_ALIGN_DOWN(ph->p_offset);
-                c->data_end  = ph->p_vaddr + ph->p_filesz;
+                c->filesz    = ph->p_filesz;
                 c->alloc_end = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
                 c->prot      = elf_segment_prot_to_pal_prot(ph->p_flags);
 
@@ -493,7 +488,7 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
                     goto out;
                 }
 
-                if (c->start >= c->map_end) {
+                if (c->start >= c->alloc_end) {
                     log_error("ELF loadable program segment has impossible memory region to map");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
@@ -543,8 +538,6 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
 
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
         size_t map_size = c->alloc_end - c->start;
-        size_t cpy_size = c->data_end - c->start;
-        assert(cpy_size <= map_size);
 
         assert(IS_ALLOC_ALIGNED_PTR(map_addr));
         assert(IS_ALLOC_ALIGNED(map_size));
@@ -554,7 +547,7 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
             log_error("Failed to prepare mapping for segment from ELF file");
             goto out;
         }
-        memcpy(map_addr, elf_file_buf + c->map_off, cpy_size);
+        memcpy(map_addr, elf_file_buf + c->map_off, c->filesz);
         ret = _PalVirtualMemoryProtect(map_addr, map_size, c->prot);
         if (ret < 0) {
             log_error("Failed to remove write memory protection off the segment from ELF file");
@@ -563,8 +556,6 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
 
         /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */
         c->start     += g_entrypoint_map.l_base_diff;
-        c->map_end   += g_entrypoint_map.l_base_diff;
-        c->data_end  += g_entrypoint_map.l_base_diff;
         c->alloc_end += g_entrypoint_map.l_base_diff;
     }
 
