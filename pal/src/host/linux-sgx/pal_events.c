@@ -106,7 +106,7 @@ static void free_untrusted_futex_word(uint64_t* addr) {
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
     PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
     if (!handle) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(handle, PAL_TYPE_EVENT);

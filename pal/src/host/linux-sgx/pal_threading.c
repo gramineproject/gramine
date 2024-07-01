@@ -169,7 +169,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     int ret;
     PAL_HANDLE new_thread = calloc(1, HANDLE_SIZE(thread));
     if (!new_thread)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     init_handle_hdr(new_thread, PAL_TYPE_THREAD);
 
@@ -177,7 +177,7 @@ int _PalThreadCreate(PAL_HANDLE* handle, int (*callback)(void*), void* param) {
     INIT_LIST_HEAD(&new_thread->thread, list);
     struct thread_param* thread_param = malloc(sizeof(struct thread_param));
     if (!thread_param) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out_err;
     }
     thread_param->callback = callback;
@@ -275,7 +275,7 @@ int _PalThreadGetCpuAffinity(PAL_HANDLE thread, unsigned long* cpu_mask, size_t 
             }
             if ((cpu_mask[i] & (1ul << j))
                     && !g_pal_public_state.topo_info.threads[thread_idx].is_online) {
-                return -PAL_ERROR_INVAL;
+                return PAL_ERROR_INVAL;
             }
         }
     }

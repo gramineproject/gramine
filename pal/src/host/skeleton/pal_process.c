@@ -16,7 +16,7 @@
 
 int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
                       size_t reserved_mem_ranges_len, PAL_HANDLE* out_handle) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 noreturn void _PalProcessExit(int exitcode) {
@@ -24,11 +24,11 @@ noreturn void _PalProcessExit(int exitcode) {
 }
 
 static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static void proc_destroy(PAL_HANDLE handle) {

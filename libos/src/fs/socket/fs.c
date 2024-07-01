@@ -179,7 +179,7 @@ static int ioctl(struct libos_handle* handle, unsigned int cmd, unsigned long ar
             int cmd_ret;
             ret = PalDeviceIoControl(pal_handle, cmd, arg, &cmd_ret);
             if (ret < 0) {
-                return ret == -PAL_ERROR_NOTIMPLEMENTED ? -ENOTTY: pal_to_unix_errno(ret);
+                return ret == PAL_ERROR_NOTIMPLEMENTED ? -ENOTTY: pal_to_unix_errno(ret);
             }
             assert(ret == 0);
             return cmd_ret;

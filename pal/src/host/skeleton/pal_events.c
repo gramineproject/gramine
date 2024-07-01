@@ -10,7 +10,7 @@
 #include "pal_internal.h"
 
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 void _PalEventSet(PAL_HANDLE handle) {
@@ -22,7 +22,7 @@ void _PalEventClear(PAL_HANDLE handle) {
 }
 
 int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static void event_destroy(PAL_HANDLE handle) {

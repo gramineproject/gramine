@@ -35,7 +35,7 @@ int main(int argc, const char** argv, const char** envp) {
 
     uint64_t timeout = 10000;
     int ret = PalEventWait(sleep_handle, &timeout);
-    if (ret != -PAL_ERROR_TRYAGAIN) {
+    if (ret != PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
     }
@@ -59,7 +59,7 @@ int main(int argc, const char** argv, const char** envp) {
 
     timeout = 3000000;
     ret = PalEventWait(sleep_handle, &timeout);
-    if (ret != -PAL_ERROR_TRYAGAIN) {
+    if (ret != PAL_ERROR_TRYAGAIN) {
         pal_printf("PalEventWait failed\n");
         return 1;
     }

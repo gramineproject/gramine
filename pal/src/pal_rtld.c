@@ -133,7 +133,7 @@ int find_string_and_symbol_tables(elf_addr_t ehdr_addr, elf_addr_t base_diff,
     elf_dyn_t* dynamic_section = find_dynamic_section(ehdr_addr, base_diff);
     if (!dynamic_section) {
         log_error("Loaded binary doesn't have dynamic section (required for symbol resolution)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* iterate through DSO's dynamic section to find the string table and the symbol table */
@@ -159,7 +159,7 @@ int find_string_and_symbol_tables(elf_addr_t ehdr_addr, elf_addr_t base_diff,
 
     if (!string_table || !symbol_table || !symbol_table_cnt) {
         log_error("Loaded binary doesn't have string table, symbol table and/or hash table");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     *out_string_table     = string_table;
@@ -172,7 +172,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
                                       elf_addr_t* out_symbol_addr) {
     elf_xword_t symbol_idx = ELF_R_SYM(rela->r_info);
     if (symbol_idx >= (elf_xword_t)map->symbol_table_cnt)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     const char* symbol_name = map->string_table + map->symbol_table[symbol_idx].st_name;
 
@@ -186,7 +186,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
     if (map == &g_pal_map) {
         /* PAL ELF object tried to find symbol in itself but couldn't */
         log_error("Could not resolve symbol %s in PAL ELF object", symbol_name);
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* next try to find in PAL ELF object */
@@ -205,7 +205,7 @@ static int find_symbol_in_loaded_maps(struct link_map* map, elf_rela_t* rela,
 
     /* this could happen if e.g. LibOS and PAL binaries are out of sync */
     log_error("Could not resolve symbol %s needed by binary %s", symbol_name, map->l_name);
-    return -PAL_ERROR_DENIED;
+    return PAL_ERROR_DENIED;
 }
 
 static int verify_dynamic_entries(struct link_map* map) {
@@ -231,38 +231,38 @@ static int verify_dynamic_entries(struct link_map* map) {
             case DT_RELENT:
                 if (dynamic_section_entry->d_un.d_val != sizeof(elf_rel_t)) {
                     log_error("Unexpected DT_RELENT (size of one Rel reloc)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 break;
             case DT_RELAENT:
                 if (dynamic_section_entry->d_un.d_val != sizeof(elf_rela_t)) {
                     log_error("Unexpected DT_RELAENT (size of one Rela reloc)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 break;
             case DT_RELRENT:
                 if (dynamic_section_entry->d_un.d_val != sizeof(elf_relr_t)) {
                     log_error("Unexpected DT_RELRENT (size of one Relr reloc)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 break;
             case DT_SYMENT:
                 if (dynamic_section_entry->d_un.d_val != sizeof(elf_sym_t)) {
                     log_error("Unexpected DT_SYMENT (size of one symbol table entry)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 break;
             case DT_PLTREL:
                 if (dynamic_section_entry->d_un.d_val != DT_RELA) {
                     log_error("Unexpected DT_PLTREL (type of relocs in PLT must be Rela)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 break;
             case DT_NEEDED:
                 if (needed_offset_found) {
                     log_error("Loaded binary has more than one dependency (must be only one "
                               "dependency -- the PAL binary)");
-                    return -PAL_ERROR_DENIED;
+                    return PAL_ERROR_DENIED;
                 }
                 needed_offset = dynamic_section_entry->d_un.d_val;
                 needed_offset_found = true;
@@ -309,10 +309,10 @@ static int verify_dynamic_entries(struct link_map* map) {
                 /* be explicit about unsupported RELR relocation type */
                 log_error("Unsupported relocation type DT_RELR; you may need to rebuild Gramine "
                           "with `-Wl,-z,nopack-relative-relocs` linker option");
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
             default:
                 log_error("Unrecognized dynamic entry (DT_*) %ld", dynamic_section_entry->d_tag);
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
 
             }
         dynamic_section_entry++;
@@ -320,7 +320,7 @@ static int verify_dynamic_entries(struct link_map* map) {
 
     if (!string_table || !string_table_size) {
         log_error("Loaded binary doesn't have string table or it is empty (DT_STRTAB/DT_STRSZ)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* verify DT_NEEDED: LibOS and PAL tests have PAL lib; PAL doesn't have this entry */
@@ -328,7 +328,7 @@ static int verify_dynamic_entries(struct link_map* map) {
         const char* needed = string_table + needed_offset;
         if (strcmp(needed, g_pal_soname) != 0) {
             log_error("Unexpected DT_NEEDED (must be name of the PAL library)");
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         }
     }
 
@@ -373,7 +373,7 @@ static int perform_relocations(struct link_map* map) {
 
     if (!relas_addr && relas_size) {
         log_error("Incorrect relocations (no relocs found but size is non-zero)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* perform relocs: supported binaries may have only R_X86_64_RELATIVE/R_X86_64_GLOB_DAT relas */
@@ -394,13 +394,13 @@ static int perform_relocations(struct link_map* map) {
         } else {
             log_error("Unrecognized relocation type; PAL loader currently supports only "
                       "R_X86_64_RELATIVE and R_X86_64_GLOB_DAT relocations");
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         }
     }
 
     if (!plt_relas_addr && plt_relas_size) {
         log_error("Incorrect PLT relocations (no relocs found but size is non-zero)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     /* perform PLT relocs: supported binaries may have only R_X86_64_JUMP_SLOT relas */
@@ -409,7 +409,7 @@ static int perform_relocations(struct link_map* map) {
         if (ELF_R_TYPE(plt_rela->r_info) != R_X86_64_JUMP_SLOT) {
             log_error("Unrecognized relocation type; PAL loader currently supports only "
                       "R_X86_64_JUMP_SLOT relocations");
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
         }
 
         elf_addr_t symbol_addr;
@@ -423,7 +423,7 @@ static int perform_relocations(struct link_map* map) {
 
     if (relas_count != expected_relas_count) {
         log_error("Expected %ld Rela relocs but got %ld", expected_relas_count, relas_count);
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     return 0;
@@ -440,11 +440,11 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
     size_t l_relro_size = 0;
 
     if (!strstartswith(uri, URI_PREFIX_FILE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     g_entrypoint_map.l_name = strdup(uri + URI_PREFIX_FILE_LEN);
     if (!g_entrypoint_map.l_name) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -455,7 +455,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
 
     loadcmds = malloc(sizeof(*loadcmds) * ehdr->e_phnum);
     if (!loadcmds) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -471,7 +471,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
             case PT_LOAD:
                 if (!IS_ALIGNED_POW2(ph->p_vaddr - ph->p_offset, ph->p_align)) {
                     log_error("ELF loadable program segment not aligned");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
 
@@ -486,19 +486,19 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
                 /* this is our parser's simplification, not a requirement of the ELF spec */
                 if (loadcmds_cnt == 1 && c->map_off) {
                     log_error("ELF first loadable program segment has non-zero offset");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
 
                 if (loadcmds_cnt == 1 && ehdr->e_type == ET_DYN && c->start) {
                     log_error("DYN ELF first loadable program segment has non-zero map address");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
 
                 if (c->start >= c->map_end) {
                     log_error("ELF loadable program segment has impossible memory region to map");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
                 break;
@@ -512,7 +512,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
 
     if (!loadcmds_cnt) {
         log_error("ELF file has no loadable segments");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -659,39 +659,39 @@ int load_entrypoint(const char* uri) {
     elf_ehdr_t* ehdr = (elf_ehdr_t*)&buf;
     if (bytes_read < sizeof(elf_ehdr_t)) {
         log_error("ELF file is too small (cannot read the ELF header)");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (memcmp(ehdr->e_ident, g_expected_elf_header, EI_OSABI)) {
         log_error("ELF file has unexpected header (unexpected first 7 bytes)");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_ident[EI_OSABI] != ELFOSABI_SYSV && ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX) {
         log_error("ELF file has unexpected OS/ABI: PAL loader currently supports only SYS-V and "
                   "LINUX");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_type != ET_DYN && ehdr->e_type != ET_EXEC) {
         log_error("ELF file has unexpected type: PAL loader currently supports only DYN and EXEC");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (bytes_read < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
         log_error("Read too few bytes from the ELF file (not all program headers)");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     ret = create_and_relocate_entrypoint(handle, uri, buf);
     if (ret < 0) {
         log_error("Could not map the ELF file into memory and then relocate it");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -724,7 +724,7 @@ int setup_pal_binary(void) {
     elf_dyn_t* dynamic_section = find_dynamic_section(pal_binary_addr, pal_base_diff);
     if (!dynamic_section) {
         log_error("PAL binary doesn't have dynamic section (required for symbol resolution)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     g_pal_map.l_name = NULL; /* will be overwritten later with argv[0] */
@@ -756,7 +756,7 @@ int setup_pal_binary(void) {
     }
     if (!soname_offset_found) {
         log_error("Did not find DT_SONAME for PAL binary (name of the PAL library)");
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
     g_pal_soname = g_pal_map.string_table + soname_offset;
 

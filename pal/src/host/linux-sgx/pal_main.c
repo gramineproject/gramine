@@ -139,7 +139,7 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
         if (cache->type != CACHE_TYPE_DATA &&
             cache->type != CACHE_TYPE_INSTRUCTION &&
             cache->type != CACHE_TYPE_UNIFIED) {
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
 
         if (   !IS_IN_RANGE_INCL(cache->level, 1, 3)
@@ -147,12 +147,12 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
             || !IS_IN_RANGE_INCL(cache->coherency_line_size, 1, 1 << 16)
             || !IS_IN_RANGE_INCL(cache->number_of_sets, 1, 1 << 30)
             || !IS_IN_RANGE_INCL(cache->physical_line_partition, 1, 1 << 16))
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     if (topo_info->threads_cnt == 0 || !topo_info->threads[0].is_online) {
         // Linux requires this
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     for (size_t i = 0; i < topo_info->threads_cnt; i++) {
@@ -160,17 +160,17 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
         coerce_untrusted_bool(&thread->is_online);
         if (thread->is_online) {
             if (thread->core_id >= topo_info->cores_cnt)
-                return -PAL_ERROR_INVAL;
+                return PAL_ERROR_INVAL;
             /* Verify that the cache array has no holes... */
             for (size_t j = 0; j < MAX_CACHES - 1; j++)
                 if (thread->ids_of_caches[j] == (size_t)-1
                         && thread->ids_of_caches[j + 1] != (size_t)-1)
-                    return -PAL_ERROR_INVAL;
+                    return PAL_ERROR_INVAL;
             /* ...and valid indices. */
             for (size_t j = 0; j < MAX_CACHES; j++) {
                 if (thread->ids_of_caches[j] != (size_t)-1
                     && thread->ids_of_caches[j] >= topo_info->caches_cnt)
-                    return -PAL_ERROR_INVAL;
+                    return PAL_ERROR_INVAL;
             }
         } else {
             // Not required, just a hardening in case we accidentally accessed offline CPU's fields.
@@ -182,14 +182,14 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
 
     for (size_t i = 0; i < topo_info->cores_cnt; i++) {
         if (topo_info->cores[i].socket_id >= topo_info->sockets_cnt)
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         if (topo_info->cores[i].node_id >= topo_info->numa_nodes_cnt)
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     if (!topo_info->numa_nodes[0].is_online) {
         // Linux requires this
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     for (size_t i = 0; i < topo_info->numa_nodes_cnt; i++) {
@@ -199,7 +199,7 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
             for (size_t j = 0; j < HUGEPAGES_MAX; j++) {
                 size_t unused; // can't use __builtin_mul_overflow_p because clang doesn't have it.
                 if (__builtin_mul_overflow(node->nr_hugepages[j], hugepage_size[j], &unused))
-                    return -PAL_ERROR_INVAL;
+                    return PAL_ERROR_INVAL;
             }
         } else {
             /* Not required, just a hardening in case we accidentally accessed offline node's
@@ -215,10 +215,10 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
         for (size_t j = 0; j < topo_info->numa_nodes_cnt; j++) {
             if ((!topo_info->numa_nodes[i].is_online || !topo_info->numa_nodes[j].is_online) &&
                     topo_info->numa_distance_matrix[i*topo_info->numa_nodes_cnt + j] != 0)
-                return -PAL_ERROR_INVAL;
+                return PAL_ERROR_INVAL;
             if (   topo_info->numa_distance_matrix[i*topo_info->numa_nodes_cnt + j]
                 != topo_info->numa_distance_matrix[j*topo_info->numa_nodes_cnt + i])
-                return -PAL_ERROR_INVAL;
+                return PAL_ERROR_INVAL;
         }
     }
 
@@ -230,7 +230,7 @@ static int sanitize_topo_info(struct pal_topo_info* topo_info) {
             continue;
         size_t node_id = topo_info->cores[thread->core_id].node_id;
         if (!topo_info->numa_nodes[node_id].is_online)
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     return 0;
@@ -242,7 +242,7 @@ static int import_and_sanitize_topo_info(void* uptr_topo_info) {
     struct pal_topo_info shallow_topo_info;
     if (!sgx_copy_to_enclave(&shallow_topo_info, sizeof(shallow_topo_info),
                              uptr_topo_info, sizeof(struct pal_topo_info))) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     struct pal_topo_info* topo_info = &g_pal_public_state.topo_info;
@@ -264,7 +264,7 @@ static int import_and_sanitize_topo_info(void* uptr_topo_info) {
                                                       numa_nodes_cnt,
                                                       numa_nodes_cnt);
     if (!caches || !threads || !cores || !sockets || !numa_nodes || !distances) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     topo_info->caches = caches;

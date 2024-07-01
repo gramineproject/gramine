@@ -15,23 +15,23 @@
 static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* uri,
                             enum pal_access access, pal_share_flags_t share,
                             enum pal_create_mode create, pal_stream_options_t options) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* offset does not apply here. */
 static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* offset does not apply here. */
 static int64_t eventfd_pal_write(PAL_HANDLE handle, uint64_t offset, uint64_t len,
                                  const void* buffer) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 /* gets used for polling(query) on eventfd from LibOS. */
 static int eventfd_pal_attrquerybyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 
 static void eventfd_pal_destroy(PAL_HANDLE handle) {

@@ -117,7 +117,7 @@ static void setup_asan(void) {
     if (IS_PTR_ERR(addr) || addr != (void*)ASAN_SHADOW_START) {
         /* We are super early in the init sequence, TCB is not yet set, we probably should not call
          * any logging functions. */
-        DO_SYSCALL(exit_group, PAL_ERROR_NOMEM);
+        DO_SYSCALL(exit_group, -PAL_ERROR_NOMEM);
         die_or_inf_loop();
     }
 }
@@ -163,7 +163,7 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
     if (ret < 0) {
         /* We failed to install a TCB (and haven't applied relocations yet), so no other code will
          * work anyway */
-        DO_SYSCALL(exit_group, PAL_ERROR_DENIED);
+        DO_SYSCALL(exit_group, -PAL_ERROR_DENIED);
         die_or_inf_loop();
     }
 

@@ -69,7 +69,7 @@ static int split_uri_and_find_ops(const char* typed_uri, char* out_type, const c
         *out_uri = typed_uri + URI_PREFIX_PIPE_SRV_LEN;
     } else {
         /* unknown handle type */
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
     return 0;
 }
@@ -108,14 +108,14 @@ int PalStreamOpen(const char* typed_uri, enum pal_access access, pal_share_flags
 static int _PalStreamWaitForClient(PAL_HANDLE handle, PAL_HANDLE* client,
                                    pal_stream_options_t options) {
     if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     const struct handle_ops* ops = HANDLE_OPS(handle);
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->waitforclient)
-        return -PAL_ERROR_NOTSERVER;
+        return PAL_ERROR_NOTSERVER;
 
     return ops->waitforclient(handle, client, options);
 }
@@ -129,10 +129,10 @@ int _PalStreamDelete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->delete)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->delete(handle, delete_mode);
 }
@@ -147,17 +147,17 @@ int64_t _PalStreamRead(PAL_HANDLE handle, uint64_t offset, uint64_t count, void*
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->read)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->read(handle, offset, count, buf);
 }
 
 int PalStreamRead(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
     if (!handle) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int64_t ret = _PalStreamRead(handle, offset, *count, buffer);
@@ -174,17 +174,17 @@ int64_t _PalStreamWrite(PAL_HANDLE handle, uint64_t offset, uint64_t count, cons
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->write)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->write(handle, offset, count, buf);
 }
 
 int PalStreamWrite(PAL_HANDLE handle, uint64_t offset, size_t* count, void* buffer) {
     if (!handle) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int64_t ret = _PalStreamWrite(handle, offset, *count, buffer);
@@ -207,14 +207,14 @@ int _PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
         return ret;
 
     if (!ops->attrquery)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->attrquery(type, uri, attr);
 }
 
 int PalStreamAttributesQuery(const char* typed_uri, PAL_STREAM_ATTR* attr) {
     if (!typed_uri || !attr) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     PAL_STREAM_ATTR attr_buf;
@@ -235,17 +235,17 @@ int _PalStreamAttributesQueryByHandle(PAL_HANDLE hdl, PAL_STREAM_ATTR* attr) {
     const struct handle_ops* ops = HANDLE_OPS(hdl);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->attrquerybyhdl)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->attrquerybyhdl(hdl, attr);
 }
 
 int PalStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (!handle || !attr) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalStreamAttributesQueryByHandle(handle, attr);
@@ -253,16 +253,16 @@ int PalStreamAttributesQueryByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 int PalStreamAttributesSetByHandle(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
     if (!handle || !attr) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     const struct handle_ops* ops = HANDLE_OPS(handle);
     if (!ops) {
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
     }
 
     if (!ops->attrsetbyhdl) {
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
     }
 
     return ops->attrsetbyhdl(handle, attr);
@@ -278,10 +278,10 @@ int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->map)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     if ((ret = ops->map(handle, addr, prot, offset, size)) < 0)
         return ret;
@@ -292,19 +292,19 @@ int _PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t
 int PalStreamMap(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_t offset,
                  size_t size) {
     if (!handle) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (!addr) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (!IS_ALLOC_ALIGNED_PTR(addr)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (!size || !IS_ALLOC_ALIGNED(size) || !IS_ALLOC_ALIGNED(offset)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalStreamMap(handle, addr, prot, offset, size);
@@ -314,17 +314,17 @@ int _PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->setlength)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->setlength(handle, length);
 }
 
 int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
     if (!handle) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
     return _PalStreamSetLength(handle, length);
 }
@@ -333,22 +333,22 @@ int PalStreamSetLength(PAL_HANDLE handle, uint64_t length) {
  *  not support this operations. */
 int _PalStreamFlush(PAL_HANDLE handle) {
     if (handle->hdr.type >= PAL_HANDLE_TYPE_BOUND)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     const struct handle_ops* ops = HANDLE_OPS(handle);
 
     if (!ops)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     if (!ops->flush)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return ops->flush(handle);
 }
 
 int PalStreamFlush(PAL_HANDLE handle) {
     if (!handle) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalStreamFlush(handle);
@@ -356,7 +356,7 @@ int PalStreamFlush(PAL_HANDLE handle) {
 
 int PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (!target_process || !cargo) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalSendHandle(target_process, cargo);
@@ -364,7 +364,7 @@ int PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
 
 int PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (!source_process) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     *out_cargo = NULL;
@@ -382,7 +382,7 @@ int PalStreamChangeName(PAL_HANDLE hdl, const char* typed_uri) {
 
     const struct handle_ops* hops = HANDLE_OPS(hdl);
     if (!hops || !hops->rename || hops != ops)
-        return -PAL_ERROR_NOTSUPPORT;
+        return PAL_ERROR_NOTSUPPORT;
 
     return hops->rename(hdl, type, uri);
 }

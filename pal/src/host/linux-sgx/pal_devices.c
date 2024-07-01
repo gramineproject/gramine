@@ -36,11 +36,11 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
 
     if (strcmp(type, URI_TYPE_DEV))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dev));
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     init_handle_hdr(hdl, PAL_TYPE_DEV);
 
@@ -60,13 +60,13 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     size_t normpath_size = strlen(uri) + 1;
     normpath = malloc(normpath_size);
     if (!normpath) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto fail;
     }
     ret = get_norm_path(uri, normpath, &normpath_size);
     if (ret < 0) {
         log_warning("Could not normalize path (%s): %s", uri, pal_strerror(ret));
-        ret = -PAL_ERROR_DENIED;
+        ret = PAL_ERROR_DENIED;
         goto fail;
     }
     hdl->dev.realpath = normpath;
@@ -76,7 +76,7 @@ static int dev_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
         if (get_file_check_policy() != FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG) {
             log_warning("Disallowing access to device '%s'; device is not allowed.",
                         hdl->dev.realpath);
-            ret = -PAL_ERROR_DENIED;
+            ret = PAL_ERROR_DENIED;
             goto fail;
         }
         log_warning("Allowing access to unknown device '%s' due to file_check_policy settings.",
@@ -104,10 +104,10 @@ static int64_t dev_read(PAL_HANDLE handle, uint64_t offset, uint64_t size, void*
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_READABLE))
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     ssize_t bytes = ocall_read(handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -117,10 +117,10 @@ static int64_t dev_write(PAL_HANDLE handle, uint64_t offset, uint64_t size, cons
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!(handle->flags & PAL_HANDLE_FD_WRITABLE))
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     ssize_t bytes = ocall_write(handle->dev.fd, buffer, size);
     return bytes < 0 ? unix_to_pal_error(bytes) : bytes;
@@ -142,7 +142,7 @@ static int dev_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     assert(handle->hdr.type == PAL_TYPE_DEV);
 
     if (delete_mode != PAL_DELETE_ALL)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int ret = ocall_delete(handle->dev.realpath);
     return ret < 0 ? unix_to_pal_error(ret) : ret;
@@ -208,14 +208,14 @@ static int dev_map(PAL_HANDLE handle, void* addr, pal_prot_flags_t prot, uint64_
 
     uint64_t dummy;
     if (__builtin_add_overflow(offset, size, &dummy)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (addr < g_pal_public_state.shared_address_start
             || (uintptr_t)addr + size > (uintptr_t)g_pal_public_state.shared_address_end) {
         log_warning("Could not map a device outside of the shared memory range at %p-%p", addr,
                     addr + size);
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     void* mem = addr;
@@ -247,12 +247,12 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     else if (handle->hdr.type == PAL_TYPE_SOCKET)
         fd = handle->sock.fd;
     else
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     /* find this IOCTL request in the manifest */
     toml_table_t* manifest_sys = toml_table_in(g_pal_public_state.manifest_root, "sys");
     if (!manifest_sys)
-        return -PAL_ERROR_NOTIMPLEMENTED;
+        return PAL_ERROR_NOTIMPLEMENTED;
 
     toml_array_t* toml_ioctl_struct = NULL;
     ret = ioctls_get_allowed_ioctl_struct(manifest_sys, cmd, &toml_ioctl_struct);
@@ -273,7 +273,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
     struct mem_region* mem_regions = calloc(mem_regions_cnt, sizeof(*mem_regions));
     struct sub_region* sub_regions = calloc(sub_regions_cnt, sizeof(*sub_regions));
     if (!mem_regions || !sub_regions) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -309,7 +309,7 @@ int _PalDeviceIoControl(PAL_HANDLE handle, uint32_t cmd, unsigned long arg, int*
         cur_host_addr = ALIGN_UP_PTR(cur_host_addr, sub_regions[i].alignment);
         if (!sgx_is_completely_within_enclave(sub_regions[i].gramine_addr, sub_regions[i].size)
                 || !sgx_is_valid_untrusted_ptr(cur_host_addr, sub_regions[i].size, 1)) {
-            ret = -PAL_ERROR_DENIED;
+            ret = PAL_ERROR_DENIED;
             goto out;
         }
         cur_host_addr += sub_regions[i].size;

@@ -19,11 +19,11 @@ int mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
     assert(g_vmas_len >= 2);
     assert(g_vmas[0].begin && g_vmas[0].end);
     if (g_vmas_len == ARRAY_LEN(g_vmas)) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     if (!IS_ALIGNED(size, PAGE_SIZE)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     for (size_t i = 1; i < g_vmas_len; i++) {
@@ -41,7 +41,7 @@ int mem_bkeep_alloc(size_t size, uintptr_t* out_addr) {
         }
     }
 
-    return -PAL_ERROR_NOMEM;
+    return PAL_ERROR_NOMEM;
 }
 
 int mem_bkeep_free(uintptr_t addr, size_t size) {
@@ -59,7 +59,7 @@ int mem_bkeep_free(uintptr_t addr, size_t size) {
         }
     }
 
-    return -PAL_ERROR_NOMEM;
+    return PAL_ERROR_NOMEM;
 }
 
 void init_memory_management(void) {
@@ -117,7 +117,7 @@ void init_memory_management(void) {
 
 int memory_alloc(size_t size, pal_prot_flags_t prot, void** out_addr) {
     if (!IS_ALIGNED(size, PAGE_SIZE)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     uintptr_t addr;
@@ -138,7 +138,7 @@ int memory_alloc(size_t size, pal_prot_flags_t prot, void** out_addr) {
 
 int memory_free(void* addr, size_t size) {
     if (!IS_ALIGNED_PTR(addr, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int ret = PalVirtualMemoryFree(addr, size);

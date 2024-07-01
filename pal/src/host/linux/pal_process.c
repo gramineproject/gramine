@@ -38,13 +38,13 @@ static inline int create_process_handle(PAL_HANDLE* parent, PAL_HANDLE* child) {
 
     ret = DO_SYSCALL(socketpair, AF_UNIX, socktype, 0, fds);
     if (ret < 0) {
-        ret = -PAL_ERROR_DENIED;
+        ret = PAL_ERROR_DENIED;
         goto out;
     }
 
     phdl = calloc(1, HANDLE_SIZE(process));
     if (!phdl) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -55,7 +55,7 @@ static inline int create_process_handle(PAL_HANDLE* parent, PAL_HANDLE* child) {
 
     chdl = calloc(1, HANDLE_SIZE(process));
     if (!chdl) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto out;
     }
 
@@ -198,7 +198,7 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
 
     ret = child_process(&param);
     if (ret < 0) {
-        ret = -PAL_ERROR_DENIED;
+        ret = PAL_ERROR_DENIED;
         goto out;
     }
 
@@ -288,18 +288,18 @@ noreturn void _PalProcessExit(int exitcode) {
 
 static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int64_t bytes = DO_SYSCALL(read, handle->process.stream, buffer, count);
 
     if (bytes < 0)
         switch (bytes) {
             case -EWOULDBLOCK:
-                return -PAL_ERROR_TRYAGAIN;
+                return PAL_ERROR_TRYAGAIN;
             case -EINTR:
-                return -PAL_ERROR_INTERRUPTED;
+                return PAL_ERROR_INTERRUPTED;
             default:
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
         }
 
     return bytes;
@@ -307,18 +307,18 @@ static int64_t proc_read(PAL_HANDLE handle, uint64_t offset, uint64_t count, voi
 
 static int64_t proc_write(PAL_HANDLE handle, uint64_t offset, uint64_t count, const void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int64_t bytes = DO_SYSCALL(write, handle->process.stream, buffer, count);
 
     if (bytes < 0)
         switch (bytes) {
             case -EWOULDBLOCK:
-                return -PAL_ERROR_TRYAGAIN;
+                return PAL_ERROR_TRYAGAIN;
             case -EINTR:
-                return -PAL_ERROR_INTERRUPTED;
+                return PAL_ERROR_INTERRUPTED;
             default:
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
         }
 
     return bytes;
@@ -350,7 +350,7 @@ static int proc_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
             shutdown = SHUT_WR;
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     DO_SYSCALL(shutdown, handle->process.stream, shutdown);

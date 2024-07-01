@@ -14,7 +14,7 @@ static bool strings_equal(const char* s1, const char* s2) {
 
 static int copy_value_to_uint64(void* addr, size_t size, uint64_t* out_value) {
     if (!addr || size > sizeof(*out_value))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
 #ifdef __x86_64__
     /* the copy below assumes little-endian machines (which x86 is) */
@@ -39,12 +39,12 @@ static int get_sub_region_idx(struct sub_region* all_sub_regions, size_t all_sub
         }
     }
     log_error("IOCTL: cannot find '%s'", sub_region_name);
-    return -PAL_ERROR_INVAL;
+    return PAL_ERROR_INVAL;
 }
 
 /* allocates a name string, it is responsibility of the caller to free it after use */
 static int get_sub_region_name(const toml_table_t* toml_sub_region, char** out_name) {
-    return toml_string_in(toml_sub_region, "name", out_name) < 0 ? -PAL_ERROR_INVAL : 0;
+    return toml_string_in(toml_sub_region, "name", out_name) < 0 ? PAL_ERROR_INVAL : 0;
 }
 
 static int get_sub_region_direction(const toml_table_t* toml_sub_region,
@@ -52,7 +52,7 @@ static int get_sub_region_direction(const toml_table_t* toml_sub_region,
     char* direction_str;
     int ret = toml_string_in(toml_sub_region, "direction", &direction_str);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!direction_str) {
         *out_direction = DIRECTION_NONE;
@@ -69,7 +69,7 @@ static int get_sub_region_direction(const toml_table_t* toml_sub_region,
     } else if (!strcmp(direction_str, "none")) {
         *out_direction = DIRECTION_NONE;
     } else {
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
     }
     free(direction_str);
     return ret;
@@ -79,7 +79,7 @@ static int get_sub_region_alignment(const toml_table_t* toml_sub_region, size_t*
     int64_t alignment;
     int ret = toml_int_in(toml_sub_region, "alignment", /*defaultval=*/1, &alignment);
     if (ret < 0 || alignment <= 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     *out_alignment = (size_t)alignment;
     return 0;
@@ -89,7 +89,7 @@ static int get_sub_region_unit(const toml_table_t* toml_sub_region, size_t* out_
     int64_t unit;
     int ret = toml_int_in(toml_sub_region, "unit", /*defaultval=*/1, &unit);
     if (ret < 0 || unit <= 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     *out_unit = (size_t)unit;
     return 0;
@@ -97,7 +97,7 @@ static int get_sub_region_unit(const toml_table_t* toml_sub_region, size_t* out_
 
 static int get_sub_region_adjustment(const toml_table_t* toml_sub_region, int64_t* out_adjustment) {
     int ret = toml_int_in(toml_sub_region, "adjustment", /*defaultval=*/0, out_adjustment);
-    return ret < 0 ? -PAL_ERROR_INVAL : 0;
+    return ret < 0 ? PAL_ERROR_INVAL : 0;
 }
 
 static int get_toml_nested_mem_region(toml_table_t* toml_ioctl_structs,
@@ -112,7 +112,7 @@ static int get_toml_nested_mem_region(toml_table_t* toml_ioctl_structs,
     char* ioctl_struct_str;
     int ret = toml_string_in(toml_sub_region, "ptr", &ioctl_struct_str);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!ioctl_struct_str) {
         /* if we're here, then we didn't find `ptr` field at all */
@@ -122,7 +122,7 @@ static int get_toml_nested_mem_region(toml_table_t* toml_ioctl_structs,
 
     toml_mem_region = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
     if (!toml_mem_region || toml_array_nelem(toml_mem_region) <= 0) {
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -146,7 +146,7 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
     if (ret == 0) {
         /* size is specified as constant */
         if (size <= 0)
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
 
         *out_size = (size_t)size;
         return 0;
@@ -156,7 +156,7 @@ static int get_sub_region_size(struct sub_region* all_sub_regions, size_t all_su
     char* sub_region_name = NULL;
     ret = toml_rtos(sub_region_size_raw, &sub_region_name);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     size_t found_idx;
     ret = get_sub_region_idx(all_sub_regions, all_sub_regions_cnt, sub_region_name, &found_idx);
@@ -194,7 +194,7 @@ static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
     if (ret == 0) {
         /* array_len is specified as constant */
         if (array_len <= 0)
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
 
         *out_array_len = (struct dynamic_value){
             .is_determined = true,
@@ -207,7 +207,7 @@ static int get_sub_region_array_len(const toml_table_t* toml_sub_region,
     char* sub_region_name = NULL;
     ret = toml_rtos(sub_region_array_len_raw, &sub_region_name);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     *out_array_len = (struct dynamic_value){
         .is_determined = false,
@@ -240,7 +240,7 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
     char* expr;
     int ret = toml_string_in(toml_sub_region, "onlyif", &expr);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (!expr) {
         *out_value = true; /* no `onlyif` field, must use this sub-region */
@@ -281,13 +281,13 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
     /* make sure the whole string is in allowed format "token1 {== | !=} token2" */
     if (compar_len != 2 || (memcmp(compar, "==", 2) && memcmp(compar, "!=", 2))) {
         log_error("IOCTL: only-if expression '%s' doesn't have '==' or '!=' comparator", expr);
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     if (*cur != '\0' || !token1_len || !token2_len) {
         log_error("IOCTL: cannot parse only-if expression '%s'", expr);
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -300,7 +300,7 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
         /* constant integer, check it is a legit unsigned int */
         if (v1 < 0) {
             log_error("IOCTL: first value in only-if expression '%s' is negative", expr);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
         value1 = (uint64_t)v1;
@@ -320,7 +320,7 @@ static int get_sub_region_onlyif(struct sub_region* all_sub_regions, size_t all_
     if (endptr == token2 + token2_len) {
         if (v2 < 0) {
             log_error("IOCTL: second value in only-if expression '%s' is negative", expr);
-            ret = -PAL_ERROR_INVAL;
+            ret = PAL_ERROR_INVAL;
             goto out;
         }
         value2 = (uint64_t)v2;
@@ -360,7 +360,7 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
 
     toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sys, "ioctl_structs");
     if (!toml_ioctl_structs)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     size_t max_sub_regions = *sub_regions_cnt_ptr;
     size_t sub_regions_cnt = 0;
@@ -369,7 +369,7 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
     size_t mem_regions_cnt = 0;
 
     if (!max_sub_regions || !max_mem_regions)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     mem_regions[0].toml_mem_region = root_toml_mem_region;
     mem_regions[0].gramine_addr    = root_gramine_addr;
@@ -405,7 +405,7 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
             toml_table_t* toml_sub_region = toml_table_at(cur_mem_region->toml_mem_region, i);
             if (!toml_sub_region) {
                 log_error("IOCTL: each memory sub-region must be a TOML table");
-                ret = -PAL_ERROR_INVAL;
+                ret = PAL_ERROR_INVAL;
                 goto out;
             }
 
@@ -423,7 +423,7 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
 
             if (sub_regions_cnt == max_sub_regions) {
                 log_error("IOCTL: too many memory sub-regions (max is %zu)", max_sub_regions);
-                ret = -PAL_ERROR_NOMEM;
+                ret = PAL_ERROR_NOMEM;
                 goto out;
             }
 
@@ -435,31 +435,31 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
             cur_sub_region->gramine_addr = cur_gramine_addr;
             if (!cur_gramine_addr) {
                 /* FIXME: use `is_user_memory_readable()` to check invalid addresses */
-                ret = -PAL_ERROR_INVAL;
+                ret = PAL_ERROR_INVAL;
                 goto out;
             }
 
             if (toml_raw_in(toml_sub_region, "alignment") && i != 0) {
                 log_error("IOCTL: 'alignment' may be specified only at beginning of mem region");
-                ret = -PAL_ERROR_INVAL;
+                ret = PAL_ERROR_INVAL;
                 goto out;
             }
 
             if (toml_array_in(toml_sub_region, "ptr") || toml_raw_in(toml_sub_region, "ptr")) {
                 if (toml_raw_in(toml_sub_region, "direction")) {
                     log_error("IOCTL: 'ptr' cannot specify 'direction'");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
                 if (toml_raw_in(toml_sub_region, "size")) {
                     log_error("IOCTL: 'ptr' cannot specify 'size' (did you mean 'array_len'?)");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
                 }
             } else if (toml_raw_in(toml_sub_region, "array_len")) {
                     log_error("IOCTL: non-'ptr' field cannot specify 'array_len' (did you mean"
                               " 'size'?)");
-                    ret = -PAL_ERROR_INVAL;
+                    ret = PAL_ERROR_INVAL;
                     goto out;
             }
 
@@ -523,20 +523,20 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
                 if (__builtin_mul_overflow(cur_sub_region->size, cur_sub_region->unit,
                                            &cur_sub_region->size)) {
                     log_error("IOCTL: integer overflow while applying 'unit'");
-                    ret = -PAL_ERROR_OVERFLOW;
+                    ret = PAL_ERROR_OVERFLOW;
                     goto out;
                 }
                 if (__builtin_add_overflow(cur_sub_region->size, cur_sub_region->adjustment,
                                            &cur_sub_region->size)) {
                     log_error("IOCTL: integer overflow while applying 'adjustment'");
-                    ret = -PAL_ERROR_OVERFLOW;
+                    ret = PAL_ERROR_OVERFLOW;
                     goto out;
                 }
             }
 
             if (!access_ok(cur_gramine_addr, cur_sub_region->size)) {
                 log_error("IOCTL: address overflows");
-                ret = -PAL_ERROR_OVERFLOW;
+                ret = PAL_ERROR_OVERFLOW;
                 goto out;
             }
             cur_gramine_addr += cur_sub_region->size;
@@ -583,7 +583,7 @@ int ioctls_collect_sub_regions(toml_table_t* manifest_sys, toml_array_t* root_to
                 for (size_t k = 0; k < sub_regions[i].array_len.value; k++) {
                     if (mem_regions_cnt == max_mem_regions) {
                         log_error("IOCTL: too many memory regions (max is %zu)", max_mem_regions);
-                        ret = -PAL_ERROR_NOMEM;
+                        ret = PAL_ERROR_NOMEM;
                         goto out;
                     }
 
@@ -629,7 +629,7 @@ int ioctls_copy_sub_regions_to_host(struct sub_region* sub_regions, size_t sub_r
             bool ret = memcpy_to_host(cur_host_addr, sub_regions[i].gramine_addr,
                                       sub_regions[i].size);
             if (!ret)
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
         }
 
         sub_regions[i].host_addr = cur_host_addr;
@@ -648,7 +648,7 @@ int ioctls_copy_sub_regions_to_host(struct sub_region* sub_regions, size_t sub_r
                     bool ret = memcpy_to_host(sub_regions[i].host_addr, &sub_regions[j].host_addr,
                                               sizeof(void*));
                     if (!ret)
-                        return -PAL_ERROR_DENIED;
+                        return PAL_ERROR_DENIED;
                     break;
                 }
             }
@@ -669,7 +669,7 @@ int ioctls_copy_sub_regions_to_gramine(struct sub_region* sub_regions, size_t su
             bool ret = memcpy_to_gramine(sub_regions[i].gramine_addr, sub_regions[i].size,
                                          sub_regions[i].host_addr, sub_regions[i].size);
             if (!ret)
-                return -PAL_ERROR_DENIED;
+                return PAL_ERROR_DENIED;
         }
     }
     return 0;
@@ -688,7 +688,7 @@ static int get_ioctl_struct(toml_table_t* manifest_sys, toml_table_t* toml_ioctl
     char* ioctl_struct_str = NULL;
     int ret = toml_rtos(toml_ioctl_struct_raw, &ioctl_struct_str);
     if (ret < 0)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (strcmp(ioctl_struct_str, "") == 0) {
         /* empty string instead of struct name -> base-type or ignored IOCTL argument */
@@ -700,13 +700,13 @@ static int get_ioctl_struct(toml_table_t* manifest_sys, toml_table_t* toml_ioctl
     toml_table_t* toml_ioctl_structs = toml_table_in(manifest_sys, "ioctl_structs");
     if (!toml_ioctl_structs) {
         log_error("There are no IOCTL structs found in manifest");
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
     toml_array_t* toml_ioctl_struct = toml_array_in(toml_ioctl_structs, ioctl_struct_str);
     if (!toml_ioctl_struct || toml_array_nelem(toml_ioctl_struct) <= 0) {
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto out;
     }
 
@@ -725,24 +725,24 @@ int ioctls_get_allowed_ioctl_struct(toml_table_t* manifest_sys, uint32_t cmd,
     /* find this IOCTL request in the manifest */
     toml_array_t* toml_allowed_ioctls = toml_array_in(manifest_sys, "allowed_ioctls");
     if (!toml_allowed_ioctls)
-        return -PAL_ERROR_NOTIMPLEMENTED;
+        return PAL_ERROR_NOTIMPLEMENTED;
 
     ssize_t toml_allowed_ioctls_cnt = toml_array_nelem(toml_allowed_ioctls);
     if (toml_allowed_ioctls_cnt <= 0)
-        return -PAL_ERROR_NOTIMPLEMENTED;
+        return PAL_ERROR_NOTIMPLEMENTED;
 
     for (size_t idx = 0; idx < (size_t)toml_allowed_ioctls_cnt; idx++) {
         toml_table_t* toml_ioctl_table = toml_table_at(toml_allowed_ioctls, idx);
         if (!toml_ioctl_table) {
             log_error("Invalid allowed IOCTL #%zu in manifest (not a TOML table)", idx + 1);
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
 
         int64_t request_code;
         ret = toml_int_in(toml_ioctl_table, "request_code", /*default_val=*/-1, &request_code);
         if (ret < 0 || request_code < 0) {
             log_error("Invalid request code of allowed IOCTL #%zu in manifest", idx + 1);
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
         }
 
         if (request_code == (int64_t)cmd) {
@@ -755,6 +755,6 @@ int ioctls_get_allowed_ioctl_struct(toml_table_t* manifest_sys, uint32_t cmd,
         }
     }
 
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }
 

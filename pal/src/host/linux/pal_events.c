@@ -19,7 +19,7 @@
 int _PalEventCreate(PAL_HANDLE* handle_ptr, bool init_signaled, bool auto_clear) {
     PAL_HANDLE handle = calloc(1, HANDLE_SIZE(event));
     if (!handle) {
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(handle, PAL_TYPE_EVENT);
@@ -99,7 +99,7 @@ int _PalEventWait(PAL_HANDLE handle, uint64_t* timeout_us) {
             /* We might have slept a bit too long. */
             diff = 0;
         }
-        assert(ret != -PAL_ERROR_TRYAGAIN || diff == 0);
+        assert(ret != PAL_ERROR_TRYAGAIN || diff == 0);
         *timeout_us = (uint64_t)diff / TIME_NS_IN_US;
     }
     return ret;

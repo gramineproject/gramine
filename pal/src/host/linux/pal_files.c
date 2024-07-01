@@ -25,7 +25,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     char* path = NULL;
 
     if (strcmp(type, URI_TYPE_FILE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     assert(WITHIN_MASK(share,   PAL_SHARE_MASK));
     assert(WITHIN_MASK(options, PAL_OPTION_MASK));
@@ -43,7 +43,7 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
     size_t uri_size = strlen(uri) + 1;
     hdl = calloc(1, HANDLE_SIZE(file));
     if (!hdl) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
@@ -53,12 +53,12 @@ static int file_open(PAL_HANDLE* handle, const char* type, const char* uri, enum
 
     path = malloc(uri_size);
     if (!path) {
-        ret = -PAL_ERROR_NOMEM;
+        ret = PAL_ERROR_NOMEM;
         goto fail;
     }
 
     if (!get_norm_path(uri, path, &uri_size)) {
-        ret = -PAL_ERROR_INVAL;
+        ret = PAL_ERROR_INVAL;
         goto fail;
     }
 
@@ -118,7 +118,7 @@ static void file_destroy(PAL_HANDLE handle) {
 
 static int file_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     DO_SYSCALL(unlink, handle->file.realpath);
     return 0;
@@ -148,7 +148,7 @@ static int file_flush(PAL_HANDLE handle) {
 
 static int file_attrquery(const char* type, const char* uri, PAL_STREAM_ATTR* attr) {
     if (strcmp(type, URI_TYPE_FILE) && strcmp(type, URI_TYPE_DIR))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     struct stat stat_buf;
     int ret = DO_SYSCALL(stat, uri, &stat_buf);
@@ -176,11 +176,11 @@ static int file_attrsetbyhdl(PAL_HANDLE handle, PAL_STREAM_ATTR* attr) {
 
 static int file_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     if (strcmp(type, URI_TYPE_FILE))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     char* tmp = strdup(uri);
     if (!tmp)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     int ret = DO_SYSCALL(rename, handle->file.realpath, uri);
     if (ret < 0) {
@@ -200,14 +200,14 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     assert(create != PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_DIR))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (create == PAL_CREATE_TRY || create == PAL_CREATE_ALWAYS) {
         int ret = DO_SYSCALL(mkdir, uri, share);
 
         if (ret < 0) {
             if (ret == -EEXIST && create == PAL_CREATE_ALWAYS)
-                return -PAL_ERROR_STREAMEXIST;
+                return PAL_ERROR_STREAMEXIST;
             if (ret != -EEXIST)
                 return unix_to_pal_error(ret);
             assert(ret == -EEXIST && create == PAL_CREATE_TRY);
@@ -221,7 +221,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(dir));
     if (!hdl) {
         DO_SYSCALL(close, fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     init_handle_hdr(hdl, PAL_TYPE_DIR);
@@ -233,7 +233,7 @@ static int dir_open(PAL_HANDLE* handle, const char* type, const char* uri, enum 
     if (!path) {
         DO_SYSCALL(close, hdl->dir.fd);
         free(hdl);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
 
     hdl->dir.realpath    = path;
@@ -253,7 +253,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
     char* buf = (char*)_buf;
 
     if (offset) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     if (handle->dir.endofstream) {
@@ -296,7 +296,7 @@ static int64_t dir_read(PAL_HANDLE handle, uint64_t offset, size_t count, void* 
         if (!handle->dir.buf) {
             handle->dir.buf = malloc(DIRBUF_SIZE);
             if (!handle->dir.buf) {
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
         }
 
@@ -339,7 +339,7 @@ static void dir_destroy(PAL_HANDLE handle) {
 
 static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
     if (delete_mode != PAL_DELETE_ALL)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int ret = DO_SYSCALL(rmdir, handle->dir.realpath);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
@@ -347,11 +347,11 @@ static int dir_delete(PAL_HANDLE handle, enum pal_delete_mode delete_mode) {
 
 static int dir_rename(PAL_HANDLE handle, const char* type, const char* uri) {
     if (strcmp(type, URI_TYPE_DIR))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     char* tmp = strdup(uri);
     if (!tmp)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     int ret = DO_SYSCALL(rename, handle->dir.realpath, uri);
     if (ret < 0) {

@@ -29,7 +29,7 @@ noreturn void PalThreadExit(int* clear_child_tid) {
 /* PAL call PalThreadResume: resume the execution of a thread which is delayed before */
 int PalThreadResume(PAL_HANDLE thread_handle) {
     if (!thread_handle || thread_handle->hdr.type != PAL_TYPE_THREAD) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalThreadResume(thread_handle);

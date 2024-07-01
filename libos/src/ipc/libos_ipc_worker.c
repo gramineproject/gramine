@@ -138,7 +138,7 @@ static int receive_ipc_messages(struct libos_ipc_connection* conn) {
             size_t tmp_size = sizeof(buf) - size;
             int ret = PalStreamRead(conn->handle, /*offset=*/0, &tmp_size, buf.buf + size);
             if (ret < 0) {
-                if (ret == -PAL_ERROR_INTERRUPTED || ret == -PAL_ERROR_TRYAGAIN) {
+                if (ret == PAL_ERROR_INTERRUPTED || ret == PAL_ERROR_TRYAGAIN) {
                     continue;
                 }
                 log_error(LOG_PREFIX "receiving message header from %u failed: %s", conn->vmid,
@@ -266,7 +266,7 @@ static noreturn void ipc_worker_main(void) {
 
         int ret = PalStreamsWaitEvents(items_cnt, handles, events, ret_events, /*timeout_us=*/NULL);
         if (ret < 0) {
-            if (ret == -PAL_ERROR_INTERRUPTED) {
+            if (ret == PAL_ERROR_INTERRUPTED) {
                 /* Generally speaking IPC worker should not be interrupted, but this happens with
                  * SGX exitless feature. */
                 continue;
@@ -310,7 +310,7 @@ static noreturn void ipc_worker_main(void) {
                 /* Although IPC worker thread does not handle any signals (hence it should never be
                  * interrupted), lets handle it for uniformity with the rest of the code. */
                 ret = PalStreamWaitForClient(g_self_ipc_handle, &new_handle, /*options=*/0);
-            } while (ret == -PAL_ERROR_INTERRUPTED);
+            } while (ret == PAL_ERROR_INTERRUPTED);
             if (ret < 0) {
                 log_error(LOG_PREFIX "PalStreamWaitForClient failed: %s", pal_strerror(ret));
                 ret = pal_to_unix_errno(ret);

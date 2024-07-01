@@ -31,7 +31,7 @@ int handle_set_cloexec(PAL_HANDLE handle, bool enable) {
         long flags = enable ? FD_CLOEXEC : 0;
         int ret = DO_SYSCALL(fcntl, handle->generic.fd, F_SETFD, flags);
         if (ret < 0 && ret != -EBADF)
-            return -PAL_ERROR_DENIED;
+            return PAL_ERROR_DENIED;
     }
 
     return 0;
@@ -75,14 +75,14 @@ int handle_serialize(PAL_HANDLE handle, void** data) {
             /* eventfds have no fields to serialize */
             break;
         default:
-            return -PAL_ERROR_INVAL;
+            return PAL_ERROR_INVAL;
     }
 
     size_t hdl_size = handle_size(handle);
     size_t buffer_size = hdl_size + field_size;
     void* buffer = malloc(buffer_size);
     if (!buffer)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     /* copy into buffer all handle fields and then serialized fields */
     memcpy(buffer, handle, hdl_size);
@@ -97,7 +97,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
     size_t hdl_size = handle_size((PAL_HANDLE)data);
     PAL_HANDLE hdl = malloc(hdl_size);
     if (!hdl)
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
 
     memcpy(hdl, data, hdl_size);
 
@@ -114,7 +114,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             hdl->dev.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dev.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             break;
         }
@@ -122,7 +122,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             hdl->file.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->file.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             break;
         }
@@ -130,7 +130,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             hdl->dir.realpath = alloc_and_copy((const char*)data + hdl_size, size - hdl_size);
             if (!hdl->dir.realpath) {
                 free(hdl);
-                return -PAL_ERROR_NOMEM;
+                return PAL_ERROR_NOMEM;
             }
             hdl->dir.buf = hdl->dir.ptr = hdl->dir.end = NULL;
             break;
@@ -143,7 +143,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
             break;
         default:
             free(hdl);
-            return -PAL_ERROR_BADHANDLE;
+            return PAL_ERROR_BADHANDLE;
     }
 
     *handle = hdl;
@@ -152,7 +152,7 @@ int handle_deserialize(PAL_HANDLE* handle, const void* data, size_t size) {
 
 int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
     if (target_process->hdr.type != PAL_TYPE_PROCESS)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     /* serialize cargo handle into a blob hdl_data */
     void* hdl_data = NULL;
@@ -213,7 +213,7 @@ int _PalSendHandle(PAL_HANDLE target_process, PAL_HANDLE cargo) {
 
 int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
     if (source_process->hdr.type != PAL_TYPE_PROCESS)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     ssize_t ret;
     struct hdl_header hdl_hdr;
@@ -233,7 +233,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
         return unix_to_pal_error(ret);
 
     if ((size_t)ret != sizeof(hdl_hdr)) {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     alignas(struct cmsghdr) char control_buf[CMSG_SPACE(sizeof(int))] = { 0 };
@@ -254,7 +254,7 @@ int _PalReceiveHandle(PAL_HANDLE source_process, PAL_HANDLE* out_cargo) {
 
     struct cmsghdr* control_hdr = CMSG_FIRSTHDR(&message_hdr);
     if (!control_hdr || control_hdr->cmsg_type != SCM_RIGHTS)
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
 
     /* deserialize cargo handle from a blob hdl_data */
     PAL_HANDLE handle = NULL;
@@ -294,7 +294,7 @@ int _PalInitDebugStream(const char* path) {
 
 int _PalDebugLog(const void* buf, size_t size) {
     if (g_log_fd < 0)
-        return -PAL_ERROR_BADHANDLE;
+        return PAL_ERROR_BADHANDLE;
 
     int ret = write_all(g_log_fd, buf, size);
     if (ret < 0)

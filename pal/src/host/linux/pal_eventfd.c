@@ -40,7 +40,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     assert(create == PAL_CREATE_IGNORED);
 
     if (strcmp(type, URI_TYPE_EVENTFD) != 0 || *uri != '\0') {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int fd = DO_SYSCALL(eventfd2, 0, eventfd_type(options));
@@ -51,7 +51,7 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
     PAL_HANDLE hdl = calloc(1, HANDLE_SIZE(eventfd));
     if (!hdl) {
         DO_SYSCALL(close, fd);
-        return -PAL_ERROR_NOMEM;
+        return PAL_ERROR_NOMEM;
     }
     init_handle_hdr(hdl, PAL_TYPE_EVENTFD);
 
@@ -67,13 +67,13 @@ static int eventfd_pal_open(PAL_HANDLE* handle, const char* type, const char* ur
 
 static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_EVENTFD)
-        return -PAL_ERROR_NOTCONNECTION;
+        return PAL_ERROR_NOTCONNECTION;
 
     if (len < sizeof(uint64_t))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int64_t bytes = DO_SYSCALL(read, handle->eventfd.fd, buffer, len);
 
@@ -86,13 +86,13 @@ static int64_t eventfd_pal_read(PAL_HANDLE handle, uint64_t offset, uint64_t len
 static int64_t eventfd_pal_write(PAL_HANDLE handle, uint64_t offset, uint64_t len,
                                  const void* buffer) {
     if (offset)
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     if (handle->hdr.type != PAL_TYPE_EVENTFD)
-        return -PAL_ERROR_NOTCONNECTION;
+        return PAL_ERROR_NOTCONNECTION;
 
     if (len < sizeof(uint64_t))
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
 
     int64_t bytes = DO_SYSCALL(write, handle->eventfd.fd, buffer, len);
     if (bytes < 0)
