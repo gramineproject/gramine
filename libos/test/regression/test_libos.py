@@ -705,7 +705,7 @@ class TC_30_Syscall(RegressionTestCase):
 
         self.assertIn('TEST OK', stdout)
 
-    def test_033_rename_unlink_chroot(self):
+    def test_033a_rename_unlink_chroot(self):
         file1 = 'tmp/file1'
         file2 = 'tmp/file2'
         try:
@@ -716,7 +716,7 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    def test_034_rename_unlink_pf(self):
+    def test_033b_rename_unlink_pf(self):
         os.makedirs('tmp/pf', exist_ok=True)
         file1 = 'tmp/pf/file1'
         file2 = 'tmp/pf/file2'
@@ -728,7 +728,7 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    def test_035_rename_unlink_enc(self):
+    def test_033c_rename_unlink_enc(self):
         os.makedirs('tmp_enc', exist_ok=True)
         file1 = 'tmp_enc/file1'
         file2 = 'tmp_enc/file2'
@@ -744,10 +744,55 @@ class TC_30_Syscall(RegressionTestCase):
                     os.unlink(path)
         self.assertIn('TEST OK', stdout)
 
-    def test_036_rename_unlink_tmpfs(self):
+    def test_033d_rename_unlink_tmpfs(self):
         file1 = '/mnt/tmpfs/file1'
         file2 = '/mnt/tmpfs/file2'
         stdout, _ = self.run_binary(['rename_unlink', file1, file2])
+        self.assertIn('TEST OK', stdout)
+
+    def test_034a_rename_unlink_fchown_chroot(self):
+        file1 = 'tmp/file1'
+        file2 = 'tmp/file2'
+        try:
+            stdout, _ = self.run_binary(['rename_unlink_fchown', file1, file2])
+        finally:
+            for path in [file1, file2]:
+                if os.path.exists(path):
+                    os.unlink(path)
+        self.assertIn('TEST OK', stdout)
+
+    def test_034b_rename_unlink_fchown_pf(self):
+        os.makedirs('tmp/pf', exist_ok=True)
+        file1 = 'tmp/pf/file1'
+        file2 = 'tmp/pf/file2'
+        try:
+            stdout, _ = self.run_binary(['rename_unlink_fchown', file1, file2])
+        finally:
+            for path in [file1, file2]:
+                if os.path.exists(path):
+                    os.unlink(path)
+        self.assertIn('TEST OK', stdout)
+
+    def test_034c_rename_unlink_fchown_enc(self):
+        os.makedirs('tmp_enc', exist_ok=True)
+        file1 = 'tmp_enc/file1'
+        file2 = 'tmp_enc/file2'
+        # Delete the files: the test overwrites them anyway, but it may fail if they are malformed.
+        for path in [file1, file2]:
+            if os.path.exists(path):
+                os.unlink(path)
+        try:
+            stdout, _ = self.run_binary(['rename_unlink_fchown', file1, file2])
+        finally:
+            for path in [file1, file2]:
+                if os.path.exists(path):
+                    os.unlink(path)
+        self.assertIn('TEST OK', stdout)
+
+    def test_034d_rename_unlink_fchown_tmpfs(self):
+        file1 = '/mnt/tmpfs/file1'
+        file2 = '/mnt/tmpfs/file2'
+        stdout, _ = self.run_binary(['rename_unlink_fchown', file1, file2])
         self.assertIn('TEST OK', stdout)
 
     def test_040_futex_bitset(self):
@@ -1291,6 +1336,10 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['shm'])
         self.assertIn("TEST OK", stdout)
 
+    def test_080_close_range(self):
+        stdout, _ = self.run_binary(['close_range'])
+        self.assertIn('TEST OK', stdout)
+
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
         if not self.has_debug():
@@ -1522,4 +1571,10 @@ class TC_91_RdtscSGX(RegressionTestCase):
 class TC_92_avx(RegressionTestCase):
     def test_000_avx(self):
         stdout, _ = self.run_binary(['avx'])
+        self.assertIn('TEST OK', stdout)
+
+@unittest.skipUnless(ON_X86, 'x86-specific')
+class TC_93_In_Out(RegressionTestCase):
+    def test_000_in_out(self):
+        stdout, stderr = self.run_binary(['in_out_instruction'])
         self.assertIn('TEST OK', stdout)

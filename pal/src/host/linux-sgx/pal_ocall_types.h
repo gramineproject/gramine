@@ -70,6 +70,7 @@ enum {
     OCALL_EVENTFD,
     OCALL_IOCTL,
     OCALL_GET_QUOTE,
+    OCALL_GET_QE_TARGETINFO,
     OCALL_EDMM_RESTRICT_PAGES_PERM,
     OCALL_EDMM_MODIFY_PAGES_TYPE,
     OCALL_EDMM_REMOVE_PAGES,
@@ -343,6 +344,11 @@ struct ocall_get_quote {
     sgx_quote_nonce_t nonce;
     char*             quote;
     size_t            quote_len;
+};
+
+struct ocall_get_qe_targetinfo {
+    bool              is_epid;
+    sgx_target_info_t qe_targetinfo;
 };
 
 struct ocall_edmm_restrict_pages_perm {

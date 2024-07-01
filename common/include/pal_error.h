@@ -7,9 +7,10 @@
 
 #pragma once
 
+#include <nodiscard.h>
 #include <stddef.h>
 
-typedef enum _pal_error_t {
+typedef enum NODISCARD {
     PAL_ERROR_SUCCESS = 0,
     PAL_ERROR_NOTIMPLEMENTED,
     PAL_ERROR_NOTDEFINED,

@@ -165,6 +165,14 @@ int main(int argc, char** argv) {
     mbedtls_x509_crt_init(&cacert);
     mbedtls_entropy_init(&entropy);
 
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        mbedtls_printf("Failed to initialize PSA Crypto implementation: %d\n", (int)status);
+        return 1;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
+
     if (argc < 2 ||
             (strcmp(argv[1], "native") && strcmp(argv[1], "epid") && strcmp(argv[1], "dcap"))) {
         mbedtls_printf("USAGE: %s native|epid|dcap [SGX measurements]\n", argv[0]);
@@ -477,6 +485,10 @@ exit:
     mbedtls_ssl_config_free(&conf);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO) || defined(MBEDTLS_SSL_PROTO_TLS1_3)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
     return exit_code;
 }

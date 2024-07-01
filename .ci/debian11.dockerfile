@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 
 # Intel's RSA-2048 key signing the intel-sgx/sgx_repo repository. Expires 2027-03-20.
 # https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
-COPY .ci/intel-sgx-deb.key /etc/apt/trusted.gpg.d/intel-sgx-deb.asc
-RUN echo deb [arch=amd64] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main > /etc/apt/sources.list.d/intel-sgx.list
+COPY .ci/intel-sgx-deb.key /etc/apt/keyrings/intel-sgx-deb.asc
+RUN echo deb [arch=amd64 signed-by=/etc/apt/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main > /etc/apt/sources.list.d/intel-sgx.list
 
 # Dependencies for actual build.
 # NOTE: COPY invalidates docker cache when source file changes,

@@ -1,10 +1,11 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2021 Intel Corporation
+/* Copyright (C) 2024 Intel Corporation
  *                    Paweł Marczewski <pawel@invisiblethingslab.com>
+ *                    Michael Steiner <michael.steiner@intel.com>
  */
 
 /*
- * Tests for renaming and deleting files. Mostly focus on cases where a file is still open.
+ * Tests for renaming and deleting files. Mostly focused on cases where a file is still open.
  */
 
 #define _DEFAULT_SOURCE /* fchmod */
@@ -177,6 +178,46 @@ static void test_rename_replace(const char* path1, const char* path2) {
         err(1, "unlink %s", path2);
 }
 
+static void test_rename_follow(const char* path1, const char* path2) {
+    printf("%s...\n", __func__);
+
+    int fd = create_file(path1, message1, message1_len);
+
+    if (rename(path1, path2) != 0)
+        err(1, "rename");
+
+    should_not_exist(path1);
+    should_exist(path2, message1_len);
+
+    if (lseek(fd, 0, SEEK_SET) != 0)
+        err(1, "lseek");
+
+    ssize_t n = posix_fd_write(fd, message2, message2_len);
+    if (n < 0)
+        errx(1, "posix_fd_write failed");
+    if ((size_t)n != message2_len)
+        errx(1, "wrote less bytes than expected");
+
+    static_assert(sizeof(message1) < sizeof(message2), "message1 must be smaller than message2");
+    should_contain("file opened before it's renamed", fd, message2, message2_len);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path2);
+
+    fd = open(path2, O_RDONLY, 0);
+    if (fd < 0)
+        err(1, "open %s", path2);
+
+    /* we expect `fd` to point to new data, even though we changed data via old fd after rename */
+    should_contain("file opened after it's renamed", fd, message2, message2_len);
+
+    if (close(fd) != 0)
+        err(1, "close %s", path2);
+
+    if (unlink(path2) != 0)
+        err(1, "unlink %s", path2);
+}
+
 static void test_rename_open_file(const char* path1, const char* path2) {
     printf("%s...\n", __func__);
 
@@ -271,6 +312,7 @@ int main(int argc, char* argv[]) {
     test_rename_same_file(path1);
     test_simple_rename(path1, path2);
     test_rename_replace(path1, path2);
+    test_rename_follow(path1, path2);
     test_rename_open_file(path1, path2);
     test_unlink_and_recreate(path1);
     test_unlink_and_write(path1);

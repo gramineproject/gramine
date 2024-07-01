@@ -1,4 +1,4 @@
-project('musl', 'c', version: '1.2.4')
+project('musl', 'c', version: '1.2.5')
 
 fs = import('fs')
 
@@ -31,7 +31,7 @@ musl = custom_target('musl',
 
     input: files([
         'configure',
-        'musl-1.2.4.patch',
+        'musl-1.2.5.patch',
     ]),
 
     output: musl_output,

@@ -116,9 +116,8 @@ The ``ltp_all.xml`` file should contain output for all tests.
 SGX mode
 --------
 
-In SGX mode, we use additional files: ``ltp_sgx.cfg``, and (temporarily)
-``ltp_bug_1075.cfg``. These function as an override for ``ltp.cfg``, so that
-configuration is not duplicated.
+In SGX mode, we use an additional file: ``ltp_sgx.cfg``. This functions as an
+override for ``ltp.cfg``, so that configuration is not duplicated.
 
 Helper scripts (``contrib/``)
 -----------------------------

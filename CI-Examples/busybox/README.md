@@ -3,6 +3,15 @@
 This directory contains the Makefile and the template manifest for the most
 recent version of Busybox (as of this writing, commit ac78f2ac96).
 
+## Note on Ubuntu 24.04 and CentOS Stream 9
+
+There is a known bug in Busybox: Busybox build fails on newer Linux
+distributions such as Ubuntu 24.04 and CentOS Stream 9. Unfortunately no fix is
+yet available. Be warned that this Busybox example will not build/work on these
+newer Linux distros.
+
+For details see https://github.com/gramineproject/gramine/issues/1909.
+
 ## Building with SGX remote attestation
 
 If you want to try out [`/dev/attestation/` files][attestation], you must build

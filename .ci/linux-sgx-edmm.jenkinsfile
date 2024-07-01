@@ -3,7 +3,6 @@ node('sgx-edmm && aesni') {
 
     env.AVX = '1'  // EDMM-capable machines in our CI always have AVX
     env.SGX = '1'
-    env.SGX_DRIVER = 'upstream'
     env.EDMM = '1'
     env.RA_TYPE = 'dcap'
 

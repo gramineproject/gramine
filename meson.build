@@ -16,6 +16,18 @@ project(
     ],
 )
 
+# If C23 (or experimetal C23 - C2x) is available, use it.
+# TODO: Gramine supports older versions of gcc, so newer versions of compilers
+#       may not be available.
+#       We can change to c2x when we drop *EL8 and Ubuntu 20.04.
+#       We can't change to c23 for any supported versions yet (requires at
+#       least gcc 14).
+if meson.get_compiler('c').has_argument('-std=c23')
+  add_project_arguments('-std=c23', language: 'c')
+elif meson.get_compiler('c').has_argument('-std=c2x')
+  add_project_arguments('-std=c2x', language: 'c')
+endif
+
 # we need this subdir() early, because we need scripts defined there for setting up global vars
 subdir('scripts')
 
@@ -225,11 +237,11 @@ tomlc99_src = tomlc99_proj.get_variable('tomlc99_src')
 
 uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 
-mbedtls_proj = subproject('mbedtls-mbedtls-3.5.2')
+mbedtls_proj = subproject('mbedtls-3.6.0')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
-curl_proj = subproject('curl-8.7.1')
+curl_proj = subproject('curl-8.8.0')
 cjson_proj = subproject('cJSON-1.7.12')
 
 if sgx
@@ -285,7 +297,7 @@ subdir('tools')
 if get_option('libc') == 'glibc'
     subproject('glibc-2.39-1')
 elif get_option('libc') == 'musl'
-    subproject('musl-1.2.4')
+    subproject('musl-1.2.5')
 endif
 
 if enable_libgomp

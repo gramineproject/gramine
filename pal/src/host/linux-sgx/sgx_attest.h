@@ -93,4 +93,6 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
                   const sgx_report_data_t* report_data, bool linkable, char** quote,
                   size_t* quote_len);
 
+int init_qe_targetinfo(void* uptr_qe_targetinfo);
+
 #pragma pack(pop)

@@ -12,6 +12,7 @@
 
 #include "api.h"
 #include "asan.h"
+#include "cpu.h"
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
@@ -177,7 +178,12 @@ static void emulate_iret_and_print_warning(sgx_cpu_context_t* uc) {
 
 /* return value: true if #UD was handled and execution can be continued without propagating #UD;
  *               false if #UD was not handled and exception needs to be raised up to LibOS/app */
-static bool handle_ud(sgx_cpu_context_t* uc) {
+static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
+    /* most unhandled #UD faults are translated and sent to LibOS/app as "Illegal instruction"
+     * exceptions; however some #UDs (e.g. triggered due to IN/OUT/INS/OUTS) must be translated as
+     * "Memory fault" exceptions */
+    *out_event_num = PAL_EVENT_ILLEGAL;
+
     uint8_t* instr = (uint8_t*)uc->rip;
     if (instr[0] == 0x0f && instr[1] == 0xa2) {
         /* cpuid */
@@ -223,6 +229,23 @@ static bool handle_ud(sgx_cpu_context_t* uc) {
             log_always("Emulating a raw syscall instruction. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }
+        return false;
+    } else if (is_in_out(instr) && !has_lock_prefix(instr)) {
+        /*
+         * Executing I/O instructions (e.g., IN/OUT/INS/OUTS) inside an SGX enclave generates a #UD
+         * fault. Without the below corner-case handling, PAL would propagate this fault to LibOS as
+         * an "Illegal instruction" Gramine exception. However, I/O instructions result in a #GP
+         * fault outside SGX (which corresponds to "Memory fault" Gramine exception) if I/O is not
+         * permitted (which is true in userspace apps). Let PAL emulate these instructions as if
+         * they ended up in a memory fault.
+         *
+         * Note that I/O instructions with a LOCK prefix always result in a #UD fault, so they are
+         * special-cased here.
+         */
+        if (FIRST_TIME()) {
+            log_warning("Emulating In/OUT/INS/OUTS instruction as a SIGSEGV signal to app.");
+        }
+        *out_event_num = PAL_EVENT_MEMFAULT;
         return false;
     }
 
@@ -280,6 +303,8 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
      * --+-----------------------------+------------------------------------------+------------+
      */
 
+    bool is_synthetic_gp = false; /* IN/OUT/INS/OUTS instructions morph #UD into a synthetic #GP */
+
     uint32_t event_num = 0; /* illegal event */
 
     if (!trusted_exit_info.valid) {
@@ -315,11 +340,19 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
                               PAL_EVENT_ILLEGAL, untrusted_external_event);
                     _PalProcessExit(1);
                 }
-                if (handle_ud(uc)) {
+                int event_num_from_handle_ud;
+                if (handle_ud(uc, &event_num_from_handle_ud)) {
                     restore_sgx_context(uc, xregs_state);
                     /* UNREACHABLE */
                 }
-                event_num = PAL_EVENT_ILLEGAL;
+                assert(event_num_from_handle_ud == PAL_EVENT_ILLEGAL
+                        || event_num_from_handle_ud == PAL_EVENT_MEMFAULT);
+                if (event_num_from_handle_ud == PAL_EVENT_MEMFAULT) {
+                    /* it's a #UD on IN/OUT/INS/OUTS instructions, morphed into a #GP in handle_ud()
+                     * logic: adjust exception info sent to LibOS to mimic a #GP (see code below) */
+                    is_synthetic_gp = true;
+                }
+                event_num = event_num_from_handle_ud;
                 break;
             case SGX_EXCEPTION_VECTOR_DE:
             case SGX_EXCEPTION_VECTOR_MF:
@@ -417,8 +450,8 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
     if (trusted_exit_info.valid) {
         ctx.trapno = trusted_exit_info.vector;
         /* Only these two exceptions save information in EXINFO. */
-        if (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
-                || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF) {
+        if (!is_synthetic_gp && (trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_GP
+                || trusted_exit_info.vector == SGX_EXCEPTION_VECTOR_PF)) {
             ctx.err = exinfo->error_code_val; /* bits: Present, Write/Read, User/Kernel, etc. */
             ctx.cr2 = exinfo->maddr;          /* NOTE: on #GP, maddr = 0 */
             has_hw_fault_address = true;
@@ -431,7 +464,8 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             addr = uc->rip;
             break;
         case PAL_EVENT_MEMFAULT:
-            if (!has_hw_fault_address && !g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
+            if (!has_hw_fault_address && !is_synthetic_gp
+                    && !g_pal_linuxsgx_state.memfaults_without_exinfo_allowed) {
                 log_error("Tried to handle a memory fault with no faulting address reported by "
                           "SGX. Please consider enabling 'sgx.use_exinfo' in the manifest.");
                 _PalProcessExit(1);

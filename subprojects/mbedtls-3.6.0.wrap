@@ -1,0 +1,11 @@
+[wrap-file]
+directory = mbedtls-3.6.0
+source_url = https://github.com/Mbed-TLS/mbedtls/releases/download/v3.6.0/mbedtls-3.6.0.tar.bz2
+source_fallback_url = https://packages.gramineproject.io/distfiles/mbedtls-3.6.0.tar.bz2
+source_filename = mbedtls-3.6.0.tar.bz2
+source_hash = 3ecf94fcfdaacafb757786a01b7538a61750ebd85c4b024f56ff8ba1490fcd38
+
+patch_directory = mbedtls
+
+# this unpacks the sources to `mbedtls-3.6.0/mbedtls-3.6.0`
+lead_directory_missing = true

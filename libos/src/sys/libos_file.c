@@ -222,7 +222,7 @@ long libos_syscall_fchmod(int fd, mode_t mode) {
     /* This isn't documented, but that's what Linux does. */
     mode_t perm = mode & 07777;
 
-    int ret = 0;
+    int ret;
     if (!hdl->inode) {
         ret = -ENOENT;
         goto out;
@@ -239,6 +239,7 @@ long libos_syscall_fchmod(int fd, mode_t mode) {
     hdl->inode->perm = perm;
     unlock(&hdl->inode->lock);
 
+    ret = 0;
 out:
     put_handle(hdl);
     return ret;
@@ -250,8 +251,6 @@ long libos_syscall_chown(const char* path, uid_t uid, gid_t gid) {
 
 long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid, int flags) {
     __UNUSED(flags);
-    __UNUSED(uid);
-    __UNUSED(gid);
 
     if (!is_user_string_readable(filename))
         return -EFAULT;
@@ -282,30 +281,23 @@ out:
 }
 
 long libos_syscall_fchown(int fd, uid_t uid, gid_t gid) {
-    __UNUSED(uid);
-    __UNUSED(gid);
-
     struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
     int ret;
-    struct libos_dentry* dent = hdl->dentry;
-
-    lock(&g_dcache_lock);
-    if (!dent || !dent->inode) {
+    if (!hdl->inode) {
         ret = -ENOENT;
         goto out;
     }
 
-    lock(&dent->inode->lock);
-    dent->inode->uid = (uid == (uid_t)-1) ? dent->inode->uid : uid;
-    dent->inode->gid = (gid == (gid_t)-1) ? dent->inode->gid : gid;
-    unlock(&dent->inode->lock);
+    lock(&hdl->inode->lock);
+    hdl->inode->uid = (uid == (uid_t)-1) ? hdl->inode->uid : uid;
+    hdl->inode->gid = (gid == (gid_t)-1) ? hdl->inode->gid : gid;
+    unlock(&hdl->inode->lock);
 
     ret = 0;
 out:
-    unlock(&g_dcache_lock);
     put_handle(hdl);
     return ret;
 }

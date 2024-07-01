@@ -168,6 +168,38 @@ static int shm_creat(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     return shm_setup_dentry(dent, type, perm, /*size=*/0);
 }
 
+static int shm_unlink(struct libos_dentry* dent) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
+    char* uri = NULL;
+    PAL_HANDLE palhdl = NULL;
+
+    int ret = dentry_uri(dent, dent->inode->type, &uri);
+    if (ret < 0)
+        goto out;
+
+    ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                        /*options=*/0, &palhdl);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    ret = PalStreamDelete(palhdl, PAL_DELETE_ALL);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    ret = 0;
+out:
+    if (palhdl)
+        PalObjectDestroy(palhdl);
+    free(uri);
+    return ret;
+}
+
 struct libos_fs_ops shm_fs_ops = {
     .mount      = shm_mount,
     /* .read and .write are intentionally not supported according to POSIX shared memory API. */
@@ -181,7 +213,7 @@ struct libos_d_ops shm_d_ops = {
     .lookup  = shm_lookup,
     .creat   = shm_creat,
     .stat    = generic_inode_stat,
-    .unlink  = chroot_unlink,
+    .unlink  = shm_unlink,
 };
 
 struct libos_fs shm_builtin_fs = {

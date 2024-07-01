@@ -1,16 +1,10 @@
 Contributing to Gramine
 =======================
 
-.. highlight:: sh
-
-.. see Documentation/howto-doc.rst about |nbsp| versus |~|
-.. |nbsp| unicode:: 0xa0
-   :trim:
-
 First off, thank you for your interest in contributing to Gramine!
 
 In general, code contributions should be submitted to the Gramine project
-using a |nbsp| `pull request <https://github.com/gramineproject/gramine/pulls>`__.
+using a `pull request <https://github.com/gramineproject/gramine/pulls>`__.
 
 To learn more about the knowledge required to start contributing to this project
 as well as some advice on contributing high-quality PRs, read through `the
@@ -20,7 +14,7 @@ onboarding guide
 Reporting Bugs
 --------------
 
-In order to report a |nbsp| problem, please open an issue in the `issue tracker
+In order to report a problem, please open an issue in the `issue tracker
 <https://github.com/gramineproject/gramine/issues>`__.
 
 Reporting Security Vulnerabilities
@@ -52,22 +46,21 @@ newcomers.
 Branch Names
 ------------
 
-For work in progress (for team members), please use your name/userid as
-a |nbsp| prefix in the branch name.  For example, if user ``jane`` is adding
-feature ``foo``, the branch should be named: ``jane/foo``.
+For work in progress (for team members), please use your name/userid as a prefix
+in the branch name. For example, if user ``jane`` is adding feature ``foo``,
+the branch should be named: ``jane/foo``.
 
-For new contributors, the branch will likely be on a |nbsp| fork of the
-repository.
+For new contributors, the branch will likely be on a fork of the repository.
 
-Otherwise, branches without this prefix should only be created for
-a |nbsp| specific purpose, as approved by the maintainers.
+Otherwise, branches without this prefix should only be created for a specific
+purpose, as approved by the maintainers.
 
 Pull Requests
 -------------
 
 The primary mechanism for submitting code changes is with a pull request (PR).
 
-In general, a |nbsp| PR should:
+In general, a PR should:
 
 #. Address a single problem.
 #. Clearly explain the problem and solution in the PR and commit messages, using
@@ -131,7 +124,7 @@ Before a pull request is merged, it must:
    - 3 approving maintainers
    - 2 approving maintainers and 5 days since the PR was created
 
-   If the author is a |nbsp| maintainer the limits are lowered by 1.
+   If the author is a maintainer the limits are lowered by 1.
 
 Additional reviews from anyone are welcome.
 
@@ -191,7 +184,9 @@ We also have (and are actively growing) PAL and LibOS unit tests.
 
 In order to run tests, Gramine must be installed. The test binaries, which are
 also built by Meson, must be installed as well. To do that, configure your build
-directory with ``-Dtests=enabled`` and install Gramine::
+directory with ``-Dtests=enabled`` and install Gramine:
+
+.. code-block:: sh
 
    # add -Dsgx=enabled and SGX options if necessary
    meson setup build/ --werror -Dtests=enabled -Ddirect=enabled
@@ -199,17 +194,23 @@ directory with ``-Dtests=enabled`` and install Gramine::
    ninja -C build/
    sudo ninja -C build/ install
 
-To run the PAL tests::
+To run the PAL tests:
+
+.. code-block:: sh
 
    cd pal/regression
    gramine-test pytest -v
 
-For SGX, one needs to do the following::
+For SGX, one needs to do the following:
+
+.. code-block:: sh
 
    cd pal/regression
    gramine-test --sgx pytest -v
 
-It is also possible to run a subset of tests::
+It is also possible to run a subset of tests:
+
+.. code-block:: sh
 
    gramine-test pytest -v -k TC_01_Bootstrap
    gramine-test pytest -v -k test_100_basic_boostrapping
@@ -235,11 +236,14 @@ The LibOS unit tests work similarly, and are under
 
 LTP
 ^^^
-Gramine passes a |nbsp| subset of the LTP tests. New changes should not break
-currently passing LTP tests (and, ideally, might add new passing tests). LTP is
-currently tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
 
-To run these tests::
+Gramine passes a subset of the LTP tests. New changes should not break currently
+passing LTP tests (and, ideally, might add new passing tests). LTP is currently
+tested only on the Linux PAL; it may or may not work on Linux-SGX PAL.
+
+To run these tests:
+
+.. code-block:: sh
 
    cd libos/test/ltp
    # consider -j$(nproc) or similar to parallelize and improve the build time.

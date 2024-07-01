@@ -3,13 +3,26 @@
  * Copyright (C) 2021 Intel Corp.
  */
 
-/* This mbedTLS config is for v3.5.2 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
+/* This mbedTLS config is for v3.6.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
 #pragma once
 
-#define MBEDTLS_AES_USE_HARDWARE_ONLY
+/* mbedTLS v3.6.0 by default enables the following TLS 1.3 features:
+ *
+ * #define MBEDTLS_SSL_PROTO_TLS1_3
+ * #define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
+ * #define MBEDTLS_SSL_TLS1_3_KEY_EXCHANGE_MODE_PSK_ENABLED
+ *
+ * These features are currently *not* enabled in mbedTLS version used for internal Gramine PAL
+ * crypto/TLS.
+ * TODO: analyze their impact and add the applicable ones
+ */
+
 #define MBEDTLS_AESNI_C
 #define MBEDTLS_AES_C
+#define MBEDTLS_AES_USE_HARDWARE_ONLY
+#define MBEDTLS_ASN1_PARSE_C
+#define MBEDTLS_ASN1_WRITE_C
 #define MBEDTLS_BASE64_C
 #define MBEDTLS_BIGNUM_C
 #define MBEDTLS_CIPHER_C

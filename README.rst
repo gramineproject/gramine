@@ -12,29 +12,24 @@ Gramine Library OS with Intel SGX Support
 
 *A Linux-compatible Library OS for Multi-Process Applications*
 
-.. This is not |~|, because that is in rst_prolog in conf.py, which GitHub cannot parse.
-   GitHub doesn't appear to use it correctly anyway...
-.. |nbsp| unicode:: 0xa0
-   :trim:
-
 
 What is Gramine?
 ================
 
-Gramine (formerly called *Graphene*) is a |nbsp| lightweight library OS,
-designed to run a single application with minimal host requirements. Gramine can
-run applications in an isolated environment with benefits comparable to running
-a |nbsp| complete OS in a |nbsp| virtual machine -- including guest
-customization, ease of porting to different OSes, and process migration.
+Gramine (formerly called *Graphene*) is a lightweight library OS, designed to
+run a single application with minimal host requirements. Gramine can run
+applications in an isolated environment with benefits comparable to running a
+complete OS in a virtual machine -- including guest customization, ease of
+porting to different OSes, and process migration.
 
 Gramine supports native, unmodified Linux binaries on any platform. Currently,
 Gramine runs on Linux and Intel SGX enclaves on Linux platforms.
 
-In untrusted cloud and edge deployments, there is a |nbsp| strong desire to
-shield the whole application from rest of the infrastructure. Gramine supports
-this “lift and shift” paradigm for bringing unmodified applications into
-Confidential Computing with Intel SGX. Gramine can protect applications from a
-|nbsp| malicious system stack with minimal porting effort.
+In untrusted cloud and edge deployments, there is a strong desire to shield the
+whole application from rest of the infrastructure. Gramine supports this “lift
+and shift” paradigm for bringing unmodified applications into Confidential
+Computing with Intel SGX. Gramine can protect applications from a malicious
+system stack with minimal porting effort.
 
 Gramine is a growing project and we have a growing contributor and maintainer
 community. The code and overall direction of the project are determined by a

@@ -232,7 +232,14 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
 
     if (g_sgx_enable_stats)
         dump_and_reset_stats();
+
+#ifdef DEBUG
+    if (g_pal_enclave.profile_enable) {
+        __atomic_store_n(&g_trigger_profile_reinit, true, __ATOMIC_RELEASE);
+    }
+#endif /* DEBUG */
 }
+
 
 int sgx_signal_setup(void) {
     int ret;

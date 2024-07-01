@@ -83,6 +83,15 @@ int fifo_setup_dentry(struct libos_dentry* dent, mode_t perm, int fd_read, int f
     return 0;
 }
 
+static void fill_pipe_stat(struct stat* stat) {
+    memset(stat, 0, sizeof(*stat));
+
+    struct libos_thread* thread = get_cur_thread();
+    stat->st_uid     = (uid_t)thread->uid;
+    stat->st_gid     = (gid_t)thread->gid;
+    stat->st_mode    = PERM_rw_______ | S_IFIFO;
+}
+
 static ssize_t pipe_read(struct libos_handle* hdl, void* buf, size_t count, file_off_t* pos) {
     assert(hdl->type == TYPE_PIPE);
     __UNUSED(pos);
@@ -131,30 +140,8 @@ static ssize_t pipe_write(struct libos_handle* hdl, const void* buf, size_t coun
 }
 
 static int pipe_hstat(struct libos_handle* hdl, struct stat* stat) {
-    /* XXX: Is any of this right?
-     * Shouldn't we be using hdl to figure something out?
-     * if stat is NULL, should we not return -EFAULT?
-     */
     __UNUSED(hdl);
-    if (!stat)
-        return 0;
-
-    struct libos_thread* thread = get_cur_thread();
-
-    stat->st_dev     = (dev_t)0;           /* ID of device containing file */
-    stat->st_ino     = (ino_t)0;           /* inode number */
-    stat->st_nlink   = (nlink_t)0;         /* number of hard links */
-    stat->st_uid     = (uid_t)thread->uid; /* user ID of owner */
-    stat->st_gid     = (gid_t)thread->gid; /* group ID of owner */
-    stat->st_rdev    = (dev_t)0;           /* device ID (if special file) */
-    stat->st_size    = (off_t)0;           /* total size, in bytes */
-    stat->st_blksize = 0;                  /* blocksize for file system I/O */
-    stat->st_blocks  = 0;                  /* number of 512B blocks allocated */
-    stat->st_atime   = (time_t)0;          /* access time */
-    stat->st_mtime   = (time_t)0;          /* last modification */
-    stat->st_ctime   = (time_t)0;          /* last status change */
-    stat->st_mode    = PERM_rw_______ | S_IFIFO;
-
+    fill_pipe_stat(stat);
     return 0;
 }
 
@@ -276,6 +263,12 @@ static int fifo_open(struct libos_handle* hdl, struct libos_dentry* dent, int fl
     return 0;
 }
 
+static int fifo_stat(struct libos_dentry* dent, struct stat* stat) {
+    __UNUSED(dent);
+    fill_pipe_stat(stat);
+    return 0;
+}
+
 static struct libos_fs_ops pipe_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
@@ -286,11 +279,13 @@ static struct libos_fs_ops pipe_fs_ops = {
 static struct libos_fs_ops fifo_fs_ops = {
     .read     = &pipe_read,
     .write    = &pipe_write,
+    .hstat    = &pipe_hstat,
     .setflags = &pipe_setflags,
 };
 
 static struct libos_d_ops fifo_d_ops = {
     .open        = &fifo_open,
+    .stat        = &fifo_stat,
     .icheckpoint = &fifo_icheckpoint,
     .irestore    = &fifo_irestore,
 };

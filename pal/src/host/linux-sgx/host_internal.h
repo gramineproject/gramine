@@ -50,13 +50,17 @@ struct pal_enclave {
     /* profiling */
     bool profile_enable;
     int profile_mode;
-    char profile_filename[64];
     bool profile_with_stack;
     int profile_frequency;
 #endif
 };
 
 extern struct pal_enclave g_pal_enclave;
+
+#ifdef DEBUG
+extern bool g_trigger_profile_reinit;
+extern char g_profile_filename[128];
+#endif /* DEBUG */
 
 void* realloc(void* ptr, size_t new_size);
 
@@ -144,10 +148,6 @@ enum {
     SGX_PROFILE_MODE_OCALL_OUTER = 3,
 };
 
-/* Filenames for saved data */
-#define SGX_PROFILE_FILENAME "sgx-perf.data"
-#define SGX_PROFILE_FILENAME_WITH_PID "sgx-perf-%d.data"
-
 /* Initialize based on g_pal_enclave settings */
 int sgx_profile_init(void);
 
@@ -174,8 +174,10 @@ void sgx_profile_report_elf(const char* filename, void* addr);
 struct perf_data;
 
 struct perf_data* pd_open(const char* file_name, bool with_stack);
+int pd_open_file(struct perf_data* pd, const char* file_name);
 
 /* Finalize and close; returns resulting file size */
+ssize_t pd_close_file(struct perf_data* pd);
 ssize_t pd_close(struct perf_data* pd);
 
 /* Write PERF_RECORD_COMM (report command name) */

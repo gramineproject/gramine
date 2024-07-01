@@ -10,6 +10,7 @@ tests = {
     'bootstrap_static': {
         'static': true,
     },
+    'close_range': {},
     'console': {},
     'debug': {
         'c_args': '-g3',
@@ -98,6 +99,7 @@ tests = {
     'pthread_set_get_affinity': {},
     'readdir': {},
     'rename_unlink': {},
+    'rename_unlink_fchown': {},
     'run_test': {
         'include_directories': include_directories(
             # for `gramine_entry_api.h`
@@ -165,6 +167,7 @@ if host_machine.cpu_family() == 'x86_64'
         'debug_regs_x86_64': {
             'c_args': '-g3',
         },
+        'in_out_instruction' : {},
         'rdtsc': {},
         'sighandler_divbyzero': {},
     }

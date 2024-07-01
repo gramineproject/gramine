@@ -15,6 +15,8 @@ fs.mounts = [
   { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
   { path = "/usr", uri = "file:/usr" },
   { path = "/tmp", uri = "file:/tmp" },
+  # for tests that require POSIX shared memory support
+  { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
 ]
 
 # for flock tests
@@ -30,6 +32,7 @@ sgx.use_exinfo = true
 
 sgx.allowed_files = [
   "file:/tmp",
+  "dev:/dev/shm/", # for tests that require POSIX shared memory support
 ]
 
 sgx.trusted_files = [
