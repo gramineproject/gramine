@@ -62,6 +62,7 @@ static int unix_to_pal_error_negative(int unix_errno) {
  * The sign of the error code is preserved.
  */
 static __attribute__((unused)) int unix_to_pal_error(int unix_errno) {
+    // TODO: The unix_errno variable should always be negative.
     if (unix_errno >= 0) {
         return -unix_to_pal_error_negative(unix_errno);
     }

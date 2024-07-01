@@ -36,7 +36,9 @@ typedef enum _pal_error_t {
     PAL_ERROR_AFNOSUPPORT = -23,
     PAL_ERROR_CONNFAILED_PIPE = -24,
 
-#define PAL_ERROR_NATIVE_COUNT ((-PAL_ERROR_CONNFAILED_PIPE) + 1)
+#define PAL_ERROR_NATIVE_END   (-PAL_ERROR_CONNFAILED_PIPE)
+#define PAL_ERROR_NATIVE_COUNT (PAL_ERROR_NATIVE_END + 1)
+
 #define PAL_ERROR_CRYPTO_START PAL_ERROR_CRYPTO_FEATURE_UNAVAILABLE
 
     /* Crypto error constants and their descriptions are adapted from mbedtls. */

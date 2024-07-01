@@ -77,6 +77,7 @@ static unsigned long pal_to_unix_errno_positive(unsigned long err) {
 }
 
 long pal_to_unix_errno(long err) {
+    // TODO: The err variable should always be negative.
     if (err >= 0) {
         return pal_to_unix_errno_positive((unsigned long)err);
     }
