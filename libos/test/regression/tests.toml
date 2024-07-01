@@ -101,6 +101,7 @@ manifests = [
   "readdir",
   "rename_unlink",
   "rename_unlink_fchown",
+  "rollback",
   "run_test",
   "rwlock",
   "sched",
