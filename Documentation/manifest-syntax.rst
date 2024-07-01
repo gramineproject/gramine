@@ -396,7 +396,7 @@ Mocking syscalls
 
 ::
 
-    sys.mock_syscalls = [
+    sys.debug__mock_syscalls = [
       { name = "syscall_name1", return = 0 },   # no-op syscall
       { name = "syscall_name2", return = -38 }, # denied syscall (ENOSYS)
     ]
@@ -412,13 +412,13 @@ silent introduction of race conditions or hangs).
 
 As one example, to skip ``sched_yield`` syscall, specify::
 
-    sys.mock_syscalls = [
+    sys.debug__mock_syscalls = [
       { name = "sched_yield", return = 0 },
     ]
 
 As another example, to disallow eventfd completely, specify::
 
-    sys.mock_syscalls = [
+    sys.debug__mock_syscalls = [
       { name = "eventfd",  return = -38 },
       { name = "eventfd2", return = -38 },
     ]
@@ -430,8 +430,8 @@ As another example, to disallow eventfd completely, specify::
    used to spawn subprocesses by Glibc and many other libraries and runtimes and
    (2) it is also used to create threads in the same process. The
    ``sys.disallow_subprocesses`` manifest option disables only the first usage,
-   whereas ``sys.mock_syscalls = [ { name = "clone", ... } ]`` disables both
-   usages.
+   whereas ``sys.debug__mock_syscalls = [ { name = "clone", ... } ]`` disables
+   both usages.
 
 .. warning ::
    This option is *not* a security feature. Its rationale is improving

@@ -107,7 +107,7 @@ int init_syscalls(void) {
     if (!manifest_sys)
         return 0;
 
-    toml_array_t* toml_mock_syscalls = toml_array_in(manifest_sys, "mock_syscalls");
+    toml_array_t* toml_mock_syscalls = toml_array_in(manifest_sys, "debug__mock_syscalls");
     if (!toml_mock_syscalls)
         return 0;
 

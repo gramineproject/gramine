@@ -10,7 +10,7 @@ fs.mounts = [
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 ]
 
-sys.mock_syscalls = [
+sys.debug__mock_syscalls = [
   # sched_yield is mocked as no-op (`return = 0` by default), sometimes useful for performance;
   # this no-op behavior should be evident from strace on the host
   { name = "sched_yield" },
