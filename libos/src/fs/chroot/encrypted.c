@@ -68,27 +68,70 @@ static int chroot_encrypted_mount(struct libos_mount_params* params, void** moun
     if (ret < 0)
         return ret;
 
-    *mount_data = key;
+    libos_encrypted_files_mode_t protection_mode = PF_ENCLAVE_LIFE_RB_PROTECTION_NON_STRICT;
+    /* default mode non-strict: balances security with backwards-compatibility */
+    if (params->protection_mode) {
+        if (strncmp(params->protection_mode, "strict", strlen("strict")) == 0)
+            protection_mode = PF_ENCLAVE_LIFE_RB_PROTECTION_STRICT;
+        else if (strncmp(params->protection_mode, "non-strict", strlen("non-strict")) == 0)
+            protection_mode = PF_ENCLAVE_LIFE_RB_PROTECTION_NON_STRICT;
+        else if (strncmp(params->protection_mode, "none", strlen("none")) == 0)
+            protection_mode = PF_ENCLAVE_LIFE_RB_PROTECTION_NONE;
+        else {
+            log_error("Invalid enforcement type: %s", params->protection_mode);
+            return -EINVAL;
+        }
+    }
+
+    struct libos_encrypted_volume* volume;
+    volume = calloc(1, sizeof(*volume));
+    if (!volume)
+        return -ENOMEM;
+    volume->mount_point_path = strdup(params->path);
+    if (!volume->mount_point_path) {
+        ret = -ENOMEM;
+        goto err;
+    }
+    volume->protection_mode = protection_mode;
+    volume->key             = key;
+    if (!create_lock(&volume->files_state_map_lock)) {
+        ret = -ENOMEM;
+        goto err;
+    }
+    volume->files_state_map = NULL;
+
+    ret = register_encrypted_volume(volume);
+    if (ret < 0)
+        goto err;
+
+    *mount_data = volume;
     return 0;
+err:
+    if (volume) {
+        if (lock_created(&volume->files_state_map_lock))
+            destroy_lock(&volume->files_state_map_lock);
+        free(volume->mount_point_path);
+    }
+    free(volume);
+    return ret;
 }
 
 static ssize_t chroot_encrypted_checkpoint(void** checkpoint, void* mount_data) {
-    struct libos_encrypted_files_key* key = mount_data;
+    struct libos_encrypted_volume* volume = mount_data;
 
-    *checkpoint = strdup(key->name);
+    *checkpoint = strdup(volume->mount_point_path);
     if (!*checkpoint)
         return -ENOMEM;
-    return strlen(key->name) + 1;
+    return strlen(volume->mount_point_path) + 1;
 }
 
 static int chroot_encrypted_migrate(void* checkpoint, void** mount_data) {
-    const char* name = checkpoint;
+    const char* mount_point_path = checkpoint;
 
-    struct libos_encrypted_files_key* key;
-    int ret = get_or_create_encrypted_files_key(name, &key);
-    if (ret < 0)
-        return ret;
-    *mount_data = key;
+    struct libos_encrypted_volume* volume = get_encrypted_volume(mount_point_path);
+    if (!volume)
+        return -EEXIST;
+    *mount_data = volume;
     return 0;
 }
 
@@ -153,8 +196,8 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         struct libos_encrypted_file* enc;
         file_off_t size;
 
-        struct libos_encrypted_files_key* key = dent->mount->data;
-        ret = encrypted_file_open(uri, key, &enc);
+        struct libos_encrypted_volume* volume = dent->mount->data;
+        ret                                   = encrypted_file_open(uri, volume, &enc);
         if (ret < 0) {
             if (ret == -EACCES) {
                 /* allow the inode to be created even if the underlying encrypted file is corrupted;
@@ -165,7 +208,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
             }
         } else {
             ret = encrypted_file_get_size(enc, &size);
-            encrypted_file_put(enc);
+            encrypted_file_put(enc, true);
 
             if (ret < 0) {
                 encrypted_file_destroy(enc);
@@ -210,7 +253,7 @@ static int chroot_encrypted_open(struct libos_handle* hdl, struct libos_dentry* 
     get_inode(dent->inode);
     hdl->type = TYPE_CHROOT_ENCRYPTED;
     hdl->seekable = true;
-    hdl->pos = 0;
+    hdl->pos      = 0;
     return 0;
 }
 
@@ -231,9 +274,9 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
         goto out;
     }
 
-    struct libos_encrypted_files_key* key = dent->mount->data;
+    struct libos_encrypted_volume* volume = dent->mount->data;
     struct libos_encrypted_file* enc;
-    ret = encrypted_file_create(uri, HOST_PERM(perm), key, &enc);
+    ret = encrypted_file_create(uri, HOST_PERM(perm), volume, &enc);
     if (ret < 0)
         goto out;
 
@@ -301,6 +344,13 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
     if (ret < 0)
         return ret;
 
+    struct libos_encrypted_file* enc = dent->inode->data;
+    if (!enc)
+        return -EACCES;
+    ret = encrypted_file_unlink(enc);
+    if (ret < 0)
+        return ret;
+
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                         PAL_OPTION_PASSTHROUGH, &palhdl);
@@ -346,7 +396,7 @@ static int chroot_encrypted_rename(struct libos_dentry* old, struct libos_dentry
         goto out;
 
     ret = encrypted_file_rename(enc, new_uri);
-    encrypted_file_put(enc);
+    encrypted_file_put(enc, true);
 out:
     unlock(&old->inode->lock);
     free(new_uri);
@@ -432,7 +482,7 @@ static int chroot_encrypted_close(struct libos_handle* hdl) {
     assert(enc);
 
     lock(&hdl->inode->lock);
-    encrypted_file_put(enc);
+    encrypted_file_put(enc, hdl->inode == hdl->dentry->inode);
     unlock(&hdl->inode->lock);
 
     return 0;

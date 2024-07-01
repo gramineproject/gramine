@@ -27,8 +27,12 @@ if [ "$GDB" == "1" ]; then
         PREFIX+=("-x" "$HOST_PAL_PATH/gdb_integration/gramine_linux_gdb.py")
     fi
     if [ "$GDB_SCRIPT" != "" ]; then
-        # Run a script in batch mode, and without TTY (so that it can be piped, redirected etc.)
-        PREFIX+=("-x" "$GDB_SCRIPT" "-batch" "-tty=/dev/null")
+        # Run a script in batch mode, and ...
+        PREFIX+=("-x" "$GDB_SCRIPT")
+        # ... optionally without TTY (so that it can be piped, redirected etc.)
+        if [ -z ${GDB_TTY+x} ]; then
+            PREFIX+=("-batch" "-tty=/dev/null")
+        fi
     fi
     PREFIX+=("--args")
 fi

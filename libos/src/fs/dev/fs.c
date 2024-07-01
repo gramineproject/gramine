@@ -176,5 +176,9 @@ int init_devfs(void) {
     if (ret < 0)
         return ret;
 
+    ret = init_rollback(root);
+    if (ret < 0)
+        return ret;
+
     return 0;
 }

@@ -192,7 +192,7 @@ class RegressionTestCase(unittest.TestCase):
         dump = p.stdout.decode()
         return '.debug_info' in dump
 
-    def run_gdb(self, args, gdb_script, **kwds):
+    def run_gdb(self, args, gdb_script, hide_tty=True, **kwds):
         prefix = ['gdb', '-q']
         env = os.environ.copy()
         if HAS_SGX:
@@ -202,8 +202,10 @@ class RegressionTestCase(unittest.TestCase):
         else:
             prefix += ['-x', fspath(self.pal_path / 'gdb_integration/gramine_linux_gdb.py')]
 
-        # Override TTY, as apparently os.setpgrp() confuses GDB and causes it to hang.
-        prefix += ['-x', gdb_script, '-batch', '-tty=/dev/null']
+        prefix += ['-x', gdb_script, '-batch']
+        if hide_tty:
+            # Override TTY, as apparently os.setpgrp() confuses GDB and causes it to hang.
+            prefix += ['-tty=/dev/null']
         prefix += ['--args']
 
         return self.run_binary(args, prefix=prefix, env=env, **kwds)
