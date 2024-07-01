@@ -471,7 +471,7 @@ static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_
                 struct loadcmd* c = &loadcmds[loadcmds_cnt++];
                 c->start     = ALLOC_ALIGN_DOWN(ph->p_vaddr);
                 c->map_off   = ALLOC_ALIGN_DOWN(ph->p_offset);
-                c->filesz    = ph->p_filesz;
+                c->filesz    = ph->p_filesz + (ph->p_vaddr - ALLOC_ALIGN_DOWN(ph->p_vaddr));
                 c->alloc_end = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
                 c->prot      = elf_segment_prot_to_pal_prot(ph->p_flags);
 
