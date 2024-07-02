@@ -62,6 +62,8 @@ struct libos_process {
     LISTP_TYPE(libos_child_process) zombies;
 
     struct libos_lock children_lock;
+
+    /* If g_dcache_lock is also required, acquire g_dcache_lock first and then fs_lock */
     struct libos_lock fs_lock;
 
     /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled

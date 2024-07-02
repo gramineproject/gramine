@@ -82,19 +82,23 @@ long libos_syscall_fchdir(int fd) {
     if (!hdl)
         return -EBADF;
 
+    int ret;
+    lock(&g_dcache_lock);
+
     struct libos_dentry* dent = hdl->dentry;
 
     if (!dent) {
         log_debug("FD=%d has no path in the filesystem", fd);
-        return -ENOTDIR;
+        ret = -ENOTDIR;
+        goto out;
     }
     if (!dent->inode || dent->inode->type != S_IFDIR) {
         char* path = NULL;
         dentry_abs_path(dent, &path, /*size=*/NULL);
         log_debug("%s is not a directory", path);
         free(path);
-        put_handle(hdl);
-        return -ENOTDIR;
+        ret = -ENOTDIR;
+        goto out;
     }
 
     lock(&g_process.fs_lock);
@@ -102,6 +106,9 @@ long libos_syscall_fchdir(int fd) {
     put_dentry(g_process.cwd);
     g_process.cwd = dent;
     unlock(&g_process.fs_lock);
+    ret = 0;
+out:
     put_handle(hdl);
-    return 0;
+    unlock(&g_dcache_lock);
+    return ret;
 }

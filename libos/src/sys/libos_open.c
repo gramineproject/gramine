@@ -373,12 +373,12 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         goto out_no_unlock;
     }
 
+    lock(&g_dcache_lock);
     if (!hdl->dentry->inode) {
         ret = -ENOENT;
-        goto out_no_unlock;
+        goto out_unlock_only_dcache_lock;
     }
 
-    lock(&g_dcache_lock);
     maybe_lock_pos_handle(hdl);
     lock(&hdl->lock);
 
@@ -467,6 +467,7 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
 out:
     unlock(&hdl->lock);
     maybe_unlock_pos_handle(hdl);
+out_unlock_only_dcache_lock:
     unlock(&g_dcache_lock);
 out_no_unlock:
     put_handle(hdl);
