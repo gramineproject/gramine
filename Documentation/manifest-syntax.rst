@@ -391,6 +391,58 @@ Python). Could be useful in SGX environments: child processes consume
    to achieve this, you need to run the whole Gramine inside a proper security
    sandbox.
 
+Mocking syscalls
+^^^^^^^^^^^^^^^^
+
+::
+
+    sys.debug__mock_syscalls = [
+      { name = "syscall_name1", return = 0 },   # no-op syscall
+      { name = "syscall_name2", return = -38 }, # denied syscall (ENOSYS)
+    ]
+
+This syntax specifies the system calls that are mocked when executed in
+Gramine (i.e. they return a specified value without any other side effects).
+If ``return`` field is skipped, then the default value is ``0`` (no-op).
+
+Be warned that returning a success (e.g. ``0``) but skipping the possible side
+effects of the syscall may introduce bugs to the application, if the application
+expects these side effects (e.g. mocking the ``futex`` syscall may lead to
+silent introduction of race conditions or hangs).
+
+As one example, to skip ``sched_yield`` syscall, specify::
+
+    sys.debug__mock_syscalls = [
+      { name = "sched_yield", return = 0 },
+    ]
+
+As another example, to disallow eventfd completely, specify::
+
+    sys.debug__mock_syscalls = [
+      { name = "eventfd",  return = -38 },
+      { name = "eventfd2", return = -38 },
+    ]
+
+
+.. note ::
+   This option is *not* a replacement for ``sys.disallow_subprocesses`` (see
+   above). This is because the ``clone()`` syscall has two usages: (1) it is
+   used to spawn subprocesses by Glibc and many other libraries and runtimes and
+   (2) it is also used to create threads in the same process. The
+   ``sys.disallow_subprocesses`` manifest option disables only the first usage,
+   whereas ``sys.debug__mock_syscalls = [ { name = "clone", ... } ]`` disables
+   both usages.
+
+.. warning ::
+   This option is *not* a security feature. Its rationale is improving
+   performance (the example of ``sched_yield``), mocking syscalls currently not
+   implemented in Gramine, and limiting syscalls exposed to the app.
+
+.. warning ::
+   If used incorrectly, this option may break syscall semantics and make your
+   application unsound! This option is for advanced users only and for
+   experimenting/debugging.
+
 Root FS mount point
 ^^^^^^^^^^^^^^^^^^^
 

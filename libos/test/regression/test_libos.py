@@ -1075,6 +1075,17 @@ class TC_31_Syscall(RegressionTestCase):
         self.assertIn('Got: P', stdout)
         self.assertIn('TEST 2 OK', stdout)
 
+    def test_020_mock_syscalls(self):
+        stdout, stderr = self.run_binary(['mock_syscalls'])
+        self.assertIn('eventfd2(...) = -38 (mock)', stderr)
+        if USES_MUSL:
+            self.assertIn('fork(...) = -38 (mock)', stderr)
+        else:
+            self.assertIn('clone(...) = -38 (mock)', stderr)
+        self.assertIn('sched_yield(...) = 0 (mock)', stderr)
+        self.assertIn('vhangup(...) = 123 (mock)', stderr)
+        self.assertIn('TEST OK', stdout)
+
 class TC_40_FileSystem(RegressionTestCase):
     def test_000_proc(self):
         stdout, _ = self.run_binary(['proc_common'])

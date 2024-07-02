@@ -12,8 +12,13 @@
 #include "linux_abi/sysinfo.h"
 
 typedef void (*libos_syscall_t)(void);
-
 extern libos_syscall_t libos_syscall_table[];
+
+struct libos_mock_syscall {
+    bool is_mocked;
+    long return_value;
+};
+extern struct libos_mock_syscall libos_mock_syscall_table[];
 
 /* syscall implementation */
 long libos_syscall_read(int fd, void* buf, size_t count);

@@ -1,0 +1,41 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.log_level = "trace"
+
+loader.env.LD_LIBRARY_PATH = "/lib"
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+]
+
+sys.debug__mock_syscalls = [
+  # sched_yield is mocked as no-op (`return = 0` by default), sometimes useful for performance;
+  # this no-op behavior should be evident from strace on the host
+  { name = "sched_yield" },
+
+  # vhangup is not implemented in Gramine but here mocked as no-op with a dummy return value
+  { name = "vhangup", return = 123 },
+
+  # even though glibc wrapper is called eventfd, glibc translates it into eventfd2;
+  # we specify both syscall variants to be on the safe side
+  { name = "eventfd", return = -38 },
+  { name = "eventfd2", return = -38 },
+
+  # even though glibc wrapper is called fork, glibc translates it into clone; at the same time, musl
+  # uses fork syscall; we specify all syscall variants to be on the safe side
+  { name = "fork", return = -38 },
+  { name = "vfork", return = -38 },
+  { name = "clone", return = -38 },
+  { name = "clone3", return = -38 },
+]
+
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
