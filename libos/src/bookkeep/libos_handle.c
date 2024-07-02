@@ -476,16 +476,6 @@ int set_new_fd_handle_above_fd(uint32_t fd, struct libos_handle* hdl, int fd_fla
     return __set_new_fd_handle(fd, hdl, fd_flags, handle_map, /*find_first=*/true);
 }
 
-static inline __attribute__((unused)) const char* __handle_name(struct libos_handle* hdl) {
-    if (hdl->uri)
-        return hdl->uri;
-    if (hdl->dentry && hdl->dentry->name[0] != '\0')
-        return hdl->dentry->name;
-    if (hdl->fs)
-        return hdl->fs->name;
-    return "(unknown)";
-}
-
 void get_handle(struct libos_handle* hdl) {
     refcount_inc(&hdl->ref_count);
 }
