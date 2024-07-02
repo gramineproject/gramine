@@ -1,4 +1,3 @@
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
@@ -29,7 +28,6 @@ sgx.allowed_files = [
 ]
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ binary_dir }}/{{ entrypoint }}",
   "file:{{ gramine.runtimedir() }}/",
   "file:{{ arch_libdir }}/libgcc_s.so.1",

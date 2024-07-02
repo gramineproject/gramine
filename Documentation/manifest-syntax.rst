@@ -69,19 +69,30 @@ Loader entrypoint
 
 ::
 
-   loader.entrypoint = "[URI]"
+   loader.entrypoint.uri = "[URI]"
    (Default: "<path to libsysdb.so>")
 
-This specifies the LibOS component that Gramine will load and run before loading
-the first executable of the user application. **Note**: currently, there is only
-one LibOS implementation: ``libsysdb.so``, and there is no need to specify this
-option explicitly.
+   loader.entrypoint.sha256 = "[HASH]"
+
+``loader.entrypoint.uri`` specifies the LibOS component that Gramine will load
+and run before loading the first executable of the user application. **Note**:
+currently, there is only one LibOS implementation: ``libsysdb.so``, and there is
+no need to specify this option explicitly.
+
+Additionally, the loader entrypoint is cryptographically hashed at build time.
+At startup, Gramine verifies that the entrypoint's hash matches what is stored
+in the manifest in ``loader.entrypoint.sha256``. The signer tool will
+automatically generate the hash of this file and add it to the SGX-specific
+manifest (``.manifest.sgx``). The manifest writer may also explicitly specify
+the hash; in this case, hashing of the file will be skipped by the signer tool
+and the value in ``loader.entrypoint.sha256`` will be used instead.
 
 Note that the loader (the PAL binary) loads the LibOS binary specified in
 ``loader.entrypoint`` and passes control to this binary. Next, the LibOS binary
 loads the actual executable (the user application) specified in
 ``libos.entrypoint``. Also note that, in contrast to ``libos.entrypoint``, the
-``loader.entrypoint`` option specifies a PAL URI (with the ``file:`` prefix).
+``loader.entrypoint.uri`` option specifies a PAL URI (with the ``file:``
+prefix).
 
 .. _libos-entrypoint:
 
@@ -1307,3 +1318,15 @@ In addition, the application manifest must also contain ``sgx.debug = true``.
    independently.
 
 See :ref:`vtune-sgx-profiling` for more information.
+
+Deprecated options
+------------------
+
+Loader entrypoint (deprecated syntax)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+   loader.entrypoint = "[URI]"
+
+This syntax was renamed to ``loader.entrypoint.uri``.

@@ -1,4 +1,3 @@
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "hostname"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
@@ -15,7 +14,6 @@ sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/hostname",
 ]

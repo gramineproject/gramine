@@ -1,4 +1,3 @@
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 # The argv source file must set argv[0] as the basename of the entrypoint. This is crucial for
@@ -15,7 +14,6 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]
 

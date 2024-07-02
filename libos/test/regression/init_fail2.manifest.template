@@ -1,6 +1,5 @@
 {% set entrypoint = "init_fail" -%}
 
-loader.entrypoint = "file:{{ gramine.libos }}"
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"
@@ -18,7 +17,6 @@ sgx.enclave_size = "256M"
 sys.brk.max_size = "512M"
 
 sgx.trusted_files = [
-  "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/{{ entrypoint }}",
 ]

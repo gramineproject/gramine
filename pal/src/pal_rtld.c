@@ -70,27 +70,24 @@ struct loadcmd {
     /*
      * Load command for a single segment. The following properties are true:
      *
-     *   - start <= data_end <= map_end <= alloc_end
-     *   - start, map_end, alloc_end are page-aligned
+     *   - start <= alloc_end; both are page-aligned
+     *   - [start + filesz, alloc_end) is zeroed out (corresponds to the BSS section)
      *   - map_off is page-aligned
      *
      *   The addresses are not relocated (i.e. you need to add l_base_diff to them).
      *
-     *   The same struct is used also in libos/src/libos_rtld.c code.
+     *   A similar struct is used also in libos/src/libos_rtld.c code.
      */
 
     /* Start of memory area */
     elf_addr_t start;
 
-    /* End of file data (data_end .. alloc_end should be zeroed out) */
-    elf_addr_t data_end;
-
-    /* End of mapped file data (data_end rounded up to page size, so that we can mmap
-     * start .. map_end) */
-    elf_addr_t map_end;
-
     /* End of memory area */
     elf_addr_t alloc_end;
+
+    /* Segment's file-image size (plus possible space for unused bytes at the beginning of the
+     * mapped segment, required due to page-alignment reasons) */
+    elf_addr_t filesz;
 
     /* Offset from the beginning of file at which the first byte of the segment resides */
     elf_off_t map_off;
@@ -429,10 +426,7 @@ static int perform_relocations(struct link_map* map) {
     return 0;
 }
 
-/* `elf_file_buf` contains the beginning of ELF file (at least ELF header and all program headers);
- * we don't bother undoing _PalStreamMap() and _PalVirtualMemoryAlloc() in case of failure. */
-static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
-                                          const char* elf_file_buf) {
+static int create_and_relocate_entrypoint(const char* uri, const char* elf_file_buf) {
     int ret;
     struct loadcmd* loadcmds = NULL;
 
@@ -477,9 +471,8 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
 
                 struct loadcmd* c = &loadcmds[loadcmds_cnt++];
                 c->start     = ALLOC_ALIGN_DOWN(ph->p_vaddr);
-                c->map_end   = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_filesz);
                 c->map_off   = ALLOC_ALIGN_DOWN(ph->p_offset);
-                c->data_end  = ph->p_vaddr + ph->p_filesz;
+                c->filesz    = ph->p_filesz + (ph->p_vaddr - ALLOC_ALIGN_DOWN(ph->p_vaddr));
                 c->alloc_end = ALLOC_ALIGN_UP(ph->p_vaddr + ph->p_memsz);
                 c->prot      = elf_segment_prot_to_pal_prot(ph->p_flags);
 
@@ -496,7 +489,7 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
                     goto out;
                 }
 
-                if (c->start >= c->map_end) {
+                if (c->start >= c->alloc_end) {
                     log_error("ELF loadable program segment has impossible memory region to map");
                     ret = -PAL_ERROR_INVAL;
                     goto out;
@@ -545,28 +538,26 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
         struct loadcmd* c = &loadcmds[i];
 
         void*  map_addr = (void*)(c->start + g_entrypoint_map.l_base_diff);
-        size_t map_size = c->map_end - c->start;
+        size_t map_size = c->alloc_end - c->start;
 
-        ret = _PalStreamMap(handle, map_addr, c->prot | PAL_PROT_WRITECOPY, c->map_off, map_size);
+        assert(IS_ALLOC_ALIGNED_PTR(map_addr));
+        assert(IS_ALLOC_ALIGNED(map_size));
+
+        ret = _PalVirtualMemoryAlloc(map_addr, map_size, c->prot | PAL_PROT_WRITE);
         if (ret < 0) {
-            log_error("Failed to map segment from ELF file");
+            log_error("Failed to prepare mapping for segment from ELF file");
+            goto out;
+        }
+        memcpy(map_addr, elf_file_buf + c->map_off, c->filesz);
+        ret = _PalVirtualMemoryProtect(map_addr, map_size, c->prot);
+        if (ret < 0) {
+            log_error("Failed to remove write memory protection off the segment from ELF file");
             goto out;
         }
 
         /* adjust segment's virtual addresses (p_vaddr) to actual virtual addresses in memory */
         c->start     += g_entrypoint_map.l_base_diff;
-        c->map_end   += g_entrypoint_map.l_base_diff;
-        c->data_end  += g_entrypoint_map.l_base_diff;
         c->alloc_end += g_entrypoint_map.l_base_diff;
-
-        if (c->alloc_end == c->map_end)
-            continue;
-
-        ret = _PalVirtualMemoryAlloc((void*)c->map_end, c->alloc_end - c->map_end, c->prot);
-        if (ret < 0) {
-            log_error("Failed to zero-fill the rest of segment from ELF file");
-            goto out;
-        }
     }
 
     /* adjust shared object's virtual addresses (p_vaddr) to actual virtual addresses in memory */
@@ -585,8 +576,8 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
     if (ret < 0)
         goto out;
 
-    /* zero out the unused parts of loaded segments and perform relocations on loaded segments
-     * (need to first change memory permissions to writable and then revert permissions back) */
+    /* perform relocations on loaded segments (need to first change memory permissions to writable
+     * and then revert permissions back) */
     for (size_t i = 0; i < loadcmds_cnt; i++) {
         struct loadcmd* c = &loadcmds[i];
         ret = _PalVirtualMemoryProtect((void*)c->start, c->alloc_end - c->start,
@@ -595,11 +586,6 @@ static int create_and_relocate_entrypoint(PAL_HANDLE handle, const char* uri,
             log_error("Failed to add write memory protection on the segment from ELF file");
             goto out;
         }
-
-        /* zero out uninitialized but allocated part of the loaded segment (note that part of
-         * segment allocated via _PalVirtualMemoryAlloc() is already zeroed out) */
-        if (ALLOC_ALIGN_UP(c->data_end) > c->data_end)
-            memset((void*)c->data_end, 0, ALLOC_ALIGN_UP(c->data_end) - c->data_end);
     }
 
     ret = perform_relocations(&g_entrypoint_map);
@@ -641,56 +627,87 @@ out:
 int load_entrypoint(const char* uri) {
     int ret;
     PAL_HANDLE handle;
+    char* buf = NULL;
 
-    char buf[1024]; /* must be enough to hold ELF header and all its program headers */
     ret = _PalStreamOpen(&handle, uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
                          /*options=*/0);
     if (ret < 0)
         return ret;
 
-    ret = _PalStreamRead(handle, 0, sizeof(buf), buf);
+    PAL_STREAM_ATTR attr;
+    ret = _PalStreamAttributesQueryByHandle(handle, &attr);
     if (ret < 0) {
-        log_error("Reading ELF file failed");
+        log_error("Getting size of loader entrypoint binary failed");
         goto out;
     }
 
-    size_t bytes_read = (size_t)ret;
+    buf = malloc(attr.pending_size);
+    if (!buf) {
+        log_error("Allocating buffer to hold loader entrypoint binary of size %lu failed",
+                  attr.pending_size);
+        goto out;
+    }
 
-    elf_ehdr_t* ehdr = (elf_ehdr_t*)&buf;
-    if (bytes_read < sizeof(elf_ehdr_t)) {
-        log_error("ELF file is too small (cannot read the ELF header)");
+    size_t buf_offset = 0;
+    size_t remaining = attr.pending_size;
+    while (remaining > 0) {
+        int64_t read = _PalStreamRead(handle, buf_offset, remaining, buf + buf_offset);
+        if (read == -PAL_ERROR_INTERRUPTED || read == -PAL_ERROR_TRYAGAIN)
+            continue;
+        if (read <= 0) {
+            log_error("Reading loader entrypoint binary failed");
+            ret = read < 0 ? read : -PAL_ERROR_DENIED;
+            goto out;
+        }
+
+        assert((size_t)read <= remaining);
+        remaining -= (size_t)read;
+        buf_offset += (size_t)read;
+    }
+    assert(remaining == 0);
+
+    ret = _PalValidateEntrypoint(buf, attr.pending_size);
+    if (ret < 0) {
+        log_error("Validating loader entrypoint binary failed");
+        goto out;
+    }
+
+    elf_ehdr_t* ehdr = (elf_ehdr_t*)buf;
+    if (attr.pending_size < sizeof(elf_ehdr_t)) {
+        log_error("Loader entrypoint binary is too small (cannot read the ELF header)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (memcmp(ehdr->e_ident, g_expected_elf_header, EI_OSABI)) {
-        log_error("ELF file has unexpected header (unexpected first 7 bytes)");
+        log_error("Loader entrypoint binary has unexpected ELF header (unexpected first 7 bytes)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_ident[EI_OSABI] != ELFOSABI_SYSV && ehdr->e_ident[EI_OSABI] != ELFOSABI_LINUX) {
-        log_error("ELF file has unexpected OS/ABI: PAL loader currently supports only SYS-V and "
-                  "LINUX");
+        log_error("Loader entrypoint binary has unexpected OS/ABI: PAL loader currently supports "
+                  "only SYS-V and LINUX");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
     if (ehdr->e_type != ET_DYN && ehdr->e_type != ET_EXEC) {
-        log_error("ELF file has unexpected type: PAL loader currently supports only DYN and EXEC");
+        log_error("Loader entrypoint binary has unexpected type: PAL loader currently supports "
+                  "only DYN and EXEC");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
-    if (bytes_read < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
-        log_error("Read too few bytes from the ELF file (not all program headers)");
+    if (attr.pending_size < ehdr->e_phoff + ehdr->e_phnum * sizeof(elf_phdr_t)) {
+        log_error("Read too few bytes from loader entrypoint binary (not all program headers)");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
 
-    ret = create_and_relocate_entrypoint(handle, uri, buf);
+    ret = create_and_relocate_entrypoint(uri, buf);
     if (ret < 0) {
-        log_error("Could not map the ELF file into memory and then relocate it");
+        log_error("Could not map loader entrypoint binary into memory and then relocate it");
         ret = -PAL_ERROR_INVAL;
         goto out;
     }
@@ -702,6 +719,7 @@ int load_entrypoint(const char* uri) {
 
 out:
     _PalObjectDestroy(handle);
+    free(buf);
     return ret;
 }
 
