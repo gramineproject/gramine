@@ -28,11 +28,11 @@ bool g_sgx_enable_stats = false;
 
 /* this function is called only on thread/process exit (never in the middle of thread exec) */
 void update_and_print_stats(bool process_wide) {
-    static atomic_ulong g_eenter_cnt       = 0;
-    static atomic_ulong g_eexit_cnt        = 0;
-    static atomic_ulong g_aex_cnt          = 0;
-    static atomic_ulong g_sync_signal_cnt  = 0;
-    static atomic_ulong g_async_signal_cnt = 0;
+    static uint64_t g_eenter_cnt       = 0;
+    static uint64_t g_eexit_cnt        = 0;
+    static uint64_t g_aex_cnt          = 0;
+    static uint64_t g_sync_signal_cnt  = 0;
+    static uint64_t g_async_signal_cnt = 0;
 
     if (!g_sgx_enable_stats)
         return;
@@ -50,11 +50,11 @@ void update_and_print_stats(bool process_wide) {
                tid, tcb->eenter_cnt, tcb->eexit_cnt, tcb->aex_cnt,
                tcb->sync_signal_cnt, tcb->async_signal_cnt);
 
-    g_eenter_cnt       += tcb->eenter_cnt;
-    g_eexit_cnt        += tcb->eexit_cnt;
-    g_aex_cnt          += tcb->aex_cnt;
-    g_sync_signal_cnt  += tcb->sync_signal_cnt;
-    g_async_signal_cnt += tcb->async_signal_cnt;
+    __atomic_fetch_add(&g_eenter_cnt, tcb->eenter_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_eexit_cnt, tcb->eexit_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_aex_cnt, tcb->aex_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_sync_signal_cnt, tcb->sync_signal_cnt, __ATOMIC_ACQ_REL);
+    __atomic_fetch_add(&g_async_signal_cnt, tcb->async_signal_cnt, __ATOMIC_ACQ_REL);
 
     if (process_wide) {
         int pid = g_host_pid;
@@ -65,8 +65,17 @@ void update_and_print_stats(bool process_wide) {
                    "  # of AEXs:           %lu\n"
                    "  # of sync signals:   %lu\n"
                    "  # of async signals:  %lu",
-                   pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
-                   g_sync_signal_cnt, g_async_signal_cnt);
+                   pid, __atomic_load_n(&g_eenter_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_eexit_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_aex_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_sync_signal_cnt, __ATOMIC_ACQUIRE),
+                   __atomic_load_n(&g_async_signal_cnt, __ATOMIC_ACQUIRE));
+
+        __atomic_store_n(&g_eenter_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_eexit_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_aex_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_sync_signal_cnt, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_async_signal_cnt, 0, __ATOMIC_RELEASE);
     }
 }
 
@@ -85,6 +94,15 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->profile_sample_time = 0;
 
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
+}
+
+void pal_host_tcb_reset_stats(void) {
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    tcb->eenter_cnt       = 0;
+    tcb->eexit_cnt        = 0;
+    tcb->aex_cnt          = 0;
+    tcb->sync_signal_cnt  = 0;
+    tcb->async_signal_cnt = 0;
 }
 
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {

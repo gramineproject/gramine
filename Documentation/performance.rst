@@ -103,6 +103,12 @@ How to read this output:
    counters should be compared against "golden runs" to deduce any interesting
    trends.
 
+It is also possible to dump and reset SGX-related statistics interactively, using
+``SIGUSR1`` signal. This helps to collect SGX-related statistics only for a
+particular period, e.g. skipping the Gramine startup and application
+initialization time and concentrating only on the actual application processing.
+Send ``SIGUSR1`` using command ``kill -SIGUSR1 <PGID>``.
+
 Effects of system calls / ocalls
 --------------------------------
 
