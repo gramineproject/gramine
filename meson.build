@@ -240,7 +240,8 @@ if src_build
     uthash_dep = subproject('uthash-2.1.0').get_variable('uthash_dep')
 endif
 
-# Build Mbed TLS because some tests, such as attestation tests, require it.
+# Build Mbed TLS even if !src_build because some tests (attestation tests)
+# require it.
 mbedtls_proj = subproject('mbedtls-3.6.0')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
