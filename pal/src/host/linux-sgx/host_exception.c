@@ -240,7 +240,6 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
 #endif /* DEBUG */
 }
 
-
 int sgx_signal_setup(void) {
     int ret;
 
