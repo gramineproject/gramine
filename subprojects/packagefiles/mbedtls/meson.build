@@ -58,11 +58,10 @@ pkgconfig.generate(
     ],
 )
 
-if get_option('libc') == 'glibc' and host_has_glibc
+if get_option('libc') == 'glibc' and host_has_glibc and src_build
     foreach output : mbedtls_libs_output
         meson.add_install_script('/bin/sh', '-c',
-            ('mkdir -p "$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/@2@ && ' +
-            'ln -sf ../../../@0@ ' +
+            ('ln -sf ../../../@0@ ' +
             '"$MESON_INSTALL_DESTDIR_PREFIX"/@1@/gramine/runtime/@2@/').format(
                 output, get_option('libdir'), get_option('libc')))
     endforeach
