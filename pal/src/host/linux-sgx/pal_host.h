@@ -65,6 +65,31 @@ typedef struct {
             bool handshake_done;
             void* ssl_ctx;
             void* handshake_helper_thread_hdl;
+            /*
+             * This lock guards accesses to ssl_ctx (a wrapper around mbedTLS SSL/TLS context; the
+             * only crypto adapter currently used in Gramine). By design, an mbedTLS SSL/TLS context
+             * is assumed to be used within a single thread and thus does not use any locking. In
+             * Gramine, though, the pipe and its associated SSL/TLS context can be used in multiple
+             * threads. Without protecting pipe read/write operations with a lock, mbedTLS internal
+             * handling of the context would exhibit data races.
+             *
+             * Taking this lock should be fine in most cases, regardless of whether read/write is
+             * blocking or not. If it is blocking, then another thread (waiting to acquire this
+             * lock) will spin on the lock which is fine (though it burns CPU cycles). If it's
+             * nonblocking, then all other operations on this handle are also nonblocking, so the
+             * lock will be released soon and we won't block indefinitely. There is a case though,
+             * that can cause this to block for arbitrary long periods: one thread e.g. does a
+             * blocking read, then another one does a nonblocking read (either by specifying
+             * `MSG_DONTWAIT` flag or using `fcntl` to add `O_NONBLOCK`); the second thread is
+             * incorrectly blocked in this case. Hopefully no app depends on it and if it does for
+             * some reason, it should not result in a deadlock -- hopefully some data arrives (or
+             * the pipe is closed) and unlocks the first blocked thread.
+             *
+             * Since we're in PAL layer, we can only use spinlocks (not e.g. futexes). It is
+             * suboptimal (for blocking operations), but the hope is that multiple threads
+             * simultaneously operating on the pipe is a rare scenario.
+             */
+            spinlock_t lock;
         } pipe;
 
         struct {
