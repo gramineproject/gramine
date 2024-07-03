@@ -573,6 +573,8 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
         if (ret < 0) {
             INIT_FAIL_MANIFEST("Cannot parse 'loader.entrypoint.uri'");
         }
+        log_warning("Detected deprecated manifest option 'loader.entrypoint'. Please switch to "
+                    "'loader.entrypoint.uri'.");
     }
 
     if (!entrypoint_name)
