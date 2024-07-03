@@ -142,6 +142,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
     hdl->pipe.nonblocking = !!(options & PAL_OPTION_NONBLOCK);
 
     /* pipesrv handle is only intermediate so it doesn't need SSL context or session key */
+    spinlock_init(&hdl->pipe.lock);
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = false;
     hdl->pipe.handshake_done = true; /* pipesrv doesn't do any handshake so consider it done */
@@ -198,6 +199,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
 
     /* create the SSL pre-shared key for this end of the pipe; note that SSL context is initialized
      * lazily on first read/write on this pipe */
+    spinlock_init(&clnt->pipe.lock);
     clnt->pipe.ssl_ctx        = NULL;
     clnt->pipe.is_server      = false;
     clnt->pipe.handshake_done = false;
@@ -280,6 +282,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
         return -PAL_ERROR_DENIED;
     }
 
+    spinlock_init(&hdl->pipe.lock);
     hdl->pipe.handshake_helper_thread_hdl = NULL;
     hdl->pipe.ssl_ctx        = NULL;
     hdl->pipe.is_server      = true;
@@ -370,8 +373,10 @@ static int64_t pipe_read(PAL_HANDLE handle, uint64_t offset, uint64_t len, void*
     if (!handle->pipe.ssl_ctx)
         return -PAL_ERROR_NOTCONNECTION;
 
+    spinlock_lock(&handle->pipe.lock);
     bytes = _PalStreamSecureRead(handle->pipe.ssl_ctx, buffer, len,
                                  /*is_blocking=*/!handle->pipe.nonblocking);
+    spinlock_unlock(&handle->pipe.lock);
 
     return bytes;
 }
@@ -401,8 +406,10 @@ static int64_t pipe_write(PAL_HANDLE handle, uint64_t offset, uint64_t len, cons
     if (!handle->pipe.ssl_ctx)
         return -PAL_ERROR_NOTCONNECTION;
 
+    spinlock_lock(&handle->pipe.lock);
     bytes = _PalStreamSecureWrite(handle->pipe.ssl_ctx, buffer, len,
                                   /*is_blocking=*/!handle->pipe.nonblocking);
+    spinlock_unlock(&handle->pipe.lock);
 
     return bytes;
 }
