@@ -447,7 +447,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
     if (!argv0_override) {
         /* possible in e.g. PAL regression tests, in this case use loader.entrypoint.uri */
         ret = toml_string_in(manifest_loader, "entrypoint.uri", &argv0_override);
-        if (ret < 0) {
+        if (ret < 0 || !argv0_override) {
             /* didn't find `loader.entrypoint.uri`, try deprecated `loader.entrypoint`;
              * TODO: remove this in Gramine v1.9 */
             ret = toml_string_in(manifest_loader, "entrypoint", &argv0_override);
@@ -566,7 +566,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
 
     char* entrypoint_name = NULL;
     ret = toml_string_in(manifest_loader, "entrypoint.uri", &entrypoint_name);
-    if (ret < 0) {
+    if (ret < 0 || !entrypoint_name) {
         /* didn't find `loader.entrypoint.uri`, try deprecated `loader.entrypoint`;
          * TODO: remove this in Gramine v1.9 */
         ret = toml_string_in(manifest_loader, "entrypoint", &entrypoint_name);

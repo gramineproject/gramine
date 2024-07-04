@@ -2,6 +2,9 @@
 
 {% set entrypoint = "helloworld" -%}
 
+# test deprecated loader.entrypoint syntax, TODO: remove in v1.9
+loader.entrypoint = "file:{{ gramine.libos }}"
+
 libos.entrypoint = "{{ entrypoint }}"
 
 loader.env.LD_LIBRARY_PATH = "/lib"

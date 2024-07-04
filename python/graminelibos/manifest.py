@@ -338,10 +338,21 @@ class Manifest:
 
         # for convenience, users are not required to specify `loader.entrypoint.uri` and
         # `loader.entrypoint.sha256`; replace with the default LibOS
+        loader_entrypoint_uri = f'file:{_env.globals["gramine"]["libos"]}'
+
         loader = manifest.setdefault('loader', {})
         loader_entrypoint = loader.setdefault('entrypoint', {})
+
+        # found deprecated `loader.entrypoint = "file:..."`; replace with loader.entrypoint.uri
+        # TODO: remove this in Gramine v1.9
+        if isinstance(loader_entrypoint, str):
+            print(f'WARNING: `loader.entrypoint = "file:..."` manifest syntax is deprecated, '
+                   'please switch to `loader.entrypoint.uri = "file:..."`')
+            loader_entrypoint = { 'uri': loader_entrypoint }
+            loader['entrypoint'] = loader_entrypoint
+
         if 'uri' not in loader_entrypoint:
-            loader_entrypoint['uri'] = f'file:{_env.globals["gramine"]["libos"]}'
+            loader_entrypoint['uri'] = loader_entrypoint_uri
         if 'sha256' not in loader_entrypoint:
             entrypoint_tf = TrustedFile.from_realpath(uri2path(loader_entrypoint['uri']))
             loader_entrypoint['sha256'] = entrypoint_tf.ensure_hash().sha256
