@@ -405,6 +405,9 @@ int dentry_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) 
         hdl->dir_info.dents = NULL;
     }
 
+    /* FIXME: add checks for O_APPEND, it can only be applied to regular files, etc. */
+    hdl->append_mode = flags & O_APPEND;
+
     /* truncate regular writable file if O_TRUNC is given */
     if ((flags & O_TRUNC) && ((flags & O_RDWR) | (flags & O_WRONLY))
             && (dent->inode->type == S_IFREG)) {

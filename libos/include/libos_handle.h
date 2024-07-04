@@ -182,6 +182,10 @@ struct libos_handle {
      * does not require holding any locks. Affects the `pos` field, see below. */
     bool seekable;
 
+    /* Whether the handle is opened in append mode (O_APPEND). This field does not change, so
+     * reading it does not require holding any locks. Writes update the `pos` field to file size. */
+    bool append_mode;
+
     /* Offset in file. Protected by `pos_lock`. Only meaningful for `seekable` handles; always zero
      * for non-seekable handles. */
     file_off_t pos;
