@@ -623,14 +623,20 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
         return -EACCES;
     }
 
-    int ret = PalStreamWrite(hdl->pal_handle, *pos, &count, (void*)buf);
+    file_off_t actual_pos = *pos;
+    lock(&hdl->inode->lock);
+    if (hdl->inode->type == S_IFREG && (hdl->flags & O_APPEND))
+        actual_pos = hdl->inode->size;
+    unlock(&hdl->inode->lock);
+
+    int ret = PalStreamWrite(hdl->pal_handle, actual_pos, &count, (void*)buf);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
 
     size_t new_size = 0;
     if (hdl->inode->type == S_IFREG) {
-        *pos += count;
+        *pos = actual_pos + count;
         /* Update file size if we just wrote past the end of file */
         lock(&hdl->inode->lock);
         if (hdl->inode->size < *pos)

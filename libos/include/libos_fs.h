@@ -726,6 +726,7 @@ int get_dirfd_dentry(int dirfd, struct libos_dentry** dir);
  * - O_DIRECTORY: expect/create a directory instead of regular file
  * - O_NOFOLLOW: don't follow symbolic links when resolving a path
  * - O_TRUNC: truncate the file after opening
+ * - O_APPEND: open file in append mode for writing
  *
  * The flags (including any not listed above), as well as file mode, are passed to the underlying
  * filesystem.

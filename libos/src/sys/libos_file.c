@@ -442,6 +442,12 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
         goto out;
     }
 
+    if (!(in_hdl->acc_mode & MAY_READ) || !(out_hdl->acc_mode & MAY_WRITE)) {
+        /* error out if input fd isn't readable or output fd isn't writable */
+        ret = -EBADF;
+        goto out;
+    }
+
     if (out_hdl->flags & O_APPEND) {
         /* Linux errors out if output fd has the O_APPEND flag set; comply with this behavior */
         ret = -EINVAL;
@@ -491,12 +497,6 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
         maybe_lock_pos_handle(in_hdl);
         pos_in = in_hdl->pos;
         maybe_unlock_pos_handle(in_hdl);
-    }
-
-    if (!(out_hdl->acc_mode & MAY_WRITE)) {
-        /* Linux errors out if output fd isn't writable */
-        ret = -EBADF;
-        goto out;
     }
 
     while (copied_to_out < count) {
