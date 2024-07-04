@@ -2054,8 +2054,10 @@ Gramine implements all classic filesystem operations, but with limitations descr
 
 Gramine supports opening files and directories (via `open()` and `openat()` system calls).
 `O_CLOEXEC`, `O_CREAT`, `O_DIRECTORY`, `O_EXCL`, `O_NOFOLLOW`, `O_PATH`, `O_TRUNC` flags are
-supported. Other flags are ignored. Notable ignored flags are `O_APPEND` (not yet implemented in
-Gramine) and `O_TMPFILE` (bug in Gramine: should not be silently ignored).
+supported. `O_APPEND` is supported, but is currently limited only to a single process, i.e., opening
+the same file in append mode in two processes may result in file contents being overwritten. Other
+flags are ignored. Notable ignored flag is `O_TMPFILE` (bug in Gramine: should not be silently
+ignored).
 
 Trusted files can be opened only for reading. Already-existing encrypted files can be opened only if
 they were not moved or renamed on the host (this is for protection against file renaming attacks).
