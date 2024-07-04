@@ -72,6 +72,15 @@ class TC_10_Tmpfs(test_fs.TC_00_FileSystem):
         self.assertIn('close(' + file_path + ') RW fd1 (mmap) OK', stdout)
         self.assertIn('close(' + file_path + ') RW fd2 OK', stdout)
 
+    # overrides TC_00_FileSystem to skip verification of file existence
+    def test_112_read_append(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_112') # new file to be created
+        stdout, stderr = self.run_binary(['read_append', file_path])
+        self.assertNotIn('ERROR: ', stderr)
+        self.assertIn('TEST 1 (' + file_path + ')', stdout)
+        self.assertIn('TEST 2 (' + file_path + ')', stdout)
+        self.assertIn('TEST 3 (' + file_path + ')', stdout)
+
     @unittest.skip("impossible to do setup on tmpfs with python only")
     def test_115_seek_tell(self):
         test_fs.TC_00_FileSystem.test_115_seek_tell(self)

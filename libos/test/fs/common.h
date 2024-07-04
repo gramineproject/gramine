@@ -38,6 +38,7 @@ void read_fd(const char* path, int fd, void* buffer, size_t size);
 void seek_fd(const char* path, int fd, off_t offset, int mode);
 off_t tell_fd(const char* path, int fd);
 int open_output_fd(const char* path, bool rdwr);
+int open_output_fd_append(const char* path);
 void write_fd(const char* path, int fd, const void* buffer, size_t size);
 void sendfile_fd(const char* input_path, const char* output_path, int fi, int fo, size_t size);
 void close_fd(const char* path, int fd);

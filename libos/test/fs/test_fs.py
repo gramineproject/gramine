@@ -121,6 +121,15 @@ class TC_00_FileSystem(RegressionTestCase):
         self.assertIn('close(' + file_path + ') RW fd1 (mmap) OK', stdout)
         self.assertIn('close(' + file_path + ') RW fd2 OK', stdout)
 
+    def test_112_read_append(self):
+        file_path = os.path.join(self.OUTPUT_DIR, 'test_112') # new file to be created
+        stdout, stderr = self.run_binary(['read_append', file_path])
+        self.assertNotIn('ERROR: ', stderr)
+        self.assertTrue(os.path.isfile(file_path))
+        self.assertIn('TEST 1 (' + file_path + ')', stdout)
+        self.assertIn('TEST 2 (' + file_path + ')', stdout)
+        self.assertIn('TEST 3 (' + file_path + ')', stdout)
+
     # pylint: disable=too-many-arguments
     def verify_seek_tell(self, stdout, output_path_1, output_path_2, size):
         self.assertIn('Test passed', stdout)
