@@ -59,7 +59,7 @@ GramineManifestSchema = Schema({
 
     Required('loader'): {
         # TODO: validator for sha256
-        Required('entrypoint'): {'uri': _uri, 'sha256': str},
+        Required('entrypoint'): {Required('uri'): _uri, 'sha256': str},
         'argv': [str],
         'argv_src_file': str,
         'env': {str: Any(str, {'value': str}, {'passthrough': True})},
