@@ -1493,6 +1493,10 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['pipe_ocloexec'])
         self.assertIn('TEST OK', stdout)
 
+    def test_093_pipe_race(self):
+        stdout, _ = self.run_binary(['pipe_race'])
+        self.assertIn('TEST OK', stdout)
+
     def test_095_mkfifo(self):
         try:
             stdout, _ = self.run_binary(['mkfifo'], timeout=60)

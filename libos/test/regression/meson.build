@@ -87,6 +87,7 @@ tests = {
     'pipe': {},
     'pipe_nonblocking': {},
     'pipe_ocloexec': {},
+    'pipe_race': {},
     'poll': {},
     'poll_closed_fd': {},
     'poll_many_types': {},
