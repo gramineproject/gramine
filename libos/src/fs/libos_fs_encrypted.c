@@ -221,9 +221,9 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = -EACCES;
         goto out;
     }
-    pf_mac_t opening_root_gmac;
+    pf_mac_t opening_root_mac;
     pf_status_t pfs = pf_open(pal_handle, norm_path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
-                              create, &enc->volume->key->pf_key, &opening_root_gmac, &pf);
+                              create, &enc->volume->key->pf_key, &opening_root_mac, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_open failed: %s", pf_strerror(pfs));
@@ -233,7 +233,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     /* rollback protection */
     struct libos_encrypted_volume_state_map* file_state = NULL;
     log_debug("file '%s' opened with MAC=" MAC_PRINTF_PATTERN, norm_path,
-              MAC_PRINTF_ARGS(opening_root_gmac));  // TODO (MST): remove me eventually?
+              MAC_PRINTF_ARGS(opening_root_mac));  // TODO (MST): remove me eventually?
     lock(&(enc->volume->files_state_map_lock));
     /* - get current state */
     HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
@@ -259,14 +259,14 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
                     goto out_unlock_map;
                 }
             }
-            if (memcmp(file_state->last_seen_root_gmac, opening_root_gmac, sizeof(pf_mac_t)) != 0) {
+            if (memcmp(file_state->last_seen_root_mac, opening_root_mac, sizeof(pf_mac_t)) != 0) {
                 log_error(
                     "file '%s' was seen before but in different inconsistent (rolled-back?) "
                     "state, expected MAC=" MAC_PRINTF_PATTERN
                     " but file had "
                     "MAC=" MAC_PRINTF_PATTERN,
-                    norm_path, MAC_PRINTF_ARGS(file_state->last_seen_root_gmac),
-                    MAC_PRINTF_ARGS(opening_root_gmac));
+                    norm_path, MAC_PRINTF_ARGS(file_state->last_seen_root_mac),
+                    MAC_PRINTF_ARGS(opening_root_mac));
                 if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
                     pf_set_corrupted(pf);
                     ret = -EACCES;
@@ -299,7 +299,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     }
     /*   we do below unconditionally as we might recreate a deleted file or overwrite an existing
      *   one */
-    memcpy(file_state->last_seen_root_gmac, opening_root_gmac, sizeof(pf_mac_t));
+    memcpy(file_state->last_seen_root_mac, opening_root_mac, sizeof(pf_mac_t));
     file_state->state = PF_FILE_STATE_ACTIVE;
 
     enc->pf = pf;
@@ -335,8 +335,8 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
 
 static void encrypted_file_internal_close(struct libos_encrypted_file* enc, bool fs_reachable) {
     assert(enc->pf);
-    pf_mac_t closing_root_gmac;
-    pf_status_t pfs = pf_close(enc->pf, &closing_root_gmac);
+    pf_mac_t closing_root_mac;
+    pf_status_t pfs = pf_close(enc->pf, &closing_root_mac);
     char* norm_path = NULL;
     int ret         = uri_to_normalized_path(enc->uri, &norm_path);
     if (ret < 0) {
@@ -344,7 +344,7 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc, bool
     } else {
         log_debug("%sreachable file '%s' closed with MAC=" MAC_PRINTF_PATTERN,
                   (fs_reachable ? "" : "un"), norm_path,
-                  MAC_PRINTF_ARGS(closing_root_gmac));  // TODO (MST): remove me eventually?
+                  MAC_PRINTF_ARGS(closing_root_mac));  // TODO (MST): remove me eventually?
         lock(&(enc->volume->files_state_map_lock));
         struct libos_encrypted_volume_state_map* file_state = NULL;
 
@@ -359,7 +359,7 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc, bool
                 /* note: we only update if reachable in fileystem to prevent file-handles made
                  * unreachable via unlink or rename to modify state.  We also do not touch it if
                  * earlier we determined this file is in inconsistent error state. */
-                memcpy(file_state->last_seen_root_gmac, closing_root_gmac, sizeof(pf_mac_t));
+                memcpy(file_state->last_seen_root_mac, closing_root_mac, sizeof(pf_mac_t));
             }
         }
         unlock(&(enc->volume->files_state_map_lock));
@@ -818,8 +818,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     if (ret < 0)
         goto out;
 
-    pf_mac_t new_root_gmac;
-    pf_status_t pfs = pf_rename(enc->pf, new_norm_path, &new_root_gmac);
+    pf_mac_t new_root_mac;
+    pf_status_t pfs = pf_rename(enc->pf, new_norm_path, &new_root_mac);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_rename failed: %s", pf_strerror(pfs));
         ret = -EACCES;
@@ -831,7 +831,7 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         log_warning("PalStreamChangeName failed: %s", pal_strerror(ret));
 
         /* We failed to rename the file. Try to restore the name in header. */
-        pfs = pf_rename(enc->pf, old_norm_path, &new_root_gmac);
+        pfs = pf_rename(enc->pf, old_norm_path, &new_root_mac);
         if (PF_FAILURE(pfs)) {
             log_warning("pf_rename (during cleanup) failed, the file might be unusable: %s",
                         pf_strerror(pfs));
@@ -843,7 +843,7 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     /* update file state map */
     log_debug("file '%s' renamed to '%s' with MAC=" MAC_PRINTF_PATTERN, old_norm_path,
               new_norm_path,
-              MAC_PRINTF_ARGS(new_root_gmac));  // TODO (MST): remove me eventually?
+              MAC_PRINTF_ARGS(new_root_mac));  // TODO (MST): remove me eventually?
     lock(&(enc->volume->files_state_map_lock));
     struct libos_encrypted_volume_state_map* old_file_state = NULL;
     HASH_FIND_STR(enc->volume->files_state_map, old_norm_path, old_file_state);
@@ -864,10 +864,10 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         new_norm_path = new_file_state->norm_path;
     }
     new_file_state->state = old_file_state->state;
-    memcpy(new_file_state->last_seen_root_gmac, new_root_gmac, sizeof(pf_mac_t));
+    memcpy(new_file_state->last_seen_root_mac, new_root_mac, sizeof(pf_mac_t));
     old_file_state->state = PF_FILE_STATE_DELETED; /* note: this might remove error state from that
                                                       file but that is fine as it is deleted now. */
-    memset(old_file_state->last_seen_root_gmac, 0, sizeof(pf_mac_t));
+    memset(old_file_state->last_seen_root_mac, 0, sizeof(pf_mac_t));
     unlock(&(enc->volume->files_state_map_lock));
 
     free(enc->uri);
@@ -905,13 +905,13 @@ int encrypted_file_unlink(struct libos_encrypted_file* enc) {
     struct libos_encrypted_volume_state_map* file_state = NULL;
     HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
     assert(file_state != NULL);
-    pf_mac_t root_gmac_before_unlink;
-    memcpy(root_gmac_before_unlink, file_state->last_seen_root_gmac, sizeof(pf_mac_t));
+    pf_mac_t root_mac_before_unlink;
+    memcpy(root_mac_before_unlink, file_state->last_seen_root_mac, sizeof(pf_mac_t));
     file_state->state = PF_FILE_STATE_DELETED;
-    memset(file_state->last_seen_root_gmac, 0, sizeof(pf_mac_t));
+    memset(file_state->last_seen_root_mac, 0, sizeof(pf_mac_t));
     unlock(&(enc->volume->files_state_map_lock));
     log_debug("file '%s' unlinked, previously with MAC=" MAC_PRINTF_PATTERN, norm_path,
-              MAC_PRINTF_ARGS(root_gmac_before_unlink));  // TODO (MST): remove me eventually?
+              MAC_PRINTF_ARGS(root_mac_before_unlink));  // TODO (MST): remove me eventually?
     return 0;
 }
 

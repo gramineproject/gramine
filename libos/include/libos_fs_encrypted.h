@@ -48,7 +48,7 @@ typedef enum {
 struct libos_encrypted_volume_state_map {
     char* norm_path;  // assumptions: all paths canonicalized, symlinks are resolved & no hard links
     libos_encrypted_file_state_t state;
-    pf_mac_t last_seen_root_gmac;
+    pf_mac_t last_seen_root_mac;
     UT_hash_handle hh;
 };
 

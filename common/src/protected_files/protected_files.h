@@ -224,24 +224,24 @@ const char* pf_strerror(int err);
  * \param      mode               Access mode.
  * \param      create             Overwrite file contents if true.
  * \param      key                Wrap key.
- * \param      opening_root_gmac  If non-NULL, !create & successfull open, returns root-hash of file
+ * \param      opening_root_mac   If non-NULL, !create & successfull open, returns root-hash of file
  * \param[out] context            PF context for later calls.
  *
  * \returns PF status.
  */
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
                     pf_file_mode_t mode, bool create, const pf_key_t* key,
-                    pf_mac_t* opening_root_gmac, pf_context_t** context);
+                    pf_mac_t* opening_root_mac, pf_context_t** context);
 
 /*!
  * \brief Close a protected file and commit all changes to disk.
  *
  * \param pf                 PF context.
- * \param closing_root_gmac  If non-NULL, returns root-hash of file at closing time
+ * \param closing_root_mac   If non-NULL, returns root-hash of file at closing time
  *
  * \returns PF status.
  */
-pf_status_t pf_close(pf_context_t* pf, pf_mac_t* closing_root_gmac);
+pf_status_t pf_close(pf_context_t* pf, pf_mac_t* closing_root_mac);
 
 /*!
  * \brief Read from a protected file.
@@ -296,12 +296,12 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
  *
  * \param pf             PF context.
  * \param new_path       New file path.
- * \param new_root_gmac  if non-NULL, returns new root-hash of file
+ * \param new_root_mac   if non-NULL, returns new root-hash of file
  *
  * Updates the path inside protected file header, and flushes all changes. The caller is responsible
  * for renaming the underlying file.
  */
-pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_gmac);
+pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_mac);
 
 /*!
  * \brief Flush any pending data of a protected file to disk.
