@@ -214,8 +214,7 @@ SGX terminology
       As a particular example, the attester is the Gramine SGX enclave. It
       generates the attestation evidence (SGX quote plus additional attestation
       claims) and sends it either directly to the verifier or to the relying
-      party, which then will forward it to the verifier (see :term:`IAS` for
-      more details).
+      party, which then will forward it to the verifier.
 
    Attestation claim
 
@@ -227,7 +226,7 @@ SGX terminology
 
       As a particular example, an Intel SGX quote (attestation evidence)
       contains an attestation claim ``MRENCLAVE = <SHA256 hash of initial
-      enclave state>``.  Similarly, an :term:`attestation policy` installed in
+      enclave state>``. Similarly, an :term:`attestation policy` installed in
       e.g. :term:`Microsoft Azure Attestation` (verifier) may contain a claim
       ``MRENCLAVE = <expected SHA256 hash of initial enclave state>``. Finally,
       an attestation result from Microsoft Azure Attestation may contain a claim
@@ -290,11 +289,10 @@ SGX terminology
 
    Attestation endorsement
 
-      A reference value (e.g., expected hash) that authenticates the
-      :term:`attester`'s identity (e.g., device identity certificate). Other
-      examples of attestation endorsements are Certificate Revocation Lists
-      (CRLs), minimum allowed TCB date, reference MRENCLAVE/MRSIGNER of the
-      :term:`Quoting Enclave`, etc.
+      A reference value (e.g., expected hash) that describes the
+      expected :term:`attester`'s identity. Other examples of attestation
+      endorsements are Certificate Revocation Lists (CRLs), minimum allowed TCB
+      date, reference MRENCLAVE/MRSIGNER of the :term:`Quoting Enclave`, etc.
 
       Typically, the :term:`verifier` collects attestation endorsements from
       :term:`endorsers<endorser>` and stores them in a local database. Upon
@@ -593,7 +591,7 @@ SGX terminology
       A set of rules installed by the :term:`verifier` and/or the :term:`relying
       party` that specifies how the :term:`attestation evidence` is evaluated by
       the :term:`verifier` against :term:`attestation
-      endorsements<endorsement>`.  The attestation policy also specifies the
+      endorsements<endorsement>`. The attestation policy also specifies the
       output format and set of :term:`attestation claims<attestation claim>` in
       the :term:`attestation result`.
 
