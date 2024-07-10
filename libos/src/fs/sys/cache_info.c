@@ -44,7 +44,12 @@ int sys_cache_load(struct libos_dentry* dent, char** out_data, size_t* out_size)
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     size_t cache_idx = topo->threads[thread_id].ids_of_caches[cache_class];
     const struct pal_cache_info* cache = &topo->caches[cache_idx];
-    char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
+
+    /* str buffer of the same size is used for all below pseudo-files; we pick the largest size for
+     * this buffer (which is presumably the size required for the "shared_cpu_list" file) */
+    static_assert(PAL_SYSFS_RANGES_FILESZ >= PAL_SYSFS_MAP_FILESZ, "sysfs file size too small");
+    char str[PAL_SYSFS_RANGES_FILESZ] = {'\0'};
+
     if (strcmp(name, "shared_cpu_map") == 0) {
         struct callback_arg callback_arg = {
             .cache_id_to_match = cache_idx,
@@ -52,6 +57,13 @@ int sys_cache_load(struct libos_dentry* dent, char** out_data, size_t* out_size)
         };
         ret = sys_print_as_bitmask(str, sizeof(str), topo->threads_cnt,
                                    is_same_cache, &callback_arg);
+    } else if (strcmp(name, "shared_cpu_list") == 0) {
+        struct callback_arg callback_arg = {
+            .cache_id_to_match = cache_idx,
+            .cache_class = cache_class,
+        };
+        ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt,
+                                  is_same_cache, &callback_arg);
     } else if (strcmp(name, "level") == 0) {
         ret = snprintf(str, sizeof(str), "%zu\n", cache->level);
     } else if (strcmp(name, "type") == 0) {

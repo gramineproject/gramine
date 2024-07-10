@@ -31,7 +31,7 @@ int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out
     int ret;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const char* name = dent->name;
-    char str[PAL_SYSFS_BUF_FILESZ];
+    char str[PAL_SYSFS_RANGES_FILESZ];
 
     if (strcmp(name, "online") == 0) {
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, is_online, NULL);

@@ -269,6 +269,7 @@ static void init_cpu_dir(struct pseudo_node* cpu) {
     indexX->list_names = &sys_resource_list_names;
 
     pseudo_add_str(indexX, "shared_cpu_map", &sys_cache_load);
+    pseudo_add_str(indexX, "shared_cpu_list", &sys_cache_load);
     pseudo_add_str(indexX, "level", &sys_cache_load);
     pseudo_add_str(indexX, "type", &sys_cache_load);
     pseudo_add_str(indexX, "size", &sys_cache_load);

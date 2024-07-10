@@ -74,6 +74,10 @@ struct libos_dev_ops {
  * Note: Used to allocate on stack; increase with caution or use malloc instead. */
 #define PAL_SYSFS_MAP_FILESZ 256
 
+/* Used to represent cpu ranges (lists) like "0-31,64-95,97".
+ * Note: Used to allocate on stack; increase with caution or use malloc instead. */
+#define PAL_SYSFS_RANGES_FILESZ 512
+
 /*
  * A node of the pseudo filesystem. A single node can describe either a single file, or a family of
  * files:
