@@ -1,0 +1,25 @@
+# Copyright (C) 2024 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
+libos.entrypoint = "/candle_matmul"
+
+loader.log_level = "{{ log_level }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}"
+
+fs.mounts = [
+  { path = "/candle_matmul", uri = "file:candle_matmul" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ arch_libdir }}/libgcc_s.so.1", uri = "file:{{ arch_libdir }}/libgcc_s.so.1" },
+]
+
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
+sgx.enclave_size = "1G"
+
+sgx.trusted_files = [
+  "file:candle_matmul",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ arch_libdir }}/libgcc_s.so.1",
+]
