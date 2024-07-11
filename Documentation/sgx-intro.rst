@@ -253,12 +253,12 @@ SGX terminology
    Background check attestation model
 
       :term:`Attestation` protocols can be grouped by which party the
-      :term:`attester` relays :term:`attestation evidence` from the TEE to; in
-      all protocols, the attestation evidence eventually finds its way to the
-      :term:`relying party`. In the background check model, the attester sends
-      attestation evidence to the :term:`relying party`, which then forwards the
-      attestation evidence to the verifier. In other words, the relying
-      party performs the background check on the attester.
+      :term:`attester` relays :term:`attestation evidence` from the :term:`TEE`
+      to; in all protocols, the attestation evidence eventually finds its way to
+      the :term:`relying party`. In the background check model, the attester
+      sends attestation evidence to the :term:`relying party`, which then
+      forwards the attestation evidence to the verifier. In other words, the
+      relying party performs the background check on the attester.
 
       In contrast, in the :term:`passport model`, the attester sends attestation
       evidence to the verifier.
@@ -617,9 +617,10 @@ SGX terminology
       A set of rules installed by the :term:`verifier` and/or the :term:`relying
       party` that specifies how the :term:`attestation evidence` is evaluated by
       the :term:`verifier` against :term:`attestation
-      endorsements<endorsement>` and reference values. The attestation policy
-      also specifies the output format and set of :term:`attestation
-      claims<attestation claim>` in the :term:`attestation result`.
+      endorsements<attestation endorsement>` and reference values. The
+      attestation policy also specifies the output format and set of
+      :term:`attestation claims<attestation claim>` in the :term:`attestation
+      result`.
 
       For example, :term:`Microsoft Azure Attestation` and :term:`Intel Trust
       Authority` allow users (relying parties) to install their own policies.
