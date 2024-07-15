@@ -47,8 +47,8 @@ int sys_cache_load(struct libos_dentry* dent, char** out_data, size_t* out_size)
 
     /* str buffer of the same size is used for all below pseudo-files; we pick the largest size for
      * this buffer (which is presumably the size required for the "shared_cpu_list" file) */
-    static_assert(PAL_SYSFS_LIST_FILESZ >= PAL_SYSFS_MAP_FILESZ, "sysfs file size too small");
-    char str[PAL_SYSFS_LIST_FILESZ] = {'\0'};
+    static_assert(PAL_SYSFS_RANGES_FILESZ >= PAL_SYSFS_MAP_FILESZ, "sysfs file size too small");
+    char str[PAL_SYSFS_RANGES_FILESZ] = {'\0'};
 
     if (strcmp(name, "shared_cpu_map") == 0) {
         struct callback_arg callback_arg = {

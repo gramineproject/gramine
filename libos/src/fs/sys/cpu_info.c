@@ -31,7 +31,7 @@ int sys_cpu_general_load(struct libos_dentry* dent, char** out_data, size_t* out
     int ret;
     const struct pal_topo_info* topo = &g_pal_public_state->topo_info;
     const char* name = dent->name;
-    char str[PAL_SYSFS_BUF_FILESZ];
+    char str[PAL_SYSFS_RANGES_FILESZ];
 
     if (strcmp(name, "online") == 0) {
         ret = sys_print_as_ranges(str, sizeof(str), topo->threads_cnt, is_online, NULL);
@@ -95,7 +95,12 @@ int sys_cpu_load_topology(struct libos_dentry* dent, char** out_data, size_t* ou
     struct pal_cpu_thread_info* thread = &topo->threads[thread_id];
     assert(thread->is_online); // `cpuX/topology/` should not exist for offline threads.
     struct pal_cpu_core_info* core = &topo->cores[thread->core_id];
-    char str[PAL_SYSFS_MAP_FILESZ] = {'\0'};
+
+    /* str buffer of the same size is used for all below pseudo-files; we pick the largest size for
+     * this buffer (which is presumably the size required for the "core_siblings" file) */
+    static_assert(PAL_SYSFS_RANGES_FILESZ >= PAL_SYSFS_MAP_FILESZ, "sysfs file size too small");
+    char str[PAL_SYSFS_RANGES_FILESZ] = {'\0'};
+
     if (strcmp(name, "core_id") == 0) {
         ret = snprintf(str, sizeof(str), "%zu\n", thread->core_id);
     } else if (strcmp(name, "physical_package_id") == 0) {
