@@ -114,7 +114,7 @@ static noreturn int thread_handshake_func(void* param) {
  * end of the pipe connects to this listening socket, a new accepted socket and the corresponding
  * PAL handle are created, and this `pipesrv` handle can be closed.
  */
-static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
+static int pipe_listen(PAL_HANDLE* out_handle, const char* name, pal_stream_options_t options) {
     int ret;
 
     struct sockaddr_un addr;
@@ -154,7 +154,7 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
         return -PAL_ERROR_DENIED;
     }
 
-    *handle = hdl;
+    *out_handle = hdl;
     return 0;
 }
 
@@ -173,7 +173,8 @@ static int pipe_listen(PAL_HANDLE* handle, const char* name, pal_stream_options_
  * corresponding underlying socket and is returned in `client`. This `pipecli` PAL handle denotes
  * our end of the pipe. Typically, `pipesrv` handle is not needed after this and can be closed.
  */
-static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_options_t options) {
+static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* out_client,
+                              pal_stream_options_t options) {
     if (handle->hdr.type != PAL_TYPE_PIPESRV)
         return -PAL_ERROR_NOTSERVER;
 
@@ -219,7 +220,7 @@ static int pipe_waitforclient(PAL_HANDLE handle, PAL_HANDLE* client, pal_stream_
     }
     __atomic_store_n(&clnt->pipe.handshake_done, true, __ATOMIC_RELEASE);
 
-    *client = clnt;
+    *out_client = clnt;
     return 0;
 
 out_err:
@@ -245,7 +246,7 @@ out_err:
  * handle is created with the corresponding underlying socket and is returned in `handle`.
  * The other end of the pipe is typically of type `pipecli`.
  */
-static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options_t options) {
+static int pipe_connect(PAL_HANDLE* out_handle, const char* name, pal_stream_options_t options) {
     int ret;
 
     struct sockaddr_un addr;
@@ -303,7 +304,7 @@ static int pipe_connect(PAL_HANDLE* handle, const char* name, pal_stream_options
     /* inform helper thread about its PAL thread handle `thread_hdl`; see thread_handshake_func() */
     __atomic_store_n(&hdl->pipe.handshake_helper_thread_hdl, thread_hdl, __ATOMIC_RELEASE);
 
-    *handle = hdl;
+    *out_handle = hdl;
     return 0;
 }
 

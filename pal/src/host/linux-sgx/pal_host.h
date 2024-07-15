@@ -71,7 +71,7 @@ typedef struct {
              * is assumed to be used within a single thread and thus does not use any locking. In
              * Gramine, though, the pipe and its associated SSL/TLS context can be used in multiple
              * threads. Without protecting pipe read/write operations with a lock, mbedTLS internal
-             * handling of the context would exhibit data races, leading to e.g. -EACCES in Gramine.
+             * handling of the context would exhibit data races.
              *
              * Taking this lock should be fine in most cases, regardless of whether read/write is
              * blocking or not. If it is blocking, then another thread (waiting to acquire this
