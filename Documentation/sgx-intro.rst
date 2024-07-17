@@ -390,8 +390,10 @@ SGX terminology
 
       Note that this definition is taken from the :term:`TCG DICE` standard and
       differs from the typical meaning in conversational English (where a claim
-      is the higher-level statement and the evidence supports this claim). We
-      use the TCG DICE definitions for the sake of standard conformity.
+      is the higher-level statement and the evidence supports this claim). In
+      the TCG DICE nomenclature, the distinction between evidence and claims is
+      that evidence is a set of signed claims. We use the TCG DICE definitions
+      for the sake of standard conformity.
 
    Flexible Launch Control
    FLC
