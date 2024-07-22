@@ -31,7 +31,7 @@ pipeline {
                     REPODEST=$PWD/packages
                     export ABUILD_USERDIR REPODEST
                     cd packaging/alpine
-                    abuild-keygen -an
+                    abuild-keygen -ani
                     abuild checksum all
                 '''
                 archiveArtifacts 'packages/'
