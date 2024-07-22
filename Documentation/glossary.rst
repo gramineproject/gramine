@@ -29,8 +29,9 @@ Glossary
       the other endpoint's certificate chain. RA-TLS is designed to be a drop-in
       replacement for classic SSL/TLS libraries.
 
-      Starting from v1.8, Gramine's RA-TLS library supports *Interoperable
-      RA-TLS*, a specification that modifies the original RA-TLS format for
+      Starting from v1.8, Gramine's RA-TLS library supports `Interoperable
+      RA-TLS <https://github.com/CCC-Attestation/interoperable-ra-tls/>`__, a
+      specification that modifies the original RA-TLS format for
       interoperability between different TEE frameworks. For example, Gramine
       applications can now establish secure connections with Occlum and
       OpenEnclave applications thanks to Interoperable RA-TLS. Previously, the

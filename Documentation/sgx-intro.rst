@@ -227,8 +227,8 @@ SGX terminology
       In the context of remote attestation, the attestation claim is a
       machine-readable assertion about an :term:`attester`, which describes
       security-relevant properties, attributes or identifiers that can be
-      included in :term:`attestation evidence`, :term:`attestation endorsement`
-      or :term:`attestation result`.
+      included in :term:`attestation evidence`, :term:`attestation endorsement`,
+      :term:`attestation result` or :term:`attestation policy`.
 
       Common examples of attestation claims might include the hash of an SGX
       enclave's address space contents at the start of execution, or the
@@ -771,7 +771,7 @@ SGX terminology
    TCG DICE
 
       TCG DICE is an industry standard developed by the Trusted Computing Group
-      organization. The DICE standard (ppreviously called RIoT) mandates
+      organization. The DICE standard (previously called RIoT) mandates
       requirements for hardware-based cryptographic device identity, attestation
       and data encryption.
 
@@ -780,6 +780,11 @@ SGX terminology
       <https://trustedcomputinggroup.org/resource/dice-attestation-architecture>`__.
       It describes the requirements and flows for :term:`attestation` of a
       :term:`TEE`.
+
+      .. seealso::
+
+         https://datatracker.ietf.org/doc/html/rfc9334 -- Remote ATtestation
+         procedureS (RATS) Architecture
 
    Thread Control Structure
    TCS
@@ -801,6 +806,4 @@ SGX terminology
       hardware and the software trustworthiness, based on evidence reported by
       the platform, such as the version of the firmware on the system or a
       cryptographically signed report that the platform was provisioned with by
-      a given vendor. Another example would be :term:`Intel Attestation
-      Service`, though it only evaluates that the hardware is genuine and
-      up-to-date.
+      a given vendor.
