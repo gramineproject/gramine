@@ -625,10 +625,7 @@ SGX terminology
       For example, :term:`Microsoft Azure Attestation` and :term:`Intel Trust
       Authority` allow users (relying parties) to install their own policies.
       These policies may e.g. disallow any firmware or software versions with
-      specific known vulnerabilities. As another example, :term:`IAS` has a
-      hard-coded policy to verify attestation claims about the Intel SGX
-      hardware and to produce an attestation result with a claim (among others)
-      ``hardware_status = ok|error``.
+      specific known vulnerabilities.
 
    Quoting Enclave
    QE
