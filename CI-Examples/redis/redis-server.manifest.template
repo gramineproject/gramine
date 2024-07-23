@@ -3,6 +3,8 @@
 
 # Redis manifest file example
 
+sgx.enable_stats = true
+
 ################################## GRAMINE ####################################
 
 # Entrypoint binary which Gramine invokes.
