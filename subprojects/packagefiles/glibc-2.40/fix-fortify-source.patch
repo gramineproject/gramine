@@ -11,11 +11,9 @@ Subject: [PATCH] Fix non-standard redefinition of _FORTIFIY_SOURCE
  wcsmbs/Makefile       |  2 +-
  5 files changed, 15 insertions(+), 15 deletions(-)
 
-diff --git a/configure b/configure
-index 59ff1e415d..d392c0b797 100755
 --- a/configure
 +++ b/configure
-@@ -7471,7 +7471,7 @@ printf "%s\n" "#define HAVE_LIBCAP 1" >>confdefs.h
+@@ -7692,7 +7692,7 @@
  fi
  
  
@@ -24,7 +22,7 @@ index 59ff1e415d..d392c0b797 100755
  fortify_source="${no_fortify_source}"
  
  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for maximum supported _FORTIFY_SOURCE level" >&5
-@@ -7523,7 +7523,7 @@ esac
+@@ -7747,7 +7747,7 @@
  
  if test "$libc_cv_fortify_source" = yes
  then :
@@ -33,11 +31,9 @@ index 59ff1e415d..d392c0b797 100755
  
  fi
  
-diff --git a/configure.ac b/configure.ac
-index 65799e5685..a91781d290 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1500,7 +1500,7 @@ dnl If not, then don't use it.
+@@ -1527,7 +1527,7 @@
  dnl Note that _FORTIFY_SOURCE may have been set through FLAGS too.
  dnl _FORTIFY_SOURCE value will be selectively disabled for function that can't
  dnl support it
@@ -46,7 +42,7 @@ index 65799e5685..a91781d290 100644
  fortify_source="${no_fortify_source}"
  
  AC_CACHE_CHECK([for maximum supported _FORTIFY_SOURCE level],
-@@ -1519,7 +1519,7 @@ AS_CASE([$enable_fortify_source],
+@@ -1546,7 +1546,7 @@
          [libc_cv_fortify_source=no])
  
  AS_IF([test "$libc_cv_fortify_source" = yes],
@@ -55,11 +51,9 @@ index 65799e5685..a91781d290 100644
        )
  
  AC_SUBST(enable_fortify_source)
-diff --git a/debug/Makefile b/debug/Makefile
-index 3903cc97a3..2ad5ef7cdc 100644
 --- a/debug/Makefile
 +++ b/debug/Makefile
-@@ -171,16 +171,16 @@ CFLAGS-recvfrom_chk.c += -fexceptions -fasynchronous-unwind-tables
+@@ -171,16 +171,16 @@
  # set up for us, so keep the CFLAGS/CPPFLAGS split logical as the order is:
  # <user CFLAGS> <test CFLAGS> <user CPPFLAGS> <test CPPFLAGS>
  CFLAGS-tst-longjmp_chk.c += -fexceptions -fasynchronous-unwind-tables
@@ -84,7 +78,7 @@ index 3903cc97a3..2ad5ef7cdc 100644
  
  # _FORTIFY_SOURCE tests.
  # Auto-generate tests for _FORTIFY_SOURCE for different levels, compilers and
-@@ -218,7 +218,7 @@ src-chk-nongnu = \#undef _GNU_SOURCE
+@@ -218,7 +218,7 @@
  # cannot be disabled via pragmas, so require -Wno-error to be used.
  define gen-chk-test
  tests-$(1)-$(4)-chk += tst-fortify-$(1)-$(2)-$(3)-$(4)
@@ -93,11 +87,9 @@ index 3903cc97a3..2ad5ef7cdc 100644
  					  -Wno-deprecated-declarations \
  					  -Wno-error
  $(eval $(call cflags-$(2),$(1),$(3),$(4)))
-diff --git a/stdio-common/Makefile b/stdio-common/Makefile
-index e312565f3b..c1b1a779e0 100644
 --- a/stdio-common/Makefile
 +++ b/stdio-common/Makefile
-@@ -486,7 +486,7 @@ CFLAGS-tst-gets.c += -Wno-deprecated-declarations
+@@ -503,7 +503,7 @@
  
  # BZ #11319 was first fixed for regular vdprintf, then reopened because
  # the fortified version had the same bug.
@@ -106,11 +98,9 @@ index e312565f3b..c1b1a779e0 100644
  
  CFLAGS-tst-memstream-string.c += -fno-builtin-fprintf
  
-diff --git a/wcsmbs/Makefile b/wcsmbs/Makefile
-index 65173e28aa..6b9297e80c 100644
 --- a/wcsmbs/Makefile
 +++ b/wcsmbs/Makefile
-@@ -258,7 +258,7 @@ CFLAGS-wcstod_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
+@@ -259,7 +259,7 @@
  CFLAGS-wcstold_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
  CFLAGS-wcstof128_l.c += $(strtox-CFLAGS)
  CFLAGS-wcstof_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
@@ -119,8 +109,14 @@ index 65173e28aa..6b9297e80c 100644
  
  CFLAGS-wcschr.c += $(config-cflags-wno-ignored-attributes)
  CFLAGS-wmemchr.c += $(config-cflags-wno-ignored-attributes)
-
-base-commit: 983f34a1252de3ca6f2305c211d86530ea42010e
--- 
-2.43.0
-
+--- a/io/Makefile
++++ b/io/Makefile
+@@ -291,7 +291,7 @@
+ CFLAGS-write.c += -fexceptions -fasynchronous-unwind-tables $(config-cflags-wno-ignored-attributes)
+ CFLAGS-close.c += -fexceptions -fasynchronous-unwind-tables
+ CFLAGS-lseek64.c += $(config-cflags-wno-ignored-attributes)
+-CFLAGS-tst-read-zero.c += $(no-fortify-source),-D_FORTIFY_SOURCE=$(supported-fortify)
++CFLAGS-tst-read-zero.c += $(no-fortify-source) -D_FORTIFY_SOURCE=$(supported-fortify)
+ 
+ CFLAGS-test-stat.c += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE
+ CFLAGS-test-lfs.c += -D_LARGEFILE64_SOURCE

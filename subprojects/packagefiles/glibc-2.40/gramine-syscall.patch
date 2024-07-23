@@ -1,8 +1,8 @@
 diff --git a/Makerules b/Makerules
-index 00365bc58be119bb0fec9cf2cfa51780c27fae8c..1995396ae885a75575eebb96254528d80d6686ab 100644
+index 275110dda82fa77e91e7064a77e98ca2bb19d5db..211698e294c2d8691a8b513e0ac2a9dc02e5e9c1 100644
 --- a/Makerules
 +++ b/Makerules
-@@ -777,7 +777,7 @@ verbose	:=
+@@ -779,7 +779,7 @@ verbose	:=
  endif						# not -s
  
  ARFLAGS := r$(verbose)
@@ -12,10 +12,10 @@ index 00365bc58be119bb0fec9cf2cfa51780c27fae8c..1995396ae885a75575eebb96254528d8
  # This makes all the object files in the parent library archive.
  
 diff --git a/elf/Makefile b/elf/Makefile
-index 5d78b659ce813ff973e499043154e5b1fc8a639b..ac86ce8f81ac89ae4a9a958503fdc160516856b9 100644
+index a3475f3fb54a6ae726ff63c6004902fb993090ce..91071684228bf466dde0417d1e9f18f960e4d62f 100644
 --- a/elf/Makefile
 +++ b/elf/Makefile
-@@ -1296,7 +1296,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
+@@ -1344,7 +1344,7 @@ $(objpfx)librtld.map: $(objpfx)dl-allobjs.os $(common-objpfx)libc_pic.a
  # For lld, skip preceding addresses and values before matching the archive and the member.
  $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
  	LC_ALL=C \
@@ -24,7 +24,7 @@ index 5d78b659ce813ff973e499043154e5b1fc8a639b..ac86ce8f81ac89ae4a9a958503fdc160
  	    $< | \
  	while read lib file; do \
  	  case $$lib in \
-@@ -1304,7 +1304,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
+@@ -1352,7 +1352,7 @@ $(objpfx)librtld.mk: $(objpfx)librtld.map Makefile
  	    LC_ALL=C grep -F -l /$$file \
  		  $(common-objpfx)stamp.os $(common-objpfx)*/stamp.os | \
  	    LC_ALL=C \
@@ -34,10 +34,10 @@ index 5d78b659ce813ff973e499043154e5b1fc8a639b..ac86ce8f81ac89ae4a9a958503fdc160
  	  */*.a) \
  	    echo rtld-$${lib%%/*} += $$file ;; \
 diff --git a/elf/dl-load.c b/elf/dl-load.c
-index ce8fdea3024359b0d4f4aea90a49796003aeaa1d..58392a372fdb3ebb66b85b8963ccdb01024dc616 100644
+index 8a89b71016d426796e602b60555696649871c6ae..8588b5718cd4d1d56360a19954f8167b56eeadb8 100644
 --- a/elf/dl-load.c
 +++ b/elf/dl-load.c
-@@ -76,6 +76,8 @@ struct filebuf
+@@ -75,6 +75,8 @@ struct filebuf
  #include <dl-prop.h>
  #include <not-cancel.h>
  
@@ -46,7 +46,7 @@ index ce8fdea3024359b0d4f4aea90a49796003aeaa1d..58392a372fdb3ebb66b85b8963ccdb01
  #include <endian.h>
  #if BYTE_ORDER == BIG_ENDIAN
  # define byteorder ELFDATA2MSB
-@@ -1480,6 +1482,8 @@ cannot enable executable stack as shared object requires");
+@@ -1435,6 +1437,8 @@ cannot enable executable stack as shared object requires");
    DL_AFTER_LOAD (l);
  #endif
  
@@ -91,7 +91,7 @@ index d0adc21c850632aea23aab6a0ce9426ea303334d..9bbf4e08e549d98c32d4dbdbcab0f392
  
  	cfi_startproc;
 diff --git a/sysdeps/unix/sysv/linux/x86_64/clone3.S b/sysdeps/unix/sysv/linux/x86_64/clone3.S
-index 5a2d42234e0cb16c56fe4a16e81a95ebd7b0c176..b9b65be33f37a77a951967fa50c3284b73a94580 100644
+index 4cc19e066ccc2c1286def8bb6f7a4088f1be0215..10cf70d1d2a9da9e1eac444912ee34810fcdcbe1 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/clone3.S
 +++ b/sysdeps/unix/sysv/linux/x86_64/clone3.S
 @@ -57,7 +57,7 @@ ENTRY (__clone3)
