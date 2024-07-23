@@ -1,21 +1,8 @@
-From 73302ea9454b816d5e0a4f02bbd68df1bf2bb53d Mon Sep 17 00:00:00 2001
-From: Matthias Klose <matthias.klose@canonical.com>
-Date: Thu, 28 Mar 2024 13:16:23 +0100
-Subject: [PATCH] Fix non-standard redefinition of _FORTIFIY_SOURCE
-
----
- configure             |  4 ++--
- configure.ac          |  4 ++--
- debug/Makefile        | 18 +++++++++---------
- stdio-common/Makefile |  2 +-
- wcsmbs/Makefile       |  2 +-
- 5 files changed, 15 insertions(+), 15 deletions(-)
-
 diff --git a/configure b/configure
-index 59ff1e415d..d392c0b797 100755
+index 1d543548cda69060e16a75b95a687695c977379a..ed8a4b52995f41a0f4a0c314d07d338524e7a32c 100755
 --- a/configure
 +++ b/configure
-@@ -7471,7 +7471,7 @@ printf "%s\n" "#define HAVE_LIBCAP 1" >>confdefs.h
+@@ -7692,7 +7692,7 @@ printf "%s\n" "#define HAVE_LIBCAP 1" >>confdefs.h
  fi
  
  
@@ -24,7 +11,7 @@ index 59ff1e415d..d392c0b797 100755
  fortify_source="${no_fortify_source}"
  
  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for maximum supported _FORTIFY_SOURCE level" >&5
-@@ -7523,7 +7523,7 @@ esac
+@@ -7747,7 +7747,7 @@ esac
  
  if test "$libc_cv_fortify_source" = yes
  then :
@@ -34,10 +21,10 @@ index 59ff1e415d..d392c0b797 100755
  fi
  
 diff --git a/configure.ac b/configure.ac
-index 65799e5685..a91781d290 100644
+index 9cbc0bf68f19cf9204e78e95090eb794fba8a029..58ee9138b30b9837b8a6a861b66d41462f9bcb40 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -1500,7 +1500,7 @@ dnl If not, then don't use it.
+@@ -1527,7 +1527,7 @@ dnl If not, then don't use it.
  dnl Note that _FORTIFY_SOURCE may have been set through FLAGS too.
  dnl _FORTIFY_SOURCE value will be selectively disabled for function that can't
  dnl support it
@@ -46,7 +33,7 @@ index 65799e5685..a91781d290 100644
  fortify_source="${no_fortify_source}"
  
  AC_CACHE_CHECK([for maximum supported _FORTIFY_SOURCE level],
-@@ -1519,7 +1519,7 @@ AS_CASE([$enable_fortify_source],
+@@ -1546,7 +1546,7 @@ AS_CASE([$enable_fortify_source],
          [libc_cv_fortify_source=no])
  
  AS_IF([test "$libc_cv_fortify_source" = yes],
@@ -56,7 +43,7 @@ index 65799e5685..a91781d290 100644
  
  AC_SUBST(enable_fortify_source)
 diff --git a/debug/Makefile b/debug/Makefile
-index 3903cc97a3..2ad5ef7cdc 100644
+index 3903cc97a37063541e1fbf0d294b510865ca811b..2ad5ef7cdc82887182b762939368152811ea73fc 100644
 --- a/debug/Makefile
 +++ b/debug/Makefile
 @@ -171,16 +171,16 @@ CFLAGS-recvfrom_chk.c += -fexceptions -fasynchronous-unwind-tables
@@ -94,10 +81,10 @@ index 3903cc97a3..2ad5ef7cdc 100644
  					  -Wno-error
  $(eval $(call cflags-$(2),$(1),$(3),$(4)))
 diff --git a/stdio-common/Makefile b/stdio-common/Makefile
-index e312565f3b..c1b1a779e0 100644
+index a63c05a120aaf600b91636c5edc6142a30a55fdf..b926b72b686bb7c10862968bcc1512c68b7de7e2 100644
 --- a/stdio-common/Makefile
 +++ b/stdio-common/Makefile
-@@ -486,7 +486,7 @@ CFLAGS-tst-gets.c += -Wno-deprecated-declarations
+@@ -503,7 +503,7 @@ CFLAGS-tst-gets.c += -Wno-deprecated-declarations
  
  # BZ #11319 was first fixed for regular vdprintf, then reopened because
  # the fortified version had the same bug.
@@ -107,10 +94,10 @@ index e312565f3b..c1b1a779e0 100644
  CFLAGS-tst-memstream-string.c += -fno-builtin-fprintf
  
 diff --git a/wcsmbs/Makefile b/wcsmbs/Makefile
-index 65173e28aa..6b9297e80c 100644
+index 1cddd8cc6dc3e90c438b1e7e5b47a766db19eb06..16c1653944fadfdd2439972c9ad51c8d1f426749 100644
 --- a/wcsmbs/Makefile
 +++ b/wcsmbs/Makefile
-@@ -258,7 +258,7 @@ CFLAGS-wcstod_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
+@@ -259,7 +259,7 @@ CFLAGS-wcstod_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
  CFLAGS-wcstold_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
  CFLAGS-wcstof128_l.c += $(strtox-CFLAGS)
  CFLAGS-wcstof_l.c += $(strtox-CFLAGS) $(config-cflags-wno-ignored-attributes)
@@ -119,8 +106,3 @@ index 65173e28aa..6b9297e80c 100644
  
  CFLAGS-wcschr.c += $(config-cflags-wno-ignored-attributes)
  CFLAGS-wmemchr.c += $(config-cflags-wno-ignored-attributes)
-
-base-commit: 983f34a1252de3ca6f2305c211d86530ea42010e
--- 
-2.43.0
-
