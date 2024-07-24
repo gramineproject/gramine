@@ -227,7 +227,7 @@ int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     sgx_quote_t* quote;
     size_t quote_size;
     int ret = find_oid_in_cert_extensions(crt->v3_ext.p, crt->v3_ext.len, g_quote_oid,
-                                          g_quote_oid_size, (uint8_t**)&quote, &quote_size);
+                                          sizeof(g_quote_oid), (uint8_t**)&quote, &quote_size);
     if (ret < 0)
         return ret;
 
@@ -239,7 +239,14 @@ int extract_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
     if (ret < 0)
         return ret;
 
-    *out_quote = quote;
+    /* quote returned by find_oid_in_cert_extensions() is a pointer somewhere inside of the X.509
+     * cert object; let's copy it into a newly allocated object to make tracing ownership easier */
+    sgx_quote_t* allocated_quote = malloc(quote_size);
+    if (!allocated_quote)
+        return MBEDTLS_ERR_X509_ALLOC_FAILED;
+    memcpy(allocated_quote, quote, quote_size);
+
+    *out_quote = allocated_quote;
     *out_quote_size = quote_size;
     return 0;
 }

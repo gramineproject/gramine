@@ -24,7 +24,6 @@
 #define OID(N) \
     { 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF8, 0x4D, 0x8A, 0x39, (N) }
 static const uint8_t g_quote_oid[] = OID(0x06);
-static const size_t g_quote_oid_size = sizeof(g_quote_oid);
 
 bool getenv_allow_outdated_tcb(void);
 bool getenv_allow_hw_config_needed(void);
