@@ -133,7 +133,8 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
         goto out;
 
     /* finally, embed the quote into the generated certificate (as X.509 extension) */
-    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid, g_quote_oid_size,
+    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid,
+                                              sizeof(g_quote_oid),
                                               /*critical=*/0, quote, quote_size);
     if (ret < 0)
         goto out;
