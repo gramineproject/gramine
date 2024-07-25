@@ -12,6 +12,11 @@ The bind address and port are hardcoded in `src/main.rs`.
 NOTE: The "benchmark-http.sh" script uses the wrk benchmark (wrk2) under the
 hood. Please refer to https://github.com/giltene/wrk2.
 
+NOTE: The Tokio crate is known to require sufficiently new Rust compiler
+(`rustc`). Such new version may not be installed by the OS distro Rust package.
+In such case, please install the latest stable Rust compiler manually, e.g., via
+https://rustup.rs/.
+
 ```sh
 # build the program and the final manifest
 make SGX=1
