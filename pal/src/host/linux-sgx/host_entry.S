@@ -76,6 +76,12 @@ async_exit_pointer:
 
     subq $RED_ZONE_SIZE, %rsp
     .cfi_adjust_cfa_offset RED_ZONE_SIZE
+    # FIXME: This second RSP adjustment is because Exitless re-uses the same stack to create
+    #        RPC request objects, as the AEX flow here. It just so happens that the total size of
+    #        allocated RPC request objects is less than 128B (red zone size), so I reuse this const.
+    #        This double-stack-usage needs a proper fix.
+    subq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset RED_ZONE_SIZE
 
     # Save ERESUME parameters
     pushq %rax
@@ -112,6 +118,9 @@ async_exit_pointer:
     .cfi_adjust_cfa_offset -8
     popq %rax
     .cfi_adjust_cfa_offset -8
+    addq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset -RED_ZONE_SIZE
+    # FIXME: See above for explanation for this second RSP adjustment.
     addq $RED_ZONE_SIZE, %rsp
     .cfi_adjust_cfa_offset -RED_ZONE_SIZE
 
