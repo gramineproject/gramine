@@ -15,6 +15,7 @@ import hashlib
 import os
 import pathlib
 import posixpath
+import sys
 
 import tomli
 import tomli_w
@@ -346,8 +347,8 @@ class Manifest:
         # found deprecated `loader.entrypoint = "file:..."`; replace with loader.entrypoint.uri
         # TODO: remove this in Gramine v1.9
         if isinstance(loader_entrypoint, str):
-            print(f'WARNING: `loader.entrypoint = "file:..."` manifest syntax is deprecated, '
-                   'please switch to `loader.entrypoint.uri = "file:..."`')
+            print('WARNING: `loader.entrypoint = "file:..."` manifest syntax is deprecated, '
+                  'please switch to `loader.entrypoint.uri = "file:..."`', file=sys.stderr)
             loader_entrypoint = { 'uri': loader_entrypoint }
             loader['entrypoint'] = loader_entrypoint
 
