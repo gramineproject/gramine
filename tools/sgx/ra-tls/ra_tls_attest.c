@@ -138,18 +138,18 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
 
     /*
      * embed the SGX quote into the generated certificate (as X.509 extension) in two formats:
-     *   - legacy non-standard "SGX quote" OID (used from Gramine v1.0)
-     *   - new standard TCG DICE "tagged evidence" OID (2.23.133.5.4.9)
+     *   - legacy non-standard "SGX quote" OID (used since Gramine v1.0)
+     *   - new standard TCG DICE "tagged evidence" OID 2.23.133.5.4.9 (used since Gramine v1.8)
      */
-    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_quote_oid,
-                                              sizeof(g_quote_oid), /*critical=*/0, quote,
+    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_ratls_quote_oid,
+                                              sizeof(g_ratls_quote_oid), /*critical=*/0, quote,
                                               quote_size);
     if (ret < 0)
         goto out;
 
-    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_evidence_oid,
-                                              sizeof(g_evidence_oid), /*critical=*/0, evidence,
-                                              evidence_size);
+    ret = mbedtls_x509write_crt_set_extension(writecrt, (const char*)g_ratls_evidence_oid,
+                                              sizeof(g_ratls_evidence_oid), /*critical=*/0,
+                                              evidence, evidence_size);
     if (ret < 0)
         goto out;
 

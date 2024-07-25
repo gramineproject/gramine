@@ -23,7 +23,8 @@ libcbor_lib = custom_target('libcbor',
 )
 
 # We can't use `include_directories('include')` because the `include/` dir is generated in the
-# custom target above, but Meson checks for existence of the dir *before* running the target
+# custom target above, but Meson checks for existence of the dir *before* running the target,
+# see https://github.com/mesonbuild/meson/issues/1855
 libcbor_inc = include_directories('.')
 
 libcbor_dep = declare_dependency(

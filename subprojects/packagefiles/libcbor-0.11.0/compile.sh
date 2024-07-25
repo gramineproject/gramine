@@ -6,11 +6,16 @@ log() {
     echo "libcbor (static): $*"
 }
 
-CURRENT_SOURCE_DIR="$1"
-CURRENT_BUILD_DIR="$2"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <source dir> <build dir> <private dir>" >&2
+    exit 2
+fi
+
+SOURCE_DIR="$1"
+BUILD_DIR="$2"
 PRIVATE_DIR="$3"
 
-BUILD_LOG=$(realpath "$CURRENT_BUILD_DIR/libcbor-build.log")
+BUILD_LOG=$(realpath "$BUILD_DIR/libcbor-build.log")
 rm -f "$BUILD_LOG"
 
 log "see $BUILD_LOG for full build log"
@@ -18,7 +23,7 @@ log "see $BUILD_LOG for full build log"
 log "preparing sources..."
 
 rm -rf "$PRIVATE_DIR"
-cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
+cp -ar "$SOURCE_DIR" "$PRIVATE_DIR"
 
 (
     cd "$PRIVATE_DIR"
@@ -28,7 +33,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DCMAKE_INSTALL_PREFIX="$CURRENT_BUILD_DIR" \
+        -DCMAKE_INSTALL_PREFIX="$BUILD_DIR" \
         . >>"$BUILD_LOG" 2>&1
 
     log "running make..."
@@ -36,7 +41,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
     make install >>"$BUILD_LOG" 2>&1
 )
 
-cp -ar "$CURRENT_BUILD_DIR"/include/. "$CURRENT_BUILD_DIR"
-cp -ar "$CURRENT_BUILD_DIR"/lib/. "$CURRENT_BUILD_DIR"
+cp -ar "$BUILD_DIR"/include/. "$BUILD_DIR"
+cp -ar "$BUILD_DIR"/lib/. "$BUILD_DIR"
 
 log "done"
