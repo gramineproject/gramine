@@ -82,6 +82,9 @@ async_exit_pointer:
     #        This double-stack-usage needs a proper fix.
     subq $RED_ZONE_SIZE, %rsp
     .cfi_adjust_cfa_offset RED_ZONE_SIZE
+    # FIXME: In some cases (LibOS test multi_pthread_exitless) we even need one more.
+    subq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset RED_ZONE_SIZE
 
     # Save ERESUME parameters
     pushq %rax
@@ -121,6 +124,9 @@ async_exit_pointer:
     addq $RED_ZONE_SIZE, %rsp
     .cfi_adjust_cfa_offset -RED_ZONE_SIZE
     # FIXME: See above for explanation for this second RSP adjustment.
+    addq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset -RED_ZONE_SIZE
+    # FIXME: See above for explanation for this third RSP adjustment.
     addq $RED_ZONE_SIZE, %rsp
     .cfi_adjust_cfa_offset -RED_ZONE_SIZE
 
