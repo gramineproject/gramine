@@ -136,8 +136,12 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
         }
     }
 
+    /* important to copy req->result before resetting the stack, otherwise it may be overwritten;
+     * this enclave's stack is also used in AEX flows, see host_entry.S:async_exit_pointer() */
+    long result = COPY_UNTRUSTED_VALUE(&req->result);
     sgx_reset_ustack(old_ustack);
-    return COPY_UNTRUSTED_VALUE(&req->result);
+
+    return result;
 }
 
 __attribute_no_sanitize_address
