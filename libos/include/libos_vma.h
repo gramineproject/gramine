@@ -134,11 +134,10 @@ int msync_range(uintptr_t begin, uintptr_t end);
 /* Call `msync` for file mappings of `hdl` */
 int msync_handle(struct libos_handle* hdl);
 
-/* Reload file mappings of `hdl` */
-int reload_mmaped_from_file_handle(struct libos_handle* hdl);
-
-/* Refresh page protections of file mappings of `hdl` when the file size has changed */
-int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_size);
+/* Refresh page protections and optionally reload file contents of file mappings of `hdl`. Reloading
+ * of file contents is performed by reading data from `hdl` and only on MAP_SHARED mappings. */
+void refresh_mappings_on_file(struct libos_handle* hdl, size_t new_file_size,
+                              bool reload_file_contents);
 
 void debug_print_all_vmas(void);
 

@@ -1529,7 +1529,7 @@ out:
  * `mmap(MAP_FIXED_NOREPLACE)` and `msync()`) via the `msync` callback, so blindly reloading the VMA
  * contents on e.g. `munmap()` can be inefficient (but unmapping file-backed memory regions
  * shouldn't be a frequent operation). */
-int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
+static int reload_mmaped_from_file_handle(struct libos_handle* hdl) {
     struct libos_vma_info* vma_infos;
     size_t count;
 
@@ -1617,7 +1617,7 @@ static int prot_refresh_vma(struct libos_vma_info* vma_info) {
 
 /* This helper function is to refresh access protections on the VMA pages of a given file handle on
  * file-extend operations (`write` and `ftruncate`). */
-int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_size) {
+static int prot_refresh_mmaped_from_file_handle(struct libos_handle* hdl, size_t file_size) {
     struct libos_vma_info* vma_infos;
     size_t count;
 
@@ -1707,6 +1707,31 @@ int msync_range(uintptr_t begin, uintptr_t end) {
 
 int msync_handle(struct libos_handle* hdl) {
     return msync_all(/*begin=*/0, /*end=*/UINTPTR_MAX, hdl);
+}
+
+void refresh_mappings_on_file(struct libos_handle* hdl, size_t new_file_size,
+                              bool reload_file_contents) {
+    assert(hdl->type == TYPE_TMPFS || hdl->type == TYPE_SHM || hdl->type == TYPE_CHROOT
+               || hdl->type == TYPE_CHROOT_ENCRYPTED);
+
+    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) == 0)
+        return;
+
+    int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl, new_file_size);
+    if (refresh_ret < 0) {
+        log_error("refreshing page protections of mmapped regions of file failed: %s",
+                  unix_strerror(refresh_ret));
+        BUG();
+    }
+
+    if (!reload_file_contents)
+        return;
+
+    int reload_ret = reload_mmaped_from_file_handle(hdl);
+    if (reload_ret < 0) {
+        log_error("reload mmapped regions of file failed: %s", unix_strerror(reload_ret));
+        BUG();
+    }
 }
 
 BEGIN_CP_FUNC(vma) {

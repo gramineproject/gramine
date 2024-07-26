@@ -491,23 +491,7 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
     size_t new_size = hdl->inode->size;
     unlock(&hdl->inode->lock);
 
-    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
-        /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl, new_size);
-        if (ret < 0) {
-            log_error("refreshing page protections of mmapped regions of file failed: %s",
-                      unix_strerror(ret));
-            BUG();
-        }
-
-        /* There are mappings for the file, read data from `enc` (only for MAP_SHARED mappings). */
-        ret = reload_mmaped_from_file_handle(hdl);
-        if (ret < 0) {
-            log_error("reload mmapped regions of file failed: %s", unix_strerror(ret));
-            BUG();
-        }
-    }
-
+    refresh_mappings_on_file(hdl, new_size, /*reload_file_contents=*/true);
     return (ssize_t)actual_count;
 }
 
@@ -532,16 +516,7 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
     hdl->inode->size = size;
     unlock(&hdl->inode->lock);
 
-    if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) != 0) {
-        /* There are mappings for the file, refresh their access protections. */
-        ret = prot_refresh_mmaped_from_file_handle(hdl, size);
-        if (ret < 0) {
-            log_error("refreshing page protections of mmapped regions of file failed: %s",
-                      unix_strerror(ret));
-            BUG();
-        }
-    }
-
+    refresh_mappings_on_file(hdl, size, /*reload_file_contents=*/false);
     return 0;
 }
 
