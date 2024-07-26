@@ -154,12 +154,22 @@ static void run_tests(char* m, const char* write_path) {
 int main(int argc, char** argv) {
     size_t page_size = getpagesize();
 
-    if (argc != 4)
-        errx(1, "Usage: %s <path1: read-only file> <path2:write-only file> <fork?>", argv[0]);
+    if (argc != 4) {
+        errx(1, "Usage: %s <path1: read-only file> <path2: write-only file> <fork|nofork>",
+             argv[0]);
+    }
 
     const char* path1 = argv[1];
     const char* path2 = argv[2];
-    bool do_fork = strcmp(argv[3], "fork") == 0;
+
+    bool do_fork;
+    if (strcmp(argv[3], "fork") == 0) {
+        do_fork = true;
+    } else if (strcmp(argv[3], "nofork") == 0) {
+        do_fork = false;
+    } else {
+        errx(1, "Did not recognize 3rd argument (can be only fork/nofork, but got %s)", argv[3]);
+    }
 
     struct sigaction sa = {
         .sa_sigaction = sigbus_handler,
