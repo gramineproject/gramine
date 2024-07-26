@@ -49,10 +49,6 @@ struct pal_enclave_tcb {
     struct untrusted_area untrusted_area_cache;
 };
 
-#ifndef DEBUG
-extern uint64_t dummy_debug_variable;
-#endif
-
 #ifdef IN_ENCLAVE
 
 static inline struct pal_enclave_tcb* pal_get_enclave_tcb(void) {
