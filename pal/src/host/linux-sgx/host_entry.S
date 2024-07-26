@@ -74,12 +74,6 @@ async_exit_pointer:
     # Inform that we are in AEX profiling code
     movb $1, %gs:PAL_HOST_TCB_IN_AEX_PROF
 
-    # FIXME: This red zone seems useless, as AEX only happens when enclave was executing, and when
-    #        enclave is executing, this stack is used only for OCALL args which take red zone into
-    #        account already (see enclave_framework.c:sgx_prepare_ustack() and company)
-    subq $RED_ZONE_SIZE, %rsp
-    .cfi_adjust_cfa_offset RED_ZONE_SIZE
-
     # Save ERESUME parameters
     pushq %rax
     .cfi_adjust_cfa_offset 8
@@ -115,9 +109,6 @@ async_exit_pointer:
     .cfi_adjust_cfa_offset -8
     popq %rax
     .cfi_adjust_cfa_offset -8
-    # FIXME: This red zone seems useless, see above explanation
-    addq $RED_ZONE_SIZE, %rsp
-    .cfi_adjust_cfa_offset -RED_ZONE_SIZE
 
     movb $0, %gs:PAL_HOST_TCB_IN_AEX_PROF
     .cfi_endproc
