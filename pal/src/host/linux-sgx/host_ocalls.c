@@ -603,8 +603,10 @@ static long sgx_ocall_shutdown(void* args) {
 static long sgx_ocall_gettime(void* args) {
     struct ocall_gettime* ocall_gettime_args = args;
     struct timeval tv;
+    uint64_t tsc = get_tsc();
     DO_SYSCALL(gettimeofday, &tv, NULL);
-    ocall_gettime_args->microsec = tv.tv_sec * (uint64_t)1000000 + tv.tv_usec;
+    ocall_gettime_args->microsec = tv.tv_sec * (uint64_t)1000000UL + tv.tv_usec;
+    ocall_gettime_args->tsc = tsc;
     return 0;
 }
 
