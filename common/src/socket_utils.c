@@ -37,6 +37,15 @@ void pal_to_linux_sockaddr(const struct pal_socket_addr* pal_addr,
             memcpy(linux_addr, &sa_ipv6, sizeof(sa_ipv6));
             *linux_addr_len = sizeof(sa_ipv6);
             break;
+        case PAL_NL:;
+            struct sockaddr_nl sa_nl = {
+                .nl_family = AF_NETLINK,
+                .nl_pid = pal_addr->nl.pid,
+                .nl_groups = pal_addr->nl.groups,
+            };
+            memcpy(linux_addr, &sa_nl, sizeof(sa_nl));
+            *linux_addr_len = sizeof(sa_nl);
+            break;
         default:
             BUG();
     }
@@ -65,6 +74,13 @@ void linux_to_pal_sockaddr(const void* linux_addr, struct pal_socket_addr* pal_a
             static_assert(sizeof(pal_addr->ipv6.addr) == sizeof(sa_ipv6.sin6_addr.s6_addr), "ops");
             memcpy(pal_addr->ipv6.addr, sa_ipv6.sin6_addr.s6_addr, sizeof(pal_addr->ipv6.addr));
             pal_addr->ipv6.port = sa_ipv6.sin6_port;
+            break;
+        case AF_NETLINK:;
+            struct sockaddr_nl sa_nl;
+            memcpy(&sa_nl, linux_addr, sizeof(sa_nl));
+            pal_addr->domain = PAL_NL;
+            pal_addr->nl.pid = sa_nl.nl_pid;
+            pal_addr->nl.groups = sa_nl.nl_groups;
             break;
         case AF_UNSPEC:
             pal_addr->domain = PAL_DISCONNECT;

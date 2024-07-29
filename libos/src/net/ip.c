@@ -123,7 +123,7 @@ static int create(struct libos_handle* handle) {
     /* We don't need to take the lock - handle was just created. */
     pal_stream_options_t options = handle->flags & O_NONBLOCK ? PAL_OPTION_NONBLOCK : 0;
     PAL_HANDLE pal_handle = NULL;
-    int ret = PalSocketCreate(pal_domain, pal_type, options, &pal_handle);
+    int ret = PalSocketCreate(pal_domain, pal_type, /*protocol=*/0, options, &pal_handle);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
