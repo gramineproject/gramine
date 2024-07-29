@@ -128,7 +128,7 @@ int load_trusted_file(struct trusted_file* tf, size_t file_size,
     }
 
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &handle);
+                        /*options=*/0, &handle);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

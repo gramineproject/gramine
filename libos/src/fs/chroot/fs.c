@@ -364,7 +364,7 @@ static int chroot_temp_open(struct libos_dentry* dent, PAL_HANDLE* out_palhdl) {
     }
 
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, out_palhdl);
+                        /*options=*/0, out_palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -393,7 +393,7 @@ static int chroot_do_open(struct libos_handle* hdl, struct libos_dentry* dent, m
     enum pal_create_mode create = LINUX_OPEN_FLAGS_TO_PAL_CREATE(flags);
     pal_stream_options_t options = LINUX_OPEN_FLAGS_TO_PAL_OPTIONS(flags);
     mode_t host_perm = HOST_PERM(perm);
-    ret = PalStreamOpen(uri, access, host_perm, create, options | PAL_OPTION_PASSTHROUGH, &palhdl);
+    ret = PalStreamOpen(uri, access, host_perm, create, options, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;

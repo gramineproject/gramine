@@ -273,7 +273,7 @@ static int chroot_encrypted_mkdir(struct libos_dentry* dent, mode_t perm) {
     /* This opens a "dir:..." URI */
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, HOST_PERM(perm), PAL_CREATE_ALWAYS,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        /*options=*/0, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -303,7 +303,7 @@ static int chroot_encrypted_unlink(struct libos_dentry* dent) {
 
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        /*options=*/0, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
@@ -368,7 +368,7 @@ static int chroot_encrypted_chmod(struct libos_dentry* dent, mode_t perm) {
 
     PAL_HANDLE palhdl;
     ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
-                        PAL_OPTION_PASSTHROUGH, &palhdl);
+                        /*options=*/0, &palhdl);
     if (ret < 0) {
         ret = pal_to_unix_errno(ret);
         goto out;
