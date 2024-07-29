@@ -727,40 +727,40 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `setxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `lsetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fsetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `getxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `getxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `lgetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `lgetxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `fgetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `fgetxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `listxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `listxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `llistxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `llistxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
-- ☒ `flistxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+- ☑ `flistxattr()`
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `removexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `lremovexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fremovexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `tkill()`
   <sup>[7](#signals-and-process-state-changes)</sup>
@@ -2125,6 +2125,13 @@ all have hard-coded values.
 Gramine currently does *not* support changing file access/modification times, via `utime()`,
 `utimes()`, `futimesat()`, `utimensat()` system calls.
 
+Mounting files and directories with extended attributes (xattr) or setting them
+via `setxattr()`, `lsetxattr()`, `fsetxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`
+is not supported.
+Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
+`flistxattr()`) but always returns no attributes (which is a correct result in our case).
+
+
 <details><summary>Related system calls</summary>
 
 - ▣ `open()`: implemented, with limitations
@@ -2219,6 +2226,19 @@ Gramine currently does *not* support changing file access/modification times, vi
 - ☒ `utimes()`: may be implemented in the future
 - ☒ `futimesat()`: may be implemented in the future
 - ☒ `utimensat()`: may be implemented in the future
+
+- ☑ `getxattr()`
+- ☑ `lgetxattr()`
+- ☑ `fgetxattr()`
+- ☑ `listxattr()`
+- ☑ `llistxattr()`
+- ☑ `flistxattr()`
+- ☒ `removexattr()`
+- ☒ `lremovexattr()`
+- ☒ `fremovexattr()`
+- ☒ `setxattr()`
+- ☒ `lsetxattr()`
+- ☒ `fsetxattr()`
 
 </details><br />
 
@@ -3098,9 +3118,6 @@ codebase of Gramine minimal.
 - Berkeley Packet Filters (BPF) and eBPF: `bpf()`
 - Capabilities: `capget()`, `capset()`
 - Execution control and debugging: `ptrace()`, `syslog()`, `perf_event_open()`, `acct()`
-- Extended attributes for files and directories (xattr): `setxattr()`, `lsetxattr()`,
-  `fsetxattr()`, `getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
-  `flistxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`
 - In-kernel key management (keyrings): `add_key()`, `request_key()`, `keyctl()`
 - Kernel modules: `create_module()`, `init_module()`, `finit_module()`, `delete_module()`,
   `query_module()`, `get_kernel_syms()`
@@ -3132,18 +3149,13 @@ codebase of Gramine minimal.
 - ☒ `copy_file_range()`
 - ☒ `create_module()`
 - ☒ `delete_module()`
-- ☒ `fgetxattr()`
 - ☒ `finit_module()`
-- ☒ `flistxattr()`
-- ☒ `fremovexattr()`
 - ☒ `fsconfig()`
-- ☒ `fsetxattr()`
 - ☒ `fsmount()`
 - ☒ `fsopen()`
 - ☒ `fspick()`
 - ☒ `get_kernel_syms()`
 - ☒ `getpmsg()`
-- ☒ `getxattr()`
 - ☒ `init_module()`
 - ☒ `io_pgetevents()`
 - ☒ `ioperm()`
@@ -3154,12 +3166,7 @@ codebase of Gramine minimal.
 - ☒ `landlock_add_rule()`
 - ☒ `landlock_create_ruleset()`
 - ☒ `landlock_restrict_self()`
-- ☒ `lgetxattr()`
-- ☒ `listxattr()`
-- ☒ `llistxattr()`
 - ☒ `lookup_dcookie()`
-- ☒ `lremovexattr()`
-- ☒ `lsetxattr()`
 - ☒ `modify_ldt()`
 - ☒ `nfsservctl()`
 - ☒ `nfsservctl()`
@@ -3178,14 +3185,12 @@ codebase of Gramine minimal.
 - ☒ `quotactl_fd()`
 - ☒ `readahead()`
 - ☒ `reboot()`
-- ☒ `removexattr()`
 - ☒ `request_key()`
 - ☒ `restart_syscall()`
 - ☒ `rseq()`
 - ☒ `seccomp()`
 - ☒ `security()`
 - ☒ `setns()`
-- ☒ `setxattr()`
 - ☒ `splice()`
 - ☒ `swapoff()`
 - ☒ `swapon()`

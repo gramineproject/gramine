@@ -292,3 +292,99 @@ out:
         put_dentry(dir);
     return ret;
 }
+
+static int check_path(const char* path, int lookup_flags) {
+    int ret;
+    struct libos_dentry* dent = NULL;
+    lock(&g_dcache_lock);
+    ret = path_lookupat(/*start=*/NULL, path, lookup_flags, &dent);
+    unlock(&g_dcache_lock);
+    if (ret < 0)
+        return ret;
+    put_dentry(dent);
+    return 0;
+}
+
+long libos_syscall_getxattr(const char* path, const char* name, void* value,
+                            size_t value_size) {
+    if (!is_user_string_readable(path) || !is_user_string_readable(name)
+            || !is_user_memory_writable(value, value_size))
+        return -EFAULT;
+
+    int ret = check_path(path, LOOKUP_FOLLOW);
+    if (ret < 0)
+        return ret;
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always "attribute not found". */
+    return -ENODATA;
+}
+
+long libos_syscall_lgetxattr(const char* path, const char* name, void* value,
+                             size_t value_size) {
+    if (!is_user_string_readable(path) || !is_user_string_readable(name)
+        || !is_user_memory_writable(value, value_size))
+        return -EFAULT;
+
+    int ret = check_path(path, LOOKUP_NO_FOLLOW);
+    if (ret < 0)
+        return ret;
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always "attribute not found". */
+    return -ENODATA;
+}
+
+long libos_syscall_fgetxattr(int fd, const char* name, void* value, size_t value_size) {
+    if (!is_user_string_readable(name) || !is_user_memory_writable(value, value_size))
+        return -EFAULT;
+
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    if (!hdl)
+        return -EBADF;
+    put_handle(hdl);
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always "attribute not found". */
+    return -ENODATA;
+}
+
+long libos_syscall_listxattr(const char* path, char* list, size_t list_size) {
+    if (!is_user_string_readable(path) || !is_user_memory_writable(list, list_size))
+        return -EFAULT;
+
+    int ret = check_path(path, LOOKUP_FOLLOW);
+    if (ret < 0)
+        return ret;
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always an empty list of attributes. */
+    return 0;
+}
+
+long libos_syscall_llistxattr(const char* path, char* list, size_t list_size) {
+    if (!is_user_string_readable(path) || !is_user_memory_writable(list, list_size))
+        return -EFAULT;
+
+    int ret = check_path(path, LOOKUP_NO_FOLLOW);
+    if (ret < 0)
+        return ret;
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always an empty list of attributes. */
+    return 0;
+}
+
+long libos_syscall_flistxattr(int fd, char* list, size_t list_size) {
+    if (!is_user_memory_writable(list, list_size))
+        return -EFAULT;
+
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    if (!hdl)
+        return -EBADF;
+    put_handle(hdl);
+
+    /* Gramine doesn't support mounting/setting xattrs, so the correct answer here is
+     * always an empty list of attributes. */
+    return 0;
+}
