@@ -625,8 +625,7 @@ int check_permissions(struct libos_dentry* dent, mode_t mask);
  * \param      flags  Lookup flags (see description below).
  * \param[out] found  Pointer to retrieved dentry.
  *
- * The caller should hold `g_dcache_lock`. If you do not already hold `g_dcache_lock`, use
- * `path_lookupat` instead.
+ * The caller should hold `g_dcache_lock`.
  *
  * On success, returns 0, and puts the retrieved dentry in `*found`. The reference count of the
  * dentry will be increased by one.

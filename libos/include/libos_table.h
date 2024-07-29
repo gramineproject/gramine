@@ -155,6 +155,14 @@ long libos_syscall_chroot(const char* filename);
 long libos_syscall_sethostname(char* name, int len);
 long libos_syscall_setdomainname(char* name, int len);
 long libos_syscall_gettid(void);
+
+long libos_syscall_getxattr(const char* path, const char* name, void* value, size_t value_size);
+long libos_syscall_lgetxattr(const char* path, const char* name, void* value, size_t value_size);
+long libos_syscall_fgetxattr(int fd, const char* name, void* value, size_t value_size);
+long libos_syscall_listxattr(const char* path, char* list, size_t list_size);
+long libos_syscall_llistxattr(const char* path, char* list, size_t list_size);
+long libos_syscall_flistxattr(int fd, char* list, size_t list_size);
+
 long libos_syscall_tkill(int pid, int sig);
 long libos_syscall_time(time_t* tloc);
 long libos_syscall_futex(int* uaddr, int op, int val, void* utime, int* uaddr2, int val3);

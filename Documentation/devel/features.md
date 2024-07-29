@@ -735,22 +735,22 @@ The below list is generated from the [syscall table of Linux
 - ☒ `fsetxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `getxattr()`
+- ☑ `getxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `lgetxattr()`
+- ☑ `lgetxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `fgetxattr()`
+- ☑ `fgetxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `listxattr()`
+- ☑ `listxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `llistxattr()`
+- ☑ `llistxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
-- ☒ `flistxattr()`
+- ☑ `flistxattr()`
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `removexattr()`
@@ -3098,9 +3098,10 @@ codebase of Gramine minimal.
 - Berkeley Packet Filters (BPF) and eBPF: `bpf()`
 - Capabilities: `capget()`, `capset()`
 - Execution control and debugging: `ptrace()`, `syslog()`, `perf_event_open()`, `acct()`
-- Extended attributes for files and directories (xattr): `setxattr()`, `lsetxattr()`,
-  `fsetxattr()`, `getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
-  `flistxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`
+- Mounting or setting extended attributes for files and directories (xattr): `setxattr()`,
+  `lsetxattr()`, `fsetxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`.
+  Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
+  `flistxattr()`) but always returns no attributes (which is a correct result in our case).
 - In-kernel key management (keyrings): `add_key()`, `request_key()`, `keyctl()`
 - Kernel modules: `create_module()`, `init_module()`, `finit_module()`, `delete_module()`,
   `query_module()`, `get_kernel_syms()`
@@ -3132,9 +3133,9 @@ codebase of Gramine minimal.
 - ☒ `copy_file_range()`
 - ☒ `create_module()`
 - ☒ `delete_module()`
-- ☒ `fgetxattr()`
+- ☑ `fgetxattr()`
 - ☒ `finit_module()`
-- ☒ `flistxattr()`
+- ☑ `flistxattr()`
 - ☒ `fremovexattr()`
 - ☒ `fsconfig()`
 - ☒ `fsetxattr()`
@@ -3143,7 +3144,7 @@ codebase of Gramine minimal.
 - ☒ `fspick()`
 - ☒ `get_kernel_syms()`
 - ☒ `getpmsg()`
-- ☒ `getxattr()`
+- ☑ `getxattr()`
 - ☒ `init_module()`
 - ☒ `io_pgetevents()`
 - ☒ `ioperm()`
@@ -3154,9 +3155,9 @@ codebase of Gramine minimal.
 - ☒ `landlock_add_rule()`
 - ☒ `landlock_create_ruleset()`
 - ☒ `landlock_restrict_self()`
-- ☒ `lgetxattr()`
-- ☒ `listxattr()`
-- ☒ `llistxattr()`
+- ☑ `lgetxattr()`
+- ☑ `listxattr()`
+- ☑ `llistxattr()`
 - ☒ `lookup_dcookie()`
 - ☒ `lremovexattr()`
 - ☒ `lsetxattr()`
