@@ -67,12 +67,6 @@ int init_fs(void) {
 
     INIT_LISTP(&g_mount_list);
 
-    if ((ret = init_file_check_policy()) < 0)
-        goto err;
-    if ((ret = init_allowed_files()) < 0)
-        goto err;
-    if ((ret = init_trusted_files()) < 0)
-        goto err;
     if ((ret = init_encrypted_files()) < 0)
         goto err;
 
@@ -97,6 +91,19 @@ err:
     if (lock_created(&g_mount_list_lock))
         destroy_lock(&g_mount_list_lock);
     return ret;
+}
+
+int init_trusted_allowed_files(void) {
+    int ret;
+
+    if ((ret = init_file_check_policy()) < 0)
+        return ret;
+    if ((ret = init_allowed_files()) < 0)
+        return ret;
+    if ((ret = init_trusted_files()) < 0)
+        return ret;
+
+    return 0;
 }
 
 static struct libos_mount* alloc_mount(void) {

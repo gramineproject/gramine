@@ -559,6 +559,7 @@ extern struct libos_dentry* g_dentry_root;
 
 /* initialization for fs and mounts */
 int init_fs(void);
+int init_trusted_allowed_files(void);
 int init_mount_root(void);
 int init_mount(void);
 int mount_etcfs(void);
