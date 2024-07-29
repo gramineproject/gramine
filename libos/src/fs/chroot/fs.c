@@ -359,7 +359,7 @@ static int chroot_temp_open(struct libos_dentry* dent, PAL_HANDLE* out_palhdl) {
         return ret;
 
     if (!is_open_allowed(dent, PAL_ACCESS_RDONLY)) {
-        ret = -EPERM;
+        ret = -EACCES;
         goto out;
     }
 
@@ -422,7 +422,7 @@ static int chroot_open(struct libos_handle* hdl, struct libos_dentry* dent, int 
     assert(dent->inode);
 
     if (!is_open_allowed(dent, LINUX_OPEN_FLAGS_TO_PAL_ACCESS(flags)))
-        return -EPERM;
+        return -EACCES;
 
     return chroot_do_open(hdl, dent, dent->inode->type, flags, /*perm=*/0);
 }
@@ -462,7 +462,7 @@ static int chroot_creat(struct libos_handle* hdl, struct libos_dentry* dent, int
         goto out;
 
     if (!is_create_allowed(uri)) {
-        ret = -EPERM;
+        ret = -EACCES;
         goto out;
     }
 
@@ -562,7 +562,7 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
 
     if (is_trusted_from_inode_data(hdl->inode)) {
         log_warning("Writing to a trusted file is disallowed!");
-        return -EPERM;
+        return -EACCES;
     }
 
     size_t actual_count = count;
