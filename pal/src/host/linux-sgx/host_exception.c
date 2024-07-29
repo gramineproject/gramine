@@ -226,7 +226,7 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(uc);
 
     if (g_sgx_enable_stats) {
-        int64_t expected_tid = 0;
+        int expected_tid = 0;
         if (__atomic_compare_exchange_n(&g_stats_reset_leader_tid, &expected_tid,
                                         DO_SYSCALL(gettid), /*weak=*/false,
                                         __ATOMIC_ACQ_REL, __ATOMIC_RELAXED) == true) {
