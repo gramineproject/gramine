@@ -228,7 +228,7 @@ static int generate_serialized_pk_hash_entry(mbedtls_pk_context* pk, uint8_t** o
     if (!cbor_hash_entry)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
 
-    /* RA-TLS always generates SHA256 hash over pubkey */
+    /* RA-TLS always uses SHA256 hash */
     cbor_item_t* cbor_hash_alg_id = cbor_build_uint8(IANA_NAMED_INFO_HASH_ALG_REGISTRY_SHA256);
     if (!cbor_hash_alg_id) {
         cbor_decref(&cbor_hash_entry);
@@ -321,12 +321,14 @@ static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_clai
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
     }
 
+    /* cbor_claims took ownership of hash_key and hash_val cbor items */
+    cbor_decref(&cbor_pubkey_hash_val);
+    cbor_decref(&cbor_pubkey_hash_key);
+
     uint8_t* claims_buf;
     size_t claims_buf_size;
     cbor_serialize_alloc(cbor_claims, &claims_buf, &claims_buf_size);
 
-    cbor_decref(&cbor_pubkey_hash_val);
-    cbor_decref(&cbor_pubkey_hash_key);
     cbor_decref(&cbor_claims);
 
     if (!claims_buf)
@@ -337,7 +339,7 @@ static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_clai
     return 0;
 }
 
-/*! generate evidence -- CBOR tag with CBOR array of CBOR bstrs: [ quote, claims ] */
+/*! generate tagged evidence -- CBOR tag with CBOR array of CBOR bstrs: [ quote, claims ] */
 static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8_t* claims,
                                         size_t claims_size, uint8_t** out_evidence_buf,
                                         size_t* out_evidence_buf_size) {
@@ -401,11 +403,12 @@ static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8
     return 0;
 }
 
-/*! generate SGX-quote evidence with \p pk as one of the embedded claims (standard format) */
-static int generate_evidence_with_claims(mbedtls_pk_context* pk, uint8_t** out_evidence,
-                                         size_t* out_evidence_size) {
+/*! generate TCG DICE tagged evidence object (a set of claims) with the SGX quote as the main
+ * evidence and \p pk as one of the embedded claims */
+static int generate_tcg_dice_tagged_evidence(mbedtls_pk_context* pk, uint8_t** out_evidence,
+                                             size_t* out_evidence_size) {
     /*
-     * SGX-quote evidence has the following serialized-CBOR format:
+     * TCG DICE tagged evidence has the following serialized-CBOR format:
      *
      * CBOR object (major type 6, new CBOR tag for "ECDSA SGX Quotes") ->
      *   CBOR array ->
@@ -414,7 +417,7 @@ static int generate_evidence_with_claims(mbedtls_pk_context* pk, uint8_t** out_e
      *        1: CBOR bstr (serialized-cbor-map of claims)
      *      ]
      *
-     * where "serialized-cbor-map of claims" is as follows:
+     * where "serialized-cbor-map of claims" is a serialized representation of the following:
      *
      *   CBOR map ->
      *      {
@@ -422,7 +425,7 @@ static int generate_evidence_with_claims(mbedtls_pk_context* pk, uint8_t** out_e
      *        "nonce"       (opt) : CBOR bstr (arbitrary-sized nonce for per-session freshness)
      *      }
      *
-     * where "serialized-cbor-array hash-entry" is as follows:
+     * where "serialized-cbor-array hash-entry" is a serialized representation of the following:
      *
      *   CBOR array ->
      *      [
@@ -489,7 +492,8 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
     /*
      * We put both "legacy Gramine" OID with plain SGX quote as well as standardized TCG DICE "tagged
      * evidence" OID with CBOR-formatted SGX quote into the RA-TLS X.509 cert. This is for keeping
-     * backward compatibility at the price of a larger size of the resulting cert. */
+     * backward compatibility at the price of a larger size of the resulting cert.
+     */
     uint8_t* quote = NULL;
     uint8_t* evidence = NULL;
 
@@ -500,7 +504,7 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
         goto out;
 
     size_t evidence_size;
-    ret = generate_evidence_with_claims(pk, &evidence, &evidence_size);
+    ret = generate_tcg_dice_tagged_evidence(pk, &evidence, &evidence_size);
     if (ret < 0)
         goto out;
 

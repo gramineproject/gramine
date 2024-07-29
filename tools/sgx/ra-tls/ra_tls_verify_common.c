@@ -190,7 +190,10 @@ int find_oid_in_cert_extensions(const uint8_t* exts, size_t exts_size, const uin
 }
 
 /*! fill buffer \p pk_der with DER-formatted public key from \p crt */
-static int fill_crt_pk_der(mbedtls_x509_crt* crt, uint8_t* pk_der, size_t* pk_der_size) {
+static int fill_crt_pk_der(mbedtls_x509_crt* crt, uint8_t* pk_der, size_t* inout_pk_der_size) {
+    if (mbedtls_pk_get_type(&crt->pk) != MBEDTLS_PK_ECKEY)
+        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+
     mbedtls_ecp_keypair* key = mbedtls_pk_ec(crt->pk);
     if (key == NULL ||
             (key->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP384R1
@@ -199,13 +202,13 @@ static int fill_crt_pk_der(mbedtls_x509_crt* crt, uint8_t* pk_der, size_t* pk_de
     }
 
     /* below function writes data at the end of the buffer */
-    int pk_der_size_int = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, *pk_der_size);
+    int pk_der_size_int = mbedtls_pk_write_pubkey_der(&crt->pk, pk_der, *inout_pk_der_size);
     if (pk_der_size_int < 0)
         return pk_der_size_int;
 
     /* move the data to the beginning of the buffer, to avoid pointer arithmetic later */
-    memmove(pk_der, pk_der + *pk_der_size - pk_der_size_int, pk_der_size_int);
-    *pk_der_size = (size_t)pk_der_size_int;
+    memmove(pk_der, pk_der + *inout_pk_der_size - pk_der_size_int, pk_der_size_int);
+    *inout_pk_der_size = (size_t)pk_der_size_int;
     return 0;
 }
 
@@ -372,8 +375,8 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
     }
 
     cbor_quote = cbor_array_get(cbor_evidence, /*index=*/0);
-    if (!cbor_quote || !cbor_isa_bytestring(cbor_quote) || !cbor_bytestring_is_definite(cbor_quote)
-            || cbor_bytestring_length(cbor_quote) == 0) {
+    if (!cbor_quote || !cbor_isa_bytestring(cbor_quote)
+            || !cbor_bytestring_is_definite(cbor_quote)) {
         ret = MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
         goto out;
     }
@@ -442,8 +445,10 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
             goto out;
         }
 
-        if (strncmp((char*)cbor_string_handle(claims_pairs[i].key), "pubkey-hash",
-                    cbor_string_length(claims_pairs[i].key)) == 0) {
+#define PUBKEY_HASH_STR "pubkey-hash"
+        if ((cbor_string_length(claims_pairs[i].key) == sizeof(PUBKEY_HASH_STR) - 1)
+                && (memcmp(cbor_string_handle(claims_pairs[i].key), PUBKEY_HASH_STR,
+                           cbor_string_length(claims_pairs[i].key)) == 0)) {
             /* claim { "pubkey-hash" : serialized CBOR array hash-entry (as CBOR bstr) } */
             if (!claims_pairs[i].value || !cbor_isa_bytestring(claims_pairs[i].value)
                     || !cbor_bytestring_is_definite(claims_pairs[i].value)
@@ -457,8 +462,8 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
 
             cbor_hash_entry = cbor_load(hash_entry_buf, hash_entry_buf_size, &cbor_result);
             if (cbor_result.error.code != CBOR_ERR_NONE) {
-                ERROR("Certificate: cannot parse 'pubkey-hash' array in CBOR format (error %d)\n",
-                        cbor_result.error.code);
+                ERROR("Certificate: cannot parse " PUBKEY_HASH_STR " array in CBOR format "
+                      "(error %d)\n", cbor_result.error.code);
                 ret = (cbor_result.error.code == CBOR_ERR_MEMERROR) ? MBEDTLS_ERR_X509_ALLOC_FAILED
                       : MBEDTLS_ERR_X509_INVALID_EXTENSIONS;
                 goto out;
@@ -467,6 +472,7 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
             ret = cmp_crt_pk_against_cbor_claim_hash_entry(crt, cbor_hash_entry);
             if (ret < 0)
                 goto out;
+#undef PUBKEY_HASH_STR
         } else {
             INFO("WARNING: Unrecognized claim in TCG DICE 'tagged evidence' OID, ignoring.\n");
         }
