@@ -339,10 +339,51 @@ static int generate_serialized_claims(mbedtls_pk_context* pk, uint8_t** out_clai
     return 0;
 }
 
-/*! generate tagged evidence -- CBOR tag with CBOR array of CBOR bstrs: [ quote, claims ] */
-static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8_t* claims,
-                                        size_t claims_size, uint8_t** out_evidence_buf,
-                                        size_t* out_evidence_buf_size) {
+/*! generate SGX quote with user_report_data = hash(serialized-cbor-map of claims) */
+static int generate_quote_with_claims_hash(uint8_t* claims, size_t claims_size,
+                                           uint8_t** out_quote_buf, size_t* out_quote_buf_size) {
+    int ret;
+    uint8_t* quote = NULL;
+
+    sgx_report_data_t user_report_data = {0};
+    ret = mbedtls_sha256(claims, claims_size, user_report_data.d, /*is224=*/0);
+    if (ret < 0)
+        goto fail;
+
+    ssize_t written = rw_file("/dev/attestation/user_report_data", user_report_data.d,
+                              sizeof(user_report_data.d), /*do_write=*/true);
+    if (written != sizeof(user_report_data)) {
+        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
+        goto fail;
+    }
+
+    quote = malloc(SGX_QUOTE_MAX_SIZE);
+    if (!quote) {
+        ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
+        goto fail;
+    }
+
+    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
+                                 /*do_write=*/false);
+    if (quote_size < 0) {
+        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
+        goto fail;
+    }
+
+    *out_quote_buf = quote;
+    *out_quote_buf_size = quote_size;
+    return 0;
+fail:
+    free(quote);
+    return ret;
+}
+
+/*! combine quote and claims in a CBOR tag with CBOR array of CBOR bstrs: [ quote, claims ] */
+static int combine_quote_and_claims_in_evidence(uint8_t* quote, size_t quote_size,
+                                                uint8_t* claims, size_t claims_size,
+                                                uint8_t** out_evidence_buf,
+                                                size_t* out_evidence_buf_size) {
+    /* step 1: wrap quote and claims as two CBOR-bstr items in a CBOR array */
     cbor_item_t* cbor_evidence = cbor_new_definite_array(2);
     if (!cbor_evidence)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
@@ -380,6 +421,7 @@ static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8
     cbor_decref(&cbor_claims);
     cbor_decref(&cbor_quote);
 
+    /* step 2: wrap the resulting CBOR array in a tagged CBOR object */
     cbor_item_t* cbor_tagged_evidence = cbor_new_tag(TCG_DICE_TAGGED_EVIDENCE_TEE_QUOTE_CBOR_TAG);
     if (!cbor_tagged_evidence) {
         cbor_decref(&cbor_evidence);
@@ -388,6 +430,7 @@ static int generate_serialized_evidence(uint8_t* quote, size_t quote_size, uint8
 
     cbor_tag_set_item(cbor_tagged_evidence, cbor_evidence);
 
+    /* step 3: serialize the resulting tagged CBOR object, to be embedded as an OID in X.509 cert */
     uint8_t* evidence_buf;
     size_t evidence_buf_size;
     cbor_serialize_alloc(cbor_tagged_evidence, &evidence_buf, &evidence_buf_size);
@@ -436,43 +479,24 @@ static int generate_tcg_dice_tagged_evidence(mbedtls_pk_context* pk, uint8_t** o
      * For hash-alg-id values, see
      * https://www.iana.org/assignments/named-information/named-information.xhtml
      */
+    int ret;
     uint8_t* claims   = NULL;
     uint8_t* quote    = NULL;
     uint8_t* evidence = NULL;
 
     size_t claims_size;
-    int ret = generate_serialized_claims(pk, &claims, &claims_size);
+    ret = generate_serialized_claims(pk, &claims, &claims_size);
     if (ret < 0)
         goto out;
 
-    sgx_report_data_t user_report_data = {0};
-    ret = mbedtls_sha256(claims, claims_size, user_report_data.d, /*is224=*/0);
+    size_t quote_size;
+    ret = generate_quote_with_claims_hash(claims, claims_size, &quote, &quote_size);
     if (ret < 0)
         goto out;
-
-    ssize_t written = rw_file("/dev/attestation/user_report_data", user_report_data.d,
-                              sizeof(user_report_data.d), /*do_write=*/true);
-    if (written != sizeof(user_report_data)) {
-        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
-        goto out;
-    }
-
-    quote = malloc(SGX_QUOTE_MAX_SIZE);
-    if (!quote) {
-        ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
-        goto out;
-    }
-
-    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
-                                 /*do_write=*/false);
-    if (quote_size < 0) {
-        ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
-        goto out;
-    }
 
     size_t evidence_size;
-    ret = generate_serialized_evidence(quote, quote_size, claims, claims_size, &evidence,
-                                       &evidence_size);
+    ret = combine_quote_and_claims_in_evidence(quote, quote_size, claims, claims_size, &evidence,
+                                               &evidence_size);
     if (ret < 0)
         goto out;
 

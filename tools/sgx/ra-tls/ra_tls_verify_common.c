@@ -341,8 +341,10 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
     int ret = find_oid_in_cert_extensions(crt->v3_ext.p, crt->v3_ext.len, g_ratls_evidence_oid_raw,
                                           sizeof(g_ratls_evidence_oid_raw), &evidence_buf,
                                           &evidence_buf_size);
-    if (ret < 0)
+    if (ret < 0) {
+        *out_found_oid = false;
         return ret;
+    }
 
     *out_found_oid = true;
 
@@ -448,7 +450,7 @@ static int extract_standard_quote_and_verify_claims(mbedtls_x509_crt* crt, bool*
 #define PUBKEY_HASH_STR "pubkey-hash"
         if ((cbor_string_length(claims_pairs[i].key) == sizeof(PUBKEY_HASH_STR) - 1)
                 && (memcmp(cbor_string_handle(claims_pairs[i].key), PUBKEY_HASH_STR,
-                           cbor_string_length(claims_pairs[i].key)) == 0)) {
+                           sizeof(PUBKEY_HASH_STR) - 1) == 0)) {
             /* claim { "pubkey-hash" : serialized CBOR array hash-entry (as CBOR bstr) } */
             if (!claims_pairs[i].value || !cbor_isa_bytestring(claims_pairs[i].value)
                     || !cbor_bytestring_is_definite(claims_pairs[i].value)
@@ -531,7 +533,7 @@ static int extract_legacy_quote_and_verify_pubkey(mbedtls_x509_crt* crt, sgx_quo
 
 int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quote,
                                     size_t* out_quote_size) {
-    bool found_oid = false;
+    bool found_oid;
     int ret = extract_standard_quote_and_verify_claims(crt, &found_oid, out_quote, out_quote_size);
     if (ret == 0)
         return 0;
