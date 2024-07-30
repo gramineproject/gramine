@@ -21,7 +21,7 @@ helloworld: helloworld.o
 
 helloworld.o: helloworld.c
 
-helloworld.manifest: helloworld.manifest.template
+helloworld.manifest: helloworld.manifest.template helloworld
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		$< $@
@@ -44,7 +44,7 @@ helloworld.sig helloworld.manifest.sgx: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: helloworld.manifest helloworld
+sgx_sign: helloworld.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

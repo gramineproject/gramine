@@ -70,25 +70,25 @@ endif
 # information to run Redis under Gramine / Gramine-SGX. We create
 # redis-server.manifest (to be run under non-SGX Gramine) by replacing variables
 # in the template file using the "gramine-manifest" script.
-
-redis-server.manifest: redis-server.manifest.template
+#
+# "gramine-manifest" also measures all Redis trusted files and adds the
+# measurements to the resulting manifest file.
+redis-server.manifest: redis-server.manifest.template $(SRCDIR)/src/redis-server
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
-
-# Manifest for Gramine-SGX requires special "gramine-sgx-sign" procedure. This
-# procedure measures all Redis trusted files, adds the measurement to the
-# resulting manifest.sgx file (among other, less important SGX options) and
-# creates redis-server.sig (SIGSTRUCT object).
 
 # Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
 # see the helloworld example for details on this workaround.
 redis-server.sig redis-server.manifest.sgx: sgx_outputs
 	@:
 
+# Manifest for Gramine-SGX requires special "gramine-sgx-sign" procedure. This
+# procedure creates the final manifest.sgx file and an SGX-specific
+# redis-server.sig file (SIGSTRUCT object).
 .INTERMEDIATE: sgx_outputs
-sgx_outputs: redis-server.manifest $(SRCDIR)/src/redis-server
+sgx_outputs: redis-server.manifest
 	gramine-sgx-sign \
 		--manifest redis-server.manifest \
 		--output redis-server.manifest.sgx

@@ -56,7 +56,7 @@ client: src/client.c
 
 ############################### SERVER MANIFEST ###############################
 
-server.manifest: server.manifest.template
+server.manifest: server.manifest.template server
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -71,14 +71,14 @@ server.manifest.sgx server.sig: sgx_sign_server
 	@:
 
 .INTERMEDIATE: sgx_sign_server
-sgx_sign_server: server.manifest server
+sgx_sign_server: server.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
 
 ########################### CLIENT (DCAP) MANIFEST ############################
 
-client_dcap.manifest: client.manifest.template
+client_dcap.manifest: client.manifest.template client
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -88,14 +88,14 @@ client_dcap.manifest.sgx client_dcap.sig: sgx_sign_client_dcap
 	@:
 
 .INTERMEDIATE: sgx_sign_client_dcap
-sgx_sign_client_dcap: client_dcap.manifest client
+sgx_sign_client_dcap: client_dcap.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
 
 ########################### CLIENT (EPID) MANIFEST ############################
 
-client_epid.manifest: client.manifest.template
+client_epid.manifest: client.manifest.template client
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -105,7 +105,7 @@ client_epid.manifest.sgx client_epid.sig: sgx_sign_client_epid
 	@:
 
 .INTERMEDIATE: sgx_sign_client_epid
-sgx_sign_client_epid: client_epid.manifest client
+sgx_sign_client_epid: client_epid.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

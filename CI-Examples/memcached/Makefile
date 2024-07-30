@@ -33,7 +33,7 @@ $(SRCDIR)/memcached: $(SRCDIR)/configure
 	cd $(SRCDIR) && ./configure
 	$(MAKE) -C $(SRCDIR)
 
-memcached.manifest: memcached.manifest.template
+memcached.manifest: memcached.manifest.template memcached
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
@@ -45,7 +45,7 @@ memcached.manifest.sgx memcached.sig: sgx_sign
 	@:
 
 .INTERMEDIATE: sgx_sign
-sgx_sign: memcached.manifest memcached
+sgx_sign: memcached.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
