@@ -136,8 +136,9 @@ static long sgx_exitless_ocall(uint64_t code, void* ocall_args) {
         }
     }
 
+    long result = COPY_UNTRUSTED_VALUE(&req->result);
     sgx_reset_ustack(old_ustack);
-    return COPY_UNTRUSTED_VALUE(&req->result);
+    return result;
 }
 
 __attribute_no_sanitize_address
