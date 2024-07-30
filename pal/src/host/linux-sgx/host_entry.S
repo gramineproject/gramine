@@ -4,6 +4,7 @@
 
     .extern tcs_base
     .extern g_in_aex_profiling
+    .extern dump_and_reset_stats
 
     .global sgx_ecall
     .type sgx_ecall, @function
@@ -70,9 +71,9 @@ async_exit_pointer:
     # increment per-thread AEX counter for stats
     lock incq %gs:PAL_HOST_TCB_AEX_CNT
 
-#ifdef DEBUG
     # Inform that we are in AEX profiling code
     movb $1, %gs:PAL_HOST_TCB_IN_AEX_PROF
+
     # Save ERESUME parameters
     pushq %rax
     .cfi_adjust_cfa_offset 8
@@ -81,18 +82,25 @@ async_exit_pointer:
     pushq %rcx
     .cfi_adjust_cfa_offset 8
 
-    # Align stack (required by System V AMD64 ABI)
+    pushq %rbp
+    .cfi_adjust_cfa_offset 8
     movq %rsp, %rbp
+    .cfi_offset %rbp, -16
     .cfi_def_cfa_register %rbp
-    andq $~0xF, %rsp
+    andq $~0xF, %rsp  # Required by System V AMD64 ABI.
 
+#ifdef DEBUG
     # Call sgx_profile_sample_aex with %rdi = TCS
     movq %rbx, %rdi
     call sgx_profile_sample_aex
+#endif
+
+    call dump_and_reset_stats
 
     # Restore stack
     movq %rbp, %rsp
-    .cfi_def_cfa_register %rsp
+    popq %rbp
+    .cfi_def_cfa %rsp, 8
 
     # Restore ERESUME parameters
     popq %rcx
@@ -101,9 +109,8 @@ async_exit_pointer:
     .cfi_adjust_cfa_offset -8
     popq %rax
     .cfi_adjust_cfa_offset -8
-    movb $0, %gs:PAL_HOST_TCB_IN_AEX_PROF
-#endif
 
+    movb $0, %gs:PAL_HOST_TCB_IN_AEX_PROF
     .cfi_endproc
 
     # fall-through to ERESUME
@@ -143,12 +150,12 @@ sgx_raise:
     .cfi_offset %rbp, -16
     .cfi_def_cfa_register %rbp
 
-#if DEBUG
     # Adjust stack and save RDI
     subq $8, %rsp
     andq $~0xF, %rsp  # Required by System V AMD64 ABI.
     movq %rdi, -8(%rbp)
 
+#if DEBUG
     # Call sgx_profile_sample_ocall_outer with RBX (ocall handler)
     movq %rbx, %rdi
     call sgx_profile_sample_ocall_outer
@@ -156,12 +163,12 @@ sgx_raise:
     # Call sgx_profile_sample_ocall_inner with RDX (pointer to in-enclave context)
     movq %rdx, %rdi
     call sgx_profile_sample_ocall_inner
+#endif
+
+    call dump_and_reset_stats
 
     # Restore RDI
     movq -8(%rbp), %rdi
-#else
-    andq $~0xF, %rsp  # Required by System V AMD64 ABI.
-#endif
 
     callq *%rbx
 

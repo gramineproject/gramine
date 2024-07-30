@@ -19,16 +19,46 @@
 #include <stdbool.h>
 
 #include "api.h"
+#include "assert.h"
 #include "cpu.h"
 #include "debug_map.h"
 #include "gdb_integration/sgx_gdb.h"
 #include "host_internal.h"
+#include "host_syscall.h"
 #include "pal_rpc_queue.h"
 #include "pal_tcb.h"
 #include "sigreturn.h"
 #include "ucontext.h"
 
 static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
+
+/*
+ * If no SGX-stats reset is in flight, this variable is zero.
+ *
+ * Upon user-induced SIGUSR1 on some thread (below happens in signal handling context):
+ *   1. If `g_stats_reset_leader_tid == 0`, then it is set to the TID of this thread -- this thread
+ *      is designated to be the "leader" of SGX-stats reset flow, and it will broadcast SIGUSR1 to
+ *      all other threads on the first AEX (since we can't do any complex logic in signal handling
+ *      context, we postpone to the normal context which starts right-after an AEX event).
+ *   2. If `g_stats_reset_leader_tid != 0`, then it means that an SGX-stats reset flow is in flight.
+ *      Two cases are possible:
+ *        a. If PID of sending process is the current PID, then the signal was sent by the "leader"
+ *           and this thread is a "follower" -- it sets `reset_stats = true` in its TCB, so that
+ *           this thread's statistics are dumped and reset on the next AEX.
+ *        b. If PID of sending process is not the current PID, then the signal was sent by the user
+ *           and this is a new "SGX-stats reset" event from the user. Since the previous flow is
+ *           still in flight, the thread must ignore this signal.
+ *
+ * On each AEX, each thread checks (below happens in normal context):
+ *   1. If `g_stats_reset_leader_tid == 0`, do nothing (no SGX-stats reset is in flight).
+ *   2. If `g_stats_reset_leader_tid == gettid()`, then this is the "leader" thread and it must
+ *      broadcast SIGUSR1 to all other threads and wait until they perform their SGX-stats resets.
+ *      After all threads are done, the "leader" resets `g_stats_reset_leader_tid` to zero.
+ *   3. Else, this is the "follower" thread and it must perform its SGX-stats reset.
+ *
+ * Application threads on Linux can never be 0, so this "no-op" default is safe.
+ */
+static int g_stats_reset_leader_tid = 0;
 
 static int block_signal(int sig, bool block) {
     int how = block ? SIG_BLOCK : SIG_UNBLOCK;
@@ -189,50 +219,31 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     /* we need this handler to interrupt blocking syscalls in RPC threads */
 }
 
-static size_t send_sigusr1_signal_to_children(pid_t main_tid) {
-    size_t no_of_signals_sent = 0;
-
-    for (size_t i = 0; i < MAX_DBG_THREADS; i++) {
-        int child_tid = ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i];
-        if (child_tid == main_tid)
-            continue;
-
-        if (child_tid) {
-            DO_SYSCALL(tkill, child_tid, SIGUSR1);
-            no_of_signals_sent++;
-        }
-    }
-    return no_of_signals_sent;
-}
-
-static void dump_and_reset_stats(void) {
-    static size_t no_of_children_visited = 0;
-
-    if (DO_SYSCALL(gettid) == g_host_pid) {
-        size_t no_of_children = send_sigusr1_signal_to_children(g_host_pid);
-
-        log_always("----- DUMPING and RESETTING SGX STATS -----");
-        while ((__atomic_load_n(&no_of_children_visited, __ATOMIC_ACQUIRE)) < no_of_children) {
-            DO_SYSCALL(sched_yield);
-        }
-
-        update_and_print_stats(/*process_wide=*/true);
-        __atomic_store_n(&no_of_children_visited, 0, __ATOMIC_RELEASE);
-    } else {
-        update_and_print_stats(/*process_wide=*/false);
-        __atomic_fetch_add(&no_of_children_visited, 1, __ATOMIC_ACQ_REL);
-    }
-
-    pal_host_tcb_reset_stats();
-}
-
 static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(signum);
     __UNUSED(info);
     __UNUSED(uc);
 
-    if (g_sgx_enable_stats)
-        dump_and_reset_stats();
+    if (g_sgx_enable_stats) {
+        int expected_tid = 0;
+        if (__atomic_compare_exchange_n(&g_stats_reset_leader_tid, &expected_tid,
+                                        DO_SYSCALL(gettid), /*weak=*/false,
+                                        __ATOMIC_ACQ_REL, __ATOMIC_RELAXED) == true) {
+            /* first thread that gets SIGUSR1, the CAS above designated it as the "leader" */
+            PAL_HOST_TCB* tcb = pal_get_host_tcb();
+            tcb->reset_stats = true;
+        } else {
+            /* thread gets SIGUSR1, check if this is a signal from the "leader" */
+            if (info->si_pid == g_host_pid) {
+                PAL_HOST_TCB* tcb = pal_get_host_tcb();
+                assert(!tcb->reset_stats);
+                tcb->reset_stats = true;
+            } else {
+                log_warning("Received SIGUSR1 from user, but there is another SGX-stats reset "
+                            "in flight; ignoring it");
+            }
+        }
+    }
 
 #ifdef DEBUG
     if (g_pal_enclave.profile_enable) {
@@ -312,4 +323,54 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
         return;
 #endif
     default_describe_location(addr, buf, buf_size);
+}
+
+static size_t send_sigusr1_to_followers(pid_t leader_tid) {
+    size_t followers_num = 0;
+
+    /* we re-use DBGINFO_ADDR special variable (that is primarily used by GDB for debugging),
+     * fortunately this variable is set up even in non-debug builds */
+    for (size_t i = 0; i < MAX_DBG_THREADS; i++) {
+        int follower_tid = ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i];
+        if (!follower_tid || follower_tid == leader_tid)
+            continue;
+
+        DO_SYSCALL(tkill, follower_tid, SIGUSR1);
+        followers_num++;
+    }
+    return followers_num;
+}
+
+/* called on each AEX and OCALL (in normal context), see host_entry.S */
+void dump_and_reset_stats(void) {
+    static size_t followers_visited_num = 0; /* note `static`, it is a global var */
+
+    if (!g_sgx_enable_stats)
+        return;
+
+    int leader_tid = __atomic_load_n(&g_stats_reset_leader_tid, __ATOMIC_ACQUIRE);
+    if (!leader_tid)
+        return;
+
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    if (!tcb->reset_stats)
+        return;
+
+    if (DO_SYSCALL(gettid) == leader_tid) {
+        log_always("----- DUMPING and RESETTING SGX STATS -----");
+        size_t followers_num = send_sigusr1_to_followers(leader_tid);
+
+        while ((__atomic_load_n(&followers_visited_num, __ATOMIC_ACQUIRE)) < followers_num)
+            DO_SYSCALL(sched_yield);
+
+        update_and_print_stats(/*process_wide=*/true);
+        pal_host_tcb_reset_stats();
+        __atomic_store_n(&followers_visited_num, 0, __ATOMIC_RELEASE);
+
+        __atomic_store_n(&g_stats_reset_leader_tid, 0, __ATOMIC_RELEASE);
+    } else {
+        update_and_print_stats(/*process_wide=*/false);
+        pal_host_tcb_reset_stats();
+        __atomic_fetch_add(&followers_visited_num, 1, __ATOMIC_ACQ_REL);
+    }
 }

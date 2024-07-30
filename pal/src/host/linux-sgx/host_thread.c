@@ -90,6 +90,7 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->aex_cnt          = 0;
     tcb->sync_signal_cnt  = 0;
     tcb->async_signal_cnt = 0;
+    tcb->reset_stats      = false;
 
     tcb->profile_sample_time = 0;
 
@@ -103,6 +104,7 @@ void pal_host_tcb_reset_stats(void) {
     tcb->aex_cnt          = 0;
     tcb->sync_signal_cnt  = 0;
     tcb->async_signal_cnt = 0;
+    tcb->reset_stats      = false;
 }
 
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {

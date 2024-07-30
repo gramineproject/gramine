@@ -105,10 +105,12 @@ typedef struct pal_host_tcb {
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
     int* start_status_ptr;         /* pointer to return value of clone_thread */
+    bool reset_stats;              /* if true, dump SGX stats and reset them on next AEX event */
 } PAL_HOST_TCB;
 
 extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
 extern void pal_host_tcb_reset_stats(void);
+void dump_and_reset_stats(void);
 
 static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
     PAL_HOST_TCB* tcb;
