@@ -1712,7 +1712,7 @@ int msync_handle(struct libos_handle* hdl) {
 void refresh_mappings_on_file(struct libos_handle* hdl, size_t new_file_size,
                               bool reload_file_contents) {
     assert(hdl->type == TYPE_TMPFS || hdl->type == TYPE_SHM || hdl->type == TYPE_CHROOT
-            || hdl->type == TYPE_CHROOT_ENCRYPTED);
+              || hdl->type == TYPE_CHROOT_ENCRYPTED);
 
     if (__atomic_load_n(&hdl->inode->num_mmapped, __ATOMIC_ACQUIRE) == 0)
         return;
@@ -1720,7 +1720,7 @@ void refresh_mappings_on_file(struct libos_handle* hdl, size_t new_file_size,
     int refresh_ret = prot_refresh_mmaped_from_file_handle(hdl, new_file_size);
     if (refresh_ret < 0) {
         log_error("refreshing page protections of mmapped regions of file failed: %s",
-                unix_strerror(refresh_ret));
+                  unix_strerror(refresh_ret));
         BUG();
     }
 
