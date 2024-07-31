@@ -108,6 +108,16 @@ static struct avl_tree vma_tree = {.cmp = vma_tree_cmp};
 static struct libos_rwlock vma_tree_lock;
 static bool vma_tree_lock_created = false;
 
+/*
+ * It is important to use the below wrappers instead of raw `rwlock_*_lock()` functions. This is
+ * because at LibOS startup, the lock `vma_tree_lock` is not yet created. Fortunately, at LibOS
+ * startup there is only one thread, so the lock would be redundant anyway.
+ *
+ * We cannot create `vma_tree_lock` at the very beginning of LibOS startup, because creating this
+ * lock itself requires the memory subsystem (VMA) to be fully initialized. So we start with VMA
+ * locking disabled first, then init the VMA subsystem, and only then create the lock. At this point
+ * the VMA subsystem can be used in thread-safe manner.
+ */
 static inline void vma_rwlock_read_lock(struct libos_rwlock* l) {
     if (!vma_tree_lock_created)
         return;
