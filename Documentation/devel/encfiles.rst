@@ -13,8 +13,8 @@ Encrypted Files in Gramine
 
 Gramine provides a feature of :ref:`encrypted-files`, which encrypts files and
 transparently decrypts them when the application reads or writes them.
-Integrity- or confidentiality-sensitive files (or whole directories) accessed by
-the application must be put under the "encrypted" FS mount in the Gramine
+Integrity- and confidentiality-sensitive files (or whole directories) accessed
+by the application must be put under the "encrypted" FS mount in the Gramine
 manifest. New files created in the "encrypted" FS mount are automatically
 treated as encrypted. The format used for encrypted and integrity-protected
 files is borrowed from the "protected files" feature of Intel SGX SDK (see the
@@ -142,6 +142,10 @@ Crypto used for encrypted files
   <https://csrc.nist.gov/pubs/sp/800/108/r1/upd1/final>`__ construction, with
   the required PRF (Pseudorandom Function) instantiated by AES-128-CMAC.
 
+- Keys for node encryption (i.e., keys stored in the MHT nodes) are generated
+  randomly using a cryptographically secure pseudo-random number generator
+  (CSPRNG); for x86-64, this CSPRNG is the RDRAND instruction.
+
 - Initialization vectors (IVs) are always all-zeros. This is allowed because
   each node-encryption key is generated randomly and is never re-used.
 
@@ -228,10 +232,10 @@ between logical and physical numbers is clear on the below diagram.
 
 Note that there is a special MHT node -- the root MHT node. It has the same
 representation inside the SGX enclave and on host storage as all other MHT
-nodes, but it is directly linked from the main data struct ``pf_handle`` via the
-``root_mht_node`` field. Also, the root MHT node's encryption key and MAC are
-stored directly in the encrypted header of the metadata node. The root MHT node
-starts to be used when the plaintext file size exceeds 3KB.
+nodes, but it is directly linked from the main data struct ``pf_context`` via
+the ``root_mht_node`` field. Also, the root MHT node's encryption key and MAC
+are stored directly in the encrypted header of the metadata node. The root MHT
+node starts to be used when the plaintext file size exceeds 3KB.
 
 Note that the root MHT node is kept in trusted enclave memory for the lifetime
 of the file handle (i.e. as long as the file is opened). This is in contrast to
@@ -290,7 +294,7 @@ represented solely in SGX enclave memory and is saved to untrusted host storage
 on a write (or more typically, on an explicit flush operation).
 
 Upon file creation, Gramine sets up three data structures representing the file:
-the main ``pf_context`` struct that has the reference to the correspoding host
+the main ``pf_context`` struct that has the reference to the corresponding host
 file and the user-supplied KDK, the ``metadata_node`` bounce buffer that will be
 copied out to host storage and the ``metadata_decrypted`` struct that has the
 file name, the file size and a 3KB buffer to hold file contents.
@@ -329,7 +333,7 @@ already supplied by the user application, and must be the same as was used for
 file write.
 
 Then the app wants to read the file data. This triggers the read flow depicted
-on the diagram above. The encrypted file is represented on the untrusted storage
+in the diagram above. The encrypted file is represented on the untrusted storage
 as a single 4KB metadata node, which consists of a plaintext header, an
 encrypted part, and an unused padding.
 
@@ -399,8 +403,7 @@ encrypted. Step 4 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the data node, on the plaintext data-node buffer ``decrypted``
 and with the newly generated key. As part of this encryption operation, the MAC
 is generated and is stored in the corresponding slot of the root MHT node (thus
-shaping a key + MAC pair for data node 1). Since the MHT node's contents will
-be encrypted, the MAC will not be leaked.
+shaping a key + MAC pair for data node 1).
 
 At this point, the 4KB of the file data are stored as ciphertext in the bounce
 buffer of the data node and are ready to be flushed to storage. However, the
@@ -418,7 +421,7 @@ encrypted. Step 6 shows that the AES-GCM encryption happens in the ``encrypted``
 bounce buffer of the root MHT node, on the plaintext root-MHT-node ``decrypted``
 and with the newly generated key. As part of this encryption operation, the MAC
 is generated and is stored in the ``root_mht_node_mac`` field of the metadata
-node's header. Since the header will be encrypted, the MAC will not be leaked.
+node's header.
 
 At this point, both the data node and the root MHT node are ready to be flushed
 to storage. Now steps 7-9 are performed, which correspond to steps 2-4 in the
@@ -512,4 +515,6 @@ Additional details
   - It is worth pointing out that the format of encrypted files mostly uses
     one-time keys. The KDK is only used to derive the metadata-node key, thus it
     produces much less ciphertext than if it would be used to directly encrypt
-    file data. Therefore, the usual NIST limits would be reached much slower.
+    file data. Therefore, the usual NIST limits on the total number of
+    invocations of the encryption operation with the same key would be reached
+    much slower.
