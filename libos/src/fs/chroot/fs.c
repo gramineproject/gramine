@@ -266,6 +266,27 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     return (ssize_t)actual_count;
 }
 
+static int chroot_stat(struct libos_dentry* dent, struct stat* buf) {
+    assert(locked(&g_dcache_lock));
+    assert(dent->inode);
+
+    int ret;
+
+    /* Temporary open of the file is required only to check if the file still exists. Without the
+     * open and if the same file was opened before, Gramine would serve this `stat()` callback from
+     * the cached `dent->inode` and wouldn't notice that the file was removed on the host. Note that
+     * such check is relevant only to chroot files, because all other file types are either pseudo
+     * in-memory files (dev, etc, sys, tmpfs) or fully controlled by Gramine files (encrypted). */
+    PAL_HANDLE palhdl;
+    ret = chroot_temp_open(dent, dent->inode->type, &palhdl);
+    if (ret < 0)
+        return ret;
+
+    ret = generic_inode_stat(dent, buf);
+    PalObjectClose(palhdl);
+    return ret < 0 ? pal_to_unix_errno(ret) : 0;
+}
+
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
     int ret;
     PAL_HANDLE palhdl;
@@ -430,7 +451,7 @@ struct libos_d_ops chroot_d_ops = {
     .lookup  = &chroot_lookup,
     .creat   = &chroot_creat,
     .mkdir   = &chroot_mkdir,
-    .stat    = &generic_inode_stat,
+    .stat    = &chroot_stat,
     .readdir = &chroot_readdir,
     .unlink  = &chroot_unlink,
     .rename  = &chroot_rename,
