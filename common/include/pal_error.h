@@ -7,8 +7,9 @@
 
 #pragma once
 
-#include <nodiscard.h>
 #include <stddef.h>
+
+#include "nodiscard.h"
 
 typedef enum NODISCARD {
     PAL_ERROR_SUCCESS = 0,
