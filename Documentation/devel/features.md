@@ -2125,6 +2125,13 @@ all have hard-coded values.
 Gramine currently does *not* support changing file access/modification times, via `utime()`,
 `utimes()`, `futimesat()`, `utimensat()` system calls.
 
+Mounting files and directories with extended attributes (xattr) or setting them
+via `setxattr()`, `lsetxattr()`, `fsetxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`
+is not supported.
+Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
+`flistxattr()`) but always returns no attributes (which is a correct result in our case).
+
+
 <details><summary>Related system calls</summary>
 
 - ▣ `open()`: implemented, with limitations
@@ -3098,10 +3105,6 @@ codebase of Gramine minimal.
 - Berkeley Packet Filters (BPF) and eBPF: `bpf()`
 - Capabilities: `capget()`, `capset()`
 - Execution control and debugging: `ptrace()`, `syslog()`, `perf_event_open()`, `acct()`
-- Mounting or setting extended attributes for files and directories (xattr): `setxattr()`,
-  `lsetxattr()`, `fsetxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`.
-  Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`, `llistxattr()`,
-  `flistxattr()`) but always returns no attributes (which is a correct result in our case).
 - In-kernel key management (keyrings): `add_key()`, `request_key()`, `keyctl()`
 - Kernel modules: `create_module()`, `init_module()`, `finit_module()`, `delete_module()`,
   `query_module()`, `get_kernel_syms()`
