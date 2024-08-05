@@ -727,40 +727,40 @@ The below list is generated from the [syscall table of Linux
   <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
 
 - ☒ `setxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `lsetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fsetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `getxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `lgetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `fgetxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `listxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `llistxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☑ `flistxattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `removexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `lremovexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `fremovexattr()`
-  <sup>[24](#advancedinfeasible-unimplemented-features)</sup>
+  <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `tkill()`
   <sup>[7](#signals-and-process-state-changes)</sup>
