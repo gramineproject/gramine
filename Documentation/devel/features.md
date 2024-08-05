@@ -2227,6 +2227,19 @@ Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`,
 - ☒ `futimesat()`: may be implemented in the future
 - ☒ `utimensat()`: may be implemented in the future
 
+- ☑ `getxattr()`
+- ☑ `lgetxattr()`
+- ☑ `fgetxattr()`
+- ☑ `listxattr()`
+- ☑ `llistxattr()`
+- ☑ `flistxattr()`
+- ☒ `removexattr()`
+- ☒ `lremovexattr()`
+- ☒ `fremovexattr()`
+- ☒ `setxattr()`
+- ☒ `lsetxattr()`
+- ☒ `fsetxattr()`
+
 </details><br />
 
 #### File locking
@@ -3136,18 +3149,13 @@ codebase of Gramine minimal.
 - ☒ `copy_file_range()`
 - ☒ `create_module()`
 - ☒ `delete_module()`
-- ☑ `fgetxattr()`
 - ☒ `finit_module()`
-- ☑ `flistxattr()`
-- ☒ `fremovexattr()`
 - ☒ `fsconfig()`
-- ☒ `fsetxattr()`
 - ☒ `fsmount()`
 - ☒ `fsopen()`
 - ☒ `fspick()`
 - ☒ `get_kernel_syms()`
 - ☒ `getpmsg()`
-- ☑ `getxattr()`
 - ☒ `init_module()`
 - ☒ `io_pgetevents()`
 - ☒ `ioperm()`
@@ -3158,12 +3166,7 @@ codebase of Gramine minimal.
 - ☒ `landlock_add_rule()`
 - ☒ `landlock_create_ruleset()`
 - ☒ `landlock_restrict_self()`
-- ☑ `lgetxattr()`
-- ☑ `listxattr()`
-- ☑ `llistxattr()`
 - ☒ `lookup_dcookie()`
-- ☒ `lremovexattr()`
-- ☒ `lsetxattr()`
 - ☒ `modify_ldt()`
 - ☒ `nfsservctl()`
 - ☒ `nfsservctl()`
@@ -3182,14 +3185,12 @@ codebase of Gramine minimal.
 - ☒ `quotactl_fd()`
 - ☒ `readahead()`
 - ☒ `reboot()`
-- ☒ `removexattr()`
 - ☒ `request_key()`
 - ☒ `restart_syscall()`
 - ☒ `rseq()`
 - ☒ `seccomp()`
 - ☒ `security()`
 - ☒ `setns()`
-- ☒ `setxattr()`
 - ☒ `splice()`
 - ☒ `swapoff()`
 - ☒ `swapon()`
