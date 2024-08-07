@@ -24,6 +24,8 @@
 int PalRandomBitsRead(void* buffer, size_t size);
 
 static int mbedtls_to_pal_error(int error) {
+    assert(error <= 0);
+
     switch (error) {
         case 0:
             return 0;
