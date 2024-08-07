@@ -43,45 +43,39 @@ noreturn void libos_abort(void) {
 }
 
 #define IDX(x) [-(x)]
-static unsigned pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT] = {
+static int pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT] = {
     IDX(PAL_ERROR_SUCCESS)         = 0,
-    IDX(PAL_ERROR_NOTIMPLEMENTED)  = ENOSYS,
-    IDX(PAL_ERROR_NOTDEFINED)      = ENOSYS,
-    IDX(PAL_ERROR_NOTSUPPORT)      = EACCES,
-    IDX(PAL_ERROR_INVAL)           = EINVAL,
-    IDX(PAL_ERROR_TOOLONG)         = ENAMETOOLONG,
-    IDX(PAL_ERROR_DENIED)          = EACCES,
-    IDX(PAL_ERROR_BADHANDLE)       = EBADF,
-    IDX(PAL_ERROR_STREAMEXIST)     = EEXIST,
-    IDX(PAL_ERROR_STREAMNOTEXIST)  = ENOENT,
-    IDX(PAL_ERROR_STREAMISFILE)    = ENOTDIR,
-    IDX(PAL_ERROR_STREAMISDIR)     = EISDIR,
-    IDX(PAL_ERROR_STREAMISDEVICE)  = ESPIPE,
-    IDX(PAL_ERROR_INTERRUPTED)     = EINTR,
-    IDX(PAL_ERROR_OVERFLOW)        = EFAULT,
-    IDX(PAL_ERROR_BADADDR)         = EFAULT,
-    IDX(PAL_ERROR_NOMEM)           = ENOMEM,
-    IDX(PAL_ERROR_INCONSIST)       = EFAULT,
-    IDX(PAL_ERROR_TRYAGAIN)        = EAGAIN,
-    IDX(PAL_ERROR_NOTSERVER)       = EINVAL,
-    IDX(PAL_ERROR_NOTCONNECTION)   = ENOTCONN,
-    IDX(PAL_ERROR_CONNFAILED)      = ECONNRESET,
-    IDX(PAL_ERROR_ADDRNOTEXIST)    = EADDRNOTAVAIL,
-    IDX(PAL_ERROR_AFNOSUPPORT)     = EAFNOSUPPORT,
-    IDX(PAL_ERROR_CONNFAILED_PIPE) = EPIPE,
+    IDX(PAL_ERROR_NOTIMPLEMENTED)  = -ENOSYS,
+    IDX(PAL_ERROR_NOTDEFINED)      = -ENOSYS,
+    IDX(PAL_ERROR_NOTSUPPORT)      = -EACCES,
+    IDX(PAL_ERROR_INVAL)           = -EINVAL,
+    IDX(PAL_ERROR_TOOLONG)         = -ENAMETOOLONG,
+    IDX(PAL_ERROR_DENIED)          = -EACCES,
+    IDX(PAL_ERROR_BADHANDLE)       = -EBADF,
+    IDX(PAL_ERROR_STREAMEXIST)     = -EEXIST,
+    IDX(PAL_ERROR_STREAMNOTEXIST)  = -ENOENT,
+    IDX(PAL_ERROR_STREAMISFILE)    = -ENOTDIR,
+    IDX(PAL_ERROR_STREAMISDIR)     = -EISDIR,
+    IDX(PAL_ERROR_STREAMISDEVICE)  = -ESPIPE,
+    IDX(PAL_ERROR_INTERRUPTED)     = -EINTR,
+    IDX(PAL_ERROR_OVERFLOW)        = -EFAULT,
+    IDX(PAL_ERROR_BADADDR)         = -EFAULT,
+    IDX(PAL_ERROR_NOMEM)           = -ENOMEM,
+    IDX(PAL_ERROR_INCONSIST)       = -EFAULT,
+    IDX(PAL_ERROR_TRYAGAIN)        = -EAGAIN,
+    IDX(PAL_ERROR_NOTSERVER)       = -EINVAL,
+    IDX(PAL_ERROR_NOTCONNECTION)   = -ENOTCONN,
+    IDX(PAL_ERROR_CONNFAILED)      = -ECONNRESET,
+    IDX(PAL_ERROR_ADDRNOTEXIST)    = -EADDRNOTAVAIL,
+    IDX(PAL_ERROR_AFNOSUPPORT)     = -EAFNOSUPPORT,
+    IDX(PAL_ERROR_CONNFAILED_PIPE) = -EPIPE,
 };
 #undef IDX
 
-static unsigned long pal_to_unix_errno_positive(unsigned long err) {
-    return (err < PAL_ERROR_NATIVE_COUNT) ? pal_errno_to_unix_errno_table[err] : EINVAL;
-}
-
-long pal_to_unix_errno(long err) {
-    // TODO: The err variable should always be negative.
-    if (err >= 0) {
-        return pal_to_unix_errno_positive((unsigned long)err);
-    }
-    return -pal_to_unix_errno_positive((unsigned long)-err);
+int pal_to_unix_errno(long err) {
+    assert(err <= 0);
+    unsigned long perr = -err;
+    return (perr < PAL_ERROR_NATIVE_COUNT) ? pal_errno_to_unix_errno_table[perr] : -EINVAL;
 }
 
 bool g_received_user_memory = false;

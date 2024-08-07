@@ -144,10 +144,8 @@ bool handle_signal(PAL_CONTEXT* context);
 
 /*!
  * \brief Translate PAL error code into UNIX error code.
- *
- * The sign of the error code is preserved.
  */
-long pal_to_unix_errno(long err);
+int pal_to_unix_errno(long err);
 
 int set_hostname(const char* name, size_t len);
 
