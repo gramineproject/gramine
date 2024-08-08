@@ -17,6 +17,7 @@ usr/lib/${DEB_HOST_MULTIARCH}/libsecret_prov_verify.a
 usr/lib/${DEB_HOST_MULTIARCH}/libsgx_util.a*
 usr/lib/${DEB_HOST_MULTIARCH}/pkgconfig/*.pc
 
+usr/include/gramine/cbor.h
 usr/include/gramine/mbedtls/*.h
 usr/include/gramine/psa/*.h
 usr/include/gramine/ra_tls.h
