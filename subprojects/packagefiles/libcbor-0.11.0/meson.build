@@ -19,7 +19,9 @@ libcbor_lib = custom_target('libcbor',
     ],
 
     console: true,
-    install: false,
+
+    install: true,
+    install_dir: [get_option('libdir'), get_option('includedir') / 'gramine'],
 )
 
 # We can't use `include_directories('include')` because the `include/` dir is generated in the
