@@ -113,6 +113,7 @@ install -t %{buildroot}/%{_licensedir}/%{name} LICENSE*.txt
 
 %{_libdir}/libmbed{crypto,tls,x509}_%{name}.{so*,a}
 
+%{_libdir}/libcbor.a
 %{_libdir}/libra_tls*.so*
 %{_libdir}/libra_tls_verify.a
 %{_libdir}/libsecret_prov*.so*

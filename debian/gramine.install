@@ -8,6 +8,7 @@ usr/lib/${DEB_HOST_MULTIARCH}/gramine/direct/loader
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/libsysdb.so
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/libpal.so
 usr/lib/${DEB_HOST_MULTIARCH}/gramine/sgx/loader
+usr/lib/${DEB_HOST_MULTIARCH}/libcbor.a*
 usr/lib/${DEB_HOST_MULTIARCH}/libmbed*_gramine.*
 usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_attest.so*
 usr/lib/${DEB_HOST_MULTIARCH}/libra_tls_verify.a
