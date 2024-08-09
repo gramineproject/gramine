@@ -73,9 +73,11 @@ static int pal_errno_to_unix_errno_table[PAL_ERROR_NATIVE_COUNT] = {
 #undef IDX
 
 int pal_to_unix_errno(long err) {
-    assert(err <= 0);
-    unsigned long perr = -err;
-    return (perr < PAL_ERROR_NATIVE_COUNT) ? pal_errno_to_unix_errno_table[perr] : -EINVAL;
+    long perr = -err;
+
+    assert(perr >= 0 && perr < PAL_ERROR_NATIVE_COUNT);
+
+    return pal_errno_to_unix_errno_table[perr];
 }
 
 bool g_received_user_memory = false;
