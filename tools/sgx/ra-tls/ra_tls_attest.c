@@ -68,6 +68,14 @@ static ssize_t rw_file(const char* path, uint8_t* buf, size_t len, bool do_write
     return ret < 0 ? ret : bytes;
 }
 
+static ssize_t read_file(const char* path, uint8_t* buf, size_t len) {
+    return rw_file(path, buf, len, /*do_write=*/false);
+}
+
+static ssize_t write_file(const char* path, uint8_t* buf, size_t len) {
+    return rw_file(path, buf, len, /*do_write=*/true);
+}
+
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt with \p quote (legacy format)
  *  and \p evidence (new standard format) embedded */
 static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t quote_size,
@@ -184,8 +192,8 @@ static int generate_quote_with_pk_hash(mbedtls_pk_context* pk, uint8_t** out_quo
     if (ret < 0)
         return ret;
 
-    ssize_t written = rw_file("/dev/attestation/user_report_data", user_report_data.d,
-                              sizeof(user_report_data.d), /*do_write=*/true);
+    ssize_t written = write_file("/dev/attestation/user_report_data", user_report_data.d,
+                                 sizeof(user_report_data.d));
     if (written != sizeof(user_report_data))
         return MBEDTLS_ERR_X509_FILE_IO_ERROR;
 
@@ -193,8 +201,7 @@ static int generate_quote_with_pk_hash(mbedtls_pk_context* pk, uint8_t** out_quo
     if (!quote)
         return MBEDTLS_ERR_X509_ALLOC_FAILED;
 
-    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
-                                 /*do_write=*/false);
+    ssize_t quote_size = read_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE);
     if (quote_size < 0) {
         free(quote);
         return MBEDTLS_ERR_X509_FILE_IO_ERROR;
@@ -350,8 +357,8 @@ static int generate_quote_with_claims_hash(uint8_t* claims, size_t claims_size,
     if (ret < 0)
         goto fail;
 
-    ssize_t written = rw_file("/dev/attestation/user_report_data", user_report_data.d,
-                              sizeof(user_report_data.d), /*do_write=*/true);
+    ssize_t written = write_file("/dev/attestation/user_report_data", user_report_data.d,
+                                 sizeof(user_report_data.d));
     if (written != sizeof(user_report_data)) {
         ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
         goto fail;
@@ -363,8 +370,7 @@ static int generate_quote_with_claims_hash(uint8_t* claims, size_t claims_size,
         goto fail;
     }
 
-    ssize_t quote_size = rw_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE,
-                                 /*do_write=*/false);
+    ssize_t quote_size = read_file("/dev/attestation/quote", quote, SGX_QUOTE_MAX_SIZE);
     if (quote_size < 0) {
         ret = MBEDTLS_ERR_X509_FILE_IO_ERROR;
         goto fail;
