@@ -603,7 +603,9 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                                                     /*fd=*/-1,
                                                     /*offset=*/0);
     if (IS_PTR_ERR(dbg)) {
-        log_warning("Cannot allocate debug information (GDB will not work)");
+        log_error("Cannot allocate debug information for GDB");
+        ret = -ENOMEM;
+        goto out;
     } else {
         assert(dbg == (void*)DBGINFO_ADDR);
         dbg->pid            = g_host_pid;
