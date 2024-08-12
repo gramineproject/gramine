@@ -940,9 +940,9 @@ restore_xregs:
     # called __morestack.
     #
     # To make GDB backtrace work, we make sure that the first function outside of enclave
-    # (sgx_entry) has a return address on stack, pointing inside __morestack. We will not actually
-    # return to this function (sgx_entry performs EENTER to go back to enclave), but GDB will make a
-    # stack frame for it.
+    # (sgx_do_host_ocall) has a return address on stack, pointing inside __morestack. We will not
+    # actually return to this function (sgx_do_host_ocall performs EENTER to go back to enclave),
+    # but GDB will make a stack frame for it.
     #
     # The function contains CFI directives to make sure that all callee-saved registers can be
     # recovered. They should reflect the situation during EEXIT in code above.
