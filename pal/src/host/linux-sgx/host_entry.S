@@ -1,3 +1,15 @@
+# This file contains host-to-enclave and enclave-to-host flows, from the side of untrusted runtime:
+#
+#     - Host-to-enclave normal-context flow (ECALL) -- sgx_ecall() function.
+#
+#     - Host-to-enclave signal-handling flow (ECALL) -- sgx_raise() function.
+#
+#     - Enclave-to-host syscall-handling flow (OCALL) -- Lsgx_do_host_ocall label. The sgx_ecall()
+#       flow pushes the address of this label into RDX before calling EENTER, and the enclave code
+#       jumps to it when handling the OCALL, see enclave_entry.S:sgx_ocall().
+#
+#     - Enclave-to-host asynchronous enclave exit (AEX) -- async_exit_pointer() function.
+
 #include "sgx_arch.h"
 
 #include "asm-offsets.h"
@@ -11,8 +23,8 @@
 sgx_ecall:
     .cfi_startproc
 
-    # put entry address in RDX
-    leaq .Lsgx_entry(%rip), %rdx
+    # put host-OCALL target in RDX (enclave code will jump to it when handling the OCALL)
+    leaq .Lsgx_do_host_ocall(%rip), %rdx
 
     # other arguments: RDI - code, RSI - ms
 
@@ -126,7 +138,7 @@ sgx_raise:
     leaq .Lafter_resume(%rip), %rdx
     jmp .Ldo_ecall_callee_save
 
-.Lsgx_entry:
+.Lsgx_do_host_ocall:
     # arguments: RDI - code, RSI - ms
     .cfi_startproc
 
@@ -163,6 +175,7 @@ sgx_raise:
     andq $~0xF, %rsp  # Required by System V AMD64 ABI.
 #endif
 
+    # call one of the sgx_ocall_* functions defined in host_ocalls.c
     callq *%rbx
 
     movq %rbp, %rsp
