@@ -12,10 +12,10 @@
  * the host. Since the host is used purely for notifications, a malicious host can only induce
  * Denial of Service (DoS) attacks.
  *
- * The emulation is currently implemented at the level of a single process. The emulation *may* work
- * for multi-process applications, e.g., if the child process inherits the timerfd object but
- * doesn't use it. However, all timerfds created in the parent process are marked as invalid in
- * child processes, i.e. inter-process timing signals via timerfds are not allowed.
+ * The emulation is currently implemented at the level of a single process. All timerfds created in
+ * the parent process are marked as invalid in child processes. In multi-process applications,
+ * Gramine does not exit immediately after fork; it only exits if the application attempts to use
+ * timerfds in the child. Therefore, inter-process timing signals via timerfds are not allowed.
  *
  * The host's eventfd object is "dummy" and used purely for notifications -- to unblock blocking
  * read/select/poll/epoll system calls. The read notify logic is already hardened, by

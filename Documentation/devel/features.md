@@ -2881,10 +2881,10 @@ of Service (DoS) attacks. `TFD_TIMER_CANCEL_ON_SET` is silently ignored because 
 "discontinuous changes of time" in Gramine (via e.g., `settimeofday()`). `TFD_IOC_SET_TICKS` is not
 supported.
 
-The emulation is currently implemented at the level of a single process. The emulation *may* work
-for multi-process applications, e.g., if the child process inherits the timerfd object but doesn't
-use it. However, all timerfds created in the parent process are marked as invalid in child
-processes, i.e. inter-process timing signals via timerfds are not allowed.
+The emulation is currently implemented at the level of a single process. All timerfds created in the
+parent process are marked as invalid in child processes. In multi-process applications, Gramine does
+not exit immediately after fork; it only exits if the application attempts to use timerfds in the
+child. Therefore, inter-process timing signals via timerfds are not allowed.
 
 Gramine does *not* currently implement the POSIX per-process timer: `timer_create()`, etc. Gramine
 could implement it in the future, if need arises.
