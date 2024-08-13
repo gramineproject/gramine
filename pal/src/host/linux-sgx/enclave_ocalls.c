@@ -10,7 +10,7 @@
  * here we retry a host-level syscall. In some cases, this may lead to FD leaks or incorrect
  * semantics (e.g., a retried open() syscall may have succeeded the first time, but a signal arrived
  * right-after this syscall and forced -EINTR, thus leaving an FD from the first try open and
- * leaking). See also `man 7 signal` and `sgx_exception.c: handle_async_signal()`.
+ * leaking). See also `man 7 signal` and `host_exception.c:handle_async_signal()`.
  *
  * FIXME: Ideally, the untrusted-PAL signal handler must inspect the interrupted RIP and unwind/fix
  *        the untrusted state and decide whether to inject -EINTR or report success (e.g., if a

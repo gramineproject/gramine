@@ -5,7 +5,7 @@
 
 /*
  * SGX profiling. This code takes samples of running code and writes them out to a perf.data file
- * (see also sgx_perf_data.c).
+ * (see also host_perf_data.c).
  */
 
 #ifdef DEBUG
