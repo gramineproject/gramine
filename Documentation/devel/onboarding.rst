@@ -203,7 +203,7 @@ Also, pay attention to the unexpected (but benign) behavior of Gramine with the
 SGX backend when debugged under GDB:
 
 - Periodically, when stepping through the code, GDB may unexpectedly jump to
-  ``sgx_entry.S: async_exit_pointer``. This is the "landing pad" of the AEX flow
+  ``host_entry.S:async_exit_pointer``. This is the "landing pad" of the AEX flow
   of Intel SGX, and can happen at any moment in SGX enclave execution. Simply
   step through this ``async_exit_pointer`` function until the ``enclu``
   instruction (which performs ERESUME), and GDB will continue at the correct

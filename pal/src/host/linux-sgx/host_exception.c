@@ -10,7 +10,7 @@
 #include <stddef.h> /* needed by <linux/signal.h> for size_t */
 
 #include "sigset.h" /* FIXME: this include can't be sorted, otherwise we get:
-                     * In file included from sgx_exception.c:19:0:
+                     * In file included from host_exception.c:19:0:
                      * ../../../include/arch/x86_64/linux/ucontext.h:136:5: error: unknown type name ‘__sigset_t’
                      *      __sigset_t uc_sigmask;
                      */

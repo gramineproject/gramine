@@ -9,7 +9,7 @@
  * Overview of ELF files used in this host:
  * - pal-sgx and libraries it uses (outside enclave) - handled by ld.so and reported by it (through
  *   _r_debug mechanism)
- * - libpal.so (in enclave) - reported in sgx_main.c before enclave start
+ * - libpal.so (in enclave) - reported in host_main.c before enclave start via debug_map_add()
  * - LibOS, application, libc... (in enclave) - reported through PalDebugMap*
  *
  * In addition, we report executable memory mappings to the profiling subsystem.

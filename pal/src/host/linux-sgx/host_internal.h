@@ -133,7 +133,7 @@ int block_async_signals(bool block);
 int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count);
 
 #ifdef DEBUG
-/* SGX profiling (sgx_profile.c) */
+/* SGX profiling (host_profile.c) */
 
 /*
  * Default and maximum sampling frequency. We depend on Linux scheduler to interrupt us, so it's not
