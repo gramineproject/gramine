@@ -6,10 +6,11 @@
 /* Implementation of "timerfd" system calls.
  *
  * The timerfd object is created inside the LibOS, and all operations are resolved entirely inside
- * the LibOS. Each timerfd object is associated with a dummy eventfd created on the host. This is
- * purely for triggering read notifications (e.g., in epoll); timerfd data is verified inside
- * the LibOS and is never exposed to the host. Since the host is used purely for notifications, a
- * malicious host can only induce Denial of Service (DoS) attacks.
+ * the LibOS (note that the time source in Gramine SGX is still untrusted). Each timerfd object is
+ * associated with a dummy eventfd created on the host. This is purely for triggering read
+ * notifications (e.g., in epoll); timerfd data is verified inside the LibOS and is never exposed to
+ * the host. Since the host is used purely for notifications, a malicious host can only induce
+ * Denial of Service (DoS) attacks.
  *
  * The emulation is currently implemented at the level of a single process. The emulation *may* work
  * for multi-process applications, e.g., if the child process inherits the timerfd object but

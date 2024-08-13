@@ -2873,12 +2873,13 @@ Gramine implements alarm clocks via `alarm()`.
 
 Gramine implements timers that notify via file descriptors: `timerfd_create()`, `timerfd_settime()`
 and `timerfd_gettime()`. The timerfd object is created inside Gramine, and all operations are
-resolved entirely inside Gramine. Each timerfd object is associated with a dummy eventfd created on
-the host. This is purely for triggering read notifications (e.g., in epoll); timerfd data is
-verified inside Gramine and is never exposed to the host. Since the host is used purely for
-notifications, a malicious host can only induce Denial of Service (DoS) attacks.
-`TFD_TIMER_CANCEL_ON_SET` is silently ignored because there are no "discontinuous changes of time"
-in Gramine (via e.g., `settimeofday()`). `TFD_IOC_SET_TICKS` is not supported.
+resolved entirely inside Gramine (note that the time source in Gramine SGX is still untrusted). Each
+timerfd object is associated with a dummy eventfd created on the host. This is purely for triggering
+read notifications (e.g., in epoll); timerfd data is verified inside Gramine and is never exposed to
+the host. Since the host is used purely for notifications, a malicious host can only induce Denial
+of Service (DoS) attacks. `TFD_TIMER_CANCEL_ON_SET` is silently ignored because there are no
+"discontinuous changes of time" in Gramine (via e.g., `settimeofday()`). `TFD_IOC_SET_TICKS` is not
+supported.
 
 The emulation is currently implemented at the level of a single process. The emulation *may* work
 for multi-process applications, e.g., if the child process inherits the timerfd object but doesn't
@@ -2902,9 +2903,9 @@ could implement it in the future, if need arises.
 - ☒ `timer_getoverrun()`: may be implemented in the future
 - ☒ `timer_delete()`: may be implemented in the future
 
-- ▣ `timerfd_create()`: see notes above
-- ▣ `timerfd_settime()`: see notes above
-- ▣ `timerfd_gettime()`: see notes above
+- ▣ `timerfd_create()`: see the notes above
+- ▣ `timerfd_settime()`: see the notes above
+- ▣ `timerfd_gettime()`: see the notes above
 
 </details><br />
 
