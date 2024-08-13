@@ -1,7 +1,6 @@
 # This file contains host-to-enclave and enclave-to-host flows, from the side of untrusted runtime:
 #
-#     - Host-to-enclave normal-context flow (ECALL) -- sgx_ecall() function. There are three ECALLs
-#       currently: ECALL_ENCLAVE_START, ECALL_THREAD_START and ECALL_THREAD_RESET.
+#     - Host-to-enclave normal-context flow (ECALL) -- sgx_ecall() function.
 #
 #     - Host-to-enclave signal-handling flow (ECALL) -- sgx_raise() function.
 #
@@ -24,7 +23,7 @@
 sgx_ecall:
     .cfi_startproc
 
-    # put entry address in RDX
+    # put OCALL exit target in RDX
     leaq .Lsgx_do_host_ocall(%rip), %rdx
 
     # other arguments: RDI - code, RSI - ms
