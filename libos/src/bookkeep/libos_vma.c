@@ -1395,6 +1395,9 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
+#ifndef LINUX_KERNEL_PATCHED
+    uint8_t* bitvector;
+#endif
     int error;
 };
 
@@ -1419,6 +1422,13 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         return true;
     }
 
+/* There is a data race in the SGX driver where two enclave threads may try to add and remove the
+ * same enclave page simultaneously (e.g., if both lazy allocation and `MADV_DONTNEED` semantics are
+ * supported), see below for details:
+ * https://lore.kernel.org/lkml/20240429104330.3636113-3-dmitrii.kuvaiskii@intel.com.
+ *
+ * TODO: remove this once the Linux kernel is patched. */
+#ifdef LINUX_KERNEL_PATCHED
     uintptr_t start = MAX(ctx->begin, vma->begin);
     uintptr_t end = MIN(ctx->end, vma->end);
     int ret = PalFreeThenLazyReallocCommittedPages((void*)start, end - start);
@@ -1426,11 +1436,61 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
         ctx->error = pal_to_unix_errno(ret);
         return false;
     }
+#else
+    uintptr_t zero_start = MAX(ctx->begin, vma->begin);
+    uintptr_t zero_end = MIN(ctx->end, vma->valid_end);
 
+    pal_prot_flags_t pal_prot = LINUX_PROT_TO_PAL(vma->prot, vma->flags);
+    pal_prot_flags_t pal_prot_writable = pal_prot | PAL_PROT_WRITE;
+
+    if (pal_prot != pal_prot_writable) {
+        /* make the area writable so that it can be memset-to-zero */
+        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start,
+                                          pal_prot_writable);
+        if (ret < 0) {
+            ctx->error = pal_to_unix_errno(ret);
+            return false;
+        }
+    }
+
+    if (vma->flags & MAP_NORESERVE) {
+        /* Lazy allocation of pages, zeroize only the committed pages. Note that the uncommitted
+         * pages have to be skipped to avoid deadlocks. This is because we're holding the
+         * non-reentrant/recursive `vma_tree_lock` when we're in this visitor callback (which is
+         * invoked during VMA traversing). And if we hit page faults on accessing the uncommitted
+         * pages, our lazy allocation logic would also try to acquire the same lock for VMA lookup
+         * in g_mem_bkeep_get_vma_info_upcall (see `pal_mem_bkeep_get_vma_info()` for details). */
+        memset(ctx->bitvector, 0, UDIV_ROUND_UP((ctx->end - ctx->begin) / PAGE_SIZE, 8));
+
+        PalGetLazyCommitPages(zero_start, (zero_end - zero_start), ctx->bitvector);
+
+        size_t zero_pages = (zero_end - zero_start) / PAGE_SIZE;
+        for (size_t bit_idx = 0; bit_idx < zero_pages; bit_idx++) {
+            size_t byte_idx = bit_idx / 8;
+            size_t bit_position = bit_idx % 8;
+
+            uint8_t byte = (ctx->bitvector)[byte_idx];
+            if (!(byte & (1 << bit_position)))
+                memset((void*)(zero_start + bit_idx * PAGE_SIZE), 0, PAGE_SIZE);
+        }
+    } else {
+        memset((void*)zero_start, 0, zero_end - zero_start);
+    }
+
+    if (pal_prot != pal_prot_writable) {
+        /* the area was made writable above; restore the original permissions */
+        int ret = PalVirtualMemoryProtect((void*)zero_start, zero_end - zero_start, pal_prot);
+        if (ret < 0) {
+            log_error("restoring original permissions failed: %s", pal_strerror(ret));
+            BUG();
+        }
+    }
+#endif
     return true;
 }
 
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
+#ifdef LINUX_KERNEL_PATCHED
     struct madvise_dontneed_ctx ctx = {
         .begin = begin,
         .end = end,
@@ -1445,6 +1505,31 @@ int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
     if (!is_continuous)
         return -ENOMEM;
     return ctx.error;
+#else
+    /* allocate the bitvector for committed pages info outside the VMA traversing to avoid
+     * recursively holding `vma_tree_lock` */
+    size_t bitvector_size = UDIV_ROUND_UP((end - begin) / PAGE_SIZE, 8);
+    uint8_t* bitvector = calloc(1, bitvector_size);
+    if (!bitvector)
+        return -ENOMEM;
+
+    struct madvise_dontneed_ctx ctx = {
+        .begin = begin,
+        .end = end,
+        .bitvector = bitvector,
+        .error = 0,
+    };
+
+    spinlock_lock(&vma_tree_lock);
+    bool is_continuous = _traverse_vmas_in_range(begin, end, /*use_only_valid_part=*/false,
+                                                 madvise_dontneed_visitor, &ctx);
+    spinlock_unlock(&vma_tree_lock);
+
+    if (!is_continuous)
+        ctx.error = -ENOMEM;
+    free(bitvector);
+    return ctx.error;
+#endif
 }
 
 static bool vma_filter_needs_reload(struct libos_vma* vma, void* arg) {
