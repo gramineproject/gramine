@@ -23,7 +23,7 @@
 sgx_ecall:
     .cfi_startproc
 
-    # put OCALL entry target in RDX (enclave code will jump to it when handling the OCALL)
+    # put host-OCALL target in RDX (enclave code will jump to it when handling the OCALL)
     leaq .Lsgx_do_host_ocall(%rip), %rdx
 
     # other arguments: RDI - code, RSI - ms
