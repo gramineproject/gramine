@@ -41,8 +41,8 @@ static long sgx_ocall_exit(void* args) {
 
     /* exit the whole process if exit_group() */
     if (ocall_exit_args->is_exitgroup) {
-        update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
+        update_print_and_reset_stats(/*process_wide=*/true);
         sgx_profile_finish();
 #endif
 
@@ -64,8 +64,8 @@ static long sgx_ocall_exit(void* args) {
 
     if (!current_enclave_thread_cnt()) {
         /* no enclave threads left, kill the whole process */
-        update_and_print_stats(/*process_wide=*/true);
 #ifdef DEBUG
+        update_print_and_reset_stats(/*process_wide=*/true);
         sgx_profile_finish();
 #endif
 #ifdef SGX_VTUNE_PROFILE

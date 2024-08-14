@@ -60,8 +60,9 @@ extern struct pal_enclave g_pal_enclave;
 #ifdef DEBUG
 extern bool g_trigger_profile_reinit;
 extern char g_profile_filename[128];
+extern int g_stats_reset_leader_tid;
+extern long long int g_stats_reset_epoch;
 #endif /* DEBUG */
-
 void* realloc(void* ptr, size_t new_size);
 
 int open_sgx_driver(void);
@@ -130,9 +131,9 @@ void thread_exit(int status);
 int sgx_signal_setup(void);
 int block_async_signals(bool block);
 
+#ifdef DEBUG
 int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count);
 
-#ifdef DEBUG
 /* SGX profiling (sgx_profile.c) */
 
 /*

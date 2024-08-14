@@ -26,13 +26,13 @@ static size_t g_enclave_thread_num = 0;
 
 bool g_sgx_enable_stats = false;
 
-/* this function is called only on thread/process exit (never in the middle of thread exec) */
-void update_and_print_stats(bool process_wide) {
-    static uint64_t g_eenter_cnt       = 0;
-    static uint64_t g_eexit_cnt        = 0;
-    static uint64_t g_aex_cnt          = 0;
-    static uint64_t g_sync_signal_cnt  = 0;
-    static uint64_t g_async_signal_cnt = 0;
+#ifdef DEBUG
+void update_print_and_reset_stats(bool process_wide) {
+    static atomic_ulong g_eenter_cnt       = 0;
+    static atomic_ulong g_eexit_cnt        = 0;
+    static atomic_ulong g_aex_cnt          = 0;
+    static atomic_ulong g_sync_signal_cnt  = 0;
+    static atomic_ulong g_async_signal_cnt = 0;
 
     if (!g_sgx_enable_stats)
         return;
@@ -50,11 +50,18 @@ void update_and_print_stats(bool process_wide) {
                tid, tcb->eenter_cnt, tcb->eexit_cnt, tcb->aex_cnt,
                tcb->sync_signal_cnt, tcb->async_signal_cnt);
 
-    __atomic_fetch_add(&g_eenter_cnt, tcb->eenter_cnt, __ATOMIC_ACQ_REL);
-    __atomic_fetch_add(&g_eexit_cnt, tcb->eexit_cnt, __ATOMIC_ACQ_REL);
-    __atomic_fetch_add(&g_aex_cnt, tcb->aex_cnt, __ATOMIC_ACQ_REL);
-    __atomic_fetch_add(&g_sync_signal_cnt, tcb->sync_signal_cnt, __ATOMIC_ACQ_REL);
-    __atomic_fetch_add(&g_async_signal_cnt, tcb->async_signal_cnt, __ATOMIC_ACQ_REL);
+    g_eenter_cnt       += tcb->eenter_cnt;
+    g_eexit_cnt        += tcb->eexit_cnt;
+    g_aex_cnt          += tcb->aex_cnt;
+    g_sync_signal_cnt  += tcb->sync_signal_cnt;
+    g_async_signal_cnt += tcb->async_signal_cnt;
+
+    tcb->eenter_cnt       = 0;
+    tcb->eexit_cnt        = 0;
+    tcb->aex_cnt          = 0;
+    tcb->sync_signal_cnt  = 0;
+    tcb->async_signal_cnt = 0;
+    tcb->reset_stats      = false;
 
     if (process_wide) {
         int pid = g_host_pid;
@@ -65,46 +72,32 @@ void update_and_print_stats(bool process_wide) {
                    "  # of AEXs:           %lu\n"
                    "  # of sync signals:   %lu\n"
                    "  # of async signals:  %lu",
-                   pid, __atomic_load_n(&g_eenter_cnt, __ATOMIC_ACQUIRE),
-                   __atomic_load_n(&g_eexit_cnt, __ATOMIC_ACQUIRE),
-                   __atomic_load_n(&g_aex_cnt, __ATOMIC_ACQUIRE),
-                   __atomic_load_n(&g_sync_signal_cnt, __ATOMIC_ACQUIRE),
-                   __atomic_load_n(&g_async_signal_cnt, __ATOMIC_ACQUIRE));
+                   pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
+                   g_sync_signal_cnt, g_async_signal_cnt);
 
-        __atomic_store_n(&g_eenter_cnt, 0, __ATOMIC_RELEASE);
-        __atomic_store_n(&g_eexit_cnt, 0, __ATOMIC_RELEASE);
-        __atomic_store_n(&g_aex_cnt, 0, __ATOMIC_RELEASE);
-        __atomic_store_n(&g_sync_signal_cnt, 0, __ATOMIC_RELEASE);
-        __atomic_store_n(&g_async_signal_cnt, 0, __ATOMIC_RELEASE);
+    g_eenter_cnt       = 0;
+    g_eexit_cnt        = 0;
+    g_aex_cnt          = 0;
+    g_sync_signal_cnt  = 0;
+    g_async_signal_cnt = 0;
     }
 }
+#endif /* DEBUG */
 
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->self = tcb;
     tcb->tcs = NULL;    /* initialized by child thread */
     tcb->stack = stack;
     tcb->alt_stack = alt_stack;
-
     tcb->eenter_cnt       = 0;
     tcb->eexit_cnt        = 0;
     tcb->aex_cnt          = 0;
     tcb->sync_signal_cnt  = 0;
     tcb->async_signal_cnt = 0;
     tcb->reset_stats      = false;
-
     tcb->profile_sample_time = 0;
 
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
-}
-
-void pal_host_tcb_reset_stats(void) {
-    PAL_HOST_TCB* tcb = pal_get_host_tcb();
-    tcb->eenter_cnt       = 0;
-    tcb->eexit_cnt        = 0;
-    tcb->aex_cnt          = 0;
-    tcb->sync_signal_cnt  = 0;
-    tcb->async_signal_cnt = 0;
-    tcb->reset_stats      = false;
 }
 
 int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
@@ -127,10 +120,12 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
     int ret;
     struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
 
+#ifdef DEBUG
     ret = set_tcs_debug_flag_if_debugging((void**)&tcs, /*count=*/1);
     if (ret < 0) {
         return ret;
     }
+#endif /* DEBUG */
 
     size_t i = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
@@ -306,7 +301,15 @@ noreturn void thread_exit(int status) {
      * (by sgx_ocall_exit()) but we keep it here for future proof */
     block_async_signals(true);
 
-    update_and_print_stats(/*process_wide=*/false);
+#ifdef DEBUG
+    if(__atomic_load_n(&g_stats_reset_leader_tid, __ATOMIC_ACQUIRE) == DO_SYSCALL(gettid)) {
+        __atomic_store_n(&g_stats_reset_leader_tid, 0, __ATOMIC_RELEASE);
+        log_warning("Main thread exited. The SIGUSR1 signal may be lost");
+    }
+    __atomic_fetch_add(&g_stats_reset_epoch, 1, __ATOMIC_ACQ_REL);
+
+    update_print_and_reset_stats(/*process_wide=*/false);
+#endif /* DEBUG */
 
     if (tcb->alt_stack) {
         stack_t ss;
@@ -410,6 +413,7 @@ int get_tid_from_tcs(void* tcs) {
     return tid ? tid : -EINVAL;
 }
 
+#ifdef DEBUG
 int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count) {
     if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
         return 0;
@@ -446,3 +450,22 @@ out:
     DO_SYSCALL(close, enclave_mem);
     return ret;
 }
+
+int send_sigusr1_to_followers(pid_t leader_tid) {
+    size_t followers_num = 0;
+    size_t enclave_thread_count = current_enclave_thread_cnt();
+
+    spinlock_lock(&g_enclave_thread_map_lock);
+    // enclave_thread_count limits the repeatative looping over thread ids
+    for (size_t i = 0; i < enclave_thread_count; i++) {
+        int follower_tid = g_enclave_thread_map[i].tid;
+        if (!follower_tid || follower_tid == leader_tid)
+            continue;
+
+        DO_SYSCALL(tgkill, g_host_pid, follower_tid, SIGUSR1);
+        followers_num++;
+    }
+    spinlock_unlock(&g_enclave_thread_map_lock);
+    return followers_num;
+}
+#endif /* DEBUG */

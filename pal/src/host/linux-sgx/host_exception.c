@@ -30,8 +30,8 @@
 #include "sigreturn.h"
 #include "ucontext.h"
 
-static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
-
+static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT, SIGUSR1};
+ #ifdef DEBUG
 /*
  * If no SGX-stats reset is in flight, this variable is zero.
  *
@@ -44,7 +44,8 @@ static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
  *      Two cases are possible:
  *        a. If PID of sending process is the current PID, then the signal was sent by the "leader"
  *           and this thread is a "follower" -- it sets `reset_stats = true` in its TCB, so that
- *           this thread's statistics are dumped and reset on the next AEX.
+ *           this thread's statistics are dumped and reset on the next AEX or right-before
+ *           executing the next OCALL in untrusted runtime.
  *        b. If PID of sending process is not the current PID, then the signal was sent by the user
  *           and this is a new "SGX-stats reset" event from the user. Since the previous flow is
  *           still in flight, the thread must ignore this signal.
@@ -58,7 +59,9 @@ static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
  *
  * Application threads on Linux can never be 0, so this "no-op" default is safe.
  */
-static int g_stats_reset_leader_tid = 0;
+ int g_stats_reset_leader_tid = 0;
+ long long int g_stats_reset_epoch = 0;
+#endif /* DEBUG */
 
 static int block_signal(int sig, bool block) {
     int how = block ? SIG_BLOCK : SIG_UNBLOCK;
@@ -219,6 +222,7 @@ static void handle_dummy_signal(int signum, siginfo_t* info, struct ucontext* uc
     /* we need this handler to interrupt blocking syscalls in RPC threads */
 }
 
+#ifdef DEBUG
 static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(signum);
     __UNUSED(info);
@@ -245,12 +249,11 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
         }
     }
 
-#ifdef DEBUG
     if (g_pal_enclave.profile_enable) {
         __atomic_store_n(&g_trigger_profile_reinit, true, __ATOMIC_RELEASE);
     }
-#endif /* DEBUG */
 }
+#endif /* DEBUG */
 
 int sgx_signal_setup(void) {
     int ret;
@@ -290,9 +293,11 @@ int sgx_signal_setup(void) {
     if (ret < 0)
         goto err;
 
+#ifdef DEBUG
     ret = set_signal_handler(SIGUSR1, handle_sigusr1);
     if (ret < 0)
         goto err;
+#endif /* DEBUG */
 
     /* SIGUSR2 is reserved for Gramine usage: interrupting blocking syscalls in RPC threads.
      * We block SIGUSR2 in enclave threads; it is unblocked by each RPC thread explicitly. */
@@ -325,24 +330,9 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
     default_describe_location(addr, buf, buf_size);
 }
 
-static size_t send_sigusr1_to_followers(pid_t leader_tid) {
-    size_t followers_num = 0;
-
-    /* we re-use DBGINFO_ADDR special variable (that is primarily used by GDB for debugging),
-     * fortunately this variable is set up even in non-debug builds */
-    for (size_t i = 0; i < MAX_DBG_THREADS; i++) {
-        int follower_tid = ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i];
-        if (!follower_tid || follower_tid == leader_tid)
-            continue;
-
-        DO_SYSCALL(tkill, follower_tid, SIGUSR1);
-        followers_num++;
-    }
-    return followers_num;
-}
-
+#ifdef DEBUG
 /* called on each AEX and OCALL (in normal context), see host_entry.S */
-void dump_and_reset_stats(void) {
+void maybe_dump_and_reset_stats(void) {
     static size_t followers_visited_num = 0; /* note `static`, it is a global var */
 
     if (!g_sgx_enable_stats)
@@ -360,17 +350,23 @@ void dump_and_reset_stats(void) {
         log_always("----- DUMPING and RESETTING SGX STATS -----");
         size_t followers_num = send_sigusr1_to_followers(leader_tid);
 
-        while ((__atomic_load_n(&followers_visited_num, __ATOMIC_ACQUIRE)) < followers_num)
-            DO_SYSCALL(sched_yield);
+        __atomic_fetch_add(&g_stats_reset_epoch, 1, __ATOMIC_ACQ_REL);
+        long long int noted_epoch = __atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE);
+        while ((__atomic_load_n(&followers_visited_num, __ATOMIC_ACQUIRE)) < followers_num) {
 
-        update_and_print_stats(/*process_wide=*/true);
-        pal_host_tcb_reset_stats();
+            if(__atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE) > noted_epoch)
+                log_warning("One of the worker threads exited");
+            DO_SYSCALL(sched_yield);
+        }
+        log_always("STATS notes_epoch %lld", noted_epoch);
+
+        update_print_and_reset_stats(/*process_wide=*/true);
         __atomic_store_n(&followers_visited_num, 0, __ATOMIC_RELEASE);
 
         __atomic_store_n(&g_stats_reset_leader_tid, 0, __ATOMIC_RELEASE);
     } else {
-        update_and_print_stats(/*process_wide=*/false);
-        pal_host_tcb_reset_stats();
+        update_print_and_reset_stats(/*process_wide=*/false);
         __atomic_fetch_add(&followers_visited_num, 1, __ATOMIC_ACQ_REL);
     }
 }
+#endif /* DEBUG */
