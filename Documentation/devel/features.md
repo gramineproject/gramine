@@ -2963,7 +2963,8 @@ current process. The following resources are supported:
 - `RLIMIT_CORE` -- dummy, zero by default
 - `RLIMIT_RSS` -- dummy, no limit by default
 - `RLIMIT_NPROC` -- dummy, no limit by default
-- `RLIMIT_NOFILE` -- implemented, default soft limit is 900, default hard limit is 65K
+- `RLIMIT_NOFILE` -- implemented, equal to `sys.fds.limit` {ref}`manifest option <sys-fds-limit>` by
+  default
 - `RLIMIT_MEMLOCK` -- dummy, no limit by default
 - `RLIMIT_AS` -- dummy, no limit by default
 - `RLIMIT_LOCKS` -- dummy, no limit by default

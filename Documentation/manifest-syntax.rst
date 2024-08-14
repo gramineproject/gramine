@@ -308,6 +308,21 @@ may improve performance for certain workloads but may also generate
 ``SIGSEGV/SIGBUS`` exceptions for some applications that specifically use
 invalid pointers (though this is not expected for most real-world applications).
 
+.. _sys-fds-limit:
+
+Limit on open file descriptors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sys.fds.limit = [NUM]
+    (default: 900)
+
+This specifies the maximum number of open file descriptors in the Gramine
+process. More specifically, this is equivalent to the ``RLIMIT_NOFILE`` resource
+limit: it specifies a value one greater than the maximum file descriptor number
+that can be opened by the Gramine process.
+
 .. _stack-size:
 
 Stack size

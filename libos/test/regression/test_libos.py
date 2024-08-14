@@ -1064,6 +1064,24 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['itimer'])
         self.assertIn("TEST OK", stdout)
 
+    def test_160_rlimit_nofile(self):
+        # uses manifest.template
+        stdout, _ = self.run_binary(['rlimit_nofile'])
+        self.assertIn("old RLIMIT_NOFILE soft limit: 900", stdout)
+        self.assertIn("(before setrlimit) opened fd: 899", stdout)
+        self.assertIn("new RLIMIT_NOFILE soft limit: 901", stdout)
+        self.assertIn("(after setrlimit) opened fd: 900", stdout)
+        self.assertIn("TEST OK", stdout)
+
+    def test_161_rlimit_nofile_4k(self):
+        # uses rlimit_nofile_4k.manifest.template
+        stdout, _ = self.run_binary(['rlimit_nofile_4k'])
+        self.assertIn("old RLIMIT_NOFILE soft limit: 4096", stdout)
+        self.assertIn("(before setrlimit) opened fd: 4095", stdout)
+        self.assertIn("new RLIMIT_NOFILE soft limit: 4097", stdout)
+        self.assertIn("(after setrlimit) opened fd: 4096", stdout)
+        self.assertIn("TEST OK", stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])

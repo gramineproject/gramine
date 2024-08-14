@@ -130,5 +130,7 @@ GramineManifestSchema = Schema({
         'debug__mock_syscalls': [{Required('name'): str, 'return': int}],
 
         'stack': {'size': _size},
+
+        'fds': {'limit': int},
     },
 })
