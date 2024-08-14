@@ -101,6 +101,8 @@ manifests = [
   "readdir",
   "rename_unlink",
   "rename_unlink_fchown",
+  "rlimit_nofile",
+  "rlimit_nofile_4k",
   "run_test",
   "rwlock",
   "sched",

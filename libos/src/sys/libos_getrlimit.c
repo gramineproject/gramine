@@ -16,7 +16,17 @@
 #include "linux_abi/sysinfo.h"
 
 /*
- * TODO: implement actual limitation on each resource.
+ * The only resource limits that affect internal Gramine logic are:
+ *
+ *   - RLIMIT_DATA:   initially equal to `sys.brk.max_size` manifest option, affects `brk()` system
+ *                    call
+ *   - RLIMIT_STACK:  initially equal to `sys.stack.size` manifest option, but updating this limit
+ *                    does *not* affect the max stack size of the main thread for processes which
+ *                    are already running
+ *   - RLIMIT_NOFILE: initially equal to `sys.fds.limit` manifest option, affects system calls that
+ *                    create new file descriptors, e.g. open(), dup(), pipe(), etc.
+ *
+ * FIXME: implement actual limitation on each resource?
  *
  * The current behavor(i.e. sys_stack_size, brk_max_size) may be subject
  * to be fixed.

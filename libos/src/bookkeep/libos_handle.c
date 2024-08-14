@@ -146,10 +146,33 @@ int init_handle(void) {
     if (!create_lock(&handle_mgr_lock)) {
         return -ENOMEM;
     }
+
     handle_mgr = create_mem_mgr(init_align_up(HANDLE_MGR_ALLOC));
     if (!handle_mgr) {
         return -ENOMEM;
     }
+
+    /* after fork, in the new child process, `libos_init` is run, hence this function too - but
+     * forked process will get its RLIMIT_NOFILE from the checkpoint */
+    assert(g_pal_public_state);
+    if (g_pal_public_state->parent_process)
+        return 0;
+
+    assert(g_manifest_root);
+    int64_t fds_limit_init64;
+    int ret = toml_int_in(g_manifest_root, "sys.fds.limit",
+                          /*defaultval=*/get_rlimit_cur(RLIMIT_NOFILE),
+                          &fds_limit_init64);
+    if (ret < 0) {
+        log_error("Cannot parse 'sys.fds.limit'");
+        return -EINVAL;
+    }
+    if (fds_limit_init64 < 0) {
+        log_error("'sys.fds.limit' is negative (%ld)", fds_limit_init64);
+        return -EINVAL;
+    }
+    set_rlimit_cur(RLIMIT_NOFILE, (uint64_t)fds_limit_init64);
+
     return 0;
 }
 
