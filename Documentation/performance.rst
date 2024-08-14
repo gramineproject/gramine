@@ -18,11 +18,12 @@ Enabling per-thread and process-wide SGX stats
 
 See also :ref:`perf` below for installing ``perf``.
 
-Enable statistics using ``sgx.enable_stats = true`` manifest option. Now your
-graminized application correctly reports performance counters. This is useful
-when using e.g. ``perf stat`` to collect performance statistics. This manifest
-option also forces Gramine to dump SGX-related information on each
-thread/process exit. Here is an example:
+Enable statistics using ``sgx.enable_stats = true`` manifest option (note that
+Gramine must be compiled with ``--buildtype=debug`` or ``--buildtype=debugoptimized``
+for this option to work). Now your graminized application correctly reports
+performance counters. This is useful when using e.g. ``perf stat`` to collect
+performance statistics. This manifest option also forces Gramine to dump
+SGX-related information on each thread/process exit. Here is an example:
 
 ::
 

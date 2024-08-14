@@ -1197,6 +1197,8 @@ Enabling per-thread and process-wide SGX stats
     sgx.enable_stats = [true|false]
     (Default: false)
 
+Gramine must be compiled with --buildtype=debug or --buildtype=debugoptimized
+for this option to work. In addition, the manifest must contain sgx.debug = true.
 This syntax specifies whether to enable SGX enclave-specific statistics:
 
 #. ``TCS.FLAGS.DBGOPTIN`` flag. This flag is set in all enclave threads and
