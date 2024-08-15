@@ -907,7 +907,7 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
             memset(addr, 0, size);
         }
     } else {
-        return -PAL_ERROR_DENIED;
+        return PAL_ERROR_DENIED;
     }
 
     return 0;

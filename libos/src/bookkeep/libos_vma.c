@@ -94,10 +94,6 @@ static bool is_addr_in_vma(uintptr_t addr, struct libos_vma* vma) {
     return vma->begin <= addr && addr < vma->end;
 }
 
-static bool is_addr_in_vma_valid_range(uintptr_t addr, struct libos_vma* vma) {
-    return vma->begin <= addr && addr < vma->valid_end;
-}
-
 /* Returns whether `addr` is smaller or inside a vma (`node`). */
 static bool cmp_addr_to_vma(void* addr, struct avl_tree_node* node) {
     struct libos_vma* vma = container_of(node, struct libos_vma, tree_node);
@@ -1234,6 +1230,28 @@ static int pal_mem_bkeep_free(uintptr_t addr, size_t size) {
     return 0;
 }
 
+static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
+    struct libos_vma_info vma_info;
+    int ret = lookup_vma((void*)addr, &vma_info);
+    if (ret < 0)
+        return ret;
+
+    if (addr >= (uintptr_t)vma_info.addr + vma_info.valid_length) {
+        ret = -EACCES;
+        goto out;
+    }
+
+    *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
+
+    ret = 0;
+out:
+    if (vma_info.file) {
+        put_handle(vma_info.file);
+    }
+
+    return ret;
+}
+
 static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     vma_info->addr         = (void*)vma->begin;
     vma_info->length       = vma->end - vma->begin;
@@ -1247,30 +1265,6 @@ static void dump_vma(struct libos_vma_info* vma_info, struct libos_vma* vma) {
     }
     static_assert(sizeof(vma_info->comment) == sizeof(vma->comment), "Comments sizes do not match");
     memcpy(vma_info->comment, vma->comment, sizeof(vma_info->comment));
-}
-
-static int pal_mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
-    int ret = 0;
-
-    spinlock_lock(&vma_tree_lock);
-    struct libos_vma* vma = _lookup_vma((uintptr_t)addr);
-    if (!vma || !is_addr_in_vma_valid_range((uintptr_t)addr, vma)) {
-        ret = -EACCES;
-        goto out;
-    }
-
-    struct libos_vma_info vma_info;
-    dump_vma(&vma_info, vma);
-
-    *out_prot_flags = LINUX_PROT_TO_PAL(vma_info.prot, vma_info.flags);
-
-    if (vma_info.file) {
-        put_handle(vma_info.file);
-    }
-
-out:
-    spinlock_unlock(&vma_tree_lock);
-    return ret;
 }
 
 int lookup_vma(void* addr, struct libos_vma_info* vma_info) {
@@ -1408,7 +1402,7 @@ void free_vma_info_array(struct libos_vma_info* vma_infos, size_t count) {
 struct madvise_dontneed_ctx {
     uintptr_t begin;
     uintptr_t end;
-#ifndef LINUX_KERNEL_PATCHED
+#ifndef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
     uint8_t* bitvector;
 #endif
     int error;
@@ -1441,7 +1435,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
  * https://lore.kernel.org/lkml/20240429104330.3636113-3-dmitrii.kuvaiskii@intel.com.
  *
  * TODO: remove this once the Linux kernel is patched. */
-#ifdef LINUX_KERNEL_PATCHED
+#ifdef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
     uintptr_t start = MAX(ctx->begin, vma->begin);
     uintptr_t end = MIN(ctx->end, vma->valid_end);
     int ret = PalFreeThenLazyReallocCommittedPages((void*)start, end - start);
@@ -1475,7 +1469,7 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
          * in g_mem_bkeep_get_vma_info_upcall (see `pal_mem_bkeep_get_vma_info()` for details). */
         memset(ctx->bitvector, 0, UDIV_ROUND_UP((ctx->end - ctx->begin) / PAGE_SIZE, 8));
 
-        PalGetLazyCommitPages(zero_start, (zero_end - zero_start), ctx->bitvector);
+        PalGetLazyCommitPages(zero_start, zero_end - zero_start, ctx->bitvector);
 
         size_t zero_pages = (zero_end - zero_start) / PAGE_SIZE;
         for (size_t bit_idx = 0; bit_idx < zero_pages; bit_idx++) {
@@ -1503,7 +1497,10 @@ static bool madvise_dontneed_visitor(struct libos_vma* vma, void* visitor_arg) {
 }
 
 int madvise_dontneed_range(uintptr_t begin, uintptr_t end) {
-#ifdef LINUX_KERNEL_PATCHED
+    assert(IS_ALLOC_ALIGNED(begin));
+    assert(IS_ALLOC_ALIGNED(end));
+
+#ifdef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
     struct madvise_dontneed_ctx ctx = {
         .begin = begin,
         .end = end,

@@ -62,7 +62,7 @@ void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
 
 int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
     if (!addr || !IS_ALLOC_ALIGNED_PTR(addr) || !size || !IS_ALLOC_ALIGNED(size)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     return _PalFreeThenLazyReallocCommittedPages(addr, size);

@@ -434,9 +434,9 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         _PalProcessExit(1);
     }
 
-    bool async_event = (event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED);
-    bool memfault_with_edmm = (!is_synthetic_gp && event_num == PAL_EVENT_MEMFAULT &&
-                               g_pal_linuxsgx_state.edmm_enabled);
+    bool async_event = event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED;
+    bool memfault_with_edmm = !is_synthetic_gp && event_num == PAL_EVENT_MEMFAULT &&
+                              g_pal_linuxsgx_state.edmm_enabled;
 
     /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault with EDMM
      * enabled (which could happen legitimately when some syscalls try to access user buffers

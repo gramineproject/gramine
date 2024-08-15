@@ -80,5 +80,5 @@ void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector) {
 int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
     __UNUSED(addr);
     __UNUSED(size);
-    return -PAL_ERROR_NOTIMPLEMENTED;
+    return PAL_ERROR_NOTIMPLEMENTED;
 }

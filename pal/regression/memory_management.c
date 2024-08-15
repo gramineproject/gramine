@@ -76,7 +76,7 @@ int mem_bkeep_get_vma_info(uintptr_t addr, pal_prot_flags_t* out_prot_flags) {
         }
     }
 
-    return -PAL_ERROR_NOMEM;
+    return PAL_ERROR_NOMEM;
 }
 
 /* for testing purposes only: this function updates protection flags for the entire VMA containing
@@ -91,7 +91,7 @@ static int mem_bkeep_set_vma_info(uintptr_t addr, pal_prot_flags_t prot_flags) {
         }
     }
 
-    return -PAL_ERROR_NOMEM;
+    return PAL_ERROR_NOMEM;
 }
 
 void init_memory_management(void) {
@@ -193,7 +193,7 @@ int memory_free(void* addr, size_t size) {
 
 int memory_protect(void* addr, size_t size, pal_prot_flags_t prot) {
     if (!IS_ALIGNED_PTR(addr, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE)) {
-        return -PAL_ERROR_INVAL;
+        return PAL_ERROR_INVAL;
     }
 
     int ret = PalVirtualMemoryProtect(addr, size, prot);
