@@ -41,6 +41,11 @@ typedef enum {
     PF_FILE_STATE_DELETED = 2,  // file was previously seen but then either unlinked or renamed
 } libos_encrypted_file_state_t;
 
+inline static const char* file_state_to_string(libos_encrypted_file_state_t state) {
+    return (state == PF_FILE_STATE_ERROR ? "error"
+                                         : (state == PF_FILE_STATE_ACTIVE ? "active" : "deleted"));
+}
+
 /*
  * Map mapping file URIs to state providing information on files, in particular whether we have seen
  * them before and what the last seen root-hash is.  This is necessary to provide rollback
@@ -48,7 +53,7 @@ typedef enum {
 struct libos_encrypted_volume_state_map {
     char* norm_path;  // assumptions: all paths canonicalized, symlinks are resolved & no hard links
     libos_encrypted_file_state_t state;
-    pf_mac_t last_seen_root_mac;
+    pf_mac_t last_seen_root_mac;  // valid only if state == PF_FILE_STATE_ACTIVE
     UT_hash_handle hh;
 };
 
@@ -224,16 +229,17 @@ void encrypted_file_put(struct libos_encrypted_file* enc, bool fs_reachable);
 /*
  * \brief Flush pending writes to an encrypted file.
  */
-int encrypted_file_flush(struct libos_encrypted_file* enc);
+int encrypted_file_flush(struct libos_encrypted_file* enc, bool fs_reachable);
 
 int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_size,
-                        file_off_t offset, size_t* out_count);
+                        file_off_t offset, size_t* out_count, bool fs_reachable);
 int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
-                         file_off_t offset, size_t* out_count);
+                         file_off_t offset, size_t* out_count, bool fs_reachable);
 int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri);
 int encrypted_file_unlink(struct libos_encrypted_file* enc);
 
-int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size);
-int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);
+int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size,
+                            bool fs_reachable);
+int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size, bool fs_reachable);
 
 int parse_pf_key(const char* key_str, pf_key_t* pf_key);

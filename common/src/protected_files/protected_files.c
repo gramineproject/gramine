@@ -791,6 +791,9 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         DEBUG_PF("failed to decrypt metadata: %d", status);
+        if (status == PF_STATUS_MAC_MISMATCH)
+            // MAC could also mismatch if wrong key was provided but we err on side of safety ...
+            pf->file_status = PF_STATUS_CORRUPTED;
         return false;
     }
 
@@ -818,6 +821,8 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
                                       &pf->metadata_decrypted.root_mht_node_mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
+            if (status == PF_STATUS_MAC_MISMATCH)
+                pf->file_status = PF_STATUS_CORRUPTED;
             return false;
         }
     }
@@ -1162,6 +1167,9 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
+
     *size = pf->metadata_decrypted.file_size;
     return PF_STATUS_SUCCESS;
 }
@@ -1172,6 +1180,9 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
 
     if (!(pf->mode & PF_FILE_MODE_WRITE))
         return PF_STATUS_INVALID_MODE;
+
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
 
     if (size == pf->metadata_decrypted.file_size)
         return PF_STATUS_SUCCESS;
@@ -1220,6 +1231,9 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
 pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_mac) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
+
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
 
     if (!(pf->mode & PF_FILE_MODE_WRITE))
         return PF_STATUS_INVALID_MODE;
@@ -1292,6 +1306,9 @@ pf_status_t pf_write(pf_context_t* pf, uint64_t offset, size_t size, const void*
 pf_status_t pf_flush(pf_context_t* pf) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
+
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
 
     if (!ipf_internal_flush(pf))
         return pf->last_error;

@@ -178,6 +178,62 @@ static int uri_to_normalized_path(const char* uri, char** out_norm_path) {
     return 0;
 }
 
+static void update_mac_in_file_state_map(struct libos_encrypted_file* enc, bool fs_reachable,
+                                         const pf_mac_t* closing_root_mac) {
+    char* norm_path = NULL;
+    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
+    if (ret < 0) {
+        log_error("Could not normalize uri %s while updating file state map (ret=%d)", enc->uri,
+                  ret);
+    } else {
+        log_debug("map update of %sreachable file '%s' closed with MAC=" MAC_PRINTF_PATTERN,
+                  (fs_reachable ? "" : "un"), norm_path,
+                  MAC_PRINTF_ARGS(*closing_root_mac));  // TODO (MST): remove me eventually?
+        if (fs_reachable) {
+            /* note: we only update if reachable in fileystem to prevent file-handles made
+             * unreachable via unlink or rename to modify state. */
+            lock(&(enc->volume->files_state_map_lock));
+            struct libos_encrypted_volume_state_map* file_state = NULL;
+
+            HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
+            assert(file_state != NULL);
+            if (file_state->state == PF_FILE_STATE_ACTIVE) {
+                /* note: we do not touch it if earlier we determined this file is in inconsistent
+                 * error state. */
+                memcpy(file_state->last_seen_root_mac, *closing_root_mac, sizeof(pf_mac_t));
+            }
+            unlock(&(enc->volume->files_state_map_lock));
+            free(norm_path);
+        }
+    }
+}
+
+static void update_state_in_file_state_map(struct libos_encrypted_file* enc, bool fs_reachable,
+                                           libos_encrypted_file_state_t state) {
+    char* norm_path = NULL;
+    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
+    if (ret < 0) {
+        log_error("Could not normalize uri %s while updating file state map (ret=%d)", enc->uri,
+                  ret);
+    } else {
+        log_debug("map update of %sreachable file '%s' to state %s", (fs_reachable ? "" : "un"),
+                  norm_path,
+                  file_state_to_string(state));  // TODO (MST): remove me eventually?
+        if (fs_reachable) {
+            /* note: we only update if reachable in fileystem to prevent file-handles made
+             * unreachable via unlink or rename to modify state. */
+            lock(&(enc->volume->files_state_map_lock));
+            struct libos_encrypted_volume_state_map* file_state = NULL;
+
+            HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
+            assert(file_state != NULL);
+            file_state->state = state;
+            unlock(&(enc->volume->files_state_map_lock));
+            free(norm_path);
+        }
+    }
+}
+
 /*
  * The `pal_handle` parameter is used if this is a checkpointed file, and we have received the PAL
  * handle from the parent process. Note that in this case, it would not be safe to attempt opening
@@ -230,6 +286,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = -EACCES;
         goto out;
     }
+
     /* rollback protection */
     struct libos_encrypted_volume_state_map* file_state = NULL;
     log_debug("file '%s' opened with MAC=" MAC_PRINTF_PATTERN, norm_path,
@@ -240,7 +297,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     /* - check current state */
     if (create) {
         if (file_state && (file_state->state != PF_FILE_STATE_DELETED)) {
-            log_error("file '%s' already exists or is in error state", norm_path);
+            log_error("newly created file '%s' is in state %s", norm_path,
+                      file_state_to_string(file_state->state));
             if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
                 pf_set_corrupted(pf);
                 ret = -EEXIST;
@@ -252,7 +310,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
             if ((file_state->state == PF_FILE_STATE_ERROR) ||
                 (file_state->state == PF_FILE_STATE_DELETED)) {
                 log_error("file '%s' was seen before but in %s state", norm_path,
-                          file_state->state == PF_FILE_STATE_DELETED ? "deleted" : "error");
+                          file_state_to_string(file_state->state));
                 if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
                     pf_set_corrupted(pf);
                     ret = -EACCES;
@@ -337,35 +395,12 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc, bool
     assert(enc->pf);
     pf_mac_t closing_root_mac;
     pf_status_t pfs = pf_close(enc->pf, &closing_root_mac);
-    char* norm_path = NULL;
-    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
-    if (ret < 0) {
-        log_error("Could not normalize uri %s while closing file (ret=%d)", enc->uri, ret);
+    if (PF_FAILURE(pfs)) {
+        log_warning("pf_close failed: %s", pf_strerror(pfs));
+        update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
     } else {
-        log_debug("%sreachable file '%s' closed with MAC=" MAC_PRINTF_PATTERN,
-                  (fs_reachable ? "" : "un"), norm_path,
-                  MAC_PRINTF_ARGS(closing_root_mac));  // TODO (MST): remove me eventually?
-        lock(&(enc->volume->files_state_map_lock));
-        struct libos_encrypted_volume_state_map* file_state = NULL;
-
-        HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
-        assert(file_state != NULL);
-        if (PF_FAILURE(pfs)) {
-            log_warning("pf_close failed: %s", pf_strerror(pfs));
-            file_state->state = PF_FILE_STATE_ERROR;
-            pf_set_corrupted(enc->pf);
-        } else {
-            if (fs_reachable && (file_state->state == PF_FILE_STATE_ACTIVE)) {
-                /* note: we only update if reachable in fileystem to prevent file-handles made
-                 * unreachable via unlink or rename to modify state.  We also do not touch it if
-                 * earlier we determined this file is in inconsistent error state. */
-                memcpy(file_state->last_seen_root_mac, closing_root_mac, sizeof(pf_mac_t));
-            }
-        }
-        unlock(&(enc->volume->files_state_map_lock));
-        free(norm_path);
+        update_mac_in_file_state_map(enc, fs_reachable, &closing_root_mac);
     }
-
     enc->pf = NULL;
     PalObjectDestroy(enc->pal_handle);
     enc->pal_handle = NULL;
@@ -721,19 +756,21 @@ void encrypted_file_put(struct libos_encrypted_file* enc, bool fs_reachable) {
     }
 }
 
-int encrypted_file_flush(struct libos_encrypted_file* enc) {
+int encrypted_file_flush(struct libos_encrypted_file* enc, bool fs_reachable) {
     assert(enc->pf);
 
     pf_status_t pfs = pf_flush(enc->pf);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_flush failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
         return -EACCES;
     }
     return 0;
 }
 
 int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_size,
-                        file_off_t offset, size_t* out_count) {
+                        file_off_t offset, size_t* out_count, bool fs_reachable) {
     assert(enc->pf);
 
     if (offset < 0)
@@ -745,6 +782,8 @@ int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_
     pf_status_t pfs = pf_read(enc->pf, offset, buf_size, buf, &count);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_read failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
         return -EACCES;
     }
     *out_count = count;
@@ -752,7 +791,7 @@ int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_
 }
 
 int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
-                         file_off_t offset, size_t* out_count) {
+                         file_off_t offset, size_t* out_count, bool fs_reachable) {
     assert(enc->pf);
 
     if (offset < 0)
@@ -763,6 +802,8 @@ int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size
     pf_status_t pfs = pf_write(enc->pf, offset, buf_size, buf);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_write failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
         return -EACCES;
     }
     /* We never write less than `buf_size` */
@@ -770,13 +811,16 @@ int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size
     return 0;
 }
 
-int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size) {
+int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size,
+                            bool fs_reachable) {
     assert(enc->pf);
 
     uint64_t size;
     pf_status_t pfs = pf_get_size(enc->pf, &size);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_get_size failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
         return -EACCES;
     }
     if (OVERFLOWS(file_off_t, size))
@@ -785,7 +829,7 @@ int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_si
     return 0;
 }
 
-int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
+int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size, bool fs_reachable) {
     assert(enc->pf);
 
     if (size < 0)
@@ -796,6 +840,8 @@ int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size) {
     pf_status_t pfs = pf_set_size(enc->pf, size);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_set_size failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, fs_reachable, PF_FILE_STATE_ERROR);
         return -EACCES;
     }
     return 0;
@@ -822,6 +868,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
     pf_status_t pfs = pf_rename(enc->pf, new_norm_path, &new_root_mac);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_rename failed: %s", pf_strerror(pfs));
+        if (pfs == PF_STATUS_CORRUPTED)
+            update_state_in_file_state_map(enc, /* fs_reachable */ true, PF_FILE_STATE_ERROR);
         ret = -EACCES;
         goto out;
     }
@@ -835,6 +883,8 @@ int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri)
         if (PF_FAILURE(pfs)) {
             log_warning("pf_rename (during cleanup) failed, the file might be unusable: %s",
                         pf_strerror(pfs));
+            if (pfs == PF_STATUS_CORRUPTED)
+                update_state_in_file_state_map(enc, /* fs_reachable */ true, PF_FILE_STATE_ERROR);
         }
         old_norm_path = NULL;  // don't free it later ...
         ret = pal_to_unix_errno(ret);
@@ -896,22 +946,7 @@ out:
 }
 
 int encrypted_file_unlink(struct libos_encrypted_file* enc) {
-    char* norm_path = NULL;
-    int ret         = uri_to_normalized_path(enc->uri, &norm_path);
-    if (ret < 0)
-        return ret;
-
-    lock(&(enc->volume->files_state_map_lock));
-    struct libos_encrypted_volume_state_map* file_state = NULL;
-    HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
-    assert(file_state != NULL);
-    pf_mac_t root_mac_before_unlink;
-    memcpy(root_mac_before_unlink, file_state->last_seen_root_mac, sizeof(pf_mac_t));
-    file_state->state = PF_FILE_STATE_DELETED;
-    memset(file_state->last_seen_root_mac, 0, sizeof(pf_mac_t));
-    unlock(&(enc->volume->files_state_map_lock));
-    log_debug("file '%s' unlinked, previously with MAC=" MAC_PRINTF_PATTERN, norm_path,
-              MAC_PRINTF_ARGS(root_mac_before_unlink));  // TODO (MST): remove me eventually?
+    update_state_in_file_state_map(enc, /* fs_reachable */ true, PF_FILE_STATE_DELETED);
     return 0;
 }
 
@@ -1072,7 +1107,7 @@ BEGIN_CP_FUNC(encrypted_file) {
     struct libos_encrypted_file* new_enc = NULL;
 
     if (enc->pf) {
-        int ret = encrypted_file_flush(enc);
+        int ret = encrypted_file_flush(enc, true);
         if (ret < 0)
             return ret;
     }

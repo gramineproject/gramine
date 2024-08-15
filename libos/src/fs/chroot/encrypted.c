@@ -207,7 +207,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
                 goto out;
             }
         } else {
-            ret = encrypted_file_get_size(enc, &size);
+            ret = encrypted_file_get_size(enc, &size, true);
             encrypted_file_put(enc, true);
 
             if (ret < 0) {
@@ -468,7 +468,7 @@ static int chroot_encrypted_flush(struct libos_handle* hdl) {
 
     /* This will write changes from `enc` to host file */
     lock(&hdl->inode->lock);
-    ret = encrypted_file_flush(enc);
+    ret = encrypted_file_flush(enc, hdl->inode == hdl->dentry->inode);
     unlock(&hdl->inode->lock);
     return ret;
 }
@@ -502,7 +502,8 @@ static ssize_t chroot_encrypted_read(struct libos_handle* hdl, void* buf, size_t
     size_t actual_count;
 
     lock(&hdl->inode->lock);
-    int ret = encrypted_file_read(enc, buf, count, *pos, &actual_count);
+    int ret =
+        encrypted_file_read(enc, buf, count, *pos, &actual_count, hdl->inode == hdl->dentry->inode);
     unlock(&hdl->inode->lock);
 
     if (ret < 0)
@@ -527,7 +528,8 @@ static ssize_t chroot_encrypted_write(struct libos_handle* hdl, const void* buf,
 
     lock(&hdl->inode->lock);
 
-    int ret = encrypted_file_write(enc, buf, count, *pos, &actual_count);
+    int ret = encrypted_file_write(enc, buf, count, *pos, &actual_count,
+                                   hdl->inode == hdl->dentry->inode);
     if (ret < 0) {
         unlock(&hdl->inode->lock);
         return ret;
@@ -557,7 +559,7 @@ static int chroot_encrypted_truncate(struct libos_handle* hdl, file_off_t size) 
     assert(enc);
 
     lock(&hdl->inode->lock);
-    ret = encrypted_file_set_size(enc, size);
+    ret = encrypted_file_set_size(enc, size, hdl->inode == hdl->dentry->inode);
     if (ret < 0) {
         unlock(&hdl->inode->lock);
         return ret;
