@@ -14,7 +14,7 @@
  *
  * Therefore, on platforms with EDMM support, the test is supposed to be significantly faster than
  * on platforms without EDMM support. But functionality-wise it will be the same. For example, on an
- * ICX machine, this test takes ~0.3s with EDMM enabled and ~14.5s with EDMM disabled.
+ * ICX machine, this test takes ~0.8s with EDMM enabled and ~13.5s with EDMM disabled.
  */
 
 #define _GNU_SOURCE
@@ -35,12 +35,12 @@
 
 #include "common.h"
 
-#define NUM_THREADS 5
+#define NUM_THREADS 16
 #define TEST_FILE "testfile_map_noreserve"
 #define TEST_LENGTH  0xC0000000
 #define TEST_LENGTH2  0xC000000
 #define TEST_LENGTH3     0xA000
-#define TEST_RACE_NUM_ITERATIONS 100
+#define TEST_RACE_NUM_ITERATIONS 3000
 
 static size_t g_page_size;
 

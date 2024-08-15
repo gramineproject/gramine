@@ -435,7 +435,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
     }
 
     bool async_event = (event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED);
-    bool memfault_with_edmm = (event_num == PAL_EVENT_MEMFAULT &&
+    bool memfault_with_edmm = (!is_synthetic_gp && event_num == PAL_EVENT_MEMFAULT &&
                                g_pal_linuxsgx_state.edmm_enabled);
 
     /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault with EDMM
@@ -509,7 +509,14 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
              * platforms with small EPC sizes). Since such a #PF is triggered by the process (from
              * host kernel's perspective), the host kernel not only resolves the enclave page
              * (brings it back into EPC) but also delivers it to Gramine, ending up in this code
-             * path. */
+             * path.
+             *
+             * This is due to a data race in the SGX driver where two enclave threads may try to
+             * access the same non-present enclave page simultaneously, see below for details:
+             * https://lore.kernel.org/lkml/20240429104330.3636113-2-dmitrii.kuvaiskii@intel.com.
+             *
+             * TODO: remove this workaround once the Linux kernel is patched.
+             */
             goto out;
         }
 
