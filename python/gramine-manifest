@@ -45,9 +45,8 @@ def main(ctx, string, define, infile, outfile, check):
         try:
             manifest.check()
         except voluptuous.MultipleInvalid as err:
-            click.echo(f'WARNING: error in manifest (after rendering): {err!s}', err=True)
-            # TODO after 1.7: make this a hard error
-            #ctx.exit(1)
+            click.echo(f'ERROR: manifest failed validation: {err!s}', err=True)
+            ctx.exit(1)
 
     manifest.dump(outfile)
 
