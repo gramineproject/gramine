@@ -19,7 +19,8 @@
 char g_parent_buf[MAX_BUF_SIZE];
 char g_child_buf[MAX_BUF_SIZE];
 
-static __attribute__ ((noinline)) void die_on_wrong_file_contents(void) {
+/* noinline because the GDB script fork_and_access_file.gdb puts a breakpoint on this func */
+static __attribute__((noinline)) void die_on_wrong_file_contents(void) {
     errx(1, "child detected incorrect contents in test file");
 }
 

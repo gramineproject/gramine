@@ -357,8 +357,6 @@ class Manifest:
         if 'sha256' not in loader_entrypoint:
             entrypoint_tf = TrustedFile.from_realpath(uri2path(loader_entrypoint['uri']))
             loader_entrypoint['sha256'] = entrypoint_tf.ensure_hash().sha256
-            # TODO: remove append to TFs after sgx.trusted_files is moved to LibOS layer
-            trusted_files.append({'uri': loader_entrypoint['uri']})
 
         sgx['trusted_files'] = trusted_files
 
