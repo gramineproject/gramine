@@ -1065,9 +1065,11 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     uint64_t end_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
     end_time = tv.tv_sec * 1000000UL + tv.tv_usec;
+
     if (g_sgx_enable_stats) {
-        /* Show the time for Gramine + the Intel SGX driver to initialize the untrusted PAL, config
-         * and create the SGX enclave, add enclave pages, measure and init it. */
+        /* This shows the time for Gramine + the Intel SGX driver to initialize the untrusted
+         * PAL, config and create the SGX enclave, add enclave pages, measure and init it.
+         */
         log_always("----- SGX enclave loading time = %10lu microseconds -----",
                    end_time - start_time);
     }
