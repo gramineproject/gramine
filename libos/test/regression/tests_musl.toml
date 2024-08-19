@@ -106,6 +106,7 @@ manifests = [
   "rename_unlink_fchown",
   "rlimit_nofile",
   "rlimit_nofile_4k",
+  "rlimit_stack",
   "run_test",
   "rwlock",
   "sched",
