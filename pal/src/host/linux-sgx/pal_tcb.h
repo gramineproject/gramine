@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #include "pal.h"
-#include "pal_linux_types.h"
 #include "sgx_arch.h"
 
 struct untrusted_area {
@@ -106,8 +105,7 @@ typedef struct pal_host_tcb {
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
     int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
     int* start_status_ptr;         /* pointer to return value of clone_thread */
-    bool reset_stats;              /* if true, dump SGX stats and reset them on next AEX event or 
-                                      after next enclave exit for an OCALL */
+    bool reset_stats;              /* if true, dump SGX stats and reset them on next AEX/OCALL */
 } PAL_HOST_TCB;
 
 extern void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack);
@@ -122,9 +120,10 @@ static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
 }
 
 extern bool g_sgx_enable_stats;
-#ifdef DEBUG
 void update_print_and_reset_stats(bool process_wide);
-int send_sigusr1_to_followers(pid_t leader_tid);
+#ifdef DEBUG
 void maybe_dump_and_reset_stats(void);
+void abort_current_reset_stats(int exiting_tid);
 #endif /* DEBUG */
+
 #endif /* IN_ENCLAVE */

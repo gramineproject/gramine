@@ -12,6 +12,9 @@ sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
+# this is only to test that `sgx.enable_stats` works (it can only be specified for debug-mode tests)
+sgx.enable_stats = true
+
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",
   "file:{{ gramine.runtimedir(libc) }}/",

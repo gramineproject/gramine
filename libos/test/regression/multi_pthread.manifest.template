@@ -13,7 +13,6 @@ sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
-sgx.enable_stats = true
 
 sgx.trusted_files = [
   "file:{{ gramine.libos }}",

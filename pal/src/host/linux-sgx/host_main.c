@@ -617,12 +617,12 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
             dbg->tcs_addrs[t] = tcs_addrs[t];
     }
 
-#ifdef DEBUG
     ret = set_tcs_debug_flag_if_debugging(tcs_addrs, enclave->thread_num);
     if (ret < 0) {
         goto out;
     }
 
+#ifdef DEBUG
     /*
      * Report libpal map. All subsequent files will be reported via PalDebugMapAdd(), but this
      * one has to be handled separately.
@@ -760,6 +760,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         ret = -EINVAL;
         goto out;
     }
+
+#ifndef DEBUG
+    if (g_sgx_enable_stats) {
+        log_error("'sgx.enable_stats = true' is specified in non-debug mode, this is disallowed");
+        ret = -EINVAL;
+        goto out;
+    }
+#endif /* !DEBUG */
 
     ret = toml_string_in(manifest_root, "sgx.sigfile", &dummy_sigfile_str);
     if (ret < 0 || dummy_sigfile_str) {
@@ -1057,15 +1065,12 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
     uint64_t end_time;
     DO_SYSCALL(gettimeofday, &tv, NULL);
     end_time = tv.tv_sec * 1000000UL + tv.tv_usec;
-#ifdef DEBUG
     if (g_sgx_enable_stats) {
-        /* This shows the time for Gramine + the Intel SGX driver to initialize the untrusted
-         * PAL, config and create the SGX enclave, add enclave pages, measure and init it.
-         */
+        /* Show the time for Gramine + the Intel SGX driver to initialize the untrusted PAL, config
+         * and create the SGX enclave, add enclave pages, measure and init it. */
         log_always("----- SGX enclave loading time = %10lu microseconds -----",
                    end_time - start_time);
     }
-#endif /* DEBUG */
 
     /* start running trusted PAL */
     ecall_enclave_start(enclave->libpal_uri, args, args_size, env, env_size, parent_stream_fd,

@@ -22,7 +22,6 @@
 #include "assert.h"
 #include "cpu.h"
 #include "debug_map.h"
-#include "gdb_integration/sgx_gdb.h"
 #include "host_internal.h"
 #include "host_syscall.h"
 #include "pal_rpc_queue.h"
@@ -30,16 +29,18 @@
 #include "sigreturn.h"
 #include "ucontext.h"
 
-static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT, SIGUSR1};
- #ifdef DEBUG
+static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT};
+
+#ifdef DEBUG
 /*
- * If no SGX-stats reset is in flight, this variable is zero.
+ * If no SGX-stats reset is in flight, `g_stats_reset_leader_tid` is zero.
  *
  * Upon user-induced SIGUSR1 on some thread (below happens in signal handling context):
  *   1. If `g_stats_reset_leader_tid == 0`, then it is set to the TID of this thread -- this thread
  *      is designated to be the "leader" of SGX-stats reset flow, and it will broadcast SIGUSR1 to
- *      all other threads on the first AEX (since we can't do any complex logic in signal handling
- *      context, we postpone to the normal context which starts right-after an AEX event).
+ *      all other threads on the first AEX or right-before executing the next OCALL in untrusted
+ *      runtime (since we can't do any complex logic in signal handling context, we postpone it to
+ *      the normal context).
  *   2. If `g_stats_reset_leader_tid != 0`, then it means that an SGX-stats reset flow is in flight.
  *      Two cases are possible:
  *        a. If PID of sending process is the current PID, then the signal was sent by the "leader"
@@ -50,7 +51,7 @@ static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT, SIGUSR1};
  *           and this is a new "SGX-stats reset" event from the user. Since the previous flow is
  *           still in flight, the thread must ignore this signal.
  *
- * On each AEX, each thread checks (below happens in normal context):
+ * On each AEX and on each OCALL execution, each thread checks (below happens in normal context):
  *   1. If `g_stats_reset_leader_tid == 0`, do nothing (no SGX-stats reset is in flight).
  *   2. If `g_stats_reset_leader_tid == gettid()`, then this is the "leader" thread and it must
  *      broadcast SIGUSR1 to all other threads and wait until they perform their SGX-stats resets.
@@ -59,8 +60,26 @@ static const int ASYNC_SIGNALS[] = {SIGTERM, SIGCONT, SIGUSR1};
  *
  * Application threads on Linux can never be 0, so this "no-op" default is safe.
  */
- int g_stats_reset_leader_tid = 0;
- long long int g_stats_reset_epoch = 0;
+static int g_stats_reset_leader_tid = 0;
+
+/*
+ * Each "SGX stats reset" is supposed to be executed in one epoch. Epoch is changed (i.e.
+ * `g_stats_reset_epoch` is atomically incremented) when any thread exits. If an "SGX stats reset"
+ * round detects that the epoch has changed before the leader thread got responses from all follower
+ * threads, this "SGX stats reset" round is aborted, see while loop in maybe_dump_and_reset_stats().
+ *
+ * This epoch mechanism is required to avoid data races:
+ *   - If the leader thread is exited in the meantime (upon e.g. SIGTERM), the
+ *     `g_stats_reset_leader_tid` variable would never be reset and future rounds would become
+ *     impossible (all threads would think that some previous round is still in flight).
+ *   - If some follower thread is exited in the meantime, the wait-for-all-followers loop in
+ *     maybe_dump_and_reset_stats() would never break.
+ *
+ * Note that the epoch is *not* changed when a new thread is spawned, i.e. the "SGX stats reset"
+ * would successfully finish but without taking into account the newly spawned thread. This is a
+ * benign scenario, though the quality of SGX-stats reporting will be lower in this case.
+ */
+static uint32_t g_stats_reset_epoch = 0;
 #endif /* DEBUG */
 
 static int block_signal(int sig, bool block) {
@@ -348,17 +367,18 @@ void maybe_dump_and_reset_stats(void) {
 
     if (DO_SYSCALL(gettid) == leader_tid) {
         log_always("----- DUMPING and RESETTING SGX STATS -----");
-        size_t followers_num = send_sigusr1_to_followers(leader_tid);
+        uint32_t epoch = __atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE);
 
-        __atomic_fetch_add(&g_stats_reset_epoch, 1, __ATOMIC_ACQ_REL);
-        long long int noted_epoch = __atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE);
+        size_t followers_num = broadcast_signal_to_threads(SIGUSR1, /*exclude_tid=*/leader_tid);
+
         while ((__atomic_load_n(&followers_visited_num, __ATOMIC_ACQUIRE)) < followers_num) {
-
-            if(__atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE) > noted_epoch)
-                log_warning("One of the worker threads exited");
             DO_SYSCALL(sched_yield);
+            if (__atomic_load_n(&g_stats_reset_epoch, __ATOMIC_ACQUIRE) != epoch) {
+                log_warning("SGX stats reset (started due to SIGUSR1) was interrupted because at "
+                            "least one thread exited in the meantime; stats may be incomplete");
+                break;
+            }
         }
-        log_always("STATS notes_epoch %lld", noted_epoch);
 
         update_print_and_reset_stats(/*process_wide=*/true);
         __atomic_store_n(&followers_visited_num, 0, __ATOMIC_RELEASE);
@@ -367,6 +387,29 @@ void maybe_dump_and_reset_stats(void) {
     } else {
         update_print_and_reset_stats(/*process_wide=*/false);
         __atomic_fetch_add(&followers_visited_num, 1, __ATOMIC_ACQ_REL);
+    }
+}
+
+/* called when some thread exits -- a possible "SGX stats reset" round must be aborted, see above */
+void abort_current_reset_stats(int exiting_tid) {
+    if (!g_sgx_enable_stats)
+        return;
+
+    /* make sure that an exiting thread does not receive SIGUSR1; this prevents a data race when
+     * this thread receives SIGUSR1, initiates a new "SGX stats reset" round and immediately exits,
+     * leaving `g_stats_reset_leader_tid` set to a dangling-tid value */
+    block_signal(SIGUSR1, /*block=*/true);
+
+    /* unconditionally increment the "SGX stats reset" epoch, reacting to every thread exit */
+    __atomic_fetch_add(&g_stats_reset_epoch, 1, __ATOMIC_ACQ_REL);
+
+    int leader_tid = __atomic_load_n(&g_stats_reset_leader_tid, __ATOMIC_ACQUIRE);
+    if (leader_tid == exiting_tid) {
+        /* unset leader, otherwise no other thread would be able to initiate "SGX stats reset"
+         * rounds in the future */
+        __atomic_store_n(&g_stats_reset_leader_tid, 0, __ATOMIC_RELEASE);
+        log_warning("SGX stats reset (started due to SIGUSR1) was aborted because initiating "
+                    "thread exited; stats may be incomplete");
     }
 }
 #endif /* DEBUG */

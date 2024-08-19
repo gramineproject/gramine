@@ -26,7 +26,6 @@ static size_t g_enclave_thread_num = 0;
 
 bool g_sgx_enable_stats = false;
 
-#ifdef DEBUG
 void update_print_and_reset_stats(bool process_wide) {
     static atomic_ulong g_eenter_cnt       = 0;
     static atomic_ulong g_eexit_cnt        = 0;
@@ -82,19 +81,20 @@ void update_print_and_reset_stats(bool process_wide) {
     g_async_signal_cnt = 0;
     }
 }
-#endif /* DEBUG */
 
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->self = tcb;
     tcb->tcs = NULL;    /* initialized by child thread */
     tcb->stack = stack;
     tcb->alt_stack = alt_stack;
+
     tcb->eenter_cnt       = 0;
     tcb->eexit_cnt        = 0;
     tcb->aex_cnt          = 0;
     tcb->sync_signal_cnt  = 0;
     tcb->async_signal_cnt = 0;
     tcb->reset_stats      = false;
+
     tcb->profile_sample_time = 0;
 
     tcb->last_async_event = PAL_EVENT_NO_EVENT;
@@ -120,12 +120,10 @@ static int add_dynamic_tcs(sgx_arch_tcs_t* tcs) {
     int ret;
     struct enclave_dbginfo* dbginfo = (struct enclave_dbginfo*)DBGINFO_ADDR;
 
-#ifdef DEBUG
     ret = set_tcs_debug_flag_if_debugging((void**)&tcs, /*count=*/1);
     if (ret < 0) {
         return ret;
     }
-#endif /* DEBUG */
 
     size_t i = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
@@ -302,12 +300,7 @@ noreturn void thread_exit(int status) {
     block_async_signals(true);
 
 #ifdef DEBUG
-    if(__atomic_load_n(&g_stats_reset_leader_tid, __ATOMIC_ACQUIRE) == DO_SYSCALL(gettid)) {
-        __atomic_store_n(&g_stats_reset_leader_tid, 0, __ATOMIC_RELEASE);
-        log_warning("Main thread exited. The SIGUSR1 signal may be lost");
-    }
-    __atomic_fetch_add(&g_stats_reset_epoch, 1, __ATOMIC_ACQ_REL);
-
+    abort_current_reset_stats(DO_SYSCALL(gettid));
     update_print_and_reset_stats(/*process_wide=*/false);
 #endif /* DEBUG */
 
@@ -413,7 +406,6 @@ int get_tid_from_tcs(void* tcs) {
     return tid ? tid : -EINVAL;
 }
 
-#ifdef DEBUG
 int set_tcs_debug_flag_if_debugging(void* tcs_addrs[], size_t count) {
     if (!g_sgx_enable_stats && !g_vtune_profile_enabled)
         return 0;
@@ -451,21 +443,19 @@ out:
     return ret;
 }
 
-int send_sigusr1_to_followers(pid_t leader_tid) {
-    size_t followers_num = 0;
-    size_t enclave_thread_count = current_enclave_thread_cnt();
-
+size_t broadcast_signal_to_threads(int sig, int exclude_tid) {
+    size_t threads_num = 0;
     spinlock_lock(&g_enclave_thread_map_lock);
-    // enclave_thread_count limits the repeatative looping over thread ids
-    for (size_t i = 0; i < enclave_thread_count; i++) {
-        int follower_tid = g_enclave_thread_map[i].tid;
-        if (!follower_tid || follower_tid == leader_tid)
+
+    for (size_t i = 0; i < g_enclave_thread_num; i++) {
+        int thread_tid = g_enclave_thread_map[i].tid;
+        if (!thread_tid || thread_tid == exclude_tid)
             continue;
 
-        DO_SYSCALL(tgkill, g_host_pid, follower_tid, SIGUSR1);
-        followers_num++;
+        DO_SYSCALL(tgkill, g_host_pid, thread_tid, sig);
+        threads_num++;
     }
+
     spinlock_unlock(&g_enclave_thread_map_lock);
-    return followers_num;
+    return threads_num;
 }
-#endif /* DEBUG */
