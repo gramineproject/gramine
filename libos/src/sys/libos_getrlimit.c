@@ -16,16 +16,13 @@
 #include "linux_abi/sysinfo.h"
 
 /*
- * All resource limits are *not* synchronized with the host OS. In other words, the application
- * inside Gramine can get resource limits, but these values will not reflect the actual limits on
- * the host. Similarly, the application inside Gramine can set resource limits, but these values
- * will not affect the limits on the host.
- *
  * The only resource limits that affect internal Gramine logic are:
+ *
  *   - RLIMIT_DATA:   initially equal to `sys.brk.max_size` manifest option, affects `brk()` system
  *                    call
  *   - RLIMIT_STACK:  initially equal to `sys.stack.size` manifest option, but updating this limit
- *                    does *not* affect the max stack size of the main thread
+ *                    does *not* affect the max stack size of the main thread for processes which
+ *                    are already running
  *   - RLIMIT_NOFILE: initially equal to `sys.fds.limit` manifest option, affects system calls that
  *                    create new file descriptors, e.g. open(), dup(), pipe(), etc.
  *

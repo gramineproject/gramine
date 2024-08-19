@@ -319,7 +319,7 @@ Limit on open file descriptors
     (default: 900)
 
 This specifies the maximum number of open file descriptors in the Gramine
-process. More specifically, this is equivalent to the ``RLIMIT_NOFILE`` resource
+process. More specifically, this option sets the ``RLIMIT_NOFILE`` resource
 limit: it specifies a value one greater than the maximum file descriptor number
 that can be opened by the Gramine process.
 
