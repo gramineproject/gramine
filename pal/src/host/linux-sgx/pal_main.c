@@ -408,8 +408,8 @@ extern void* g_enclave_top;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
 
-static bool need_warn_about_allowed_files_usage(void) {
-    if (!g_pal_common_state.parent_process) {
+static bool warn_about_allowed_files_usage(void) {
+    if (g_pal_common_state.parent_process) {
         /* only warn in the master process, not in children */
         return false;
     }
@@ -438,7 +438,7 @@ static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
     bool allow_eventfd        = false;
     bool experimental_flock   = false;
     bool allow_all_files      = false;
-    bool use_allowed_files    = need_warn_about_allowed_files_usage();
+    bool use_allowed_files    = warn_about_allowed_files_usage();
     bool encrypted_files_keys = false;
     bool memfaults_without_exinfo_allowed = g_pal_linuxsgx_state.memfaults_without_exinfo_allowed;
 
