@@ -501,15 +501,9 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         assert(ctx.err);
 
         if (!(ctx.err & ERRCD_P) && is_eaccept_instr(uc)) {
-            /* Corner case of a #PF on a non-present page during EACCEPT: this is a benign #PF that
-             * is resolved completely by the host kernel. Typically such resolved-by-kernel #PFs are
-             * not delivered to the Gramine enclave, but the EACCEPT SGX instruction explicitly
-             * triggers a #PF on a to-be-accepted enclave page that is not residing currently in the
-             * EPC (possible if the enclave page was swapped out of EPC, especially on client
-             * platforms with small EPC sizes). Since such a #PF is triggered by the process (from
-             * host kernel's perspective), the host kernel not only resolves the enclave page
-             * (brings it back into EPC) but also delivers it to Gramine, ending up in this code
-             * path.
+            /*
+             * Corner case of a #PF on a non-present page during EACCEPT: this is a benign spurious
+             * #PF that will be resolved completely by the host kernel.
              *
              * This is due to a data race in the SGX driver where two enclave threads may try to
              * access the same non-present enclave page simultaneously, see below for details:
