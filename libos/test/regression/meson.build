@@ -103,6 +103,7 @@ tests = {
     'rename_unlink': {},
     'rename_unlink_fchown': {},
     'rlimit_nofile': {},
+    'rlimit_stack': {},
     'run_test': {
         'include_directories': include_directories(
             # for `gramine_entry_api.h`
