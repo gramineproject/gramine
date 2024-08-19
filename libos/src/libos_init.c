@@ -278,23 +278,29 @@ static int populate_stack(void* stack, size_t stack_size, const char* const* arg
 int init_stack(const char* const* argv, const char* const* envp, char*** out_argp,
                elf_auxv_t** out_auxv) {
     int ret;
-
-    assert(g_manifest_root);
     uint64_t stack_size;
-    ret = toml_sizestring_in(g_manifest_root, "sys.stack.size", get_rlimit_cur(RLIMIT_STACK),
-                             &stack_size);
-    if (ret < 0) {
-        log_error("Cannot parse 'sys.stack.size'");
-        return -EINVAL;
-    }
 
-    stack_size = ALLOC_ALIGN_UP(stack_size);
-    set_rlimit_cur(RLIMIT_STACK, stack_size);
+    assert(g_pal_public_state);
+    if (g_pal_public_state->parent_process) {
+        /* after fork, in the new child process, `libos_init` is run, hence this function too - but
+         * forked process will get its RLIMIT_STACK from the checkpoint */
+        stack_size = get_rlimit_cur(RLIMIT_STACK);
+    } else {
+        assert(g_manifest_root);
+        ret = toml_sizestring_in(g_manifest_root, "sys.stack.size", get_rlimit_cur(RLIMIT_STACK),
+                                 &stack_size);
+        if (ret < 0) {
+            log_error("Cannot parse 'sys.stack.size'");
+            return -EINVAL;
+        }
+        set_rlimit_cur(RLIMIT_STACK, stack_size);
+    }
 
     struct libos_thread* cur_thread = get_cur_thread();
     if (!cur_thread || cur_thread->stack)
         return 0;
 
+    stack_size = ALLOC_ALIGN_UP(stack_size);
     void* stack = allocate_stack(stack_size, ALLOC_ALIGNMENT, /*user=*/true);
     if (!stack)
         return -ENOMEM;
