@@ -258,6 +258,8 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
     return false;
 }
 
+/* TODO: remove this once the Linux kernel is patched. */
+#ifndef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
 static bool is_eaccept_instr(sgx_cpu_context_t* uc) {
     /* instruction must be ENCLU and leaf must be EACCEPT */
     uint8_t* instr = (uint8_t*)uc->rip;
@@ -265,6 +267,7 @@ static bool is_eaccept_instr(sgx_cpu_context_t* uc) {
         return true;
     return false;
 }
+#endif
 
 /* perform exception handling inside the enclave */
 void _PalExceptionHandler(uint32_t trusted_exit_info_,
@@ -500,6 +503,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
 
         assert(ctx.err);
 
+#ifndef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
         if (!(ctx.err & ERRCD_P) && is_eaccept_instr(uc)) {
             /*
              * Corner case of a #PF on a non-present page during EACCEPT: this is a benign spurious
@@ -513,6 +517,7 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
              */
             goto out;
         }
+#endif
 
         pal_prot_flags_t prot_flags;
 
