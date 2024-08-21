@@ -1070,6 +1070,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn("old RLIMIT_NOFILE soft limit: 900", stdout)
         self.assertIn("(before setrlimit) opened fd: 899", stdout)
         self.assertIn("new RLIMIT_NOFILE soft limit: 901", stdout)
+        self.assertIn("(in child, after setrlimit) opened fd: 900", stdout)
         self.assertIn("(after setrlimit) opened fd: 900", stdout)
         self.assertIn("TEST OK", stdout)
 
@@ -1079,6 +1080,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn("old RLIMIT_NOFILE soft limit: 4096", stdout)
         self.assertIn("(before setrlimit) opened fd: 4095", stdout)
         self.assertIn("new RLIMIT_NOFILE soft limit: 4097", stdout)
+        self.assertIn("(in child, after setrlimit) opened fd: 4096", stdout)
         self.assertIn("(after setrlimit) opened fd: 4096", stdout)
         self.assertIn("TEST OK", stdout)
 
