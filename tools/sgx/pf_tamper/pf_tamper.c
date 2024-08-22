@@ -212,10 +212,11 @@ static void tamper_truncate(void) {
     truncate_file("trunc_data_3", 3 * PF_NODE_SIZE + PF_NODE_SIZE / 2);
 
     /* extend */
+    /* Note: The code implementing Gramine's encrypted filesystem in `common/src/protected_files.c`
+     * tolerates the actual file to be longer than what the `file_size` attribute in the decrypted
+     * header says. The only required invariant enforced in the code is ensuring that the file size
+     * is a multiple of PF_NODE_SIZE, so let us validate this below. */
     truncate_file("extend_0", g_input_size + 1);
-    truncate_file("extend_1", g_input_size + PF_NODE_SIZE / 2);
-    truncate_file("extend_2", g_input_size + PF_NODE_SIZE);
-    truncate_file("extend_3", g_input_size + PF_NODE_SIZE + PF_NODE_SIZE / 2);
 }
 
 /* returns mmap'd output contents */
@@ -270,24 +271,48 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
     munmap(meta, g_input_size); \
 } while (0)
 
-/* if update is true, also create a file with correct metadata MAC */
-#define BREAK_PF(suffix, update, ...) do { \
-    __BREAK_PF(suffix, __VA_ARGS__); \
-    if (update) { \
-        __BREAK_PF(suffix "_fixed", __VA_ARGS__ { \
-                       pf_encrypt(meta_dec, sizeof(*meta_dec), &g_meta_key, \
-                                  &meta->plaintext_part.metadata_mac, meta->encrypted_part, \
-                                  "metadata"); \
-                   } ); \
-    } \
-} while (0)
+/*
+ * Three different macros to tamper with a file:
+ * - BREAK_PLN: tamper with the plaintext part of the metadata.
+ * - BREAK_DEC: tamper with the decrypted part of the metadata and re-encrypt it.
+ *   (Not something an adversary can do to attack the system but still tests overall reliability.)
+ * - BREAK_MHT: tamper with the MHT nodes.
+ *
+ * The tampering is done by creating a new file with the tampered part and the rest copied from the
+ * original file.
+ */
 
-#define BREAK_MHT(suffix, ...) do { \
-    __BREAK_PF(suffix, __VA_ARGS__ { \
-                   pf_encrypt(mht_dec, sizeof(*mht_dec), &meta_dec->root_mht_node_key, \
-                              &meta_dec->root_mht_node_mac, mht_enc, "mht"); \
-               } ); \
-} while (0)
+/* if update is true, also create a file with correct metadata MAC */
+#define BREAK_PLN(suffix, update, ...)                                                   \
+    do {                                                                                 \
+        __BREAK_PF(suffix, __VA_ARGS__);                                                 \
+        if (update) {                                                                    \
+            __BREAK_PF(                                                                  \
+                suffix "_fixed", __VA_ARGS__ {                                           \
+                    pf_encrypt(meta_dec, sizeof(*meta_dec), &g_meta_key,                 \
+                               &meta->plaintext_part.metadata_mac, meta->encrypted_part, \
+                               "metadata");                                              \
+                });                                                                      \
+        }                                                                                \
+    } while (0)
+
+#define BREAK_DEC(suffix, ...)                                                                    \
+    do {                                                                                          \
+        __BREAK_PF(                                                                               \
+            suffix, __VA_ARGS__ {                                                                 \
+                pf_encrypt(meta_dec, sizeof(*meta_dec), &g_meta_key,                              \
+                           &meta->plaintext_part.metadata_mac, meta->encrypted_part, "metadata"); \
+            });                                                                                   \
+    } while (0)
+
+#define BREAK_MHT(suffix, ...)                                                      \
+    do {                                                                            \
+        __BREAK_PF(                                                                 \
+            suffix, __VA_ARGS__ {                                                   \
+                pf_encrypt(mht_dec, sizeof(*mht_dec), &meta_dec->root_mht_node_key, \
+                           &meta_dec->root_mht_node_mac, mht_enc, "mht");           \
+            });                                                                     \
+    } while (0)
 
 #define LAST_BYTE(array) (((uint8_t*)&array)[sizeof(array) - 1])
 
@@ -303,60 +328,56 @@ static void tamper_modify(void) {
         FATAL("Out of memory\n");
 
     /* plain part of the metadata isn't covered by the MAC so no point updating it */
-    BREAK_PF("meta_plain_id_0", /*update=*/false,
-             { meta->plaintext_part.file_id = 0; });
-    BREAK_PF("meta_plain_id_1", /*update=*/false,
-             { meta->plaintext_part.file_id = UINT64_MAX; });
-    BREAK_PF("meta_plain_version_0", /*update=*/false,
-             { meta->plaintext_part.major_version = 0; });
-    BREAK_PF("meta_plain_version_1", /*update=*/false,
-             { meta->plaintext_part.major_version = 0xff; });
-    BREAK_PF("meta_plain_version_2", /*update=*/false,
-             { meta->plaintext_part.minor_version = 0xff; });
+    BREAK_PLN("meta_plain_id_0", /*update=*/false,
+              { meta->plaintext_part.file_id = 0; });
+    BREAK_PLN("meta_plain_id_1", /*update=*/false,
+              { meta->plaintext_part.file_id = UINT64_MAX; });
+    BREAK_PLN("meta_plain_version_0", /*update=*/false,
+              { meta->plaintext_part.major_version = 0; });
+    BREAK_PLN("meta_plain_version_1", /*update=*/false,
+              { meta->plaintext_part.major_version = 0xff; });
+    /* Note: Gramine's encrypted filesystem only tests (equality) on major version but nothing about
+     * minor_version, so no point in tampering with meta->plaintext_part.minor_version. */
 
     /* metadata_key_nonce is the keying material for encrypted metadata key derivation, so create
      * also PFs with updated MACs */
-    BREAK_PF("meta_plain_nonce_0", /*update=*/true,
-             { meta->plaintext_part.metadata_key_nonce[0] ^= 1; });
-    BREAK_PF("meta_plain_nonce_1", /*update=*/true,
-             { LAST_BYTE(meta->plaintext_part.metadata_key_nonce) ^= 0xfe; });
-    BREAK_PF("meta_plain_mac_0", /*update=*/true,
-             { meta->plaintext_part.metadata_mac[0] ^= 0xfe; });
-    BREAK_PF("meta_plain_mac_1", /*update=*/true,
-             { LAST_BYTE(meta->plaintext_part.metadata_mac) &= 1; });
+    BREAK_PLN("meta_plain_nonce_0", /*update=*/true,
+              { meta->plaintext_part.metadata_key_nonce[0] ^= 1; });
+    BREAK_PLN("meta_plain_nonce_1", /*update=*/true,
+              { LAST_BYTE(meta->plaintext_part.metadata_key_nonce) ^= 0xfe; });
+    BREAK_PLN("meta_plain_mac_0", /*update=*/false,  // update would overwrite the tampering
+              { meta->plaintext_part.metadata_mac[0] ^= 0xfe; });
+    BREAK_PLN("meta_plain_mac_1", /*update=*/false,  // update would overwrite the tampering
+              { LAST_BYTE(meta->plaintext_part.metadata_mac) ^= 1; });
+    BREAK_PLN("meta_plain_encrypted_0", /*update=*/false,  // update would overwrite the tampering
+              { meta->encrypted_part[0] ^= 1; });
+    BREAK_PLN("meta_plain_encrypted_1", /*update=*/false,  // update would overwrite the tampering
+              { LAST_BYTE(meta->encrypted_part) ^= 1; });
 
-    BREAK_PF("meta_enc_filename_0", /*update=*/true,
-             { meta_dec->file_path[0] = 0; });
-    BREAK_PF("meta_enc_filename_1", /*update=*/true,
-             { meta_dec->file_path[0] ^= 1; });
-    BREAK_PF("meta_enc_filename_2", /*update=*/true,
-             { LAST_BYTE(meta_dec->file_path) ^= 0xfe; });
-    BREAK_PF("meta_enc_size_0", /*update=*/true,
-             { meta_dec->file_size = 0; });
-    BREAK_PF("meta_enc_size_1", /*update=*/true,
-             { meta_dec->file_size = g_input_size - 1; });
-    BREAK_PF("meta_enc_size_2", /*update=*/true,
-             { meta_dec->file_size = g_input_size + 1; });
-    BREAK_PF("meta_enc_size_3", /*update=*/true,
-             { meta_dec->file_size = UINT64_MAX; });
-    BREAK_PF("meta_enc_mht_key_0", /*update=*/true,
-             { meta_dec->root_mht_node_key[0] ^= 1; });
-    BREAK_PF("meta_enc_mht_key_1", /*update=*/true,
-             { LAST_BYTE(meta_dec->root_mht_node_key) ^= 0xfe; });
-    BREAK_PF("meta_enc_mht_mac_0", /*update=*/true,
-             { meta_dec->root_mht_node_mac[0] ^= 1; });
-    BREAK_PF("meta_enc_mht_mac_1", /*update=*/true,
-             { LAST_BYTE(meta_dec->root_mht_node_mac) ^= 0xfe; });
-    BREAK_PF("meta_enc_data_0", /*update=*/true,
-             { meta_dec->file_data[0] ^= 0xfe; });
-    BREAK_PF("meta_enc_data_1", /*update=*/true,
-             { LAST_BYTE(meta_dec->file_data) ^= 1; });
+    BREAK_DEC("meta_enc_filename_0", { meta_dec->file_path[0] = 0; });
+    BREAK_DEC("meta_enc_filename_1", { meta_dec->file_path[0] ^= 1; });
+    assert(strlen(meta_dec->file_path) > 0);
+    BREAK_DEC("meta_enc_filename_2", {
+        meta_dec->file_path[strlen(meta_dec->file_path) - 1] =
+            '\0';  // shorten path by one character
+    });
+    /* Note: Gramine's encrypted filesystem does not generally test whether a file is longer than
+     * what `meta_dec->file_size` indicates; in particular it does not test for the case where the
+     * header says the file is empty but file would contain (ignored) data blocks. So test only size
+     * modifications which interfere with the mht tree but not with `meta_dec->file_size = 0`. */
+    BREAK_DEC("meta_enc_size_0",    { meta_dec->file_size = g_input_size - PF_NODE_SIZE; });
+    BREAK_DEC("meta_enc_size_1",    { meta_dec->file_size = g_input_size - 1; });
+    BREAK_DEC("meta_enc_size_2",    { meta_dec->file_size = g_input_size + PF_NODE_SIZE; });
+    BREAK_DEC("meta_enc_size_3",    { meta_dec->file_size = UINT64_MAX; });
+    BREAK_DEC("meta_enc_size_4",    { meta_dec->file_size = g_input_size + 1; });
+    BREAK_DEC("meta_enc_mht_key_0", { meta_dec->root_mht_node_key[0] ^= 1; });
+    BREAK_DEC("meta_enc_mht_key_1", { LAST_BYTE(meta_dec->root_mht_node_key) ^= 0xfe; });
+    BREAK_DEC("meta_enc_mht_mac_0", { meta_dec->root_mht_node_mac[0] ^= 1; });
+    BREAK_DEC("meta_enc_mht_mac_1", { LAST_BYTE(meta_dec->root_mht_node_mac) ^= 0xfe; });
+    /* Note: no point in tampering with (decrypted) meta_dec->file_data as there is no way to
+     * detect such tampering, the re-encryption would turn it in authentic (different) data. */
 
-    /* padding is ignored */
-    BREAK_PF("meta_padding_0", /*update=*/false,
-             { meta->padding[0] ^= 1; });
-    BREAK_PF("meta_padding_1", /*update=*/false,
-             { LAST_BYTE(meta->padding) ^= 0xfe; });
+    /* Note: padding is ignored during processing, so no point in tampering meta->padding */
 
     BREAK_MHT("mht_0", { mht_dec->data_nodes_crypto[0].key[0] ^= 1; });
     BREAK_MHT("mht_1", { mht_dec->data_nodes_crypto[0].mac[0] ^= 1; });
@@ -380,11 +401,9 @@ static void tamper_modify(void) {
     });
 
     /* data nodes start from node #2 */
-    BREAK_PF("data_0", /*update=*/false,
-             { *(out + 2 * PF_NODE_SIZE) ^= 1; });
-    BREAK_PF("data_1", /*update=*/false,
-             { *(out + 3 * PF_NODE_SIZE - 1) ^= 1; });
-    BREAK_PF("data_2", /*update=*/false, {
+    BREAK_PLN("data_0", /*update=*/false, { *(out + 2 * PF_NODE_SIZE) ^= 1; });
+    BREAK_PLN("data_1", /*update=*/false, { *(out + 3 * PF_NODE_SIZE - 1) ^= 1; });
+    BREAK_PLN("data_2", /*update=*/false, {
         /* swap data nodes */
         memcpy(out + 2 * PF_NODE_SIZE, g_input_data + 3 * PF_NODE_SIZE, PF_NODE_SIZE);
         memcpy(out + 3 * PF_NODE_SIZE, g_input_data + 2 * PF_NODE_SIZE, PF_NODE_SIZE);
