@@ -188,8 +188,8 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         for name in os.listdir(invalid_dir):
             invalid = os.path.join(invalid_dir, name)
             output_path = os.path.join(self.OUTPUT_DIR, name)
-            input_path = os.path.join(invalid_dir, os.path.basename(original_input))
             # copy the file so it has the original file name (for allowed path check)
+            input_path = original_input
             shutil.copy(invalid, input_path)
 
             # test decryption using the pf-crypt tool
