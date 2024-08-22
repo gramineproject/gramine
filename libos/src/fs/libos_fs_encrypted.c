@@ -19,7 +19,6 @@ static LISTP_TYPE(libos_encrypted_files_key) g_keys = LISTP_INIT;
 
 /* Protects the `g_keys` list, but also individual keys, since they can be updated */
 static struct libos_lock g_keys_lock;
-
 static LISTP_TYPE(libos_encrypted_volume) g_volumes = LISTP_INIT;
 
 /* Protects the `g_volumes` list. */
@@ -277,69 +276,78 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         ret = -EACCES;
         goto out;
     }
+    libos_encrypted_file_state_t new_state_in_map = PF_FILE_STATE_ACTIVE;
     pf_mac_t opening_root_mac;
     pf_status_t pfs = pf_open(pal_handle, norm_path, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
                               create, &enc->volume->key->pf_key, &opening_root_mac, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
-        log_warning("pf_open failed: %s", pf_strerror(pfs));
         ret = -EACCES;
-        goto out;
+        if (pfs != PF_STATUS_CORRUPTED) {
+            log_warning("pf_open failed: %s", pf_strerror(pfs));
+            goto out;
+        }
+        log_error("pf_open of file '%s' encountered corrupted state during open", norm_path);
+        new_state_in_map = PF_FILE_STATE_ERROR;
     }
 
     /* rollback protection */
-    struct libos_encrypted_volume_state_map* file_state = NULL;
     log_debug("file '%s' opened with MAC=" MAC_PRINTF_PATTERN, norm_path,
               MAC_PRINTF_ARGS(opening_root_mac));  // TODO (MST): remove me eventually?
+    struct libos_encrypted_volume_state_map* file_state = NULL;
     lock(&(enc->volume->files_state_map_lock));
     /* - get current state */
     HASH_FIND_STR(enc->volume->files_state_map, norm_path, file_state);
-    /* - check current state */
-    if (create) {
-        if (file_state && (file_state->state != PF_FILE_STATE_DELETED)) {
-            log_error("newly created file '%s' is in state %s", norm_path,
-                      file_state_to_string(file_state->state));
-            if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
-                pf_set_corrupted(pf);
-                ret = -EEXIST;
-                goto out_unlock_map;
-            }
-        }
-    } else {
-        if (file_state) {
-            if ((file_state->state == PF_FILE_STATE_ERROR) ||
-                (file_state->state == PF_FILE_STATE_DELETED)) {
-                log_error("file '%s' was seen before but in %s state", norm_path,
+    if (new_state_in_map != PF_FILE_STATE_ERROR) {
+        /* - check current state */
+        if (create) {
+            if (file_state && (file_state->state != PF_FILE_STATE_DELETED)) {
+                // Note: with create=true we want to open without overwriting, so only valid state
+                // for an existing map entry is if the file was known to be deleted.
+                log_error("newly created file '%s' is in state %s", norm_path,
                           file_state_to_string(file_state->state));
                 if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
-                    pf_set_corrupted(pf);
-                    ret = -EACCES;
-                    goto out_unlock_map;
-                }
-            }
-            if (memcmp(file_state->last_seen_root_mac, opening_root_mac, sizeof(pf_mac_t)) != 0) {
-                log_error(
-                    "file '%s' was seen before but in different inconsistent (rolled-back?) "
-                    "state, expected MAC=" MAC_PRINTF_PATTERN
-                    " but file had "
-                    "MAC=" MAC_PRINTF_PATTERN,
-                    norm_path, MAC_PRINTF_ARGS(file_state->last_seen_root_mac),
-                    MAC_PRINTF_ARGS(opening_root_mac));
-                if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
-                    pf_set_corrupted(pf);
-                    ret = -EACCES;
-                    goto out_unlock_map;
+                    pf_close(pf, NULL);
+                    ret              = -EEXIST;
+                    new_state_in_map = PF_FILE_STATE_ERROR;
                 }
             }
         } else {
-            if (enc->volume->protection_mode == PF_ENCLAVE_LIFE_RB_PROTECTION_STRICT) {
-                log_error(
-                    "file '%s' was not seen before which is not allowed with strict rollback "
-                    "protection mode",
-                    norm_path);
-                pf_set_corrupted(pf);
-                ret = -EACCES;
-                goto out_unlock_map;
+            if (file_state) {
+                if ((file_state->state == PF_FILE_STATE_ERROR) ||
+                    (file_state->state == PF_FILE_STATE_DELETED)) {
+                    log_error("file '%s' was seen before but in %s state", norm_path,
+                              file_state_to_string(file_state->state));
+                    if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
+                        pf_close(pf, NULL);
+                        ret              = -EACCES;
+                        new_state_in_map = PF_FILE_STATE_ERROR;
+                    }
+                } else if (memcmp(file_state->last_seen_root_mac, opening_root_mac,
+                                  sizeof(pf_mac_t)) != 0) {
+                    log_error(
+                        "file '%s' was seen before but in different inconsistent (rolled-back?) "
+                        "state, expected MAC=" MAC_PRINTF_PATTERN
+                        " but file had "
+                        "MAC=" MAC_PRINTF_PATTERN,
+                        norm_path, MAC_PRINTF_ARGS(file_state->last_seen_root_mac),
+                        MAC_PRINTF_ARGS(opening_root_mac));
+                    if (enc->volume->protection_mode != PF_ENCLAVE_LIFE_RB_PROTECTION_NONE) {
+                        pf_close(pf, NULL);
+                        ret              = -EACCES;
+                        new_state_in_map = PF_FILE_STATE_ERROR;
+                    }
+                }
+            } else {
+                if (enc->volume->protection_mode == PF_ENCLAVE_LIFE_RB_PROTECTION_STRICT) {
+                    log_error(
+                        "file '%s' was not seen before which is not allowed with strict rollback "
+                        "protection mode",
+                        norm_path);
+                    pf_close(pf, NULL);
+                    ret              = -EACCES;
+                    new_state_in_map = PF_FILE_STATE_ERROR;
+                }
             }
         }
     }
@@ -354,15 +362,20 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         norm_path             = NULL; /* to prevent freeing it */
         HASH_ADD_KEYPTR(hh, enc->volume->files_state_map, file_state->norm_path,
                         strlen(file_state->norm_path), file_state);
+        log_debug(
+            "updated file protection map with file '%s', state '%s' and MAC=" MAC_PRINTF_PATTERN,
+            file_state->norm_path, file_state_to_string(file_state->state),
+            MAC_PRINTF_ARGS(file_state->last_seen_root_mac));
     }
     /*   we do below unconditionally as we might recreate a deleted file or overwrite an existing
      *   one */
     memcpy(file_state->last_seen_root_mac, opening_root_mac, sizeof(pf_mac_t));
-    file_state->state = PF_FILE_STATE_ACTIVE;
+    file_state->state = new_state_in_map;
 
-    enc->pf = pf;
-    enc->pal_handle = pal_handle;
-    ret = 0;
+    if (ret == 0) {
+        enc->pf         = pf;
+        enc->pal_handle = pal_handle;
+    }
 
 out_unlock_map:
     unlock(&(enc->volume->files_state_map_lock));

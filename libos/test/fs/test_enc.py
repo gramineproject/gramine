@@ -200,13 +200,24 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
                 # decryption of invalid file must fail with -1 (wrapped to 255)
                 self.assertEqual(exc.returncode, 255)
             else:
-                print('[!] Fail: successfully decrypted file: ' + name)
+                print('[!] Fail: successfully decrypted file with cipher utility: ' + name)
                 failed = True
+
+            # test decryption as part of reading file in program running with gramine
+            stdout, stderr = self.run_binary(['pf_tamper', input_path])
+            try:
+               self.assertIn('ERROR: ', stdout)
+            # TODO: check also that we updated map in trace/stderr?
+            # DEBUG: self.assertIn('truncate(' + path_1 + ') to ' + str(size_out) + ' OK', stdout)
+            except:
+                print('[!] Fail: successfully decrypted file with gramine: ' + name)
+                failed = True
+
         if failed:
             self.fail()
 
+    # checks rollback protection
     def test_600_gdb_pf_rollback(self):
-        # This test checks rollback protection.
         # To run this test manually, encrypt a <input_file> (contained in <work_dir>) with the 
         # default key from manifest and use:
         #    GDB=1 GDB_TTY=1 GDB_SCRIPT=pf_rollback.gdb gramine-[sgx|direct] pf_rollback <work_dir> <input_file>
