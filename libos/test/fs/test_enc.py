@@ -179,10 +179,12 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         # prepare valid encrypted file (largest one for maximum possible corruptions)
         original_input = self.OUTPUT_FILES[-1]
         self.__encrypt_file(self.INPUT_FILES[-1], original_input)
+        shutil.copy(original_input, original_input+".save") # Save for debugging as we overwrite original below
         # generate invalid files based on the above
         self.__corrupt_file(original_input, invalid_dir)
 
         # try to decrypt invalid files
+        failed = False
         for name in os.listdir(invalid_dir):
             invalid = os.path.join(invalid_dir, name)
             output_path = os.path.join(self.OUTPUT_DIR, name)
@@ -190,6 +192,7 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
             # copy the file so it has the original file name (for allowed path check)
             shutil.copy(invalid, input_path)
 
+            # test decryption using the pf-crypt tool
             try:
                 args = ['decrypt', '-V', '-w', self.WRAP_KEY, '-i', input_path, '-o', output_path]
                 self.__pf_crypt(args)
@@ -198,4 +201,6 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
                 self.assertEqual(exc.returncode, 255)
             else:
                 print('[!] Fail: successfully decrypted file: ' + name)
-                self.fail()
+                failed = True
+        if failed:
+            self.fail()
