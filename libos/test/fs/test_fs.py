@@ -2,6 +2,7 @@ import filecmp
 import os
 import shutil
 import unittest
+import conftest
 
 from graminelibos.regression import (
     HAS_SGX,
@@ -31,7 +32,8 @@ class TC_00_FileSystem(RegressionTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        shutil.rmtree(cls.TEST_DIR)
+        if not conftest.option.skip_teardown:
+            shutil.rmtree(cls.TEST_DIR)
 
     def setUp(self):
         # clean output for each test
@@ -336,7 +338,8 @@ class TC_01_Sync(RegressionTestCase):
         os.mkdir(self.TEST_DIR)
 
     def tearDown(self):
-        shutil.rmtree(self.TEST_DIR)
+        if not conftest.option.skip_teardown:
+            shutil.rmtree(self.TEST_DIR)
 
     def _test_multiple_writers(self, n_lines, n_processes, n_threads):
         output_path = os.path.join(self.TEST_DIR, 'output.txt')
