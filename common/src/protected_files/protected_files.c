@@ -643,8 +643,10 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     if (PF_FAILURE(status)) {
         free(file_data_node);
         pf->last_error = status;
-        if (status == PF_STATUS_MAC_MISMATCH)
+        if (status == PF_STATUS_MAC_MISMATCH) {
             pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return NULL;
     }
 
@@ -706,8 +708,10 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_nod
     if (PF_FAILURE(status)) {
         free(file_mht_node);
         pf->last_error = status;
-        if (status == PF_STATUS_MAC_MISMATCH)
+        if (status == PF_STATUS_MAC_MISMATCH) {
             pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return NULL;
     }
 
@@ -791,9 +795,11 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         DEBUG_PF("failed to decrypt metadata: %d", status);
-        if (status == PF_STATUS_MAC_MISMATCH)
+        if (status == PF_STATUS_MAC_MISMATCH) {
             // MAC could also mismatch if wrong key was provided but we err on side of safety ...
             pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return false;
     }
 
@@ -821,8 +827,10 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
                                       &pf->metadata_decrypted.root_mht_node_mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
-            if (status == PF_STATUS_MAC_MISMATCH)
+            if (status == PF_STATUS_MAC_MISMATCH) {
                 pf->file_status = PF_STATUS_CORRUPTED;
+                pf->last_error  = PF_STATUS_CORRUPTED;
+            }
             return false;
         }
     }
