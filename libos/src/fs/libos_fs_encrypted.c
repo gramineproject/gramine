@@ -113,7 +113,7 @@ static pf_status_t cb_aes_cmac(const pf_key_t* key, const void* input, size_t in
                           sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESCMAC failed: %d", ret);
-        return PF_STATUS_CALLBACK_FAILED;
+        return PF_STATUS_CRYPTO_ERROR;
     }
     return PF_STATUS_SUCCESS;
 }
@@ -125,7 +125,7 @@ static pf_status_t cb_aes_gcm_encrypt(const pf_key_t* key, const pf_iv_t* iv, co
                                 input_size, aad, aad_size, output, (uint8_t*)mac, sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESGCMEncrypt failed: %d", ret);
-        return PF_STATUS_CALLBACK_FAILED;
+        return PF_STATUS_CRYPTO_ERROR;
     }
     return PF_STATUS_SUCCESS;
 }
@@ -138,7 +138,10 @@ static pf_status_t cb_aes_gcm_decrypt(const pf_key_t* key, const pf_iv_t* iv, co
                                 sizeof(*mac));
     if (ret != 0) {
         log_warning("lib_AESGCMDecrypt failed: %d", ret);
-        return PF_STATUS_CALLBACK_FAILED;
+        if (ret == PAL_ERROR_CRYPTO_AUTH_FAILED)
+            return PF_STATUS_MAC_MISMATCH;
+        else
+            return PF_STATUS_CRYPTO_ERROR;
     }
     return PF_STATUS_SUCCESS;
 }

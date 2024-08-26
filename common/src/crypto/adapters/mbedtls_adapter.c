@@ -35,6 +35,7 @@ static int mbedtls_to_pal_error(int error) {
 
         case MBEDTLS_ERR_AES_INVALID_INPUT_LENGTH:
         case MBEDTLS_ERR_CIPHER_FULL_BLOCK_EXPECTED:
+        case MBEDTLS_ERR_GCM_BUFFER_TOO_SMALL:
             return PAL_ERROR_CRYPTO_INVALID_INPUT_LENGTH;
 
         case MBEDTLS_ERR_CIPHER_FEATURE_UNAVAILABLE:
@@ -52,6 +53,8 @@ static int mbedtls_to_pal_error(int error) {
         case MBEDTLS_ERR_RSA_PUBLIC_FAILED:  // see mbedtls_rsa_public()
         case MBEDTLS_ERR_RSA_PRIVATE_FAILED: // see mbedtls_rsa_private()
         case MBEDTLS_ERR_ECP_BAD_INPUT_DATA:
+        case MBEDTLS_ERR_GCM_BAD_INPUT:
+        case MBEDTLS_ERR_SHA256_BAD_INPUT_DATA:
             return PAL_ERROR_CRYPTO_BAD_INPUT_DATA;
 
         case MBEDTLS_ERR_RSA_OUTPUT_TOO_LARGE:
@@ -71,6 +74,7 @@ static int mbedtls_to_pal_error(int error) {
             return PAL_ERROR_CRYPTO_INVALID_PADDING;
 
         case MBEDTLS_ERR_CIPHER_AUTH_FAILED:
+        case MBEDTLS_ERR_GCM_AUTH_FAILED:
             return PAL_ERROR_CRYPTO_AUTH_FAILED;
 
         case MBEDTLS_ERR_CIPHER_INVALID_CONTEXT:
