@@ -350,7 +350,7 @@ static void tamper_modify(void) {
     });
     /* Note: we do not test generally whether file is longer than meta_dec_file indicates, in
      * particular we do not test it for the case where the header says it is empty.  So test only
-     * size modification which interfer with the mht tree but not with meta_dec->file_size = 0. */
+     * size modifications which interfere with the mht tree but not with meta_dec->file_size = 0. */
     BREAK_DEC("meta_enc_size_0",    { meta_dec->file_size = g_input_size - PF_NODE_SIZE; });
     BREAK_DEC("meta_enc_size_1",    { meta_dec->file_size = g_input_size - 1; });
     BREAK_DEC("meta_enc_size_2",    { meta_dec->file_size = g_input_size + PF_NODE_SIZE; });
