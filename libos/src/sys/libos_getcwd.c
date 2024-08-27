@@ -82,7 +82,7 @@ long libos_syscall_fchdir(int fd) {
     if (!hdl)
         return -EBADF;
 
-    int ret = 0;
+    int ret;
     lock(&g_dcache_lock);
 
     struct libos_dentry* dent = hdl->dentry;
@@ -106,6 +106,7 @@ long libos_syscall_fchdir(int fd) {
     put_dentry(g_process.cwd);
     g_process.cwd = dent;
     unlock(&g_process.fs_lock);
+    ret = 0;
 out:
     put_handle(hdl);
     unlock(&g_dcache_lock);
