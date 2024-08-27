@@ -303,7 +303,7 @@ static int register_trusted_file(const char* path, const char* hash_str) {
     }
 
     size_t path_len = strlen(path);
-    if (path_len >= URI_MAX) {
+    if (path_len > URI_MAX) {
         log_error("Size of file exceeds maximum %dB: %s", URI_MAX, path);
         return -EINVAL;
     }
@@ -403,10 +403,7 @@ int init_trusted_files(void) {
         return 0;
 
     ssize_t toml_trusted_files_cnt = toml_array_nelem(toml_trusted_files);
-    if (toml_trusted_files_cnt < 0)
-        return -EPERM;
-    if (toml_trusted_files_cnt == 0)
-        return 0;
+    assert(toml_trusted_files_cnt >= 0);
 
     for (size_t i = 0; i < (size_t)toml_trusted_files_cnt; i++) {
         /* read `sgx.trusted_file = {uri = "file:foo", sha256 = "deadbeef"}` entry from manifest */
