@@ -31,6 +31,11 @@ typedef uint8_t pf_mac_t[PF_MAC_SIZE];
 typedef uint8_t pf_key_t[PF_KEY_SIZE];
 typedef uint8_t pf_nonce_t[PF_NONCE_SIZE];
 
+// convenience macros to print out some mac fingerprint: printf( "some text " MAC_PRINTF_PATTERN "
+// yet other text", MAC_PRINTF_ARGS(mac) );
+#define MAC_PRINTF_PATTERN   "0x%02x%02x%02x%02x..."
+#define MAC_PRINTF_ARGS(mac) (mac)[0], (mac)[1], (mac)[2], (mac)[3]
+
 typedef enum _pf_status_t {
     PF_STATUS_SUCCESS              = 0,
     PF_STATUS_UNKNOWN_ERROR        = -1,
@@ -212,28 +217,31 @@ const char* pf_strerror(int err);
 /*!
  * \brief Open a protected file.
  *
- * \param      handle           Open underlying file handle.
- * \param      path             Path to the file. If NULL and \p create is false, don't check path
- *                              for validity.
- * \param      underlying_size  Underlying file size.
- * \param      mode             Access mode.
- * \param      create           Overwrite file contents if true.
- * \param      key              Wrap key.
- * \param[out] context          PF context for later calls.
+ * \param      handle             Open underlying file handle.
+ * \param      path               Path to the file. If NULL and \p create is false, don't check path
+ *                                for validity.
+ * \param      underlying_size    Underlying file size.
+ * \param      mode               Access mode.
+ * \param      create             Overwrite file contents if true.
+ * \param      key                Wrap key.
+ * \param      opening_root_mac   If non-NULL, !create & successfull open, returns root-hash of file
+ * \param[out] context            PF context for later calls.
  *
  * \returns PF status.
  */
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
-                    pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context);
+                    pf_file_mode_t mode, bool create, const pf_key_t* key,
+                    pf_mac_t* opening_root_mac, pf_context_t** context);
 
 /*!
  * \brief Close a protected file and commit all changes to disk.
  *
- * \param pf  PF context.
+ * \param pf                 PF context.
+ * \param closing_root_mac   If non-NULL, returns root-hash of file at closing time
  *
  * \returns PF status.
  */
-pf_status_t pf_close(pf_context_t* pf);
+pf_status_t pf_close(pf_context_t* pf, pf_mac_t* closing_root_mac);
 
 /*!
  * \brief Read from a protected file.
@@ -286,13 +294,14 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size);
 /*!
  * \brief Rename a PF.
  *
- * \param pf        PF context.
- * \param new_path  New file path.
+ * \param pf             PF context.
+ * \param new_path       New file path.
+ * \param new_root_mac   if non-NULL, returns new root-hash of file
  *
  * Updates the path inside protected file header, and flushes all changes. The caller is responsible
  * for renaming the underlying file.
  */
-pf_status_t pf_rename(pf_context_t* pf, const char* new_path);
+pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_mac);
 
 /*!
  * \brief Flush any pending data of a protected file to disk.
@@ -302,3 +311,10 @@ pf_status_t pf_rename(pf_context_t* pf, const char* new_path);
  * \returns PF status.
  */
 pf_status_t pf_flush(pf_context_t* pf);
+
+/*!
+ * \brief Set protected file state as corrupted
+ *
+ * \param pf  PF context.
+ */
+void pf_set_corrupted(pf_context_t* pf);

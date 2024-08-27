@@ -1,0 +1,28 @@
+loader.entrypoint = "file:{{ gramine.libos }}"
+loader.log_level ="trace" # DEBUG
+libos.entrypoint = "{{ entrypoint }}"
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/{{ arch_libdir }}"
+loader.insecure__use_cmdline_argv = true
+
+fs.mounts = [
+  { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
+  { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
+  { path = "/bin", uri = "file:/bin" },
+
+  { type = "encrypted", protection_mode = "non-strict", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+]
+
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+
+sgx.trusted_files = [
+  "file:{{ gramine.libos }}",
+  "file:{{ gramine.runtimedir(libc) }}/",
+  "file:{{ binary_dir }}/{{ entrypoint }}",
+]
+
+# See the `keys.c` test.
+fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"

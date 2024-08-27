@@ -643,8 +643,10 @@ static file_node_t* ipf_read_data_node(pf_context_t* pf, uint64_t offset) {
     if (PF_FAILURE(status)) {
         free(file_data_node);
         pf->last_error = status;
-        if (status == PF_STATUS_MAC_MISMATCH)
+        if (status == PF_STATUS_MAC_MISMATCH) {
             pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return NULL;
     }
 
@@ -706,8 +708,10 @@ static file_node_t* ipf_read_mht_node(pf_context_t* pf, uint64_t logical_mht_nod
     if (PF_FAILURE(status)) {
         free(file_mht_node);
         pf->last_error = status;
-        if (status == PF_STATUS_MAC_MISMATCH)
+        if (status == PF_STATUS_MAC_MISMATCH) {
             pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return NULL;
     }
 
@@ -791,6 +795,11 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
     if (PF_FAILURE(status)) {
         pf->last_error = status;
         DEBUG_PF("failed to decrypt metadata: %d", status);
+        if (status == PF_STATUS_MAC_MISMATCH) {
+            // MAC could also mismatch if wrong key was provided but we err on side of safety ...
+            pf->file_status = PF_STATUS_CORRUPTED;
+            pf->last_error  = PF_STATUS_CORRUPTED;
+        }
         return false;
     }
 
@@ -818,6 +827,10 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
                                       &pf->metadata_decrypted.root_mht_node_mac);
         if (PF_FAILURE(status)) {
             pf->last_error = status;
+            if (status == PF_STATUS_MAC_MISMATCH) {
+                pf->file_status = PF_STATUS_CORRUPTED;
+                pf->last_error  = PF_STATUS_CORRUPTED;
+            }
             return false;
         }
     }
@@ -1076,7 +1089,7 @@ static void ipf_delete_cache(pf_context_t* pf) {
     }
 }
 
-static bool ipf_close(pf_context_t* pf) {
+static bool ipf_close(pf_context_t* pf, pf_mac_t* closing_root_mac) {
     bool retval = true;
 
     if (pf->file_status != PF_STATUS_SUCCESS) {
@@ -1087,6 +1100,10 @@ static bool ipf_close(pf_context_t* pf) {
             DEBUG_PF("internal flush failed");
             retval = false;
         }
+    }
+
+    if (closing_root_mac != NULL) {
+        memcpy(*closing_root_mac, pf->metadata_node.plaintext_part.metadata_mac, sizeof(pf_mac_t));
     }
 
     // omeg: fs close is done by Gramine handler
@@ -1126,20 +1143,25 @@ void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
 }
 
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
-                    pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context) {
+                    pf_file_mode_t mode, bool create, const pf_key_t* key,
+                    pf_mac_t* opening_root_mac, pf_context_t** context) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
     pf_status_t status;
     *context = ipf_open(path, mode, create, handle, underlying_size, key, &status);
+    if ((*context != NULL) && (opening_root_mac != NULL)) {
+        memcpy(*opening_root_mac, (*context)->metadata_node.plaintext_part.metadata_mac,
+               sizeof(pf_mac_t));
+    }
     return status;
 }
 
-pf_status_t pf_close(pf_context_t* pf) {
+pf_status_t pf_close(pf_context_t* pf, pf_mac_t* closing_root_mac) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
-    if (ipf_close(pf)) {
+    if (ipf_close(pf, closing_root_mac)) {
         free(pf);
         return PF_STATUS_SUCCESS;
     }
@@ -1153,6 +1175,9 @@ pf_status_t pf_get_size(pf_context_t* pf, uint64_t* size) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
+
     *size = pf->metadata_decrypted.file_size;
     return PF_STATUS_SUCCESS;
 }
@@ -1163,6 +1188,9 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
 
     if (!(pf->mode & PF_FILE_MODE_WRITE))
         return PF_STATUS_INVALID_MODE;
+
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
 
     if (size == pf->metadata_decrypted.file_size)
         return PF_STATUS_SUCCESS;
@@ -1208,9 +1236,12 @@ pf_status_t pf_set_size(pf_context_t* pf, uint64_t size) {
     return PF_STATUS_SUCCESS;
 }
 
-pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
+pf_status_t pf_rename(pf_context_t* pf, const char* new_path, pf_mac_t* new_root_mac) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
+
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
 
     if (!(pf->mode & PF_FILE_MODE_WRITE))
         return PF_STATUS_INVALID_MODE;
@@ -1224,6 +1255,9 @@ pf_status_t pf_rename(pf_context_t* pf, const char* new_path) {
     pf->need_writing = true;
     if (!ipf_internal_flush(pf))
         return pf->last_error;
+    if (new_root_mac != NULL) {
+        memcpy(*new_root_mac, pf->metadata_node.plaintext_part.metadata_mac, sizeof(pf_mac_t));
+    }
 
     return PF_STATUS_SUCCESS;
 }
@@ -1281,6 +1315,9 @@ pf_status_t pf_flush(pf_context_t* pf) {
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
+    if (pf->file_status == PF_STATUS_CORRUPTED)
+        return pf->file_status;  // Make corruption "sticky"
+
     if (!ipf_internal_flush(pf))
         return pf->last_error;
 
@@ -1296,4 +1333,8 @@ pf_status_t pf_flush(pf_context_t* pf) {
     }
 
     return PF_STATUS_SUCCESS;
+}
+
+void pf_set_corrupted(pf_context_t* pf) {
+    pf->file_status = PF_STATUS_CORRUPTED;
 }

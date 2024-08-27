@@ -373,14 +373,13 @@ static ssize_t do_getdents(int fd, uint8_t* buf, size_t buf_size, bool is_getden
         goto out_no_unlock;
     }
 
+    lock(&g_dcache_lock); /* for dentry->inode */
+    maybe_lock_pos_handle(hdl);
+    lock(&hdl->lock); /* for hdl->dentry */
     if (!hdl->dentry->inode) {
         ret = -ENOENT;
-        goto out_no_unlock;
+        goto out;
     }
-
-    lock(&g_dcache_lock);
-    maybe_lock_pos_handle(hdl);
-    lock(&hdl->lock);
 
     struct libos_dir_handle* dirhdl = &hdl->dir_info;
     if ((ret = populate_directory_handle(hdl)) < 0)

@@ -102,6 +102,7 @@ tests = {
     'readdir': {},
     'rename_unlink': {},
     'rename_unlink_fchown': {},
+    'rollback': {},
     'run_test': {
         'include_directories': include_directories(
             # for `gramine_entry_api.h`

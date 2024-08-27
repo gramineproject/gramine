@@ -14,6 +14,7 @@
 
 #include <stddef.h>
 
+#include "libos_checkpoint.h"  // for include of uthash.h _and_ consistent uthash_fatal macros
 #include "libos_types.h"
 #include "list.h"
 #include "pal.h"
@@ -34,6 +35,48 @@ struct libos_encrypted_files_key {
     LIST_TYPE(libos_encrypted_files_key) list;
 };
 
+typedef enum {
+    PF_FILE_STATE_ERROR   = 0,  // file is in non-determined state due to some errors
+    PF_FILE_STATE_ACTIVE  = 1,  // file was provisously seen with known (good committed) state
+    PF_FILE_STATE_DELETED = 2,  // file was previously seen but then either unlinked or renamed
+} libos_encrypted_file_state_t;
+
+inline static const char* file_state_to_string(libos_encrypted_file_state_t state) {
+    return (state == PF_FILE_STATE_ERROR ? "error"
+                                         : (state == PF_FILE_STATE_ACTIVE ? "active" : "deleted"));
+}
+
+/*
+ * Map mapping file URIs to state providing information on files, in particular whether we have seen
+ * them before and what the last seen root-hash is.  This is necessary to provide rollback
+ */
+struct libos_encrypted_volume_state_map {
+    char* norm_path;  // assumptions: all paths canonicalized, symlinks are resolved & no hard links
+    libos_encrypted_file_state_t state;
+    pf_mac_t last_seen_root_mac;  // valid only if state == PF_FILE_STATE_ACTIVE
+    UT_hash_handle hh;
+};
+
+typedef enum {
+    PF_ENCLAVE_LIFE_RB_PROTECTION_NONE       = 0,
+    PF_ENCLAVE_LIFE_RB_PROTECTION_NON_STRICT = 1,
+    PF_ENCLAVE_LIFE_RB_PROTECTION_STRICT     = 2,
+} libos_encrypted_files_mode_t;
+
+DEFINE_LIST(libos_encrypted_volume);
+DEFINE_LISTP(libos_encrypted_volume);
+struct libos_encrypted_volume {
+    char* mount_point_path;
+    libos_encrypted_files_mode_t protection_mode;
+
+    struct libos_encrypted_volume_state_map* files_state_map;
+    struct libos_lock files_state_map_lock;
+
+    struct libos_encrypted_files_key* key;
+
+    LIST_TYPE(libos_encrypted_volume) list;
+};
+
 /*
  * Represents a specific encrypted file. The file is open as long as `use_count` is greater than 0.
  * Note that the file can be open and closed multiple times before it's destroyed.
@@ -44,7 +87,7 @@ struct libos_encrypted_files_key {
 struct libos_encrypted_file {
     size_t use_count;
     char* uri;
-    struct libos_encrypted_files_key* key;
+    struct libos_encrypted_volume* volume;
 
     /* `pf` and `pal_handle` are non-null as long as `use_count` is greater than 0 */
     pf_context_t* pf;
@@ -107,17 +150,44 @@ bool read_encrypted_files_key(struct libos_encrypted_files_key* key, pf_key_t* p
 void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_key_t* pf_key);
 
 /*
+ * \brief Register a volume.
+ *
+ * Registers passed volume -- assumed to be initialized, in particular with valid mount_point_path
+ * -- in global list of mounted volumes.  Returns an error if a volume with identical
+ * mount_point_path already exists.
+ */
+int register_encrypted_volume(struct libos_encrypted_volume* volume);
+
+/*
+ * \brief Retrieve a volume.
+ *
+ * Returns a volume with a given mount_point_path, or NULL if it has not been created yet. Note that
+ * even if the key exists, it might not be set yet (see `struct libos_encrypted_files_key`).
+ *
+ * This does not pass ownership of the key: the key objects are still managed by this module.
+ */
+struct libos_encrypted_volume* get_encrypted_volume(const char* mount_point_path);
+
+/*
+ * \brief List existing volumes.
+ *
+ * Calls `callback` on each currently existing volume.
+ */
+int list_encrypted_volumes(int (*callback)(struct libos_encrypted_volume* volume, void* arg),
+                           void* arg);
+
+/*
  * \brief Open an existing encrypted file.
  *
  * \param      uri      PAL URI to open, has to begin with "file:".
- * \param      key      Key, has to be already set.
+ * \param      volume   Volume assocated with file, has to be already set.
  * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` has to correspond to an existing file that can be decrypted with `key`.
  *
  * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
-int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
+int encrypted_file_open(const char* uri, struct libos_encrypted_volume* volume,
                         struct libos_encrypted_file** out_enc);
 
 /*
@@ -125,14 +195,14 @@ int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
  *
  * \param      uri      PAL URI to open, has to begin with "file:".
  * \param      perm     Permissions for the new file.
- * \param      key      Key, has to be already set.
+ * \param      volume   Volume assocated with file, has to be already set.
  * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` must not correspond to an existing file.
  *
  * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
-int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
+int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_volume* volume,
                           struct libos_encrypted_file** out_enc);
 
 /*
@@ -154,20 +224,22 @@ int encrypted_file_get(struct libos_encrypted_file* enc);
  *
  * This decreases `use_count`, and closes the file if it reaches 0.
  */
-void encrypted_file_put(struct libos_encrypted_file* enc);
+void encrypted_file_put(struct libos_encrypted_file* enc, bool fs_reachable);
 
 /*
  * \brief Flush pending writes to an encrypted file.
  */
-int encrypted_file_flush(struct libos_encrypted_file* enc);
+int encrypted_file_flush(struct libos_encrypted_file* enc, bool fs_reachable);
 
 int encrypted_file_read(struct libos_encrypted_file* enc, void* buf, size_t buf_size,
-                        file_off_t offset, size_t* out_count);
+                        file_off_t offset, size_t* out_count, bool fs_reachable);
 int encrypted_file_write(struct libos_encrypted_file* enc, const void* buf, size_t buf_size,
-                         file_off_t offset, size_t* out_count);
+                         file_off_t offset, size_t* out_count, bool fs_reachable);
 int encrypted_file_rename(struct libos_encrypted_file* enc, const char* new_uri);
+int encrypted_file_unlink(struct libos_encrypted_file* enc);
 
-int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size);
-int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);
+int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_size,
+                            bool fs_reachable);
+int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size, bool fs_reachable);
 
 int parse_pf_key(const char* key_str, pf_key_t* pf_key);

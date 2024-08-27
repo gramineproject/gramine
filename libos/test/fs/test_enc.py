@@ -179,17 +179,20 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         # prepare valid encrypted file (largest one for maximum possible corruptions)
         original_input = self.OUTPUT_FILES[-1]
         self.__encrypt_file(self.INPUT_FILES[-1], original_input)
+        shutil.copy(original_input, original_input+".save") # Save for debugging as we overwrite original below
         # generate invalid files based on the above
         self.__corrupt_file(original_input, invalid_dir)
 
         # try to decrypt invalid files
+        failed = False
         for name in os.listdir(invalid_dir):
             invalid = os.path.join(invalid_dir, name)
             output_path = os.path.join(self.OUTPUT_DIR, name)
-            input_path = os.path.join(invalid_dir, os.path.basename(original_input))
             # copy the file so it has the original file name (for allowed path check)
+            input_path = original_input
             shutil.copy(invalid, input_path)
 
+            # test decryption using the pf-crypt tool
             try:
                 args = ['decrypt', '-V', '-w', self.WRAP_KEY, '-i', input_path, '-o', output_path]
                 self.__pf_crypt(args)
@@ -197,5 +200,73 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
                 # decryption of invalid file must fail with -1 (wrapped to 255)
                 self.assertEqual(exc.returncode, 255)
             else:
-                print('[!] Fail: successfully decrypted file: ' + name)
-                self.fail()
+                print('[!] Fail: successfully decrypted file with cipher utility: ' + name)
+                failed = True
+
+            # test decryption as part of reading file in program running with gramine
+            stdout, stderr = self.run_binary(['pf_tamper', input_path])
+            try:
+               self.assertIn('ERROR: ', stdout)
+            # TODO: check also that we updated map in trace/stderr?
+            # DEBUG: self.assertIn('truncate(' + path_1 + ') to ' + str(size_out) + ' OK', stdout)
+            except:
+                print('[!] Fail: successfully decrypted file with gramine: ' + name)
+                failed = True
+
+        if failed:
+            self.fail()
+
+    # checks rollback protection
+    def test_600_gdb_pf_rollback(self):
+        # To run this test manually, encrypt a <input_file> (contained in <work_dir>) with the 
+        # default key from manifest and use:
+        #    GDB=1 GDB_TTY=1 GDB_SCRIPT=pf_rollback.gdb gramine-[sgx|direct] pf_rollback <work_dir> <input_file>
+        #
+        expected_results = { # with entres for protection-modes strict, non-strict & none
+            'test_open_pre_existing':                           [ 'OK', 'FAIL', 'FAIL' ],
+            'test_reopen_rw':                                   [ 'OK', 'OK', 'OK' ],
+            'test_reopen_exclusive':                            [ 'OK', 'OK', 'OK' ],
+            'test_reopen_non_exclusive':                        [ 'OK', 'OK', 'OK' ],
+            'test_reopen_renamed_rw':                           [ 'OK', 'OK', 'OK' ],
+            'test_reopen_renamed_exclusive':                    [ 'OK', 'OK', 'OK' ],
+            'test_reopen_renamed_non_exclusive':                [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_close_rw':                     [ 'OK', 'OK', 'FAIL' ],
+            'test_rollback_after_close_exclusive':              [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_close_non_exclusive':          [ 'OK', 'OK', 'FAIL' ],
+            'test_delete_rollback_after_close_rw':              [ 'OK', 'OK', 'OK' ],
+            'test_delete_rollback_after_close_exclusive':       [ 'OK', 'OK', 'OK' ],
+            'test_delete_rollback_after_close_non_exclusive':   [ 'OK', 'OK', 'OK' ],
+            'test_rollback_while_open':                         [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_rename_rw':                    [ 'OK', 'OK', 'FAIL' ],
+            'test_rollback_after_rename_exclusive':             [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_rename_non_exclusive':         [ 'OK', 'OK', 'FAIL' ],
+            'test_rename_rollback_after_rename_rw':             [ 'OK', 'OK', 'OK' ],
+            'test_rename_rollback_after_rename_exclusive':      [ 'OK', 'OK', 'OK' ],
+            'test_rename_rollback_after_rename_non_exclusive':  [ 'OK', 'OK', 'OK' ],
+            'test_delete_rollback_after_rename_rw':             [ 'OK', 'OK', 'OK' ],
+            'test_delete_rollback_after_rename_exclusive':      [ 'OK', 'OK', 'OK' ],
+            'test_delete_rollback_after_rename_non_exclusive':  [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_unlink_rw':                    [ 'OK', 'OK', 'FAIL' ],
+            'test_rollback_after_unlink_exclusive':             [ 'OK', 'OK', 'OK' ],
+            'test_rollback_after_unlink_non_exclusive':         [ 'OK', 'OK', 'FAIL' ],
+        }
+        for mode_str, mode_idx in { 'strict': 0, 'non-strict': 1, 'none': 2}.items():
+            work_dir = self.ENCRYPTED_DIR + f"/pm_{mode_str}"
+            internal_work_dir = '/'+work_dir
+            os.mkdir(work_dir)
+            input_file = work_dir + "/input_file"
+            self.__encrypt_file(self.INPUT_FILES[-1], input_file)
+            internal_input_file = '/'+input_file
+            stdout, _ = self.run_gdb(['pf_rollback', internal_work_dir, internal_input_file], 'pf_rollback.gdb', hide_tty=False)
+
+            # expected test results
+            for key, val in expected_results.items():
+                self.assertIn(f'{val[mode_idx]}: {key}', stdout)
+            # Note: for rollback attacks there are also log-messages of adverserial actions along the lines of ...
+            #    self.assertIn('OK: test_rollback_after_close_rw in adversary_save_file({internal_work_dir}/test_rollback_after_close_rw)', stdout)
+            #    self.assertIn('OK: test_rollback_after_close_rw in adversary_reset_file({internal_work_dir}/test_rollback_after_close_rw)', stdout)
+            # ... and delete_rollback attacks provide
+            #     self.assertIn(f'OK: test_delete_rollback_after_rename_rw in adversary_delete_file({internal_work_dir}/test_delete_rollback_after_rename_rw.renamed)', stdout)
+            self.assertIn('TEST OK', stdout)
+            self.assertIn('EXITING GDB WITHOUT A GRAMINE ERROR', stdout)
+            self.assertNotIn('EXITING GDB WITH A GRAMINE ERROR', stdout)

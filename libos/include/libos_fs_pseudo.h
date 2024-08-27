@@ -233,6 +233,7 @@ int proc_ipc_thread_follow_link(struct libos_dentry* dent, char** out_target);
 
 int init_devfs(void);
 int init_attestation(struct pseudo_node* dev);
+int init_rollback(struct pseudo_node* dev);
 
 /* sysfs */
 

@@ -62,7 +62,7 @@ struct libos_process {
     LISTP_TYPE(libos_child_process) zombies;
 
     struct libos_lock children_lock;
-    struct libos_lock fs_lock;
+    struct libos_lock fs_lock; /* Note: has lower priority than g_dcache_lock. */
 
     /* Complete command line for the process, as reported by /proc/[pid]/cmdline; currently filled
      * once during initialization and not able to be modified.

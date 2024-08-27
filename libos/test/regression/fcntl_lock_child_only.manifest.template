@@ -6,7 +6,8 @@ fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
 
-  { type = "encrypted", path = "/tmp_enc/", uri = "file:tmp_enc/" },
+  { type = "encrypted", protection_mode = "non-strict", path = "/tmp_enc/", uri = "file:tmp_enc/" },
+   {# this test work only in non-strict mode until we have full multi-process support for rollback protected files .. #}
 ]
 
 fs.insecure__keys.default = "ffeeddccbbaa99887766554433221100"

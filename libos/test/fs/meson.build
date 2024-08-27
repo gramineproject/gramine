@@ -42,6 +42,8 @@ tests = {
     },
     'open_close': {},
     'open_flags': {},
+    'pf_rollback': {},
+    'pf_tamper': {},
     'read_write': {},
     'read_write_mmap': {},
     'seek_tell': {},

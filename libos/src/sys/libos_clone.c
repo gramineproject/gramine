@@ -95,6 +95,7 @@ static BEGIN_MIGRATION_DEF(fork, struct libos_process* process_description,
                            struct libos_ipc_ids* process_ipc_ids) {
     DEFINE_MIGRATE(process_ipc_ids, process_ipc_ids, sizeof(*process_ipc_ids));
     DEFINE_MIGRATE(all_encrypted_files_keys, NULL, 0);
+    DEFINE_MIGRATE(all_encrypted_volumes, NULL, 0);
     DEFINE_MIGRATE(dentry_root, NULL, 0);
     DEFINE_MIGRATE(all_mounts, NULL, 0);
     DEFINE_MIGRATE(all_vmas, NULL, 0);
