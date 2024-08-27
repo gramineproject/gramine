@@ -212,9 +212,10 @@ static void tamper_truncate(void) {
     truncate_file("trunc_data_3", 3 * PF_NODE_SIZE + PF_NODE_SIZE / 2);
 
     /* extend */
-    /* Note: as mentioned below in tamper_modify() for meta_dec.file_size, we mostly allow the
-     * actual file to be longer than what the header size, the only thing we require is that the
-     * file size is a multiple of PF_NODE_SIZE, so just verify this */
+    /* Note: The code implementing Gramine's encrypted filesystem in `common/src/protected_files.c`
+     * tolerates the actual file to be longer than what the `file_size` attribute in the decrypted
+     * header says. The only required invariant enforced in the code is ensuring that the file size
+     * is a multiple of PF_NODE_SIZE, so let us validate this below. */
     truncate_file("extend_0", g_input_size + 1);
 }
 
@@ -270,6 +271,14 @@ static void pf_encrypt(const void* decrypted, size_t size, const pf_key_t* key, 
     munmap(meta, g_input_size); \
 } while (0)
 
+/* Three different macros to tamper with a file
+ * - BREAK_PLN: tamper with the plaintext part of the metadata.
+ * - BREAK_DEC: tamper with the decrypted part of the metadata and re-encrypted it.
+ *   (Not something an adversary can do to attack the system but still tests overall reliability.)
+ * - BREAK_MHT: tamper with the MHT nodes
+ * The tampering is done by creating a new file with the tampered part and the rest copied from the
+ * original file. */
+
 /* if update is true, also create a file with correct metadata MAC */
 #define BREAK_PLN(suffix, update, ...)                                                   \
     do {                                                                                 \
@@ -324,8 +333,8 @@ static void tamper_modify(void) {
               { meta->plaintext_part.major_version = 0; });
     BREAK_PLN("meta_plain_version_1", /*update=*/false,
               { meta->plaintext_part.major_version = 0xff; });
-    /* Note: we only test (equality) on major version but nothing about minor_version, so no
-     * point in tampering with meta->plaintext_part.minor_version ... */
+    /* Note: Gramine's encrypted filesystem only tests (equality) on major version but nothing about
+     * minor_version, so no point in tampering with meta->plaintext_part.minor_version. */
 
     /* metadata_key_nonce is the keying material for encrypted metadata key derivation, so create
      * also PFs with updated MACs */
@@ -348,9 +357,11 @@ static void tamper_modify(void) {
         meta_dec->file_path[strlen(meta_dec->file_path) - 1] =
             '\0';  // shorten path by one character
     });
-    /* Note: we do not test generally whether file is longer than meta_dec_file indicates, in
-     * particular we do not test it for the case where the header says it is empty.  So test only
-     * size modifications which interfere with the mht tree but not with meta_dec->file_size = 0. */
+    /* Note: As mentioned above, Gramine's encrypted filesystem does not generally test whether a
+     * file is longer than `meta_dec->file_size` indicates, in particular it does not test for the
+     * case where the header says the file is empty but file would contain (ignored) data blocks. So
+     * test only size modifications which interfere with the mht tree but not with
+     * `meta_dec->file_size = 0`. */
     BREAK_DEC("meta_enc_size_0",    { meta_dec->file_size = g_input_size - PF_NODE_SIZE; });
     BREAK_DEC("meta_enc_size_1",    { meta_dec->file_size = g_input_size - 1; });
     BREAK_DEC("meta_enc_size_2",    { meta_dec->file_size = g_input_size + PF_NODE_SIZE; });
@@ -360,10 +371,10 @@ static void tamper_modify(void) {
     BREAK_DEC("meta_enc_mht_key_1", { LAST_BYTE(meta_dec->root_mht_node_key) ^= 0xfe; });
     BREAK_DEC("meta_enc_mht_mac_0", { meta_dec->root_mht_node_mac[0] ^= 1; });
     BREAK_DEC("meta_enc_mht_mac_1", { LAST_BYTE(meta_dec->root_mht_node_mac) ^= 0xfe; });
-    /* Note: no poing in tampering with (decrypted) meta_dec->file_data as there is no way to
-     * detect such tampering, the re-encryption would turn it in authentic (different) data .... */
+    /* Note: no point in tampering with (decrypted) meta_dec->file_data as there is no way to
+     * detect such tampering, the re-encryption would turn it in authentic (different) data. */
 
-    /* Note: padding is ignored during processing, so no point in tampering meta.padding */
+    /* Note: padding is ignored during processing, so no point in tampering meta->padding */
 
     BREAK_MHT("mht_0", { mht_dec->data_nodes_crypto[0].key[0] ^= 1; });
     BREAK_MHT("mht_1", { mht_dec->data_nodes_crypto[0].mac[0] ^= 1; });
