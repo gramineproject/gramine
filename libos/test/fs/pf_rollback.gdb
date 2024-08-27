@@ -51,7 +51,7 @@ commands
 python
 from pathlib import Path
 from gdb_helper import adversary_do
-adversary_do(lambda external_path, external_path_saved, external_path2: Path.unlink(external_path))
+adversary_do(lambda external_path, external_path_saved, external_path2: Path(external_path).unlink())
 end
 
 continue

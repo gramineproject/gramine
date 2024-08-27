@@ -21,5 +21,5 @@ def adversary_do(cmd):
     try:
         cmd(external_path, external_path_saved, external_path2)
         print(f"OK: {test_function} in {operation}({internal_path}{opt_arg}])")
-    except:
-        print(f"FAIL: {test_function} in {operation}({internal_path}{opt_arg})")
+    except Exception as e:
+        print(f"FAIL: {test_function} in {operation}({internal_path}{opt_arg}): {e}")
