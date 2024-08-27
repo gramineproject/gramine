@@ -179,7 +179,8 @@ class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
         # prepare valid encrypted file (largest one for maximum possible corruptions)
         original_input = self.OUTPUT_FILES[-1]
         self.__encrypt_file(self.INPUT_FILES[-1], original_input)
-        shutil.copy(original_input, original_input+".save") # Save for debugging as we overwrite original below
+        # Save for debugging as we overwrite original below
+        shutil.copy(original_input, original_input+".orig")
         # generate invalid files based on the above
         self.__corrupt_file(original_input, invalid_dir)
 

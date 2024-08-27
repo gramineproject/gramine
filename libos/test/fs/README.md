@@ -19,4 +19,9 @@ How to execute
 - `gramine-test pytest -v`
 
 Encrypted file tests assume that Gramine was built with SGX enabled (see comment
-in `test_enc.py`).
+in `test_enc.py`). 
+
+In case some tests fail and you want to debug, there is a new
+pytest option `--skip-teardown` which prevents the removal of generated test
+files (in sub-directory `tmp`) and  allows to easily replicate and investigate 
+manually the test scenarios, e.g., with help of `gdb`.
