@@ -72,7 +72,7 @@ struct allowed_file* get_allowed_file(const char* path) {
     struct allowed_file* tmp;
     LISTP_FOR_EACH_ENTRY(tmp, &g_allowed_file_list, list) {
         /* must be a sub-directory or file */
-        if (path_is_equal_or_subpath(tmp, norm_path, norm_path_size - 1)) {
+        if (path_is_equal_or_subpath(tmp, norm_path, strlen(norm_path))) {
             af = tmp;
             break;
         }
@@ -84,7 +84,7 @@ struct allowed_file* get_allowed_file(const char* path) {
 
 int register_allowed_file(const char* path) {
     size_t path_len = strlen(path);
-    if (path_len >= URI_MAX) {
+    if (path_len > URI_MAX) {
         log_error("Size of file exceeds maximum %dB: %s", URI_MAX, path);
         return -EINVAL;
     }
@@ -182,10 +182,7 @@ int init_allowed_files(void) {
         return 0;
 
     ssize_t toml_allowed_files_cnt = toml_array_nelem(toml_allowed_files);
-    if (toml_allowed_files_cnt < 0)
-        return -EPERM;
-    if (toml_allowed_files_cnt == 0)
-        return 0;
+    assert(toml_allowed_files_cnt >= 0);
 
     for (ssize_t i = 0; i < toml_allowed_files_cnt; i++) {
         toml_raw_t toml_allowed_uri_raw = toml_raw_at(toml_allowed_files, i);
