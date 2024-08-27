@@ -365,15 +365,14 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         norm_path             = NULL; /* to prevent freeing it */
         HASH_ADD_KEYPTR(hh, enc->volume->files_state_map, file_state->norm_path,
                         strlen(file_state->norm_path), file_state);
-        log_debug(
-            "updated file protection map with file '%s', state '%s' and MAC=" MAC_PRINTF_PATTERN,
-            file_state->norm_path, file_state_to_string(file_state->state),
-            MAC_PRINTF_ARGS(file_state->last_seen_root_mac));
     }
     /*   we do below unconditionally as we might recreate a deleted file or overwrite an existing
      *   one */
     memcpy(file_state->last_seen_root_mac, opening_root_mac, sizeof(pf_mac_t));
     file_state->state = new_state_in_map;
+    log_debug("updated file protection map with file '%s', state '%s' and MAC=" MAC_PRINTF_PATTERN,
+              file_state->norm_path, file_state_to_string(file_state->state),
+              MAC_PRINTF_ARGS(file_state->last_seen_root_mac));
 
     if (ret == 0) {
         enc->pf         = pf;
