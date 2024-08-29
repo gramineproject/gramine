@@ -406,6 +406,11 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_dcache);
     RUN_INIT(init_handle);
 
+    if (print_warnings_on_insecure_configs(!g_pal_public_state->parent_process) < 0) {
+        log_error("Cannot parse the manifest (while checking for insecure configurations)");
+        PalProcessExit(1);
+    }
+
     log_debug("LibOS loaded at %p, ready to initialize", &__load_address);
 
     if (g_pal_public_state->parent_process) {

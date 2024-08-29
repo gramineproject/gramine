@@ -105,6 +105,7 @@ libos_sources = files(
     'sys/libos_wait.c',
     'sys/libos_wrappers.c',
     'utils/log.c',
+    'utils/warn.c',
 )
 
 # Arch-specific meson.build must define the following Meson variables:

@@ -183,6 +183,8 @@ noreturn void pal_linux_main(void* initial_rsp, void* fini_callback) {
 
     call_init_array();
 
+    g_pal_public_state.confidential_computing = false;
+
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_public_state.alloc_align = g_page_size;
     assert(IS_POWER_OF_2(g_pal_public_state.alloc_align));
