@@ -327,6 +327,13 @@ static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_n
     if (strcmp(g_pal_public_state->host_type, "Linux-SGX"))
         return 0;
 
+    /* FIXME: Make all SGX-related names and constants more generic, based on
+     *        g_pal_public_state->confidential_computing == true */
+    if (!g_pal_public_state->confidential_computing) {
+        log_error("host is Linux-SGX but 'confidential_computing' flag is false, impossible");
+        return -EINVAL;
+    }
+
     if (!g_pal_public_state->attestation_type) {
         log_error("Cannot determine remote attestation type during init of /dev/attestation/");
         return -EINVAL;

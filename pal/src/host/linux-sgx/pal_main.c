@@ -410,148 +410,6 @@ extern bool g_allowed_files_warn;
 extern uint64_t g_tsc_hz;
 extern size_t g_unused_tcs_pages_num;
 
-static int print_warnings_on_insecure_configs(PAL_HANDLE parent_process) {
-    int ret;
-
-    if (parent_process) {
-        /* Warn only in the first process. */
-        return 0;
-    }
-
-    bool verbose_log_level    = false;
-    bool sgx_debug            = false;
-    bool use_cmdline_argv     = false;
-    bool use_host_env         = false;
-    bool disable_aslr         = false;
-    bool allow_eventfd        = false;
-    bool experimental_flock   = false;
-    bool allow_all_files      = false;
-    bool use_allowed_files    = g_allowed_files_warn;
-    bool encrypted_files_keys = false;
-    bool memfaults_without_exinfo_allowed = g_pal_linuxsgx_state.memfaults_without_exinfo_allowed;
-
-    char* log_level_str = NULL;
-
-    ret = toml_string_in(g_pal_public_state.manifest_root, "loader.log_level", &log_level_str);
-    if (ret < 0)
-        goto out;
-    if (log_level_str && strcmp(log_level_str, "none") && strcmp(log_level_str, "error"))
-        verbose_log_level = true;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.debug",
-                       /*defaultval=*/false, &sgx_debug);
-    if (ret < 0)
-        goto out;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_cmdline_argv",
-                       /*defaultval=*/false, &use_cmdline_argv);
-    if (ret < 0)
-        goto out;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__use_host_env",
-                       /*defaultval=*/false, &use_host_env);
-    if (ret < 0)
-        goto out;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "loader.insecure__disable_aslr",
-                       /*defaultval=*/false, &disable_aslr);
-    if (ret < 0)
-        goto out;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.insecure__allow_eventfd",
-                       /*defaultval=*/false, &allow_eventfd);
-    if (ret < 0)
-        goto out;
-
-    ret = toml_bool_in(g_pal_public_state.manifest_root, "sys.experimental__enable_flock",
-                       /*defaultval=*/false, &experimental_flock);
-    if (ret < 0)
-        goto out;
-
-    if (get_file_check_policy() == FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG)
-        allow_all_files = true;
-
-    toml_table_t* manifest_fs = toml_table_in(g_pal_public_state.manifest_root, "fs");
-    if (manifest_fs) {
-        toml_table_t* manifest_fs_keys = toml_table_in(manifest_fs, "insecure__keys");
-        if (manifest_fs_keys) {
-            ret = toml_table_nkval(manifest_fs_keys);
-            if (ret < 0)
-                goto out;
-
-            if (ret > 0)
-                encrypted_files_keys = true;
-        }
-    }
-
-    if (!verbose_log_level && !sgx_debug && !use_cmdline_argv && !use_host_env && !disable_aslr &&
-            !allow_eventfd && !experimental_flock && !allow_all_files && !use_allowed_files &&
-            !encrypted_files_keys && !memfaults_without_exinfo_allowed) {
-        /* there are no insecure configurations, skip printing */
-        ret = 0;
-        goto out;
-    }
-
-    log_always("-------------------------------------------------------------------------------"
-               "----------------------------------------");
-    log_always("Gramine detected the following insecure configurations:\n");
-
-    if (sgx_debug)
-        log_always("  - sgx.debug = true                           "
-                   "(this is a debug enclave)");
-
-    if (verbose_log_level)
-        log_always("  - loader.log_level = warning|debug|trace|all "
-                   "(verbose log level, may leak information)");
-
-    if (use_cmdline_argv)
-        log_always("  - loader.insecure__use_cmdline_argv = true   "
-                   "(forwarding command-line args from untrusted host to the app)");
-
-    if (use_host_env)
-        log_always("  - loader.insecure__use_host_env = true       "
-                   "(forwarding environment vars from untrusted host to the app)");
-
-    if (disable_aslr)
-        log_always("  - loader.insecure__disable_aslr = true       "
-                   "(Address Space Layout Randomization is disabled)");
-
-    if (allow_eventfd)
-        log_always("  - sys.insecure__allow_eventfd = true         "
-                   "(host-based eventfd is enabled)");
-
-    if (experimental_flock)
-        log_always("  - sys.experimental__enable_flock = true      "
-                   "(flock syscall is enabled; still under development and may contain bugs)");
-
-    if (memfaults_without_exinfo_allowed)
-        log_always("  - sgx.insecure__allow_memfaults_without_exinfo "
-                   "(allow memory faults even when SGX EXINFO is not supported by CPU)");
-
-    if (allow_all_files)
-        log_always("  - sgx.file_check_policy = allow_all_but_log  "
-                   "(all files are passed through from untrusted host without verification)");
-
-    if (use_allowed_files)
-        log_always("  - sgx.allowed_files = [ ... ]                "
-                   "(some files are passed through from untrusted host without verification)");
-
-    if (encrypted_files_keys)
-        log_always("  - fs.insecure__keys.* = \"...\"                "
-                   "(keys hardcoded in manifest)");
-
-
-    log_always("\nGramine will continue application execution, but this configuration must not be "
-               "used in production!");
-    log_always("-------------------------------------------------------------------------------"
-               "----------------------------------------\n");
-
-    ret = 0;
-out:
-    free(log_level_str);
-    return ret;
-}
-
 static void print_warning_on_invariant_tsc(PAL_HANDLE parent_process) {
     if (!parent_process && !g_tsc_hz) {
         /* Warn only in the first process. */
@@ -576,11 +434,6 @@ static void print_warnings_on_invalid_dns_host_conf(PAL_HANDLE parent_process) {
 }
 
 static void post_callback(void) {
-    if (print_warnings_on_insecure_configs(g_pal_common_state.parent_process) < 0) {
-        log_error("Cannot parse the manifest (while checking for insecure configurations)");
-        ocall_exit(1, /*is_exitgroup=*/true);
-    }
-
     print_warning_on_invariant_tsc(g_pal_common_state.parent_process);
 
     print_warnings_on_invalid_dns_host_conf(g_pal_common_state.parent_process);
@@ -623,6 +476,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     call_init_array();
+
+    g_pal_public_state.confidential_computing = true;
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_public_state.alloc_align = g_page_size;
