@@ -30,6 +30,8 @@ extern struct pal_public_state* g_pal_public_state;
 void libos_log(int level, const char* file, const char* func, uint64_t line,
                const char* fmt, ...) __attribute__((format(printf, 5, 6)));
 
+int print_warnings_on_insecure_configs(bool parent_process);
+
 /*!
  * \brief High-level syscall emulation entrypoint.
  *
