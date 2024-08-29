@@ -48,8 +48,6 @@ struct chroot_inode_data {
 };
 
 static bool is_allowed_from_inode_data(struct libos_inode* inode) {
-    if (!inode->data)
-        die_or_inf_loop();
     assert(inode->data);
     return ((struct chroot_inode_data*)inode->data)->is_allowed;
 }
@@ -97,8 +95,7 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
     if (!data)
         return -ENOMEM;
 
-    struct allowed_file* af = get_allowed_file(strip_prefix(uri));
-    if (af || type == S_IFDIR) {
+    if (type == S_IFDIR || get_allowed_file(strip_prefix(uri))) {
         data->is_allowed = true;
         inode->data = data;
         return 0;
