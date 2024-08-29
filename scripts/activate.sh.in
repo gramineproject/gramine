@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -xe
+
+case "@PATH@" in
+@*)
+    echo This script is intended for running from builddir after being templated by Meson. >&2
+    exit 1
+    ;;
+esac
+
+pathmunge() {
+    eval "var=\$$1"
+    case "$var" in *"$2"*) return;; esac
+    eval "$1=\$2\${$1:+:\$$1}"
+    eval "export $1"
+}
+
+pathmunge PATH "@PATH@"
+pathmunge LD_LIBRARY_PATH "@LD_LIBRARY_PATH@"
+pathmunge PKG_CONFIG_PATH "@PKG_CONFIG_PATH@"
+pathmunge PYTHONPATH "@PYTHONPATH@"
+
+exec $SHELL

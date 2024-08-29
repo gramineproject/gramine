@@ -311,3 +311,14 @@ if enable_libgomp
 endif
 
 run_target('clang-format', command: [meson_clang_format_prog])
+
+conf = configuration_data()
+conf.set('PATH', get_option('prefix') / get_option('bindir'))
+conf.set('LD_LIBRARY_PATH', get_option('prefix') / get_option('libdir'))
+conf.set('PKG_CONFIG_PATH', get_option('prefix') / get_option('libdir') / 'pkgconfig')
+conf.set('PYTHONPATH', python3_platlib)
+configure_file(
+    input: 'scripts/activate.sh.in',
+    output: 'activate.sh',
+    configuration: conf,
+)
