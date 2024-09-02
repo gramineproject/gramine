@@ -367,8 +367,6 @@ static int read_environs(const char* const* envp) {
     } while (0)
 
 noreturn void libos_init(const char* const* argv, const char* const* envp) {
-    int ret;
-
     g_pal_public_state = PalGetPalPublicState();
     assert(g_pal_public_state);
 
@@ -408,8 +406,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_dcache);
     RUN_INIT(init_handle);
 
-    ret = print_warnings_on_insecure_configs(!!g_pal_public_state->parent_process);
-    if (ret < 0) {
+    if (print_warnings_on_insecure_configs(!!g_pal_public_state->parent_process) < 0) {
         log_error("Cannot parse the manifest (while checking for insecure configurations)");
         PalProcessExit(1);
     }
@@ -419,7 +416,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     if (g_pal_public_state->parent_process) {
         struct checkpoint_hdr hdr;
 
-        ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
+        int ret = read_exact(g_pal_public_state->parent_process, &hdr, sizeof(hdr));
         if (ret < 0) {
             log_error("libos_init: failed to read the whole checkpoint header: %s",
                       unix_strerror(ret));
@@ -463,7 +460,7 @@ noreturn void libos_init(const char* const* argv, const char* const* envp) {
     RUN_INIT(init_ipc_worker);
 
     if (g_pal_public_state->parent_process) {
-        ret = connect_to_process(g_process_ipc_ids.parent_vmid);
+        int ret = connect_to_process(g_process_ipc_ids.parent_vmid);
         if (ret < 0) {
             log_error("libos_init: failed to establish IPC connection to parent: %s",
                       unix_strerror(ret));

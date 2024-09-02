@@ -24,11 +24,7 @@ static bool warn_about_fs_insecure_keys(void) {
     toml_table_t* manifest_fs_keys = toml_table_in(manifest_fs, "insecure__keys");
     if (!manifest_fs_keys)
         return false;
-    int ret = toml_table_nkval(manifest_fs_keys);
-    if (ret <= 0)
-        return false;
-
-    return true;
+    return toml_table_nkval(manifest_fs_keys) > 0;
 }
 
 int print_warnings_on_insecure_configs(bool parent_process) {
