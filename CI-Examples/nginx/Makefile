@@ -51,9 +51,9 @@ $(NGINX_SRC).tar.gz:
 		$(foreach mirror,$(NGINX_MIRRORS),--url $(mirror)/$(NGINX_SRC).tar.gz)
 
 nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx \
-		$(INSTALL_DIR)/conf/nginx-gramine.conf \
-		$(TEST_DATA) nginx_args \
-		$(INSTALL_DIR)/conf/server.crt
+                $(INSTALL_DIR)/conf/nginx-gramine.conf \
+                $(TEST_DATA) nginx_args \
+                $(INSTALL_DIR)/conf/server.crt
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Darch_libdir=$(ARCH_LIBDIR) \

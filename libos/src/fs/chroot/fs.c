@@ -39,22 +39,42 @@
  */
 #define HOST_PERM(perm) ((perm) | PERM_r________)
 
+enum file_protection_kind {
+    /*
+     * Not in sgx.allowed_files nor in sgx.trusted_files. Files of this type can still be accessed
+     * if sgx.file_check_policy == "allow_all_but_log".
+     */
+    FILE_PROTECTION_KIND_NONE = 0,
+
+    /*
+     * File path (or its prefix directory path) is in sgx.allowed_files. Files of this type can be
+     * opened/created but have no protections.
+     */
+    FILE_PROTECTION_KIND_ALLOWED,
+
+    /*
+     * File path is in sgx.trusted_files. Files of this type can be opened read-only and have
+     * integrity checks (based on SHA256 hashes).
+     */
+    FILE_PROTECTION_KIND_TRUSTED,
+};
+
 /* this data is set up only once (at inode creation or restore), so doesn't require locking */
 struct chroot_inode_data {
-    bool is_trusted;
-    bool is_allowed;
-    /* used only if `is_trusted = true`: array of hashes over separate file chunks */
+    enum file_protection_kind file_kind;
+
+    /* used only if `file_kind == FILE_PROTECTION_KIND_TRUSTED`: array of hashes over file chunks */
     struct trusted_chunk_hash* chunk_hashes;
 };
 
 static bool is_allowed_from_inode_data(struct libos_inode* inode) {
     assert(inode->data);
-    return ((struct chroot_inode_data*)inode->data)->is_allowed;
+    return ((struct chroot_inode_data*)inode->data)->file_kind == FILE_PROTECTION_KIND_ALLOWED;
 }
 
 static bool is_trusted_from_inode_data(struct libos_inode* inode) {
     assert(inode->data);
-    return ((struct chroot_inode_data*)inode->data)->is_trusted;
+    return ((struct chroot_inode_data*)inode->data)->file_kind == FILE_PROTECTION_KIND_TRUSTED;
 }
 
 static const char* strip_prefix(const char* uri) {
@@ -72,7 +92,10 @@ static int setup_inode_data_created_file(const char* uri, struct libos_inode* in
 
     /* can be only allowed file or unknown file (allowed via file check policy),
      * guaranteed to not be a trusted file */
-    data->is_allowed = !!get_allowed_file(strip_prefix(uri));
+    data->file_kind = FILE_PROTECTION_KIND_NONE;
+    if (get_allowed_file(strip_prefix(uri)))
+        data->file_kind = FILE_PROTECTION_KIND_ALLOWED;
+
     inode->data = data;
     return 0;
 }
@@ -84,7 +107,7 @@ static int setup_inode_data_created_dir(struct libos_inode* inode) {
     if (!data)
         return -ENOMEM;
 
-    data->is_allowed = true; /* dirs are always allowed */
+    data->file_kind = FILE_PROTECTION_KIND_ALLOWED; /* dirs are always allowed */
     inode->data = data;
     return 0;
 }
@@ -95,8 +118,10 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
     if (!data)
         return -ENOMEM;
 
+    data->file_kind = FILE_PROTECTION_KIND_NONE;
+
     if (type == S_IFDIR || get_allowed_file(strip_prefix(uri))) {
-        data->is_allowed = true;
+        data->file_kind = FILE_PROTECTION_KIND_ALLOWED;
         inode->data = data;
         return 0;
     }
@@ -109,7 +134,7 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
             free(data);
             return ret;
         }
-        data->is_trusted = true;
+        data->file_kind = FILE_PROTECTION_KIND_TRUSTED;
         data->chunk_hashes = out_chunk_hashes;
         inode->data = data;
         return 0;
@@ -139,7 +164,10 @@ static int chroot_icheckpoint(struct libos_inode* inode, void** out_data, size_t
     assert(inode->data);
 
     struct chroot_inode_data* idata = inode->data;
-    size_t chunk_hashes_size = idata->is_trusted ? get_chunk_hashes_size(inode->size) : 0;
+
+    size_t chunk_hashes_size = 0;
+    if (idata->file_kind == FILE_PROTECTION_KIND_TRUSTED)
+        chunk_hashes_size = get_chunk_hashes_size(inode->size);
 
     struct chroot_checkpoint* cp;
     size_t cp_size = sizeof(*cp) + sizeof(*idata) + chunk_hashes_size;
@@ -165,7 +193,7 @@ static int chroot_irestore(struct libos_inode* inode, void* data) {
         return -ENOMEM;
 
     memcpy(idata, cp->data, sizeof(*idata));
-    if (idata->is_trusted) {
+    if (idata->file_kind == FILE_PROTECTION_KIND_TRUSTED) {
         size_t chunk_hashes_size = cp->size - sizeof(*idata);
         idata->chunk_hashes = malloc(chunk_hashes_size);
         if (!idata->chunk_hashes) {
@@ -299,7 +327,7 @@ static int chroot_lookup(struct libos_dentry* dent) {
     }
 
     mode_t perm = pal_attr.share_flags;
-    size_t file_size = (type == S_IFREG ? pal_attr.pending_size : 0);
+    size_t file_size = type == S_IFREG ? pal_attr.pending_size : 0;
 
     inode = get_new_inode(dent->mount, type, perm);
     if (!inode) {
@@ -530,27 +558,26 @@ static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, fi
     assert(hdl->type == TYPE_CHROOT);
 
     int ret;
-    size_t actual_count = count;
     uint64_t offset = *pos;
+    uint64_t end = count + offset;
 
     if (is_trusted_from_inode_data(hdl->inode)) {
         struct chroot_inode_data* data = hdl->inode->data;
-        ret = copy_and_verify_trusted_file(hdl->pal_handle, offset, actual_count, buf,
+        ret = copy_and_verify_trusted_file(hdl->pal_handle, offset, count, buf,
                                            hdl->inode->size, data->chunk_hashes);
         if (ret < 0)
             return ret;
-        actual_count = MIN(offset + count, (size_t)hdl->inode->size) - offset;
+        count = MIN(end, (uint64_t)hdl->inode->size) - offset;
     } else {
-        ret = PalStreamRead(hdl->pal_handle, offset, &actual_count, buf);
+        ret = PalStreamRead(hdl->pal_handle, offset, &count, buf);
         if (ret < 0)
             return pal_to_unix_errno(ret);
     }
 
-    assert(actual_count <= count);
     if (hdl->inode->type == S_IFREG) {
-        *pos += actual_count;
+        *pos += count;
     }
-    return actual_count;
+    return count;
 }
 
 static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t count,
@@ -562,16 +589,14 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
         return -EACCES;
     }
 
-    size_t actual_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf);
+    int ret = PalStreamWrite(hdl->pal_handle, *pos, &count, (void*)buf);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
-    assert(actual_count <= count);
 
     size_t new_size = 0;
     if (hdl->inode->type == S_IFREG) {
-        *pos += actual_count;
+        *pos += count;
         /* Update file size if we just wrote past the end of file */
         lock(&hdl->inode->lock);
         if (hdl->inode->size < *pos)
@@ -581,7 +606,7 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
     }
 
     refresh_mappings_on_file(hdl, new_size, /*reload_file_contents=*/true);
-    return (ssize_t)actual_count;
+    return (ssize_t)count;
 }
 
 int chroot_readdir(struct libos_dentry* dent, readdir_callback_t callback, void* arg) {
