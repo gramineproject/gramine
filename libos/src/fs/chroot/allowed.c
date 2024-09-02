@@ -67,20 +67,20 @@ struct allowed_file* get_allowed_file(const char* path) {
         return NULL;
     }
 
-    struct allowed_file* af = NULL;
+    struct allowed_file* found_af = NULL;
 
     spinlock_lock(&g_allowed_files_lock);
-    struct allowed_file* tmp;
-    LISTP_FOR_EACH_ENTRY(tmp, &g_allowed_files_list, list) {
+    struct allowed_file* af;
+    LISTP_FOR_EACH_ENTRY(af, &g_allowed_files_list, list) {
         /* must be a sub-directory or file */
-        if (is_af_path_equal_or_subpath(tmp, norm_path, strlen(norm_path))) {
-            af = tmp;
+        if (is_af_path_equal_or_subpath(af, norm_path, strlen(norm_path))) {
+            found_af = af;
             break;
         }
     }
     spinlock_unlock(&g_allowed_files_lock);
     free(norm_path);
-    return af;
+    return found_af;
 }
 
 int register_allowed_file(const char* path) {
