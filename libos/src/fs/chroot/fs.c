@@ -61,20 +61,20 @@ enum file_protection_kind {
 
 /* this data is set up only once (at inode creation or restore), so doesn't require locking */
 struct chroot_inode_data {
-    enum file_protection_kind file_kind;
+    enum file_protection_kind prot_kind;
 
-    /* used only if `file_kind == FILE_PROTECTION_KIND_TRUSTED`: array of hashes over file chunks */
+    /* used only if `prot_kind == FILE_PROTECTION_KIND_TRUSTED`: array of hashes over file chunks */
     struct trusted_chunk_hash* chunk_hashes;
 };
 
 static bool is_allowed_from_inode_data(struct libos_inode* inode) {
     assert(inode->data);
-    return ((struct chroot_inode_data*)inode->data)->file_kind == FILE_PROTECTION_KIND_ALLOWED;
+    return ((struct chroot_inode_data*)inode->data)->prot_kind == FILE_PROTECTION_KIND_ALLOWED;
 }
 
 static bool is_trusted_from_inode_data(struct libos_inode* inode) {
     assert(inode->data);
-    return ((struct chroot_inode_data*)inode->data)->file_kind == FILE_PROTECTION_KIND_TRUSTED;
+    return ((struct chroot_inode_data*)inode->data)->prot_kind == FILE_PROTECTION_KIND_TRUSTED;
 }
 
 static const char* strip_prefix(const char* uri) {
@@ -92,9 +92,9 @@ static int setup_inode_data_created_file(const char* uri, struct libos_inode* in
 
     /* can be only allowed file or unknown file (allowed via file check policy),
      * guaranteed to not be a trusted file */
-    data->file_kind = FILE_PROTECTION_KIND_NONE;
-    if (get_allowed_file(strip_prefix(uri)))
-        data->file_kind = FILE_PROTECTION_KIND_ALLOWED;
+    data->prot_kind = get_allowed_file(strip_prefix(uri))
+                      ? FILE_PROTECTION_KIND_ALLOWED
+                      : FILE_PROTECTION_KIND_NONE;
 
     inode->data = data;
     return 0;
@@ -107,7 +107,7 @@ static int setup_inode_data_created_dir(struct libos_inode* inode) {
     if (!data)
         return -ENOMEM;
 
-    data->file_kind = FILE_PROTECTION_KIND_ALLOWED; /* dirs are always allowed */
+    data->prot_kind = FILE_PROTECTION_KIND_ALLOWED; /* dirs are always allowed */
     inode->data = data;
     return 0;
 }
@@ -118,10 +118,10 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
     if (!data)
         return -ENOMEM;
 
-    data->file_kind = FILE_PROTECTION_KIND_NONE;
+    data->prot_kind = FILE_PROTECTION_KIND_NONE;
 
     if (type == S_IFDIR || get_allowed_file(strip_prefix(uri))) {
-        data->file_kind = FILE_PROTECTION_KIND_ALLOWED;
+        data->prot_kind = FILE_PROTECTION_KIND_ALLOWED;
         inode->data = data;
         return 0;
     }
@@ -134,7 +134,7 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
             free(data);
             return ret;
         }
-        data->file_kind = FILE_PROTECTION_KIND_TRUSTED;
+        data->prot_kind = FILE_PROTECTION_KIND_TRUSTED;
         data->chunk_hashes = out_chunk_hashes;
         inode->data = data;
         return 0;
@@ -166,7 +166,7 @@ static int chroot_icheckpoint(struct libos_inode* inode, void** out_data, size_t
     struct chroot_inode_data* idata = inode->data;
 
     size_t chunk_hashes_size = 0;
-    if (idata->file_kind == FILE_PROTECTION_KIND_TRUSTED)
+    if (idata->prot_kind == FILE_PROTECTION_KIND_TRUSTED)
         chunk_hashes_size = get_chunk_hashes_size(inode->size);
 
     struct chroot_checkpoint* cp;
@@ -193,7 +193,7 @@ static int chroot_irestore(struct libos_inode* inode, void* data) {
         return -ENOMEM;
 
     memcpy(idata, cp->data, sizeof(*idata));
-    if (idata->file_kind == FILE_PROTECTION_KIND_TRUSTED) {
+    if (idata->prot_kind == FILE_PROTECTION_KIND_TRUSTED) {
         size_t chunk_hashes_size = cp->size - sizeof(*idata);
         idata->chunk_hashes = malloc(chunk_hashes_size);
         if (!idata->chunk_hashes) {
