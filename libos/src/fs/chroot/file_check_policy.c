@@ -6,7 +6,7 @@
 #include "libos_fs.h"
 #include "toml_utils.h"
 
-int g_file_check_policy = FILE_CHECK_POLICY_STRICT;
+enum file_check_policy g_file_check_policy = FILE_CHECK_POLICY_STRICT;
 
 int init_file_check_policy(void) {
     int ret;

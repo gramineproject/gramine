@@ -9,8 +9,8 @@
  * apply suitable protections for each AF.
  *
  * Allowed files are useful for debugging, or when files are guaranteed to have no effect on
- * security of the execution (e.g. non-critical logs), or when the application itself protects these
- * files.
+ * security of the execution (e.g. non-confidential logs), or when the application itself protects
+ * these files.
  */
 
 #include <stdbool.h>
@@ -30,16 +30,17 @@ struct allowed_file {
 };
 
 DEFINE_LISTP(allowed_file);
-static LISTP_TYPE(allowed_file) g_allowed_file_list = LISTP_INIT;
-static spinlock_t g_allowed_file_lock = INIT_SPINLOCK_UNLOCKED;
+static LISTP_TYPE(allowed_file) g_allowed_files_list = LISTP_INIT;
+static spinlock_t g_allowed_files_lock = INIT_SPINLOCK_UNLOCKED;
 
-static bool path_is_equal_or_subpath(const struct allowed_file* af, const char* path,
-                                     size_t path_len) {
-    if (af->path_len > path_len || memcmp(af->path, path, af->path_len)) {
+/* assumes that both af->path and full_path are already normalized */
+static bool is_af_path_equal_or_subpath(const struct allowed_file* af, const char* full_path,
+                                        size_t full_path_len) {
+    if (af->path_len > full_path_len || memcmp(af->path, full_path, af->path_len)) {
         /* af path is not a prefix of `path` */
         return false;
     }
-    if (af->path_len == path_len) {
+    if (af->path_len == full_path_len) {
         /* Both are equal */
         return true;
     }
@@ -47,7 +48,7 @@ static bool path_is_equal_or_subpath(const struct allowed_file* af, const char* 
         /* af path is a subpath of `path` (with slash), e.g. "foo/" and "foo/bar" */
         return true;
     }
-    if (path[af->path_len] == '/') {
+    if (full_path[af->path_len] == '/') {
         /* af path is a subpath of `path` (without slash), e.g. "foo" and "foo/bar" */
         return true;
     }
@@ -68,16 +69,16 @@ struct allowed_file* get_allowed_file(const char* path) {
 
     struct allowed_file* af = NULL;
 
-    spinlock_lock(&g_allowed_file_lock);
+    spinlock_lock(&g_allowed_files_lock);
     struct allowed_file* tmp;
-    LISTP_FOR_EACH_ENTRY(tmp, &g_allowed_file_list, list) {
+    LISTP_FOR_EACH_ENTRY(tmp, &g_allowed_files_list, list) {
         /* must be a sub-directory or file */
-        if (path_is_equal_or_subpath(tmp, norm_path, strlen(norm_path))) {
+        if (is_af_path_equal_or_subpath(tmp, norm_path, strlen(norm_path))) {
             af = tmp;
             break;
         }
     }
-    spinlock_unlock(&g_allowed_file_lock);
+    spinlock_unlock(&g_allowed_files_lock);
     free(norm_path);
     return af;
 }
@@ -97,18 +98,18 @@ int register_allowed_file(const char* path) {
     new->path_len = path_len;
     memcpy(new->path, path, path_len + 1);
 
-    spinlock_lock(&g_allowed_file_lock);
+    spinlock_lock(&g_allowed_files_lock);
     struct allowed_file* af;
-    LISTP_FOR_EACH_ENTRY(af, &g_allowed_file_list, list) {
+    LISTP_FOR_EACH_ENTRY(af, &g_allowed_files_list, list) {
         /* below check is required because same file could have been added by another thread */
         if (af->path_len == path_len && !memcmp(af->path, path, path_len)) {
-            spinlock_unlock(&g_allowed_file_lock);
+            spinlock_unlock(&g_allowed_files_lock);
             free(new);
             return 0;
         }
     }
-    LISTP_ADD_TAIL(new, &g_allowed_file_list, list);
-    spinlock_unlock(&g_allowed_file_lock);
+    LISTP_ADD_TAIL(new, &g_allowed_files_list, list);
+    spinlock_unlock(&g_allowed_files_lock);
     return 0;
 }
 

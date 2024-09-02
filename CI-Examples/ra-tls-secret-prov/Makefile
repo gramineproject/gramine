@@ -77,7 +77,7 @@ secret_prov_pf/client: secret_prov_pf/client.c
 # TODO: Simplify after https://github.com/gramineproject/gramine/issues/878 is fixed (manifest paths
 #       should be relative to the manifest, not to current dir) - drop `cd` and `notdir`.
 secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.template \
-	                                 secret_prov_minimal/client
+                                     secret_prov_minimal/client
 	cd secret_prov_minimal && \
 	gramine-manifest \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \

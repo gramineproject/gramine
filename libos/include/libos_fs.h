@@ -20,11 +20,11 @@
 #include "list.h"
 #include "pal.h"
 
-enum {
+enum file_check_policy {
     FILE_CHECK_POLICY_STRICT = 0,
     FILE_CHECK_POLICY_ALLOW_ALL_BUT_LOG,
 };
-extern int g_file_check_policy;
+extern enum file_check_policy g_file_check_policy;
 
 struct trusted_file_hash {
     uint8_t bytes[32];
