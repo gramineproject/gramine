@@ -13,9 +13,6 @@
 #include "libos_thread.h"
 #include "libos_utils.h"
 
-#define IDLE_SLEEP_TIME_US 1000000
-#define MAX_IDLE_CYCLES 10000
-
 DEFINE_LIST(async_event);
 struct async_event {
     IDTYPE caller; /* thread installing this event */
@@ -30,15 +27,14 @@ DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
 
 /* Should be accessed with async_worker_lock held. */
-static enum { WORKER_NOTALIVE, WORKER_ALIVE } async_worker_state;
+static bool async_worker_shutdown = false;
+static int async_worker_running = 1;
 
 static struct libos_thread* async_worker_thread;
 static struct libos_lock async_worker_lock;
 
 /* TODO: use async_worker_thread->pollable_event instead */
 static struct libos_pollable_event install_new_event;
-
-static int create_async_worker(void);
 
 /* Threads register async events like alarm(), setitimer(), ioctl(FIOASYNC)
  * using this function. These events are enqueued in async_list and delivered
@@ -109,28 +105,11 @@ int64_t install_async_event(PAL_HANDLE object, uint64_t time_us,
     INIT_LIST_HEAD(event, list);
     LISTP_ADD_TAIL(event, &async_list, list);
 
-    if (async_worker_state == WORKER_NOTALIVE) {
-        int ret = create_async_worker();
-        if (ret < 0) {
-            unlock(&async_worker_lock);
-            return ret;
-        }
-    }
-
     unlock(&async_worker_lock);
 
     log_debug("Installed async event at %lu", now_us);
     set_pollable_event(&install_new_event);
     return max_prev_expire_time_us - now_us;
-}
-
-int init_async_worker(void) {
-    /* early enough in init, can write global vars without the lock */
-    async_worker_state = WORKER_NOTALIVE;
-    if (!create_lock(&async_worker_lock)) {
-        return -ENOMEM;
-    }
-    return create_pollable_event(&install_new_event);
 }
 
 static int libos_async_worker(void* arg) {
@@ -143,25 +122,9 @@ static int libos_async_worker(void* arg) {
 
     log_setprefix(libos_get_tcb());
 
-    lock(&async_worker_lock);
-    bool notme = (self != async_worker_thread);
-    unlock(&async_worker_lock);
-
-    if (notme) {
-        put_thread(self);
-        PalThreadExit(/*clear_child_tid=*/NULL);
-        /* UNREACHABLE */
-    }
-
     /* Assume async worker thread will not drain the stack that PAL provides,
      * so for efficiency we don't swap the stack. */
     log_debug("Async worker thread started");
-
-    /* Simple heuristic to not burn cycles when no async events are installed:
-     * async worker thread sleeps IDLE_SLEEP_TIME_US for MAX_IDLE_CYCLES and
-     * if nothing happens, dies. It will be re-spawned if some thread wants
-     * to install a new event. */
-    uint64_t idle_cycles = 0;
 
     /* init `pals` so that it always contains at least install_new_event */
     size_t pals_max_cnt = 32;
@@ -194,8 +157,7 @@ static int libos_async_worker(void* arg) {
         }
 
         lock(&async_worker_lock);
-        if (async_worker_state != WORKER_ALIVE) {
-            async_worker_thread = NULL;
+        if (async_worker_shutdown) {
             unlock(&async_worker_lock);
             break;
         }
@@ -205,7 +167,6 @@ static int libos_async_worker(void* arg) {
 
         struct async_event* tmp;
         struct async_event* n;
-        bool other_event = false;
         LISTP_FOR_EACH_ENTRY_SAFE(tmp, n, &async_list, list) {
             /* repopulate `pals` with IO events and find the next expiring alarm/timer */
             if (tmp->object) {
@@ -249,9 +210,6 @@ static int libos_async_worker(void* arg) {
                     /* use time of the next expiring alarm/timer */
                     next_expire_time_us = tmp->expire_time_us;
                 }
-            } else {
-                /* cleanup events do not have an object nor a timeout */
-                other_event = true;
             }
         }
 
@@ -259,23 +217,10 @@ static int libos_async_worker(void* arg) {
         uint64_t sleep_time_us;
         if (next_expire_time_us) {
             sleep_time_us  = next_expire_time_us - now_us;
-            idle_cycles = 0;
-        } else if (pals_cnt || other_event) {
-            inf_sleep = true;
-            idle_cycles = 0;
         } else {
-            /* no async IO events and no timers/alarms: thread is idling */
-            sleep_time_us = IDLE_SLEEP_TIME_US;
-            idle_cycles++;
+            inf_sleep = true;
         }
 
-        if (idle_cycles == MAX_IDLE_CYCLES) {
-            async_worker_state  = WORKER_NOTALIVE;
-            async_worker_thread = NULL;
-            unlock(&async_worker_lock);
-            log_debug("Async worker thread has been idle for some time; stopping it");
-            break;
-        }
         unlock(&async_worker_lock);
 
         /* wait on async IO events + install_new_event + next expiring alarm/timer */
@@ -350,43 +295,42 @@ static int libos_async_worker(void* arg) {
         }
     }
 
-    put_thread(self);
     log_debug("Async worker thread terminated");
 
     free(pals);
     free(pal_events);
 
-    PalThreadExit(/*clear_child_tid=*/NULL);
+    PalThreadExit(&async_worker_running);
     /* UNREACHABLE */
 
 out_err_unlock:
     unlock(&async_worker_lock);
 out_err:
     log_error("Terminating the process due to a fatal error in async worker");
-    put_thread(self);
     PalProcessExit(1);
 }
 
-/* this should be called with the async_worker_lock held */
-static int create_async_worker(void) {
-    assert(locked(&async_worker_lock));
-
-    if (async_worker_state == WORKER_ALIVE)
-        return 0;
+int init_async_worker(void) {
+    /* early enough in init, can write global vars without the lock */
+    if (!create_lock(&async_worker_lock)) {
+        return -ENOMEM;
+    }
+    int ret = create_pollable_event(&install_new_event);
+    if (ret < 0) {
+        return ret;
+    }
 
     struct libos_thread* new = get_new_internal_thread();
     if (!new)
         return -ENOMEM;
 
     async_worker_thread = new;
-    async_worker_state  = WORKER_ALIVE;
 
     PAL_HANDLE handle = NULL;
-    int ret = PalThreadCreate(libos_async_worker, new, &handle);
+    ret = PalThreadCreate(libos_async_worker, new, &handle);
 
     if (ret < 0) {
         async_worker_thread = NULL;
-        async_worker_state  = WORKER_NOTALIVE;
         put_thread(new);
         return pal_to_unix_errno(ret);
     }
@@ -395,26 +339,19 @@ static int create_async_worker(void) {
     return 0;
 }
 
-/* On success, the reference to async worker thread is returned with refcount
- * incremented. It is the responsibility of caller to wait for async worker's
- * exit and then release the final reference to free related resources (it is
- * problematic for the thread itself to release its own resources e.g. stack).
- */
-struct libos_thread* terminate_async_worker(void) {
+void terminate_async_worker(void) {
     lock(&async_worker_lock);
-
-    if (async_worker_state != WORKER_ALIVE) {
-        unlock(&async_worker_lock);
-        return NULL;
-    }
-
-    struct libos_thread* ret = async_worker_thread;
-    if (ret)
-        get_thread(ret);
-    async_worker_state = WORKER_NOTALIVE;
+    async_worker_shutdown = true;
     unlock(&async_worker_lock);
-
     /* force wake up of async worker thread so that it exits */
     set_pollable_event(&install_new_event);
-    return ret;
+
+    while (__atomic_load_n(&async_worker_running, __ATOMIC_ACQUIRE)) {
+        CPU_RELAX();
+    }
+
+    PAL_HANDLE handle = async_worker_thread->pal_handle;
+    put_thread(async_worker_thread);
+    async_worker_thread = NULL;
+    PalObjectDestroy(handle);
 }
