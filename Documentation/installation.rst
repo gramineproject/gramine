@@ -30,8 +30,8 @@ Debian 12
 
 ::
 
-   sudo curl -fsSLo /etc/apt/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   sudo curl -fsSLo /etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg https://packages.gramineproject.io/gramine-keyring-$(lsb_release -sc).gpg
+   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/gramine.list
 
    sudo curl -fsSLo /etc/apt/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
@@ -50,8 +50,8 @@ Debian 11
    echo "deb http://deb.debian.org/debian $(lsb_release -sc)-backports main" \
    | sudo tee /etc/apt/sources.list.d/backports.list
 
-   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring-$(lsb_release -sc).gpg https://packages.gramineproject.io/gramine-keyring-$(lsb_release -sc).gpg
+   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring-$(lsb_release -sc).gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/gramine.list
 
    sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
@@ -61,13 +61,42 @@ Debian 11
    sudo apt-get update
    sudo apt-get install gramine
 
-Ubuntu 22.04 LTS or 20.04 LTS
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Ubuntu 24.04 LTS
+^^^^^^^^^^^^^^^^
+
+Gramine depends on certain packages published by Intel in their repo. At the
+time of this writing, the repository for Ubuntu 24.04 is not yet available. You
+can try to use packages for Ubuntu 23.10, which appear to be compatible.
+
+After Intel releases packages, please use the instruction from the next section
+(Ubuntu 22.04). The only difference is ``mantic`` codename in Intel's repo line.
+
+Note that Ubuntu 23.10 itself is already out of support by Canonical (support
+ended July 2024), but this does not apply to external packages.
 
 ::
 
-   sudo curl -fsSLo /etc/apt/keyrings/gramine-keyring.gpg https://packages.gramineproject.io/gramine-keyring.gpg
-   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/gramine-keyring.gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   sudo curl -fsSLo /etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg https://packages.gramineproject.io/gramine-keyring-$(lsb_release -sc).gpg
+   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
+   | sudo tee /etc/apt/sources.list.d/gramine.list
+
+   sudo curl -fsSLo /etc/apt/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
+   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu mantic main" \
+   | sudo tee /etc/apt/sources.list.d/intel-sgx.list
+
+   sudo apt-get update
+   sudo apt-get install gramine
+
+Ubuntu 22.04 LTS
+^^^^^^^^^^^^^^^^
+
+These instructions will also apply to Ubuntu 24.04, when Intel publishes
+``mantic`` repos.
+
+::
+
+   sudo curl -fsSLo /etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg https://packages.gramineproject.io/gramine-keyring-$(lsb_release -sc).gpg
+   echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/gramine-keyring-$(lsb_release -sc).gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
    | sudo tee /etc/apt/sources.list.d/gramine.list
 
    sudo curl -fsSLo /etc/apt/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
