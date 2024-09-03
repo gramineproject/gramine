@@ -26,14 +26,7 @@ static noreturn void libos_clean_and_exit(int exit_code) {
 
     shutdown_sync_client();
 
-    struct libos_thread* async_thread = terminate_async_worker();
-    if (async_thread) {
-        /* TODO: wait for the thread to finish its tasks and exit in the host OS.
-         * This is tracked by the following issue:
-         * https://github.com/gramineproject/graphene/issues/440
-         */
-        put_thread(async_thread);
-    }
+    terminate_async_worker();
 
     /*
      * At this point there should be only 2 threads running: this + IPC worker.
