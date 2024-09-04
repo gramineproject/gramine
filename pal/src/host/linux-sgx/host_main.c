@@ -763,6 +763,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+#ifndef DEBUG
+    if (g_sgx_enable_stats) {
+        log_error("'sgx.enable_stats = true' is specified in non-debug mode, this is disallowed");
+        ret = -EINVAL;
+        goto out;
+    }
+#endif
+
     ret = toml_string_in(manifest_root, "sgx.sigfile", &dummy_sigfile_str);
     if (ret < 0 || dummy_sigfile_str) {
         log_error("sgx.sigfile is not supported anymore. Please update your manifest according to "

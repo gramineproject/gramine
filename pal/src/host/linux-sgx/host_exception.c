@@ -17,6 +17,7 @@
 #include "debug_map.h"
 #include "host_internal.h"
 #include "pal_rpc_queue.h"
+#include "pal_tcb.h"
 #include "sigreturn.h"
 #include "sigset.h"
 #include "ucontext.h"
@@ -188,6 +189,11 @@ static void handle_sigusr1(int signum, siginfo_t* info, struct ucontext* uc) {
     __UNUSED(info);
     __UNUSED(uc);
 
+    if (g_sgx_enable_stats) {
+        PAL_HOST_TCB* tcb = pal_get_host_tcb();
+        __atomic_store_n(&tcb->reset_stats, true, __ATOMIC_RELAXED);
+    }
+
     if (g_pal_enclave.profile_enable) {
         __atomic_store_n(&g_trigger_profile_reinit, true, __ATOMIC_RELEASE);
     }
@@ -268,3 +274,19 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 #endif
     default_describe_location(addr, buf, buf_size);
 }
+
+#ifdef DEBUG
+/* called on each AEX and OCALL (in normal context), see host_entry.S */
+void maybe_dump_and_reset_stats(void) {
+    if (!g_sgx_enable_stats)
+        return;
+
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    if (__atomic_load_n(&tcb->reset_stats, __ATOMIC_RELAXED) == false)
+        return;
+
+    collect_and_print_sgx_stats();
+
+    __atomic_store_n(&tcb->reset_stats, false, __ATOMIC_RELAXED);
+}
+#endif

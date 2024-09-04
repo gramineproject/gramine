@@ -16,6 +16,7 @@
 struct enclave_thread_map {
     unsigned int    tid;
     sgx_arch_tcs_t* tcs;
+    PAL_HOST_TCB*   tcb;
 };
 
 static struct enclave_thread_map* g_enclave_thread_map = NULL;
@@ -26,36 +27,93 @@ static size_t g_enclave_thread_num = 0;
 
 bool g_sgx_enable_stats = false;
 
-/* this function is called only on thread/process exit (never in the middle of thread exec) */
-void update_sgx_stats(bool print_process_wide_stats) {
-    static atomic_ulong g_eenter_cnt       = 0;
-    static atomic_ulong g_eexit_cnt        = 0;
-    static atomic_ulong g_aex_cnt          = 0;
-    static atomic_ulong g_sync_signal_cnt  = 0;
-    static atomic_ulong g_async_signal_cnt = 0;
+/* protected by g_enclave_thread_map_lock to prevent data races when one thread exits (and updates
+ * these global SGX counters) and another thread dumps (reads) these SGX counters */
+static uint64_t g_eenter_cnt       = 0;
+static uint64_t g_eexit_cnt        = 0;
+static uint64_t g_aex_cnt          = 0;
+static uint64_t g_sync_signal_cnt  = 0;
+static uint64_t g_async_signal_cnt = 0;
 
-    if (!g_sgx_enable_stats)
-        return;
+static void print_global_sgx_stats(void) {
+    assert(spinlock_is_locked(&g_enclave_thread_map_lock));
 
-    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    int pid = g_host_pid;
+    assert(pid > 0);
+
+    log_always("----- Total SGX stats for process %d -----\n"
+               "  # of EENTERs:        %lu\n"
+               "  # of EEXITs:         %lu\n"
+               "  # of AEXs:           %lu\n"
+               "  # of sync signals:   %lu\n"
+               "  # of async signals:  %lu",
+               pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
+               g_sync_signal_cnt, g_async_signal_cnt);
+}
+
+static void reset_global_sgx_stats(void) {
+    assert(spinlock_is_locked(&g_enclave_thread_map_lock));
+
+    g_eenter_cnt       = 0;
+    g_eexit_cnt        = 0;
+    g_aex_cnt          = 0;
+    g_sync_signal_cnt  = 0;
+    g_async_signal_cnt = 0;
+}
+
+static void update_global_sgx_stats_from_thread_stats(PAL_HOST_TCB* tcb) {
+    assert(spinlock_is_locked(&g_enclave_thread_map_lock));
+
     g_eenter_cnt       += tcb->eenter_cnt;
     g_eexit_cnt        += tcb->eexit_cnt;
     g_aex_cnt          += tcb->aex_cnt;
     g_sync_signal_cnt  += tcb->sync_signal_cnt;
     g_async_signal_cnt += tcb->async_signal_cnt;
 
-    if (print_process_wide_stats) {
-        int pid = g_host_pid;
-        assert(pid > 0);
-        log_always("----- Total SGX stats for process %d -----\n"
-                   "  # of EENTERs:        %lu\n"
-                   "  # of EEXITs:         %lu\n"
-                   "  # of AEXs:           %lu\n"
-                   "  # of sync signals:   %lu\n"
-                   "  # of async signals:  %lu",
-                   pid, g_eenter_cnt, g_eexit_cnt, g_aex_cnt,
-                   g_sync_signal_cnt, g_async_signal_cnt);
+    /* there is a small window when the thread's counters may be updated in-between reading and
+     * resetting these counters -- some SGX events will be lost; we ignore this as the number of
+     * lost events is negligible for perf analysis purposes */
+
+    tcb->eenter_cnt       = 0;
+    tcb->eexit_cnt        = 0;
+    tcb->aex_cnt          = 0;
+    tcb->sync_signal_cnt  = 0;
+    tcb->async_signal_cnt = 0;
+}
+
+/* this function is called only on thread/process exit (never in the middle of thread exec) */
+void update_sgx_stats(bool print_process_wide_stats) {
+    if (!g_sgx_enable_stats)
+        return;
+
+    spinlock_lock(&g_enclave_thread_map_lock);
+
+    PAL_HOST_TCB* tcb = pal_get_host_tcb();
+    update_global_sgx_stats_from_thread_stats(tcb);
+
+    if (print_process_wide_stats)
+        print_global_sgx_stats();
+
+    spinlock_unlock(&g_enclave_thread_map_lock);
+}
+
+void collect_and_print_sgx_stats(void) {
+    if (!g_sgx_enable_stats)
+        return;
+
+    spinlock_lock(&g_enclave_thread_map_lock);
+    for (size_t i = 0; i < g_enclave_thread_num; i++) {
+        if (!g_enclave_thread_map[i].tcs || !g_enclave_thread_map[i].tid)
+            continue;
+
+        PAL_HOST_TCB* tcb = g_enclave_thread_map[i].tcb;
+        update_global_sgx_stats_from_thread_stats(tcb);
     }
+
+    print_global_sgx_stats();
+    reset_global_sgx_stats();
+
+    spinlock_unlock(&g_enclave_thread_map_lock);
 }
 
 void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
@@ -69,6 +127,7 @@ void pal_host_tcb_init(PAL_HOST_TCB* tcb, void* stack, void* alt_stack) {
     tcb->aex_cnt          = 0;
     tcb->sync_signal_cnt  = 0;
     tcb->async_signal_cnt = 0;
+    tcb->reset_stats      = false;
 
     tcb->profile_sample_time = 0;
 
@@ -86,6 +145,7 @@ int create_tcs_mapper(void* tcs_base, unsigned int thread_num) {
     for (uint32_t i = 0; i < thread_num; i++) {
         g_enclave_thread_map[i].tid = 0;
         g_enclave_thread_map[i].tcs = &enclave_tcs[i];
+        g_enclave_thread_map[i].tcb = NULL;
     }
     g_enclave_thread_num = thread_num;
     return 0;
@@ -147,7 +207,7 @@ out:
     return ret;
 }
 
-void map_tcs(unsigned int tid) {
+static void map_tcs(unsigned int tid, PAL_HOST_TCB* tcb) {
     while (true) {
         spinlock_lock(&g_enclave_thread_map_lock);
         for (size_t i = 0; i < g_enclave_thread_num; i++) {
@@ -155,6 +215,8 @@ void map_tcs(unsigned int tid) {
                 continue;
             if (!g_enclave_thread_map[i].tid) {
                 g_enclave_thread_map[i].tid = tid;
+                g_enclave_thread_map[i].tcb = tcb;
+
                 pal_get_host_tcb()->tcs = g_enclave_thread_map[i].tcs;
                 ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i] = tid;
                 spinlock_unlock(&g_enclave_thread_map_lock);
@@ -186,6 +248,7 @@ void unmap_my_tcs(void) {
     for (i = 0; i < g_enclave_thread_num; i++)
         if (g_enclave_thread_map[i].tcs == pal_get_host_tcb()->tcs) {
             g_enclave_thread_map[i].tid = 0;
+            g_enclave_thread_map[i].tcb = NULL;
             ((struct enclave_dbginfo*)DBGINFO_ADDR)->thread_tids[i] = 0;
             break;
         }
@@ -237,7 +300,7 @@ int pal_thread_init(void* tcbptr) {
     }
 
     int tid = DO_SYSCALL(gettid);
-    map_tcs(tid); /* updates tcb->tcs */
+    map_tcs(tid, tcb); /* also updates tcb->tcs */
 
     if (!tcb->tcs) {
         log_error("There are no available TCS pages left for a new thread. Please try to increase"
