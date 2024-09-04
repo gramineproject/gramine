@@ -16,6 +16,7 @@
 
     .extern tcs_base
     .extern g_in_aex_profiling
+    .extern maybe_dump_and_reset_stats
 
     .global sgx_ecall
     .type sgx_ecall, @function
@@ -102,6 +103,8 @@ async_exit_pointer:
     movq %rbx, %rdi
     call sgx_profile_sample_aex
 
+    call maybe_dump_and_reset_stats
+
     # Restore stack
     movq %rbp, %rsp
     .cfi_def_cfa_register %rsp
@@ -168,6 +171,8 @@ sgx_raise:
     # Call sgx_profile_sample_ocall_inner with RDX (pointer to in-enclave context)
     movq %rdx, %rdi
     call sgx_profile_sample_ocall_inner
+
+    call maybe_dump_and_reset_stats
 
     # Restore RDI
     movq -8(%rbp), %rdi
