@@ -115,5 +115,5 @@ static inline PAL_HOST_TCB* pal_get_host_tcb(void) {
 }
 
 extern bool g_sgx_enable_stats;
-void update_and_print_stats(bool process_wide);
+void update_sgx_stats(bool print_process_wide_stats);
 #endif /* IN_ENCLAVE */
