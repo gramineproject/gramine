@@ -91,6 +91,10 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
             log_always("Emulating a raw system/supervisor call. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }
+        char buf[LOCATION_BUF_SIZE];
+        pal_describe_location(ucontext_get_ip(uc), buf, sizeof(buf));
+        log_trace("Emulating raw syscall instruction with number %d at address %s",
+                  info->si_syscall, buf);
     }
 
     enum pal_event event = signal_to_pal_event(signum);
