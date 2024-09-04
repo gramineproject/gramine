@@ -468,6 +468,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
+    g_pal_public_state.confidential_computing = true;
+
     uint64_t start_time;
     ret = _PalSystemTimeQuery(&start_time);
     if (ret < 0) {
@@ -476,8 +478,6 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
     }
 
     call_init_array();
-
-    g_pal_public_state.confidential_computing = true;
 
     /* Initialize alloc_align as early as possible, a lot of PAL APIs depend on this being set. */
     g_pal_public_state.alloc_align = g_page_size;

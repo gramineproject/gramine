@@ -332,6 +332,8 @@ static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_n
         return -EINVAL;
     }
 
+    assert(g_pal_public_state->confidential_computing);
+
     /* always add the following SGX-specific files, even if remote attestation type is "none" */
     pseudo_add_str(attestation, "attestation_type", attestation_type_load);
     pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
