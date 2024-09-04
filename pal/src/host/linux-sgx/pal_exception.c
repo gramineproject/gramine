@@ -231,7 +231,7 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
         }
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
-        log_trace("Emulating raw syscall instruction with number %lu and address is %s", uc->rax,
+        log_trace("Emulating raw syscall instruction with number %lu at address %s", uc->rax,
                   buf);
         return false;
     } else if (is_in_out(instr) && !has_lock_prefix(instr)) {
