@@ -30,6 +30,24 @@
 
 rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
+static noreturn void process_exit(int exitcode) {
+    update_sgx_stats(/*do_print=*/true);
+
+#ifdef DEBUG
+    sgx_profile_finish();
+#endif
+
+#ifdef SGX_VTUNE_PROFILE
+    if (g_vtune_profile_enabled) {
+        extern void __itt_fini_ittlib(void);
+        __itt_fini_ittlib();
+    }
+#endif
+
+    DO_SYSCALL(exit_group, exitcode);
+    die_or_inf_loop();
+}
+
 static long sgx_ocall_exit(void* args) {
     struct ocall_exit* ocall_exit_args = args;
 
@@ -41,19 +59,7 @@ static long sgx_ocall_exit(void* args) {
 
     /* exit the whole process if exit_group() */
     if (ocall_exit_args->is_exitgroup) {
-        update_and_print_stats(/*process_wide=*/true);
-#ifdef DEBUG
-        sgx_profile_finish();
-#endif
-
-#ifdef SGX_VTUNE_PROFILE
-        if (g_vtune_profile_enabled) {
-            extern void __itt_fini_ittlib(void);
-            __itt_fini_ittlib();
-        }
-#endif
-        DO_SYSCALL(exit_group, (int)ocall_exit_args->exitcode);
-        die_or_inf_loop();
+        process_exit((int)ocall_exit_args->exitcode);
     }
 
     /* otherwise call SGX-related thread reset and exit this thread */
@@ -64,20 +70,10 @@ static long sgx_ocall_exit(void* args) {
 
     if (!current_enclave_thread_cnt()) {
         /* no enclave threads left, kill the whole process */
-        update_and_print_stats(/*process_wide=*/true);
-#ifdef DEBUG
-        sgx_profile_finish();
-#endif
-#ifdef SGX_VTUNE_PROFILE
-        if (g_vtune_profile_enabled) {
-            extern void __itt_fini_ittlib(void);
-            __itt_fini_ittlib();
-        }
-#endif
-        DO_SYSCALL(exit_group, (int)ocall_exit_args->exitcode);
-        die_or_inf_loop();
+        process_exit((int)ocall_exit_args->exitcode);
     }
 
+    update_sgx_stats(/*do_print=*/false);
     thread_exit((int)ocall_exit_args->exitcode);
     return 0;
 }
