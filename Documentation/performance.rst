@@ -18,11 +18,13 @@ Enabling SGX enclave stats
 
 See also :ref:`perf` below for installing ``perf``.
 
-Enable statistics using ``sgx.enable_stats = true`` manifest option. Now your
-graminized application correctly reports performance counters. This is useful
-when using e.g. ``perf stat`` to collect performance statistics. This manifest
-option also forces Gramine to dump SGX-related information on each enclave exit.
-Here is an example:
+Enable statistics using ``sgx.enable_stats = true`` manifest option (note that
+Gramine must be compiled with ``--buildtype=debug`` or
+``--buildtype=debugoptimized`` for this option to work). Now your graminized
+application correctly reports performance counters. This is useful when using
+e.g. ``perf stat`` to collect performance statistics. This manifest option also
+forces Gramine to dump SGX-related information on each enclave exit. Here is an
+example:
 
 ::
 
@@ -89,6 +91,12 @@ How to read this output:
    itself, this particular output is not interesting. In reality, performance
    counters should be compared against "golden runs" to deduce any interesting
    trends.
+
+It is also possible to dump and reset SGX-related statistics interactively, using
+``SIGUSR1`` signal. This helps to collect SGX-related statistics only for a
+particular period, e.g. skipping the Gramine startup and application
+initialization time and concentrating only on the actual application processing.
+Send ``SIGUSR1`` using command ``kill -SIGUSR1 -<PGID>``.
 
 Effects of system calls / ocalls
 --------------------------------
