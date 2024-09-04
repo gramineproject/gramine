@@ -274,8 +274,6 @@ noreturn void thread_exit(int status) {
      * (by sgx_ocall_exit()) but we keep it here for future proof */
     block_async_signals(true);
 
-    update_sgx_stats(/*print_process_wide_stats=*/false);
-
     if (tcb->alt_stack) {
         stack_t ss;
         ss.ss_sp    = NULL;

@@ -75,6 +75,7 @@ static long sgx_ocall_exit(void* args) {
         die_or_inf_loop();
     }
 
+    update_sgx_stats(/*print_process_wide_stats=*/false);
     thread_exit((int)ocall_exit_args->exitcode);
     return 0;
 }
