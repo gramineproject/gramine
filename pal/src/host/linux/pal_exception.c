@@ -93,8 +93,8 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
         }
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(ucontext_get_ip(uc), buf, sizeof(buf));
-        log_trace("Emulating raw syscall instruction with number %lu at address %s",
-                  info->si_syscall, buf);
+        log_trace("Emulating raw syscall instruction with number %u at address %s",
+                  (unsigned int)info->si_syscall, buf);
     }
 
     enum pal_event event = signal_to_pal_event(signum);
