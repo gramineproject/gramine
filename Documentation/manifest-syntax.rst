@@ -1293,6 +1293,10 @@ This syntax specifies whether to enable SGX enclave-specific statistics:
    includes creating the enclave, adding enclave pages, measuring them and
    initializing the enclave.
 
+For this option to take effect, Gramine must be compiled with
+``--buildtype=debug`` or ``--buildtype=debugoptimized``. Otherwise (if built in
+release mode), Gramine will exit with an error.
+
 .. warning::
    This option is insecure and cannot be used with production enclaves
    (``sgx.debug = false``). If a production enclave is started with this option
