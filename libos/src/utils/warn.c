@@ -27,7 +27,7 @@ static bool warn_about_fs_insecure_keys(void) {
     return toml_table_nkval(manifest_fs_keys) > 0;
 }
 
-int print_warnings_on_insecure_configs(bool parent_process) {
+int print_warnings_on_insecure_configs(bool is_initial_process) {
     int ret;
 
     if (!g_pal_public_state->confidential_computing) {
@@ -35,7 +35,7 @@ int print_warnings_on_insecure_configs(bool parent_process) {
         return 0;
     }
 
-    if (parent_process) {
+    if (!is_initial_process) {
         /* Warn only in the first process. */
         return 0;
     }
