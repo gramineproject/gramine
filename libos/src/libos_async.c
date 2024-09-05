@@ -26,8 +26,7 @@ struct async_event {
 DEFINE_LISTP(async_event);
 static LISTP_TYPE(async_event) async_list;
 
-/* Should be accessed with async_worker_lock held. */
-static bool async_worker_shutdown = false;
+static int async_worker_shutdown = 0;
 static int async_worker_running = 1;
 
 static struct libos_thread* async_worker_thread;
@@ -147,7 +146,7 @@ static int libos_async_worker(void* arg) {
     pal_events[0] = PAL_WAIT_READ;
     ret_events[0] = 0;
 
-    while (true) {
+    while (!__atomic_load_n(&async_worker_shutdown, __ATOMIC_ACQUIRE)) {
         uint64_t now_us = 0;
         int ret = PalSystemTimeQuery(&now_us);
         if (ret < 0) {
@@ -157,10 +156,6 @@ static int libos_async_worker(void* arg) {
         }
 
         lock(&async_worker_lock);
-        if (async_worker_shutdown) {
-            unlock(&async_worker_lock);
-            break;
-        }
 
         uint64_t next_expire_time_us = 0;
         size_t pals_cnt = 0;
@@ -324,25 +319,21 @@ int init_async_worker(void) {
     if (!new)
         return -ENOMEM;
 
-    async_worker_thread = new;
-
     PAL_HANDLE handle = NULL;
     ret = PalThreadCreate(libos_async_worker, new, &handle);
 
     if (ret < 0) {
-        async_worker_thread = NULL;
         put_thread(new);
         return pal_to_unix_errno(ret);
     }
 
     new->pal_handle = handle;
+    async_worker_thread = new;
     return 0;
 }
 
 void terminate_async_worker(void) {
-    lock(&async_worker_lock);
-    async_worker_shutdown = true;
-    unlock(&async_worker_lock);
+    __atomic_store_n(&async_worker_shutdown, 1, __ATOMIC_RELEASE);
     /* force wake up of async worker thread so that it exits */
     set_pollable_event(&install_new_event);
 
@@ -350,8 +341,5 @@ void terminate_async_worker(void) {
         CPU_RELAX();
     }
 
-    PAL_HANDLE handle = async_worker_thread->pal_handle;
-    put_thread(async_worker_thread);
-    async_worker_thread = NULL;
-    PalObjectDestroy(handle);
+    /* no need to clean up resources, as this function is called at process exit */
 }
