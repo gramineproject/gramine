@@ -251,7 +251,6 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     unsigned long enclave_entry_addr;
     unsigned long enclave_heap_min;
     char* sig_path = NULL;
-    int sigfile_fd = -1;
     size_t areas_size = 0;
     struct mem_area* areas = NULL;
 
@@ -301,14 +300,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
         goto out;
     }
 
-    sigfile_fd = DO_SYSCALL(open, sig_path, O_RDONLY | O_CLOEXEC, 0);
-    if (sigfile_fd < 0) {
-        log_error("Cannot open sigstruct file %s", sig_path);
-        ret = -EINVAL;
-        goto out;
-    }
-
-    ret = read_enclave_sigstruct(sigfile_fd, &enclave_sigstruct);
+    ret = read_enclave_sigstruct(sig_path, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Reading enclave sigstruct failed: %s", unix_strerror(ret));
         goto out;
@@ -649,8 +641,6 @@ out:
     free(tcs_addrs);
     if (enclave_image >= 0)
         DO_SYSCALL(close, enclave_image);
-    if (sigfile_fd >= 0)
-        DO_SYSCALL(close, sigfile_fd);
     if (areas)
         DO_SYSCALL(munmap, areas, areas_size);
     free(sig_path);

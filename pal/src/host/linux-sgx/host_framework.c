@@ -129,23 +129,36 @@ int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token
                                      &out_token->body.attributes.xfrm);
 }
 
-int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
+int read_enclave_sigstruct(char* sig_path, sgx_sigstruct_t* sig) {
     struct stat stat;
+    int sigfile_fd = -1;
     int ret;
-    ret = DO_SYSCALL(fstat, sigfile, &stat);
-    if (ret < 0)
-        return ret;
 
-    if ((size_t)stat.st_size != sizeof(sgx_sigstruct_t)) {
-        log_error("size of sigstruct size does not match");
-        return -EINVAL;
+    sigfile_fd = DO_SYSCALL(open, sig_path, O_RDONLY | O_CLOEXEC, 0);
+    if (sigfile_fd < 0) {
+        log_error("Cannot open sigstruct file %s", sig_path);
+        ret = sigfile_fd;
+        goto out;
     }
 
-    ret = read_all(sigfile, sig, sizeof(sgx_sigstruct_t));
+    ret = DO_SYSCALL(fstat, sigfile_fd, &stat);
     if (ret < 0)
-        return ret;
+        goto out;
 
-    return 0;
+    if ((size_t)stat.st_size != sizeof(sgx_sigstruct_t)) {
+        log_error("size of sigstruct file (%s) does not match: expected %zu, found %zu",
+                  sig_path, sizeof(sgx_sigstruct_t), (size_t)stat.st_size);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = read_all(sigfile_fd, sig, sizeof(sgx_sigstruct_t));
+
+out:
+    if (sigfile_fd >= 0)
+        DO_SYSCALL(close, sigfile_fd);
+
+    return ret;
 }
 
 bool is_wrfsbase_supported(void) {
