@@ -130,12 +130,16 @@ struct pal_dns_host_conf {
 struct pal_public_state {
     uint64_t instance_id;
     const char* host_type;
-    const char* attestation_type; /* currently only for Linux-SGX */
+
+    /*
+     * Related to confidential computing (currently only for Linux-SGX PAL)
+     */
+    bool confidential_computing;
+    const char* attestation_type;
 
     /*
      * Handles and executables
      */
-
     toml_table_t* manifest_root; /*!< program manifest */
     PAL_HANDLE parent_process;   /*!< handle of parent process */
     PAL_HANDLE first_thread;     /*!< handle of first thread */
