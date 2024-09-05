@@ -137,7 +137,8 @@ int read_enclave_sigstruct(int sigfile, sgx_sigstruct_t* sig) {
         return ret;
 
     if ((size_t)stat.st_size != sizeof(sgx_sigstruct_t)) {
-        log_error("size of sigstruct size does not match");
+        log_error("size of sigstruct size does not match: expected %zu, found %zu",
+                  sizeof(sgx_sigstruct_t), (size_t)stat.st_size);
         return -EINVAL;
     }
 
