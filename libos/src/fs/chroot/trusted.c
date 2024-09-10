@@ -15,7 +15,7 @@
  * During the generation of the SHA256 hash, a 128-bit hash (truncated SHA256) is also generated for
  * each chunk (of size TRUSTED_CHUNK_SIZE) in the file. The per-chunk hashes are used for partial
  * verification in future reads, to avoid re-verifying the whole file again or the need of caching
- * file contents.
+ * the whole file contents.
  */
 
 #include <stdbool.h>
@@ -41,11 +41,11 @@ struct trusted_file {
     char path[]; /* must be NULL-terminated */
 };
 
-/* initialized once at startup, so doesn't require locking */
+/* initialized once at startup and read-only afterwards, so doesn't require locking */
 DEFINE_LISTP(trusted_file);
 static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
 
-static int read_trusted_file(PAL_HANDLE handle, void* buffer, uint64_t offset, size_t size) {
+static int read_file_exact(PAL_HANDLE handle, void* buffer, uint64_t offset, size_t size) {
     size_t buffer_offset = 0;
     size_t remaining = size;
 
@@ -83,8 +83,7 @@ struct trusted_file* get_trusted_file(const char* path) {
     struct trusted_file* tf = NULL;
     struct trusted_file* tmp;
     LISTP_FOR_EACH_ENTRY(tmp, &g_trusted_file_list, list) {
-        if ((tmp->path_len == norm_path_size - 1)
-                && !memcmp(tmp->path, norm_path, norm_path_size)) {
+        if (tmp->path_len == norm_path_size - 1 && !memcmp(tmp->path, norm_path, norm_path_size)) {
             tf = tmp;
             break;
         }
@@ -94,7 +93,7 @@ struct trusted_file* get_trusted_file(const char* path) {
 }
 
 size_t get_chunk_hashes_size(size_t file_size) {
-    return (sizeof(struct trusted_chunk_hash) * UDIV_ROUND_UP(file_size, TRUSTED_CHUNK_SIZE));
+    return sizeof(struct trusted_chunk_hash) * UDIV_ROUND_UP(file_size, TRUSTED_CHUNK_SIZE);
 }
 
 /* calculate chunk hashes and compare with hash in manifest */
@@ -105,14 +104,11 @@ int load_trusted_file(struct trusted_file* tf, size_t file_size,
     struct trusted_chunk_hash* chunk_hashes = NULL;
     PAL_HANDLE handle = NULL;
 
-    char* uri = malloc(URI_PREFIX_FILE_LEN + tf->path_len + 1);
+    char* uri = alloc_concat(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN, tf->path, tf->path_len);
     if (!uri) {
         ret = -ENOMEM;
         goto out;
     }
-    memcpy(uri, URI_PREFIX_FILE, URI_PREFIX_FILE_LEN);
-    memcpy(uri + URI_PREFIX_FILE_LEN, tf->path, tf->path_len);
-    uri[URI_PREFIX_FILE_LEN + tf->path_len] = '\0';
 
     chunk_hashes = malloc(get_chunk_hashes_size(file_size));
     if (!chunk_hashes) {
@@ -155,7 +151,7 @@ int load_trusted_file(struct trusted_file* tf, size_t file_size,
             ret = pal_to_unix_errno(ret);
             goto out;
         }
-        ret = read_trusted_file(handle, tmp_chunk, offset, chunk_size);
+        ret = read_file_exact(handle, tmp_chunk, offset, chunk_size);
         if (ret < 0)
             goto out;
         ret = lib_SHA256Update(&file_sha, tmp_chunk, chunk_size);
@@ -209,7 +205,7 @@ out:
     return ret;
 }
 
-int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t count, uint8_t* buf,
+int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t count, uint8_t* buf,
                                  size_t file_size, struct trusted_chunk_hash* chunk_hashes) {
     int ret;
 
@@ -218,7 +214,6 @@ int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
 
     uint64_t end = MIN(offset + count, file_size);
     uint64_t aligned_offset = ALIGN_DOWN(offset, TRUSTED_CHUNK_SIZE);
-    uint64_t aligned_end    = ALIGN_UP(end, TRUSTED_CHUNK_SIZE);
 
     /* FIXME: use pre-allocated object in common case (e.g. for the first thread) */
     uint8_t* tmp_chunk = malloc(TRUSTED_CHUNK_SIZE);
@@ -229,7 +224,7 @@ int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
     uint64_t chunk_offset = aligned_offset;
     struct trusted_chunk_hash* chunk_hashes_item = chunk_hashes +
                                                        aligned_offset / TRUSTED_CHUNK_SIZE;
-    for (; chunk_offset < aligned_end; chunk_offset += TRUSTED_CHUNK_SIZE) {
+    for (; chunk_offset < end; chunk_offset += TRUSTED_CHUNK_SIZE) {
         size_t chunk_size  = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         uint64_t chunk_end = chunk_offset + chunk_size;
 
@@ -241,9 +236,9 @@ int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
         }
 
         if (chunk_offset >= offset && chunk_end <= end) {
-            /* if current chunk-to-copy completely resides in the requested region-to-copy,
+            /* if current chunk-to-verify completely resides in the requested region-to-copy,
              * directly copy into buf (without a scratch buffer) and hash in-place */
-            ret = read_trusted_file(handle, buf_pos, chunk_offset, chunk_size);
+            ret = read_file_exact(handle, buf_pos, chunk_offset, chunk_size);
             if (ret < 0)
                 goto out;
             ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
@@ -253,10 +248,10 @@ int copy_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
             }
             buf_pos += chunk_size;
         } else {
-            /* if current chunk-to-copy only partially overlaps with the requested region-to-copy,
+            /* if current chunk-to-verify only partially overlaps with the requested region-to-copy,
              * read the file contents into a scratch buffer, verify hash and then copy only the part
              * needed by the caller */
-            ret = read_trusted_file(handle, tmp_chunk, chunk_offset, chunk_size);
+            ret = read_file_exact(handle, tmp_chunk, chunk_offset, chunk_size);
             if (ret < 0)
                 goto out;
             ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
@@ -342,7 +337,7 @@ static int init_one_trusted_file(toml_raw_t toml_trusted_uri_raw,
     char* norm_trusted_path = NULL;
 
     ret = toml_rtos(toml_trusted_uri_raw, &toml_trusted_uri_str);
-    if (ret < 0) {
+    if (ret < 0 || !toml_trusted_uri_str) {
         log_error("Invalid trusted file in manifest at index %ld ('uri' is not a string)", idx);
         ret = -EINVAL;
         goto out;
@@ -356,7 +351,8 @@ static int init_one_trusted_file(toml_raw_t toml_trusted_uri_raw,
     }
 
     if (!strstartswith(toml_trusted_uri_str, URI_PREFIX_FILE)) {
-        log_error("Invalid URI [%s]: Trusted files must start with 'file:'", toml_trusted_uri_str);
+        log_error("Invalid URI [%s]: Trusted files must start with '" URI_PREFIX_FILE "'",
+                  toml_trusted_uri_str);
         ret = -EINVAL;
         goto out;
     }

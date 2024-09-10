@@ -563,7 +563,7 @@ static ssize_t chroot_read(struct libos_handle* hdl, void* buf, size_t count, fi
 
     if (is_trusted_from_inode_data(hdl->inode)) {
         struct chroot_inode_data* data = hdl->inode->data;
-        ret = copy_and_verify_trusted_file(hdl->pal_handle, offset, count, buf,
+        ret = read_and_verify_trusted_file(hdl->pal_handle, offset, count, buf,
                                            hdl->inode->size, data->chunk_hashes);
         if (ret < 0)
             return ret;
