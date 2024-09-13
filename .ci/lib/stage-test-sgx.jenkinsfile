@@ -14,10 +14,6 @@ stage('test-sgx') {
         fi
     '''
 
-    if (env.RA_TYPE == null) {
-        env.RA_TYPE = 'epid'
-    }
-
     timeout(time: 5, unit: 'MINUTES') {
         sh '''
             cd CI-Examples/helloworld
