@@ -1,6 +1,6 @@
 stage('test') {
     if (env.RA_TYPE == null) {
-        env.RA_TYPE = 'epid'
+        env.RA_TYPE = 'dcap'
     }
 
     timeout(time: 15, unit: 'MINUTES') {
