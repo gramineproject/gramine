@@ -1,8 +1,4 @@
 stage('test') {
-    if (env.RA_TYPE == null) {
-        env.RA_TYPE = 'epid'
-    }
-
     timeout(time: 15, unit: 'MINUTES') {
         try {
             sh '''
