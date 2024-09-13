@@ -15,7 +15,7 @@ stage('test-sgx') {
     '''
 
     if (env.RA_TYPE == null) {
-        env.RA_TYPE = 'epid'
+        env.RA_TYPE = 'dcap'
     }
 
     timeout(time: 5, unit: 'MINUTES') {
