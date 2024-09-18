@@ -39,7 +39,9 @@ RUN apt-get update && apt-get satisfy -y \
 # libunwind8: libos/test/regression/bootstrap_cpp.manifest.template
 # nginx: CI-Examples/ra-tls-nginx
 # shellcheck: .ci/run-shellcheck
+# busybox: CI-Examples/busybox
 RUN apt-get update && apt-get install -y \
+    busybox \
     cmake \
     git \
     libunwind8 \
