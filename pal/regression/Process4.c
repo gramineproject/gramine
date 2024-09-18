@@ -2,7 +2,11 @@
 #include "pal.h"
 #include "pal_regression.h"
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(envp);
+
     int count = 0;
 
     pal_printf("In process: %s", argv[0]);

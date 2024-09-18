@@ -1,7 +1,11 @@
 #include "api.h"
 #include "pal_regression.h"
 
-int main(int argc, const char** argv) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(envp);
+
     const char* ptr = "123 asd";
     const char* next = ptr;
 

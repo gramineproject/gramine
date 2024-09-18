@@ -112,7 +112,13 @@ static void handler4(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* context) {
         context->rip++;
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     pal_printf("Stack in main: %p\n", get_stack());
 
     PalSetExceptionHandler(handler1, PAL_EVENT_ARITHMETIC_ERROR);

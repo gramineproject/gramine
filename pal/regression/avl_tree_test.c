@@ -291,7 +291,13 @@ static int32_t rand_mod(void) {
     return rand() % (ELEMENTS_COUNT / 4);
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     pal_printf("Running static tests: ");
     test_ordering();
     srand(1337);
