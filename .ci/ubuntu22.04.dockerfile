@@ -43,7 +43,9 @@ RUN apt-get update && apt-get satisfy -y \
 # jq: used in jenkinsfiles
 # cpio dwarves gcc/g++-12 kmod qemu-kvm: for building kernel modules and running VMs
 # wget: scripts/download
+# busybox: CI-Examples/busybox
 RUN apt-get update && apt-get install -y \
+    busybox \
     cargo \
     clang \
     cmake \
