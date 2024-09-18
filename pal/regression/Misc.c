@@ -3,7 +3,7 @@
 #include "pal_error.h"
 #include "pal_regression.h"
 
-int main(int argc, const char** argv, const char** envp) {
+int main(int argc, char** argv, char** envp) {
     uint64_t time1 = 0;
     if (PalSystemTimeQuery(&time1) < 0) {
         pal_printf("PalSystemTimeQuery failed\n");

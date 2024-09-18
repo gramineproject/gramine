@@ -1,5 +1,4 @@
-/* SPDX-License-Identifier: LGPL-3.0-or-later */
-/* Copyright (C) 2022 Intel Corporation
+/* SPDX-License-Identifier: LGPL-3.0-or-later */ /* Copyright (C) 2022 Intel Corporation
  *                    Mariusz Zaborski <oshogbo@invisiblethingslab.com>
  */
 
@@ -43,7 +42,13 @@ static int ipv6_invalid(const char* buf) {
     return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     struct {
         const char* str;
         uint16_t addr[8];

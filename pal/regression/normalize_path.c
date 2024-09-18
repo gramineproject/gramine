@@ -67,7 +67,13 @@ static int run_test(void) {
     return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     cases        = get_norm_path_cases;
     cases_len    = ARRAY_SIZE(get_norm_path_cases);
     func_to_test = get_norm_path;
