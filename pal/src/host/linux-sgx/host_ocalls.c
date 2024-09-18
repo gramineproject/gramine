@@ -32,7 +32,7 @@ rpc_queue_t* g_rpc_queue = NULL; /* pointer to untrusted queue */
 
 static noreturn void process_exit(int exitcode) {
 #ifdef DEBUG
-    update_sgx_stats(/*print_process_wide_stats=*/true);
+    update_sgx_stats_on_exit(/*print_process_wide_stats=*/true);
     sgx_profile_finish();
 #endif
 
@@ -75,7 +75,7 @@ static long sgx_ocall_exit(void* args) {
     }
 
 #ifdef DEBUG
-    update_sgx_stats(/*print_process_wide_stats=*/false);
+    update_sgx_stats_on_exit(/*print_process_wide_stats=*/false);
 #endif
     thread_exit((int)ocall_exit_args->exitcode);
     return 0;

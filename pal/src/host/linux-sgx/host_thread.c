@@ -64,25 +64,15 @@ static void reset_global_sgx_stats(void) {
 static void update_global_sgx_stats_from_thread_stats(PAL_HOST_TCB* tcb) {
     assert(spinlock_is_locked(&g_enclave_thread_map_lock));
 
-    g_eenter_cnt       += tcb->eenter_cnt;
-    g_eexit_cnt        += tcb->eexit_cnt;
-    g_aex_cnt          += tcb->aex_cnt;
-    g_sync_signal_cnt  += tcb->sync_signal_cnt;
-    g_async_signal_cnt += tcb->async_signal_cnt;
-
-    /* there is a small window when the thread's counters may be updated in-between reading and
-     * resetting these counters -- some SGX events will be lost; we ignore this as the number of
-     * lost events is negligible for perf analysis purposes */
-
-    tcb->eenter_cnt       = 0;
-    tcb->eexit_cnt        = 0;
-    tcb->aex_cnt          = 0;
-    tcb->sync_signal_cnt  = 0;
-    tcb->async_signal_cnt = 0;
+    g_eenter_cnt       += __atomic_exchange_n(&tcb->eenter_cnt, 0, __ATOMIC_RELAXED);
+    g_eexit_cnt        += __atomic_exchange_n(&tcb->eexit_cnt, 0, __ATOMIC_RELAXED);
+    g_aex_cnt          += __atomic_exchange_n(&tcb->aex_cnt, 0, __ATOMIC_RELAXED);
+    g_sync_signal_cnt  += __atomic_exchange_n(&tcb->sync_signal_cnt, 0, __ATOMIC_RELAXED);
+    g_async_signal_cnt += __atomic_exchange_n(&tcb->async_signal_cnt, 0, __ATOMIC_RELAXED);
 }
 
 /* this function is called only on thread/process exit (never in the middle of thread exec) */
-void update_sgx_stats(bool print_process_wide_stats) {
+void update_sgx_stats_on_exit(bool print_process_wide_stats) {
     if (!g_sgx_enable_stats)
         return;
 
@@ -101,6 +91,15 @@ void collect_and_print_sgx_stats(void) {
     if (!g_sgx_enable_stats)
         return;
 
+    /*
+     * This function is executed by the "SGX-stats-collecting" thread (that received SIGUSR1). Thus,
+     * this thread is able to peek into the local storage of other threads. This is typically
+     * considered a bad smell (one thread reads local data of another thread), but here it's a
+     * reasonable trade-off: most of the accesses to the thread-local SGX counters are done on EEXIT
+     * and AEX events by the thread itself, so the memory access should be as simple as possible and
+     * as fast as possible. An alternative would be to move all SGX stats in a shared array, then we
+     * would have false cache sharing and complex memory management of the shared array.
+     */
     spinlock_lock(&g_enclave_thread_map_lock);
     for (size_t i = 0; i < g_enclave_thread_num; i++) {
         if (!g_enclave_thread_map[i].tcs || !g_enclave_thread_map[i].tid)

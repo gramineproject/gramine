@@ -282,11 +282,8 @@ void maybe_dump_and_reset_stats(void) {
         return;
 
     PAL_HOST_TCB* tcb = pal_get_host_tcb();
-    if (__atomic_load_n(&tcb->reset_stats, __ATOMIC_RELAXED) == false)
-        return;
-
-    collect_and_print_sgx_stats();
-
-    __atomic_store_n(&tcb->reset_stats, false, __ATOMIC_RELAXED);
+    if (__atomic_exchange_n(&tcb->reset_stats, false, __ATOMIC_RELAXED) == true) {
+        collect_and_print_sgx_stats();
+    }
 }
 #endif
