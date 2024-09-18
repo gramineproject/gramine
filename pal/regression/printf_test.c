@@ -14,7 +14,14 @@
     }                                                                                              \
 })
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     char* ptr = NULL;
 
     /* Basic tests. */

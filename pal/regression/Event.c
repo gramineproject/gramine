@@ -39,7 +39,14 @@ static noreturn int thread_func(void* arg) {
     PalThreadExit(&g_clear_thread_exit);
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     PAL_HANDLE event = NULL;
     CHECK(PalEventCreate(&event, /*init_signaled=*/true, /*auto_clear=*/true));
 

@@ -181,7 +181,12 @@ static void do_child(void) {
     PalObjectDestroy(handle);
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(envp);
+
     if (argc <= 0) {
         pal_printf("Invalid argc: %d\n", argc);
         return 1;
