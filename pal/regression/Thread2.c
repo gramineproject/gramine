@@ -50,7 +50,13 @@ static int thread4_run(void* args) {
 
 // If there's a thread limit, like on SGX, it should be set to exactly 2. There
 // should be only the main thread and only one other thread at a time.
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     pal_printf("Thread 1 (main) started.\n");
 
     PAL_HANDLE sleep_handle = NULL;

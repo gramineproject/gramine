@@ -38,7 +38,13 @@ static int ipv4_invalid(const char* buf) {
     return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with "call through pointer with incorrect function type" */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     CHECK(ipv4_valid("255.255.255.255", 0xffffffff));
     CHECK(ipv4_valid("8.8.8.8", 0x08080808));
     CHECK(ipv4_valid("8.8.8.8 with suffix", 0x08080808));
