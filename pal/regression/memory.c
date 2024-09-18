@@ -88,7 +88,14 @@ static void memfault_handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* contex
 /* Disable AddressSanitizer: this code tries to trigger a memory fault by accessing memory that's
  * supposed to be inaccessible, but SGX PAL poisons such memory. */
 __attribute_no_sanitize_address
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     size_t total_mem = PalGetPalPublicState()->mem_total;
     if (total_mem == 0) {
         log_error("no memory???");

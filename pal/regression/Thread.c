@@ -35,7 +35,14 @@ static noreturn int callback(void* args) {
     /* UNREACHABLE */
 }
 
-int main(void) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(argc);
+    __UNUSED(argv);
+    __UNUSED(envp);
+
     if (PalSegmentBaseSet(PAL_SEGMENT_FS, (uintptr_t)&private1) < 0) {
         pal_printf("Failed to set FS\n");
         return 1;

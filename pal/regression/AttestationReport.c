@@ -7,7 +7,12 @@
 
 char zerobuf[sizeof(sgx_report_t)] = {0};
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv, char** envp) {
+    /* We don't care about unused args to main, but UBSan complains otherwise
+     * with call through pointer with incorrect function type"
+     */
+    __UNUSED(envp);
+
     int ret;
 
     size_t user_report_data_size;
