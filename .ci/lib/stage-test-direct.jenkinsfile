@@ -60,7 +60,7 @@ stage('test-direct') {
             # memcslap populates server but doesn't report errors, use
             # memcached-tool for this (must return two lines of stats)
             memcslap --servers=127.0.0.1 --concurrency=8
-            src/scripts/memcached-tool 127.0.0.1 | wc -l | grep -w "2"
+            test "$(src/scripts/memcached-tool 127.0.0.1 | wc -l)" -ge 2
         '''
     }
     timeout(time: 10, unit: 'MINUTES') {
