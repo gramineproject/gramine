@@ -13,27 +13,21 @@ options relevant for performance benchmarking. Refer to
 in these examples should not be considered representative and serve only
 illustration purposes.
 
-Enabling per-thread and process-wide SGX stats
-----------------------------------------------
+Enabling SGX enclave stats
+--------------------------
 
 See also :ref:`perf` below for installing ``perf``.
 
 Enable statistics using ``sgx.enable_stats = true`` manifest option. Now your
 graminized application correctly reports performance counters. This is useful
 when using e.g. ``perf stat`` to collect performance statistics. This manifest
-option also forces Gramine to dump SGX-related information on each
-thread/process exit. Here is an example:
+option also forces Gramine to dump SGX-related information on each enclave exit.
+Here is an example:
 
 ::
 
    libos/test/regression$ perf stat gramine-sgx helloworld
    Hello world (helloworld)!
-   ----- SGX stats for thread 87219 -----
-   # of EENTERs:        224
-   # of EEXITs:         192
-   # of AEXs:           201
-   # of sync signals:   32
-   # of async signals:  0
    ----- Total SGX stats for process 87219 -----
    # of EENTERs:        224
    # of EEXITs:         192
@@ -47,13 +41,6 @@ thread/process exit. Here is an example:
           172,308,653      branches
 
 How to read this output:
-
-#. You can see that one thread was created, with Linux-host (actual) ``TID =
-   87219``. This one thread belongs to one process, so they have the same ``TID
-   = PID`` and the same statistics. If the test application would have e.g. two
-   threads, then there would be two "SGX stats for thread" outputs, and their
-   values would sum up to the values reported in the final "Total SGX stats for
-   process".
 
 #. There are about 200 EENTERs and EEXITs. These are mostly due to OCALLs:
    recall that every OCALL requires one EEXIT to exit the enclave and one EENTER

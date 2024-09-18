@@ -27,7 +27,7 @@ static size_t g_enclave_thread_num = 0;
 bool g_sgx_enable_stats = false;
 
 /* this function is called only on thread/process exit (never in the middle of thread exec) */
-void update_sgx_stats(bool print_process_wide_stats) {
+void update_sgx_stats(bool do_print) {
     static atomic_ulong g_eenter_cnt       = 0;
     static atomic_ulong g_eexit_cnt        = 0;
     static atomic_ulong g_aex_cnt          = 0;
@@ -44,7 +44,7 @@ void update_sgx_stats(bool print_process_wide_stats) {
     g_sync_signal_cnt  += tcb->sync_signal_cnt;
     g_async_signal_cnt += tcb->async_signal_cnt;
 
-    if (print_process_wide_stats) {
+    if (do_print) {
         int pid = g_host_pid;
         assert(pid > 0);
         log_always("----- Total SGX stats for process %d -----\n"

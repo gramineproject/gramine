@@ -1267,8 +1267,8 @@ large enough to hold the whole heap area.
 This option is invalid (i.e. must be ``false``) if specified together with
 ``sgx.edmm_enable``, as there are no heap pages to pre-fault.
 
-Enabling per-thread and process-wide SGX stats
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Enabling SGX enclave stats
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ::
 
@@ -1285,7 +1285,7 @@ This syntax specifies whether to enable SGX enclave-specific statistics:
    number of EENTERs (corresponds to ECALLs plus returns from OCALLs), number
    of EEXITs (corresponds to OCALLs plus returns from ECALLs) and number of
    AEXs (corresponds to interrupts/exceptions/signals during enclave
-   execution). Prints per-thread and per-process stats.
+   execution). Prints overall stats at the end of enclave execution.
 
 #. Printing the SGX enclave loading time at startup. The enclave loading time
    includes creating the enclave, adding enclave pages, measuring them and
