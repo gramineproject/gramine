@@ -6,6 +6,11 @@ BUILDDIR = $(ROOTDIR)/build
 INSTALLDIR = $(ROOTDIR)/install
 TESTCASEDIR = $(INSTALLDIR)/testcases/bin
 
+# Without the below flag, LTP's clone301 test fails on Clang 18 (e.g. on Ubuntu 24.04) with
+# "error: implicit declaration of function pidfd_send_signal".
+# TODO: Remove this flag when LTP is updated to the latest release (where this is fixed).
+EXTRA_CFLAGS = -Wno-implicit-function-declaration
+
 clean-extra += clean-build
 
 .PHONY: all
@@ -24,7 +29,7 @@ $(BUILDDIR)/BUILD_SUCCESS: $(SRCDIR)/configure
 	mkdir -p $(BUILDDIR)
 	# Kernel module tests are not meaningful for our LibOS and building them causes troubles on
 	# incompatible host kernels.
-	cd $(BUILDDIR) && $(SRCDIR)/configure --without-modules --prefix $(INSTALLDIR)
+	cd $(BUILDDIR) && $(SRCDIR)/configure CFLAGS=$(EXTRA_CFLAGS) --without-modules --prefix $(INSTALLDIR)
 	$(MAKE) -C $(BUILDDIR) -f $(SRCDIR)/Makefile top_srcdir=$(SRCDIR) top_builddir=$(BUILDDIR) all
 	touch $@
 
