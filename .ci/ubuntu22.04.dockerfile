@@ -69,4 +69,15 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 10 && \
     update-alternatives --set gcc /usr/bin/gcc-12 && \
     update-alternatives --set g++ /usr/bin/g++-12
 
+# Install wrk2 benchmark. This benchmark is used in `benchmark-http.sh`.
+RUN git clone https://github.com/giltene/wrk2.git \
+    && cd wrk2 \
+    && git checkout 44a94c17d8e6a0bac8559b53da76848e430cb7a7 \
+    && make \
+    && cp wrk /usr/local/bin \
+    && cd .. \
+    && rm -rf wrk2
+
+ENV REQUESTS=10000
+
 CMD ["bash"]
