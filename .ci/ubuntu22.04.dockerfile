@@ -108,6 +108,8 @@ RUN git clone https://github.com/giltene/wrk2.git \
     && cd .. \
     && rm -rf wrk2
 
+ENV REQUESTS=10000
+
 COPY .ci/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
 
 CMD ["bash"]
