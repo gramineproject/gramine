@@ -697,7 +697,7 @@ int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_s
 
     enum sgx_attestation_type attestation_type;
     sgx_spid_t spid;
-    bool linkable;
+    bool linkable = false;
 
     ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
     if (ret < 0) {
