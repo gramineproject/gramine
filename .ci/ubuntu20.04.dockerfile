@@ -97,6 +97,8 @@ RUN git clone https://github.com/giltene/wrk2.git \
     && cd .. \
     && rm -rf wrk2
 
+ENV REQUESTS=10000
+
 # NOTE about meson version: we support "0.56 or newer", so in CI we pin to latest patch version of
 # the earliest supported minor version (pip implicitly installs latest version satisfying the
 # specification)
