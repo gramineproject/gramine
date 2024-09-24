@@ -85,9 +85,22 @@ static void memfault_handler(bool is_in_pal, uintptr_t addr, PAL_CONTEXT* contex
     PalProcessExit(1);
 }
 
-/* Disable AddressSanitizer: this code tries to trigger a memory fault by accessing memory that's
- * supposed to be inaccessible, but SGX PAL poisons such memory. */
+/*
+ * Disable AddressSanitizer: this code tries to trigger a memory fault by accessing memory that's
+ * supposed to be inaccessible, but SGX PAL poisons such memory.
+ *
+ * Also disable UndefinedBehaviorSanitizer's complaint about "Indirect call of a function through a
+ * function pointer of the wrong type". UBSan expects all functions which can be indirectly called
+ * to be instrumented with two magic metadata values, located right-before the function in address
+ * space. The below code does *not* add metadata (it simply allocates some pages and copies the asm
+ * code at the beginning of the first page). Instead of adding UBSan-required metadata, we simply
+ * disable this particular check (it's a test after all, not core Gramine functionality). For more
+ * info, see https://maskray.me/blog/2022-12-18-control-flow-integrity#fsanitizefunction.
+ */
 __attribute_no_sanitize_address
+#ifdef UBSAN
+__attribute__((no_sanitize("function")))
+#endif
 int main(int argc, char** argv, char** envp) {
     /* We don't care about unused args to main, but UBSan complains otherwise
      * with "call through pointer with incorrect function type" */
