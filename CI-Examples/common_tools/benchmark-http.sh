@@ -3,8 +3,6 @@
 # Copyright (C) 2023 Gramine contributors
 # SPDX-License-Identifier: BSD-3-Clause
 
-# On Ubuntu, this script requires wrk2 tool installed for the wrk binary.
-#
 # Run like: ./benchmark-http.sh host:port
 #
 # It also works with HTTPS, e.g., ./benchmark-http.sh https://localhost:8443
@@ -15,10 +13,12 @@ LOOP=${LOOP:-1}
 DOWNLOAD_HOST=$1
 DOWNLOAD_FILE=${DOWNLOAD_FILE:-random/10K.1.html}
 CONNECTIONS=${CONNECTIONS:-300}
-REQUESTS=${REQUESTS:-10000}
 DURATION=${DURATION:-30}
 CONCURRENCY_LIST=${CONCURRENCY_LIST:-"1 2 4 8 16 32 64 128 256"}
 RESULT=result-$(date +%y%m%d-%H%M%S)
+
+# This parameter requires wrk2 tool installed for the wrk binary.
+REQUESTS_OPT="${REQUESTS:+-R"$REQUESTS"}"
 
 touch "$RESULT"
 convert_throughput() {
@@ -32,11 +32,11 @@ convert_throughput() {
     if [ -z "$THROUGHPUT_UNIT" ]; then
         THROUGHPUT=$THROUGHPUT_VAL
     elif [ "$THROUGHPUT_UNIT" = "k" ]; then
-        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000")
+        THROUGHPUT=$((THROUGHPUT_VAL * 1000))
     elif [ "$THROUGHPUT_UNIT" = "M" ]; then
-        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000000")
+        THROUGHPUT=$((THROUGHPUT_VAL * 1000000))
     elif [ "$THROUGHPUT_UNIT" = "G" ]; then
-        THROUGHPUT=$(bc <<< "$THROUGHPUT_VAL*1000000000")
+        THROUGHPUT=$((THROUGHPUT_VAL * 1000000000))
     else
         THROUGHPUT=0
     fi
@@ -55,13 +55,13 @@ latency_in_milliseconds() {
     if [ -z "$LATENCY_UNIT" ] || [ "$LATENCY_UNIT" = "ms" ]; then
         LATENCY=$LATENCY_VAL
     elif [ "$LATENCY_UNIT" = "us" ]; then
-        LATENCY=$(bc <<< "scale=3; $LATENCY_VAL/1000")
+        LATENCY=$(python3 -c "print($LATENCY_VAL/1000)")
     elif [ "$LATENCY_UNIT" = "s" ]; then
-        LATENCY=$(bc <<< "$LATENCY_VAL*1000")
+        LATENCY=$((LATENCY_VAL * 1000))
     elif [ "$LATENCY_UNIT" = "m" ]; then
-        LATENCY=$(bc <<< "$LATENCY_VAL*1000*60")
+        LATENCY=$((LATENCY_VAL * 1000 * 60))
     elif [ "$LATENCY_UNIT" = "h" ]; then
-        LATENCY=$(bc <<< "$LATENCY_VAL*1000*3600")
+        LATENCY=$((LATENCY_VAL * 1000 * 3600))
     else
         LATENCY=0
     fi
@@ -75,8 +75,9 @@ do
     for CONCURRENCY in $CONCURRENCY_LIST
     do
         rm -f OUTPUT
-        echo "wrk -c $CONNECTIONS -d $DURATION -t $CONCURRENCY -R $REQUESTS $DOWNLOAD_HOST/$DOWNLOAD_FILE"
-        wrk -c "$CONNECTIONS" -d "$DURATION" -t "$CONCURRENCY" -R "$REQUESTS" "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
+        echo "wrk -c $CONNECTIONS -d $DURATION -t $CONCURRENCY $REQUESTS_OPT $DOWNLOAD_HOST/$DOWNLOAD_FILE"
+        # shellcheck disable=SC2086
+        wrk -c "$CONNECTIONS" -d "$DURATION" -t "$CONCURRENCY" $REQUESTS_OPT "$DOWNLOAD_HOST/$DOWNLOAD_FILE" > OUTPUT || exit $?
 
         THROUGHPUT_STR=$(grep -m1 "Req/Sec" OUTPUT | awk '{ print $2 }')
         THROUGHPUT=$(convert_throughput "$THROUGHPUT_STR")
