@@ -47,6 +47,7 @@ sgx.ra_client_linkable = {{ 'true' if ra_client_linkable else 'false' }}
 sgx.edmm_enable = {{ "true" if env.get("EDMM", "0") | int > 0 else "false" }}
 sys.enable_sigterm_injection = true
 
+sgx.max_threads = {{ 1 if env.get("EDMM", "0") | int > 0 else 8 }}
 sgx.debug = true
 
 sgx.trusted_files = [

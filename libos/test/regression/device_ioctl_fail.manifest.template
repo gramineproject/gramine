@@ -10,6 +10,7 @@ fs.mounts = [
   { path = "/dev/gramine_test_dev", uri = "dev:/dev/gramine_test_dev" },
 ]
 
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 sgx.debug = true
 
 sgx.trusted_files = [

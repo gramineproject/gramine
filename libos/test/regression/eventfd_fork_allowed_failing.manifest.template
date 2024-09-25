@@ -15,6 +15,7 @@ fs.mounts = [
 # because eventfd is in a secure single-process mode (due to commented-out line)
 #sys.insecure__allow_eventfd = true
 
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
