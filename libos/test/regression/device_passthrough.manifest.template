@@ -8,6 +8,7 @@ fs.mounts = [
   { path = "/dev/host-zero", uri = "dev:/dev/zero" },
 ]
 
+sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
