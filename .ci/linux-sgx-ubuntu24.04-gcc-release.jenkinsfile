@@ -1,4 +1,4 @@
-node('sgx') {
+node('sgx && noble') {
     checkout scm
 
     env.SGX = '1'
