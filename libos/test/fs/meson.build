@@ -42,6 +42,7 @@ tests = {
     },
     'open_close': {},
     'open_flags': {},
+    'read_append': {},
     'read_write': {},
     'read_write_mmap': {},
     'seek_tell': {},

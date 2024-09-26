@@ -228,8 +228,14 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
                             file_off_t* pos) {
     assert(hdl->type == TYPE_CHROOT);
 
+    file_off_t actual_pos = *pos;
+    lock(&hdl->inode->lock);
+    if (hdl->inode->type == S_IFREG && (hdl->flags & O_APPEND))
+        actual_pos = hdl->inode->size;
+    unlock(&hdl->inode->lock);
+
     size_t actual_count = count;
-    int ret = PalStreamWrite(hdl->pal_handle, *pos, &actual_count, (void*)buf);
+    int ret = PalStreamWrite(hdl->pal_handle, actual_pos, &actual_count, (void*)buf);
     if (ret < 0) {
         return pal_to_unix_errno(ret);
     }
@@ -237,7 +243,7 @@ static ssize_t chroot_write(struct libos_handle* hdl, const void* buf, size_t co
 
     size_t new_size = 0;
     if (hdl->inode->type == S_IFREG) {
-        *pos += actual_count;
+        *pos = actual_pos + actual_count;
         /* Update file size if we just wrote past the end of file */
         lock(&hdl->inode->lock);
         if (hdl->inode->size < *pos)

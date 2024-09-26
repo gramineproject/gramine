@@ -65,6 +65,13 @@ int open_output_fd(const char* path, bool rdwr) {
     return fd;
 }
 
+int open_output_fd_append(const char* path) {
+    int fd = open(path, O_RDWR | O_CREAT | O_APPEND, 0664);
+    if (fd < 0)
+        fatal_error("Failed to open output file for append %s: %s\n", path, strerror(errno));
+    return fd;
+}
+
 void write_fd(const char* path, int fd, const void* buffer, size_t size) {
     off_t offset = 0;
     while (size > 0) {

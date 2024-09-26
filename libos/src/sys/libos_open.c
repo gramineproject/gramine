@@ -330,6 +330,14 @@ long libos_syscall_pwrite64(int fd, char* buf, size_t count, loff_t offset) {
         goto out;
     }
 
+    /*
+     * Note that Linux has the following bug: POSIX requires that opening a file with the O_APPEND
+     * flag should have no affect on the location at which pwrite() writes data. However, on Linux,
+     * if a file is opened with O_APPEND, pwrite() appends data to the end of the file, regardless
+     * of the value of offset. See man page pwrite(2), section BUGS.
+     *
+     * Gramine complies with this behavior, see implementations of the write() callback.
+     */
     file_off_t pos = offset;
     ret = fs->fs_ops->write(hdl, buf, count, &pos);
 out:

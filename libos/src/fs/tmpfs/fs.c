@@ -259,7 +259,8 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
     lock(&inode->lock);
     struct libos_mem_file* mem = inode->data;
 
-    ret = mem_file_write(mem, *pos, buf, size);
+    file_off_t actual_pos = (hdl->flags & O_APPEND) ? hdl->inode->size : *pos;
+    ret = mem_file_write(mem, actual_pos, buf, size);
     if (ret < 0) {
         unlock(&inode->lock);
         return ret;
@@ -267,7 +268,7 @@ static ssize_t tmpfs_write(struct libos_handle* hdl, const void* buf, size_t siz
 
     inode->size = mem->size;
 
-    *pos += ret;
+    *pos = actual_pos + ret;
     inode->mtime = time_us / USEC_IN_SEC;
     /* keep `ret` */
 
