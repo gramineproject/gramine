@@ -19,6 +19,7 @@ fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/{{ entrypoint }}", uri = "file:{{ binary_dir }}/{{ entrypoint }}" },
   { path = "/usr/{{ arch_libdir }}", uri = "file:/usr/{{ arch_libdir }}" },
+  { path = "/dev/shm", type = "tmpfs" },
 ]
 
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '32' }}
