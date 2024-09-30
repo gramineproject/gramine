@@ -6,6 +6,8 @@ loader.insecure__use_cmdline_argv = true
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir(libc) }}" },
   { path = "/hostname", uri = "file:{{ binary_dir }}/hostname" },
+
+  { path = "/etc", uri = "file:/etc" },  # test shadowing of host's /etc/resolv.conf
 ]
 
 sys.enable_extra_runtime_domain_names_conf = true
@@ -16,4 +18,7 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
   "file:{{ binary_dir }}/hostname",
+
+  # test shadowing of host's /etc/resolv.conf (note the double-slash, imitates non-normalized path)
+  { uri = "file://etc/resolv.conf", sha256 = "0000000000000000000000000000000000000000000000000000000000000000" },
 ]
