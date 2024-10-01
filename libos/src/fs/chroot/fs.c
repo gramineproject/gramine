@@ -113,7 +113,7 @@ static int setup_inode_data_created_dir(struct libos_inode* inode) {
     return 0;
 }
 
-static bool is_normalized_path_equal_to_etc_resolv_conf(const char* path) {
+static bool normalize_and_compare_path(const char* path, const char* compare_with) {
     size_t norm_path_size = strlen(path) + 1; /* overapproximate */
     char* norm_path = malloc(norm_path_size);
     if (!norm_path)
@@ -125,7 +125,7 @@ static bool is_normalized_path_equal_to_etc_resolv_conf(const char* path) {
         return false;
     }
 
-    bool result = strcmp(norm_path, "/etc/resolv.conf") == 0;
+    bool result = strcmp(norm_path, compare_with) == 0;
     free(norm_path);
     return result;
 }
@@ -137,7 +137,7 @@ static int setup_inode_data(mode_t type, const char* uri, size_t file_size,
         return -ENOMEM;
 
     if (g_pal_public_state->extra_runtime_domain_names_conf &&
-            is_normalized_path_equal_to_etc_resolv_conf(strip_prefix(uri))) {
+            normalize_and_compare_path(strip_prefix(uri), "/etc/resolv.conf")) {
         /*
          * Manifest option `sys.enable_extra_runtime_domain_names_conf` is set to true, implying
          * that LibOS will generate /etc/resolv.conf by itself, but LibOS still calls this function
