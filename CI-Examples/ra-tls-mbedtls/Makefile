@@ -116,8 +116,8 @@ sgx_sign_client_epid: client_epid.manifest
 check_epid: app epid
 	gramine-sgx server & SERVER_ID=$$!; \
 	../../scripts/wait_for_server 60 127.0.0.1 4433; \
-	./client epid > OUTPUT; \
-	./client epid 0 0 0 0 >> OUTPUT; \
+	./client epid | tee OUTPUT; \
+	./client epid 0 0 0 0 | tee -a OUTPUT; \
 	kill -9 $$SERVER_ID
 	@grep -q "using default SGX-measurement verification callback" OUTPUT && echo "[ Success 1/4 ]"
 	@grep -q "using our own SGX-measurement verification callback" OUTPUT && echo "[ Success 2/4 ]"
@@ -136,8 +136,8 @@ check_epid_fail: app epid
 check_dcap: app dcap
 	gramine-sgx server >/dev/null & SERVER_ID=$$!; \
 	../../scripts/wait_for_server 60 127.0.0.1 4433; \
-	./client dcap > OUTPUT; \
-	./client dcap 0 0 0 0 >> OUTPUT; \
+	./client dcap | tee OUTPUT; \
+	./client dcap 0 0 0 0 | tee -a OUTPUT; \
 	kill -9 $$SERVER_ID
 	@grep -q "using default SGX-measurement verification callback" OUTPUT && echo "[ Success 1/4 ]"
 	@grep -q "using our own SGX-measurement verification callback" OUTPUT && echo "[ Success 2/4 ]"
