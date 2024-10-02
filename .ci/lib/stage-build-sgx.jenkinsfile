@@ -73,6 +73,7 @@ stage('build') {
 
     // In CI we install to non-standard --prefix (see above). This makes sure the libraries are
     // available anyway.
+    env.LD_LIBRARY_PATH = libdir
     env.PKG_CONFIG_PATH = libdir + '/pkgconfig'
 
     // prevent cheating and testing from repo
