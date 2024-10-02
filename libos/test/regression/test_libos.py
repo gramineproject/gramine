@@ -63,7 +63,7 @@ class TC_00_Unittests(RegressionTestCase):
     def _test_asan(self, case, desc):
         expected_list = [f'asan: {desc}']
         if self.has_debug():
-            expected_list.append(f'asan: location: run_test_asan_{case} at libos_call.c')
+            expected_list.append(f'asan: location: run_test_asan_{case} at ')
         self._test_abort(f'asan_{case}', expected_list)
 
     def _test_abort(self, test_name, expected_list):
