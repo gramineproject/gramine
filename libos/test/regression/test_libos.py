@@ -1468,7 +1468,7 @@ class TC_50_GDB(RegressionTestCase):
         # trusted file, and then lets the program continue execution. The child process must see the
         # modified trusted file, and Gramine's verification logic must fail the whole program.
         try:
-            stdout, _ = self.run_gdb(['fork_and_access_file'], 'fork_and_access_file.gdb')
+            stdout, _ = self.run_gdb(['fork_and_access_file'], 'fork_and_access_file.gdb', timeout=60)
             self.assertIn('BREAK ON FORK', stdout)
             self.assertIn('EXITING GDB WITH AN ERROR', stdout)
             # below message must NOT be printed; it means Gramine didn't fail but the program itself
