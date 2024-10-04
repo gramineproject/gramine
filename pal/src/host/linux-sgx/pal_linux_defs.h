@@ -5,7 +5,7 @@
 #define SSA_FRAME_NUM  2 /* one frame for normal context, one frame for signal preparation */
 
 #define THREAD_STACK_SIZE (PRESET_PAGESIZE * 512) /* 2MB untrusted stack */
-#define ALT_STACK_SIZE    (PRESET_PAGESIZE * 16)  /* 64KB untrusted signal stack */
+#define ALT_STACK_SIZE    (PRESET_PAGESIZE * 64)  /* 64KB untrusted signal stack */
 #define RPC_STACK_SIZE    (PRESET_PAGESIZE * 2)
 
 /* Currently max supported XSAVE size. */
@@ -23,7 +23,7 @@ static_assert(SSA_XSAVE_SIZE_MAX + /* GPRs size in SSA */176 <= SSA_FRAME_SIZE -
 #define SSA_MISC_EXINFO_SIZE 16
 
 #define ENCLAVE_STACK_SIZE     (PRESET_PAGESIZE * 64)
-#define ENCLAVE_SIG_STACK_SIZE (PRESET_PAGESIZE * 16)
+#define ENCLAVE_SIG_STACK_SIZE (PRESET_PAGESIZE * 64)
 
 /* default enclave base must cover code segment loaded at 0x400000 (for non-PIE executables),
  * and mmap minimum address cannot start at zero (modern OSes do not allow this) */
