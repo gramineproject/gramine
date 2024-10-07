@@ -50,7 +50,7 @@ $(NGINX_SRC).tar.gz:
 	../common_tools/download --output $@ --sha256 $(NGINX_SHA256) \
 		$(foreach mirror,$(NGINX_MIRRORS),--url $(mirror)/$(NGINX_SRC).tar.gz)
 
-nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx \
+nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx testdata \
                 $(INSTALL_DIR)/conf/nginx-gramine.conf \
                 $(TEST_DATA) nginx_args \
                 $(INSTALL_DIR)/conf/server.crt
