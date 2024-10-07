@@ -1,8 +1,6 @@
 /* SPDX-License-Identifier: LGPL-3.0-or-later */
 /* Copyright (C) 2014 Stony Brook University
  *               2020 Intel Labs
- *               2024 Intel Corporation
- *                    Kailun Qin <kailun.qin@intel.com>
  */
 
 /*
@@ -18,7 +16,6 @@
 #include "pal.h"
 #include "pal_internal.h"
 #include "pal_linux.h"
-#include "pal_sgx.h"
 
 #define ADDR_IN_PAL(addr) ((void*)(addr) > TEXT_START && (void*)(addr) < TEXT_END)
 
@@ -232,9 +229,10 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
             log_always("Emulating a raw syscall instruction. This degrades performance, consider"
                        " patching your application to use Gramine syscall API.");
         }
-        char buf[LOCATION_BUF_SIZE];
-        pal_describe_location(uc->rip, buf, sizeof(buf));
-        log_trace("Emulating raw syscall instruction with number %lu at address %s", uc->rax, buf);
+        /* FIXME: better to use `pal_describe_location()` (see example below), but it leads to a
+ *        non-deterministic bug on some workloads */
+        log_trace("Emulating raw syscall instruction with number %lu at address %p",
+                  uc->rax, (void*)uc->rip);
         return false;
     } else if (is_in_out(instr) && !has_lock_prefix(instr)) {
         /*
@@ -260,17 +258,6 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
     log_warning("Unknown or illegal instruction executed at %s", buf);
     return false;
 }
-
-/* TODO: remove this once the Linux kernel is patched. */
-#ifndef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
-static bool is_eaccept_instr(sgx_cpu_context_t* uc) {
-    /* instruction must be ENCLU and leaf must be EACCEPT */
-    uint8_t* instr = (uint8_t*)uc->rip;
-    if (instr[0] == 0x0f && instr[1] == 0x01 && instr[2] == 0xd7 && uc->rax == EACCEPT)
-        return true;
-    return false;
-}
-#endif
 
 /* perform exception handling inside the enclave */
 void _PalExceptionHandler(uint32_t trusted_exit_info_,
@@ -440,15 +427,8 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
         _PalProcessExit(1);
     }
 
-    bool async_event = event_num == PAL_EVENT_QUIT || event_num == PAL_EVENT_INTERRUPTED;
-    bool memfault_with_edmm = !is_synthetic_gp && event_num == PAL_EVENT_MEMFAULT &&
-                              g_pal_linuxsgx_state.edmm_enabled;
-
-    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) or memory fault with EDMM
-     * enabled (which could happen legitimately when some syscalls try to access user buffers
-     * that're created using mappings with `MAP_NORESERVE`) -- this should be handled later in the
-     * lazy-allocation logic */
-    if (ADDR_IN_PAL(uc->rip) && !async_event && !memfault_with_edmm) {
+    /* in PAL, and event isn't asynchronous (i.e., synchronous exception) */
+    if (ADDR_IN_PAL(uc->rip) && event_num != PAL_EVENT_QUIT && event_num != PAL_EVENT_INTERRUPTED) {
         char buf[LOCATION_BUF_SIZE];
         pal_describe_location(uc->rip, buf, sizeof(buf));
 
@@ -500,78 +480,10 @@ void _PalExceptionHandler(uint32_t trusted_exit_info_,
             break;
     }
 
-    if (memfault_with_edmm) {
-        /* EDMM lazy allocation */
-        assert(g_mem_bkeep_get_vma_info_upcall);
-
-        assert(ctx.err);
-
-#ifndef LINUX_KERNEL_SGX_EDMM_DATA_RACES_PATCHED
-        if (!(ctx.err & ERRCD_P) && is_eaccept_instr(uc)) {
-            /*
-             * Corner case of a #PF on a non-present page during EACCEPT: this is a benign spurious
-             * #PF that will be resolved completely by the host kernel.
-             *
-             * This is due to a data race in the SGX driver where two enclave threads may try to
-             * access the same non-present enclave page simultaneously, see below for details:
-             * https://lore.kernel.org/lkml/20240429104330.3636113-2-dmitrii.kuvaiskii@intel.com.
-             *
-             * TODO: remove this workaround once the Linux kernel is patched.
-             */
-            goto out;
-        }
-#endif
-
-        pal_prot_flags_t prot_flags;
-
-        if (g_mem_bkeep_get_vma_info_upcall(addr, &prot_flags) == 0) {
-            prot_flags &= ~PAL_PROT_LAZYALLOC;
-
-            if (((ctx.err & ERRCD_W) && !(prot_flags & PAL_PROT_WRITE)) ||
-                ((ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_EXEC)) ||
-                /* This checks insufficient read access, e.g., reading a `PROT_NONE` page or the
-                 * eXecute-Only-Memory (XOM) (specified with `PROT_EXEC` alone). Note that on Linux,
-                 * `PROT_READ` is not required to be set when `PROT_WRITE` or `PROT_EXEC` are set.
-                 * Since we're in SGX EDMM PAL, a memfault is propagated when reading the XOM. */
-                (!(ctx.err & ERRCD_W) && !(ctx.err & ERRCD_I) && !(prot_flags & PAL_PROT_READ)) ||
-                (ctx.err & ERRCD_PK) || (ctx.err & ERRCD_SS)) {
-                /* the memfault can be caused by e.g. insufficient access rights rather than page
-                 * not existing, which should be propagated in this case */
-                goto propagate_memfault;
-            }
-
-            /* The page's set/unset status will be double-checked against the status recorded in the
-             * enclave page tracker, and if it has already been committed, the page will be skipped.
-             * See `walk_pages()` in "pal/src/host/linux-sgx/enclave_edmm.c" for details.
-             *
-             * This avoids a potential security issue where a malicious host could trick us into
-             * committing the page twice (which would effectively allow the host to replace a
-             * lazily-allocated page with 0s) by removing the page and forcing a page fault. */
-            int ret = commit_lazy_alloc_pages(ALLOC_ALIGN_DOWN_PTR(addr), /*count=*/1, prot_flags);
-            if (ret < 0) {
-                log_error("failed to lazily allocate page at 0x%lx: %s", addr, pal_strerror(ret));
-                _PalProcessExit(1);
-            }
-            goto out;
-        } else if (ADDR_IN_PAL(uc->rip)) {
-            /* inside PAL, and we failed to get the VMA info of the faulting address or we hit a
-             * memfault on a not lazily-allocated page */
-            char buf[LOCATION_BUF_SIZE];
-            pal_describe_location(uc->rip, buf, sizeof(buf));
-
-            log_error("Unexpected memory fault occurred inside PAL (%s)", buf);
-            _PalProcessExit(1);
-        }
-
-        /* propagate the unhandled memfaults to LibOS via upcall */
-    }
-
-propagate_memfault:;
     pal_event_handler_t upcall = _PalGetExceptionHandler(event_num);
     if (upcall) {
         (*upcall)(ADDR_IN_PAL(uc->rip), addr, &ctx);
     }
 
-out:
     restore_pal_context(uc, &ctx);
 }
