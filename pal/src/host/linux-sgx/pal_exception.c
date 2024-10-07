@@ -230,7 +230,7 @@ static bool handle_ud(sgx_cpu_context_t* uc, int* out_event_num) {
                        " patching your application to use Gramine syscall API.");
         }
         /* FIXME: better to use `pal_describe_location()` (see example below), but it leads to a
- *        non-deterministic bug on some workloads */
+         * non-deterministic bug on some workloads */
         log_trace("Emulating raw syscall instruction with number %lu at address %p",
                   uc->rax, (void*)uc->rip);
         return false;

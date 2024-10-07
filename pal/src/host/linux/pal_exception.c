@@ -92,7 +92,7 @@ static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc)
                        " patching your application to use Gramine syscall API.");
         }
         /* FIXME: better to use `pal_describe_location()` (see example below), but it leads to a
- *        non-deterministic bug on some workloads */
+         * non-deterministic bug on some workloads */
         log_trace("Emulating raw syscall instruction with number %d at address %p", info->si_syscall,
                   info->si_call_addr);
     }
