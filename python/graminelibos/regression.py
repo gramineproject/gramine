@@ -22,6 +22,12 @@ HAS_SGX = os.environ.get('SGX') == '1'
 IS_VM = os.environ.get('IS_VM') == '1'
 ON_X86 = os.uname().machine in ['x86_64']
 USES_MUSL = os.environ.get('GRAMINE_MUSL') == '1'
+try:
+    GDB_VERSION = tuple(int(i) if i.isdigit() else i for i in subprocess.check_output(
+        ['gdb', '-q', '-ex', 'python print(gdb.VERSION)', '-ex', 'q']
+    ).strip().decode('ascii').split('.'))
+except (subprocess.SubprocessError, OSError):
+    GDB_VERSION = None
 
 def expectedFailureIf(predicate):
     if predicate:
