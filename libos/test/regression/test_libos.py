@@ -10,6 +10,7 @@ import json
 import tomli
 
 from graminelibos.regression import (
+    GDB_VERSION,
     HAS_AVX,
     HAS_EDMM,
     HAS_SGX,
@@ -1460,6 +1461,14 @@ class TC_50_GDB(RegressionTestCase):
         xmm0_result = self.find('XMM0 result', stdout)
         self.assertEqual(xmm0_result, '$4 = 0x4000400040004000')
 
+    # There's a bug in gdb introduced somewhere between versions 12 and 13 (and
+    # still present in 15.x at the time of this writing): When using set
+    # detach-on-fork off and set schedule-multiple on (which our gramine.gdb
+    # uses) non-main threads in the parent process get stuck in "tracing stop"
+    # state after vfork+execve. This test uses gdb and unfortunately triggers
+    # the bug.
+    @unittest.skipUnless(GDB_VERSION is not None and GDB_VERSION < (13,),
+        f'missing or known buggy GDB ({GDB_VERSION=})')
     def test_020_gdb_fork_and_access_file_bug(self):
         # To run this test manually, use:
         # GDB=1 GDB_SCRIPT=fork_and_access_file.gdb gramine-sgx fork_and_access_file
