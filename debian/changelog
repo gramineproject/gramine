@@ -1,8 +1,25 @@
-gramine (1.7post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.8~rc3) unstable-bookworm unstable-bullseye unstable-noble unstable-noble unstable-jammy unstable-focal; urgency=medium
 
-  *
+  * version 1.8
+  * TBD: new and updated features (copy from release notes)
+  * Known issue: multithreaded apps which issue a lot of OCALLs concurrently
+    might experience reliability issues:
+    https://github.com/gramineproject/gramine/issues/1261#issuecomment-2411152710;
+    specifically, workloads that use PyTorch are affected.
+  * There's a bug in GDB introduced somewhere between versions 12 and 13 (and
+    still present in 15.x): When using `set detach-on-fork off` and `set
+    schedule-multiple on` (which our `gramine.gdb` uses) non-main threads in
+    the parent process get stuck in "tracing stop" state after vfork+execve.
+    This causes GDB to be unusable for debugging `gramine-direct` on Debian 12
+    and Ubuntu 24.04.
+  * new dependency: libcbor (0.11.0)
+  * new dependency: cmake
+  * updated curl (8.7.1 -> 8.8.0)
+  * updated glibc (2.39 -> 2.40)
+  * updated mbedtls (3.5.2 -> 3.6.0)
+  * updated musl (1.2.4 -> 1.2.5)
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 24 Apr 2024 09:27:58 +0200
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 16 Oct 2024 23:25:59 +0200
 
 gramine (1.7) bookworm bullseye jammy focal; urgency=medium
 
