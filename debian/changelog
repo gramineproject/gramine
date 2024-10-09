@@ -1,8 +1,9 @@
-gramine (1.7post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.8~rc2) unstable-bookworm unstable-bullseye unstable-noble unstable-noble unstable-jammy unstable-focal; urgency=medium
 
-  *
+  * version 1.8
+  * TODO after drafting release notes copy main points here
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 24 Apr 2024 09:27:58 +0200
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Thu, 10 Oct 2024 15:36:15 +0200
 
 gramine (1.7) bookworm bullseye jammy focal; urgency=medium
 
