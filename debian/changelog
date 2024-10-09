@@ -1,8 +1,29 @@
-gramine (1.7post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.8) bookworm bullseye noble noble jammy focal; urgency=medium
 
-  *
+  * version 1.8
+  * new dependency: libcbor (0.11.0)
+  * new build-only dependency: cmake
+  * updated curl (8.7.1 -> 8.8.0)
+  * updated glibc (2.39 -> 2.40)
+  * updated mbedtls (3.5.2 -> 3.6.0)
+  * updated musl (1.2.4 -> 1.2.5)
+  * gramine-manifest's check is now hard-failing by default
+  * RA_TLS_* variables need to be all explicitly set
+  * sgx.require_* manifest options are removed
+  * loader.entrypoint manifest option is optional
+  * new system calls implemented: close_range, {,l,f}{get,list}xattr
+  * new manifest options: sys.debug__mock_syscalls, sys.fds.limit
+  * /dev/fd/ is properly emulated
+  * added shared_cpu_list to sysfs cache info
+  * RA-TLS modified to adhere to Interoperable RA-TLS standard
+  * known issue: multithreaded apps which issue a lot of OCALLs concurrently
+    might experience reliability issues:
+    https://github.com/gramineproject/gramine/issues/1261#issuecomment-2411152710;
+    specifically, workloads that use PyTorch are affected.
+  * assorted bugfixes, perf and stability improvements, debug/devel-oriented
+    changes that don't affect packaged build, and other
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 24 Apr 2024 09:27:58 +0200
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Mon, 21 Oct 2024 15:22:20 +0200
 
 gramine (1.7) bookworm bullseye jammy focal; urgency=medium
 

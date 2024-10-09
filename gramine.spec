@@ -4,7 +4,7 @@
 %global has_supported_sphinx 0%{?rhel} >= 9
 
 Name: gramine
-Version: 1.7post~UNRELEASED
+Version: 1.8
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
