@@ -38,7 +38,14 @@ int _PalVirtualMemoryAlloc(void* addr, size_t size, pal_prot_flags_t prot) {
     void* res_addr = (void*)DO_SYSCALL(mmap, addr, size, linux_prot, flags, -1, 0);
 
     if (IS_PTR_ERR(res_addr)) {
-        return unix_to_pal_error(PTR_TO_ERR(res_addr));
+        int ret = PTR_TO_ERR(res_addr);
+        if (ret == -ENOMEM && FIRST_TIME()) {
+            log_debug("Host Linux returned -ENOMEM on mmap(); this may happen because process's "
+                      "maximum number of mappings would be exceeded. Gramine cannot handle this "
+                      "case. You may want to increase the value in /proc/sys/vm/max_map_count.");
+        }
+
+        return unix_to_pal_error(ret);
     }
 
     assert(res_addr == addr);
@@ -50,7 +57,7 @@ int _PalVirtualMemoryFree(void* addr, size_t size) {
     int ret = DO_SYSCALL(munmap, addr, size);
     if (ret == -ENOMEM && FIRST_TIME()) {
         log_error("Host Linux returned -ENOMEM on munmap(); this may happen because process's "
-                  "maximum number of mappings is exceeded. Gramine cannot handle this case. "
+                  "maximum number of mappings would be exceeded. Gramine cannot handle this case. "
                   "You may want to increase the value in /proc/sys/vm/max_map_count.");
     }
     return ret < 0 ? unix_to_pal_error(ret) : 0;
