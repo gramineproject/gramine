@@ -1,5 +1,5 @@
 # Contributor: Amie Raine <amie@invisiblethingslab.com>
-# Maintainer: Amie Raine <amie@invisiblethingslab.com>
+# Maintainer: Wojtek Porczyk <woju@invisiblethingslab.com>
 pkgname=gramine
 _real_pkgver=1.7post~UNRELEASED
 pkgver=$(printf %s "$_real_pkgver" | sed \
