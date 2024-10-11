@@ -97,6 +97,7 @@ tests = {
     'proc_common': {},
     'proc_cpuinfo': {},
     'proc_path': {},
+    'proc_hardcoded_files': {},
     'proc_stat': {},
     'pselect': {},
     'pthread_set_get_affinity': {},
