@@ -2,43 +2,43 @@ Encrypted Files in Gramine
 ==========================
 
 .. note ::
-   This is a highly technical document intended for crypto practitioners.
+   This is a highly technical document intended for cryptography practitioners.
 
-   This is a living document. The last major update happened in **April 2024**
-   and closely corresponds to Gramine v1.6.
+   This is a living document. The last major update happened in **October 2024**
+   and closely corresponds to Gramine v1.8.
 
-   A short introduction to the "protected files" feature as implemented in Intel
-   SGX SDK was also published in `this old blog post
-   <https://web.archive.org/web/20230401201058/https://www.tatetian.io/2017/01/15/understanding-sgx-protected-file-system/>`__.
-
-Gramine provides a feature of :ref:`encrypted-files`, which encrypts files and
-transparently decrypts them when the application reads or writes them.
-Integrity- and confidentiality-sensitive files (or whole directories) accessed
-by the application must be put under the "encrypted" FS mount in the Gramine
-manifest. New files created in the "encrypted" FS mount are automatically
-treated as encrypted. The format used for encrypted and integrity-protected
-files is borrowed from the "protected files" feature of Intel SGX SDK (see the
-corresponding section in `Intel SGX Developer Reference manual
+With Gramine's :ref:`encrypted-files` feature, Gramine transparently encrypts
+and decrypts files when the application writes and reads the files,
+respectively. To use the encrypted files feature, the user must place integrity-
+and confidentiality-sensitive files (or whole directories) under the
+``encrypted`` FS mount in the Gramine manifest. New files created in the
+``encrypted`` FS mount are automatically treated as encrypted. The format used
+for encrypted and integrity-protected files is borrowed from the "protected
+files" feature of Intel SGX SDK (see the corresponding section in `Intel SGX
+Developer Reference manual
 <https://download.01.org/intel-sgx/sgx-linux/2.23/docs/Intel_SGX_Developer_Reference_Linux_2.23_Open_Source.pdf>`__).
 
-Each encrypted file is encrypted separately, i.e. Gramine employs file-level
-encryption and not block-level encryption. Each "encrypted" FS mount can have a
-separate encryption key (more precisely, this is the key derivation key or KDK).
+Each encrypted file is encrypted separately, i.e., Gramine employs file-level
+encryption and not block-level encryption. Each ``encrypted`` FS mount has a
+separate encryption key (more precisely, this is the key-derivation key or KDK).
 More information on the usage of encrypted files can be found in the
 :ref:`encrypted-files` manifest syntax.
 
 The feature was previously called "protected files" or "protected FS", same as
 in Intel SGX SDK. These legacy names may still be found in Gramine codebase.
+A short introduction to the "protected files" feature as implemented in Intel
+SGX SDK was also published in `this old blog post
+<https://web.archive.org/web/20230401201058/https://www.tatetian.io/2017/01/15/understanding-sgx-protected-file-system/>`__.
 
 Encrypted files are primarily used with TEEs (Trusted Execution Environments)
-like Intel SGX, i.e. with :program:`gramine-sgx`. However, for debug purposes,
-encrypted files are also functional in :program:`gramine-direct`.
+like Intel SGX, i.e., with :program:`gramine-sgx`. However, for debugging
+purposes, encrypted files are also functional in :program:`gramine-direct`.
 
-Security guarantees of encrypted files
+Security properties of encrypted files
 --------------------------------------
 
 The current implementation of encrypted files in Gramine provides the following
-security guarantees:
+security properties:
 
 - **Confidentiality of user data**: all user data is encrypted and then written
   to untrusted host storage; this prevents user data leakage.
@@ -52,22 +52,22 @@ security guarantees:
 The current implementation does *not* protect against the following attacks:
 
 - **Rollback/replay attacks after file close**. The user cannot detect whether
-  he has opened an old (but authenticated) version of a file. In other words,
+  they have opened an old (but authenticated) version of a file. In other words,
   Gramine does not guarantee the freshness of user data in the file after this
   file was closed. Note that while the file is opened, the rollback/replay
   attack is prevented (by always keeping the root hash of a Merkle tree over the
   file in trusted enclave memory and checking the consistency during accesses,
   see more details below).
-- **Side-channel attacks**. Some file metadata, such as file name, file size,
-  access time, access patterns (e.g., which blocks are read/written), etc. is
-  not confidentiality-protected. This could be used by attackers to gain
-  sensitive information. See also
+- **Side-channel attacks**. Some file metadata is not confidentiality-protected,
+  such as file name, file size, access time, access patterns (e.g., which blocks
+  are read/written). This lack of confidentiality protection of metadata could
+  be used by attackers to gain sensitive information. See also
   https://gramine.readthedocs.io/en/stable/devel/features.html#file-systems for
   additional discussions on file metadata.
 
 .. note ::
-   There is an effort to improve rollback/replay attack protection in Gramine.
-   See the discussion in https://github.com/gramineproject/gramine/issues/1835.
+   There is an effort to add rollback/replay attack protection in Gramine. See
+   the discussion in https://github.com/gramineproject/gramine/issues/1835.
 
 Encrypted Files subsystem in Gramine codebase
 ---------------------------------------------
@@ -97,13 +97,15 @@ From the Gramine codebase perspective, the split is as follows:
 There are several reasons for this decoupling:
 
 - Historical reason -- to ease the porting effort from Intel SGX SDK.
+- Sharing of bug fixes -- if a bug is fixed in Intel SGX SDK, it can be easily
+  applied in Gramine, and vice versa.
 - Reusability -- the encrypted-files code can be used as-is in stand-alone tools
   like :program:`gramine-sgx-pf-crypt`.
 - Crypto reviews -- the encrypted-files code is the only place that directly
   uses crypto algorithms, which facilitates crypto/security review efforts.
 
 The application code is *not* aware of encrypted files. Applications treat
-encrypted files just like regular files, e.g. apps open file descriptors (FDs),
+encrypted files just like regular files, e.g., apps open file descriptors (FDs),
 duplicate them, perform I/O operations on files and then close the FDs. Gramine
 intercepts such system calls, creates handles for FDs, consults the manifest
 file to learn that these handles are encrypted-files' handles, attaches inodes
@@ -117,19 +119,21 @@ particular, the application's operations on the file will return ``-EACCES``.
 
 .. image:: ../img/encfiles/01_encfiles_datastructs.svg
    :target: ../img/encfiles/01_encfiles_datastructs.svg
-   :alt: Figure: Relations between the app, the Gramine FS code, the Gramine glue code and the generic encrypted-files code
+   :alt: Figure: Relations between the app, the Gramine FS code, the Gramine glue code and the generic encrypted-files code.
 
 The diagram above shows the relations between the application, the Gramine FS
-code, the Gramine glue code and the generic encrypted-files code. Here the
+code, the Gramine glue code and the generic encrypted-files code. Here, the
 ``libos_encrypted_file`` data structure is hosted in the glue code, and the
-``pf_context`` data structure is hosted in the generic encrypted-files code. The
-KDK is installed through Gramine interfaces into the ``libos_encrypted_key``
-field in the glue code which copies it into the ``kdk`` field in encrypted-files
-code. Also, the glue code opens a host file via Gramine's PAL interfaces and
-saves the reference to it into ``pal_handle``, which is copied into
-``host_file_handle`` in encrypted-files code. With these two fields, plus the
-set of registered callbacks, the encrypted-files code has enough information to
-encrypt and decrypt files stored on the host's disk.
+``pf_context`` data structure is hosted in the generic encrypted-files code.
+In addition to the standard file-system callbacks and PAL interfaces in Gramine,
+the encrypted FS requires one additional configuration option for the
+key-derivation key (KDK). The KDK is installed through Gramine interfaces into
+the ``libos_encrypted_key`` field in the glue code which copies it into the
+``kdk`` field in encrypted-files code. Also, the glue code opens a host file via
+Gramine's PAL interfaces and saves the reference to it into ``pal_handle``,
+which is copied into ``host_file_handle`` in encrypted-files code. With these
+two fields, plus the set of registered callbacks, the encrypted-files code has
+enough information to encrypt and decrypt files stored on the host's disk.
 
 Crypto used for encrypted files
 -------------------------------
@@ -142,9 +146,10 @@ Crypto used for encrypted files
   <https://csrc.nist.gov/pubs/sp/800/108/r1/upd1/final>`__ construction, with
   the required PRF (Pseudorandom Function) instantiated by AES-128-CMAC.
 
-- Keys for node encryption (i.e., keys stored in the MHT nodes) are generated
-  randomly using a cryptographically secure pseudo-random number generator
-  (CSPRNG); for x86-64, this CSPRNG is the RDRAND instruction.
+- Keys for node encryption (i.e., keys stored in the Merkle Hash Tree nodes aka
+  MHT nodes) are generated randomly using a cryptographically secure
+  pseudo-random number generator (CSPRNG); for x86-64, this CSPRNG is the RDRAND
+  instruction.
 
 - Initialization vectors (IVs) are always all-zeros. This is allowed because
   each node-encryption key is generated randomly and is never re-used.
@@ -152,7 +157,7 @@ Crypto used for encrypted files
 - Additional authenticated data (AAD) is not used.
 
 - The crypto library used is mbedTLS, frequently updated by Gramine maintainers
-  to be of the latest released version.
+  to be the latest released version.
 
 Representation on host storage and in SGX enclave memory
 --------------------------------------------------------
@@ -168,7 +173,7 @@ same pathname, but augmented with additional metadata and split into 4KB chunks
 
 .. image:: ../img/encfiles/02_encfiles_representation.svg
    :target: ../img/encfiles/02_encfiles_representation.svg
-   :alt: Figure: Representation of an encrypted file on host storage and inside the SGX enclave
+   :alt: Figure: Representation of an encrypted file on host storage and inside the SGX enclave.
 
 An encrypted file is represented inside the SGX enclave as a set of interlinked
 data structures and buffers. There is a main data struct ``pf_context`` for each
@@ -194,8 +199,8 @@ parts:
 
 1. The plaintext header, occupying bytes 0-57. The header contains a magic
    string, a major version of the encrypted-files protocol, a minor version, a
-   nonce for KDF (Key Derivation Function, explained later) and a MAC
-   (cryptographic hash over the encrypted header).
+   nonce for KDF (Key Derivation Function, explained in the next section) and a
+   MAC (cryptographic hash over the encrypted header).
 2. The encrypted header, occupying bytes 58-3941. This header has two parts: the
    encrypted metadata fields and the first 3KB of actual file contents. The
    metadata fields contain a file path (to prevent rename attacks), the file
@@ -238,19 +243,19 @@ are stored directly in the encrypted header of the metadata node. The root MHT
 node starts to be used when the plaintext file size exceeds 3KB.
 
 Note that the root MHT node is kept in trusted enclave memory for the lifetime
-of the file handle (i.e. as long as the file is opened). This is in contrast to
+of the file handle (i.e., as long as the file is opened). This is in contrast to
 other MHT nodes which can be evicted from enclave memory; see the notes on LRU
 cache in :ref:`additional-details`. The fact that the root MHT node is
 non-evictable ensures protection against rollback/replay attacks.
 
 .. image:: ../img/encfiles/03_encfiles_layout.svg
    :target: ../img/encfiles/03_encfiles_layout.svg
-   :alt: Figure: Merkle Hash Tree of an encrypted file and file layout on host storage
+   :alt: Figure: Merkle Hash Tree of an encrypted file and file layout on host storage.
 
 The diagram above shows the in-enclave-memory structure of the nodes that
 constitute a single encrypted file, as well as the on-disk data layout of the
 same file. This diagram visualizes the difference between logical and physical
-node numbers: the former are used to calculate the offsets in plaintext file
+node numbers: the former are used to calculate the offsets in plaintext file,
 whereas the latter are used to calculate the offsets in encrypted file. Knowing
 the offset in the plaintext file, it is easy to calculate the logical node
 number; knowing the logical node number, it is easy to calculate the physical
@@ -287,7 +292,7 @@ metadata node.
 
 .. image:: ../img/encfiles/04_encfiles_write_less3k.svg
    :target: ../img/encfiles/04_encfiles_write_less3k.svg
-   :alt: Figure: Write flow for an encrypted file with size less than 3KB
+   :alt: Figure: Write flow for an encrypted file with size less than 3KB.
 
 Assume an encrypted file created by the application. The file is first
 represented solely in SGX enclave memory and is saved to untrusted host storage
@@ -323,7 +328,7 @@ used later to decrypt the metadata node's ciphertext.
 
 .. image:: ../img/encfiles/05_encfiles_read_less3k.svg
    :target: ../img/encfiles/05_encfiles_read_less3k.svg
-   :alt: Figure: Read flow for an encrypted file with size less than 3KB
+   :alt: Figure: Read flow for an encrypted file with size less than 3KB.
 
 Now assume that an encrypted file previously created by the application must be
 read by another application. The application opens a file with the ``open()``
@@ -340,10 +345,10 @@ encrypted part, and an unused padding.
 In step 1, the metadata node is copied into the enclave's bounce buffer
 ``metadata_node``. The actual file contents are stored in ``file_data`` which is
 located in the encrypted-header part of the metadata node. Thus, Gramine must
-decrypt the encrypted header. To obtain the same key as was used for encryption,
-a KDF nonce is read from the plaintext header in ``metadata_node`` (step 2).
-Then in step 3, AES-CMAC is used for key derivation, with input materials being
-the KDK and the nonce.
+decrypt the encrypted header. To obtain the same key that was used for
+encryption, a KDF nonce is read from the plaintext header in ``metadata_node``
+(step 2). Then in step 3, AES-CMAC is used for key derivation, with input
+materials being the KDK and the nonce.
 
 Now that the key is derived, the metadata's encrypted header can be decrypted.
 Step 4 shows that the AES-GCM decryption happens on the ``metadata_node`` bounce
@@ -364,12 +369,12 @@ metadata node's encrypted header.
 Encrypted I/O: general case
 ---------------------------
 
-Below are the flows for the general case of encrypted-file I/O, i.e. for files
+Below are the flows for the general case of encrypted-file I/O, i.e., for files
 with sizes greater than 3KB.
 
 .. image:: ../img/encfiles/06_encfiles_write_greater3k.svg
    :target: ../img/encfiles/06_encfiles_write_greater3k.svg
-   :alt: Figure: Write flow for an encrypted file with size greater than 3KB
+   :alt: Figure: Write flow for an encrypted file with size greater than 3KB.
 
 Assume an encrypted file created by the application. The application writes more
 than 3KB of data into this file.
@@ -440,14 +445,14 @@ diagram correspond to the steps in the above description.
 
 .. image:: ../img/encfiles/07_encfiles_write_greater3k_general.svg
    :target: ../img/encfiles/07_encfiles_write_greater3k_general.svg
-   :alt: Figure: Generic write flow for an encrypted file with size greater than 3KB
+   :alt: Figure: Generic write flow for an encrypted file with size greater than 3KB.
 
 Now assume that an encrypted file previously created by the application must be
 read by another application. The file size is greater than 3KB in size.
 
 .. image:: ../img/encfiles/08_encfiles_read_greater3k.svg
    :target: ../img/encfiles/08_encfiles_read_greater3k.svg
-   :alt: Figure: Read flow for an encrypted file with size greater than 3KB
+   :alt: Figure: Read flow for an encrypted file with size greater than 3KB.
 
 The read flow contains similar steps to the flow described for files of less
 than 3KB size above. We will only briefly outline the logic.
@@ -482,7 +487,7 @@ diagram correspond to the steps in the above description.
 
 .. image:: ../img/encfiles/09_encfiles_read_greater3k_general.svg
    :target: ../img/encfiles/09_encfiles_read_greater3k_general.svg
-   :alt: Figure: Generic read flow for an encrypted file with size greater than 3KB
+   :alt: Figure: Generic read flow for an encrypted file with size greater than 3KB.
 
 .. _additional-details:
 
