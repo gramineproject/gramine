@@ -6,9 +6,15 @@
  *                    Michał Kowalczyk <mkow@invisiblethingslab.com>
  */
 
+/* TODO: remove this after dropping the dependency on glibc */
+#include <bits/pthreadtypes.h> // can't include full pthread.h, conflicts with our own types
+int pthread_create(pthread_t* thread, const pthread_attr_t* attr, void *(*start_routine)(void *),
+                   void* arg);
+
 #include <asm/errno.h>
 #include <asm/fcntl.h>
 #include <linux/fs.h>
+#include <stdnoreturn.h>
 
 #include "asan.h"
 #include "cpu.h"
@@ -1153,6 +1159,14 @@ static int verify_hw_requirements(char* envp[]) {
     return 0;
 }
 
+/* TODO: Remove this hacky fix after dropping the dependency on glibc. */
+noreturn static void* dummy_glibc_thread(void* arg) {
+    __UNUSED(arg);
+    while (1) {
+        pause();
+    }
+}
+
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
@@ -1160,6 +1174,29 @@ int main(int argc, char* argv[], char* envp[]) {
     char* manifest = NULL;
     void* reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = 0;
+
+    /* TODO: Remove this hacky fix after dropping the dependency on glibc.
+     *
+     * We depend on glibc in untrusted PAL for at least two reasons:
+     * - We use protobuf, which depends on glibc.
+     * - Some of our common functions depend on it (e.g. alloc_concat())
+     *
+     * Linking to glibc is a problem, because:
+     * - We need to control our process' memory layout very precisely.
+     * - We use clone() for spawning threads, which isn't compatible with glibc - it doesn't
+     *   register that these threads exist, thus e.g. still keeping __libc_multiple_threads == 0,
+     *   which causes all locks to be skipped, leading to fun stuff like memory corruptions when
+     *   using malloc concurrently.
+     *
+     * This is a quick hack to fix the race conditions (by forcing glibc to set
+     * `__libc_multiple_threads` to 1), intended to be removed togerther with the glibc dependency.
+     */
+    pthread_t glibc_thread;
+    ret = pthread_create(&glibc_thread, /*attr=*/NULL, dummy_glibc_thread, NULL);
+    if (ret != 0) {
+        log_error("Failed to create a glibc thread");
+        return 1;
+    }
 
 #ifdef DEBUG
     ret = debug_map_init_from_proc_maps();

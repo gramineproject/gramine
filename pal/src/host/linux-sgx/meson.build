@@ -175,6 +175,8 @@ libpal_sgx_host = executable('loader',
         protobuf_dep,
         vtune_dep,
         dl_dep,
+        # TODO: remove this after dropping the dependency on glibc
+        dependency('threads'),
     ],
 
     install: true,
