@@ -114,6 +114,7 @@ int sgx_ecall(long ecall_no, void* ms);
 int sgx_raise(int event);
 
 void async_exit_pointer(void);
+void eenter_pointer(void);
 void eresume_pointer(void);
 void async_exit_pointer_end(void);
 
