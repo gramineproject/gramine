@@ -112,4 +112,79 @@ stage('test-sgx') {
             make ${MAKEOPTS} regression
         '''
     }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
+            cd CI-Examples/ra-tls-mbedtls
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
+            if [ "${RA_TYPE}" = "epid" ]; then \
+                if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
+                then \
+                    make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                    make check_epid_fail RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                else \
+                    echo "Failure: no ra_client_spid and/or ra_client_key!"; \
+                    exit 1; \
+                fi \
+            elif [ "${RA_TYPE}" = "dcap" ]; then \
+                make check_dcap RA_TYPE=dcap; \
+                make check_dcap_fail RA_TYPE=dcap; \
+            else \
+                echo "Invalid RA_TYPE env variable: ${RA_TYPE}"; \
+                exit 1; \
+            fi
+        '''
+    }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
+            cd CI-Examples/ra-tls-secret-prov
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
+            if [ "${RA_TYPE}" = "epid" ]; then \
+                if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
+                then \
+                    make check_epid RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                else \
+                    echo "Failure: no ra_client_spid and/or ra_client_key!"; \
+                    exit 1; \
+                fi \
+            elif [ "${RA_TYPE}" = "dcap" ]; then \
+                make check_dcap RA_TYPE=dcap; \
+            else \
+                echo "Invalid RA_TYPE env variable: ${RA_TYPE}"; \
+                exit 1; \
+            fi
+        '''
+    }
+    timeout(time: 5, unit: 'MINUTES') {
+        sh '''
+            cd CI-Examples/ra-tls-nginx
+            export RA_TLS_MRSIGNER=any
+            export RA_TLS_MRENCLAVE=any
+            export RA_TLS_ISV_PROD_ID=any
+            export RA_TLS_ISV_SVN=any
+            if [ "${RA_TYPE}" = "epid" ]; then \
+                if [ "${ra_client_spid}" != "" ] && [ "${ra_client_key}" != "" ]; \
+                then \
+                    make check RA_TYPE=epid RA_CLIENT_SPID=${ra_client_spid} \
+                        RA_TLS_EPID_API_KEY=${ra_client_key} RA_CLIENT_LINKABLE=0; \
+                else \
+                    echo "Failure: no ra_client_spid and/or ra_client_key!"; \
+                    exit 1; \
+                fi \
+            elif [ "${RA_TYPE}" = "dcap" ]; then \
+                make check; \
+            else \
+                echo "Invalid RA_TYPE env variable: ${RA_TYPE}"; \
+                exit 1; \
+            fi
+        '''
+    }
 }
