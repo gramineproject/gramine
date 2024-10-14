@@ -53,6 +53,7 @@ RUN apt-get update && env DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-click \
     python3-cryptography \
     python3-jinja2 \
+    python3-jsonschema \ # required for mbedTLS v3.6.1, see https://github.com/Mbed-TLS/mbedtls/issues/6596#issuecomment-2404530040
     python3-lxml \
     python3-numpy \
     python3-pip \

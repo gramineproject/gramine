@@ -29,6 +29,7 @@ RUN apt-get update && apt-get satisfy -y \
     'python3-click (>= 6.7)' \
     'python3-cryptography' \
     'python3-jinja2' \
+    'python3-jsonschema (>= 3.2.0)' \ # required for mbedTLS v3.6.1, see https://github.com/Mbed-TLS/mbedtls/issues/6596#issuecomment-2404530040
     'python3-pyelftools' \
     'python3-tomli (>= 1.1.0)' \
     'python3-tomli-w (>= 0.4.0)' \
