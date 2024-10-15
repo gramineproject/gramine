@@ -99,7 +99,8 @@ typedef struct pal_host_tcb {
     atomic_ulong sync_signal_cnt;  /* # of sync signals, corresponds to # of SIGSEGV/SIGILL/.. */
     atomic_ulong async_signal_cnt; /* # of async signals, corresponds to # of SIGINT/SIGCONT/.. */
     uint64_t profile_sample_time;  /* last time sgx_profile_sample() recorded a sample */
-    int32_t last_async_event;      /* last async signal, reported to the enclave on ocall return */
+    int32_t last_async_event;      /* last async signal, reported to enclave on ocall return/AEX */
+    int32_t last_sync_event;       /* last sync signal, reported to enclave on ocall return/AEX */
     int* start_status_ptr;         /* pointer to return value of clone_thread */
     bool reset_stats;              /* if true, dump SGX stats and reset them on next AEX/OCALL */
 } PAL_HOST_TCB;
