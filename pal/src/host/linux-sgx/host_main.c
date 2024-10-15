@@ -552,7 +552,10 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
                 tcs->ogs_base  = tls_area->addr - enclave->baseaddr + t * g_page_size;
                 tcs->ofs_limit = 0xfff;
                 tcs->ogs_limit = 0xfff;
+                tcs->flags    |= (enclave_token.body.attributes.flags & SGX_FLAGS_AEXNOTIFY)
+                                     ? TCS_FLAGS_AEXNOTIFY : 0;
                 tcs_addrs[t] = (void*)tcs_area->addr + g_page_size * t;
+
             }
         } else if (areas[i].data_src == BUF) {
             memcpy(data, areas[i].buf, areas[i].buf_size);
@@ -687,6 +690,21 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
     if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
         log_error("Enclave size not a power of two (an SGX-imposed requirement)");
         ret = -EINVAL;
+        goto out;
+    }
+
+    bool aex_notify_enabled;
+    ret = toml_bool_in(manifest_root, "sgx.experimental_enable_aex_notify",
+                       /*defaultval=*/false, &aex_notify_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.experimental_enable_aex_notify'");
+        ret = -EINVAL;
+        goto out;
+    }
+
+    if (aex_notify_enabled && !is_aexnotify_supported()) {
+        log_error("Cannot enable AEX-Notify on this platform (hardware doesn't support it)");
+        ret = -EPERM;
         goto out;
     }
 

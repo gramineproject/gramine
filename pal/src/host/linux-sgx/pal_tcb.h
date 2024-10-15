@@ -42,6 +42,7 @@ struct pal_enclave_tcb {
     uint64_t  ocall_exit_called;
     uint64_t  thread_started;
     uint64_t  ready_for_exceptions;
+    uint64_t  ready_for_aex_notify;
     uint64_t  manifest_size;
     void*     heap_min;
     void*     heap_max;
