@@ -17,6 +17,18 @@ LISTEN_HOST ?= 127.0.0.1
 LISTEN_PORT ?= 8002
 LISTEN_SSL_PORT ?= 8444
 
+# HTTP docs: Generating random HTML files in $(INSTALL_DIR)/html/random
+RANDOM_DIR = $(INSTALL_DIR)/html/random
+RANDOM_FILES = \
+	$(foreach n,1 2 3 4 5 6 7 8 9 10,2K.$n.html) \
+	$(foreach n,1 2 3 4 5,10K.$n.html) \
+	$(foreach n,1 2 3 4 5,100K.$n.html) \
+	$(foreach n,1 2 3,1M.$n.html) \
+	$(foreach n,1 2 3,10M.$n.html) \
+	$(foreach n,1 2 3,100.$n.html)
+
+TEST_DATA = $(addprefix $(RANDOM_DIR)/,$(RANDOM_FILES))
+
 ifeq ($(DEBUG),1)
 GRAMINE_LOG_LEVEL = debug
 else
@@ -50,7 +62,7 @@ $(NGINX_SRC).tar.gz:
 	../common_tools/download --output $@ --sha256 $(NGINX_SHA256) \
 		$(foreach mirror,$(NGINX_MIRRORS),--url $(mirror)/$(NGINX_SRC).tar.gz)
 
-nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx testdata \
+nginx.manifest: nginx.manifest.template $(INSTALL_DIR)/sbin/nginx \
                 $(INSTALL_DIR)/conf/nginx-gramine.conf \
                 $(TEST_DATA) nginx_args \
                 $(INSTALL_DIR)/conf/server.crt
@@ -81,18 +93,6 @@ $(INSTALL_DIR)/conf/nginx-gramine.conf: nginx-gramine.conf.template $(INSTALL_DI
 		-e 's|$$(LISTEN_SSL_PORT)|'"$(LISTEN_SSL_PORT)"'|g' \
 		-e 's|$$(LISTEN_HOST)|'"$(LISTEN_HOST)"'|g' \
 	$< > $@
-
-# HTTP docs: Generating random HTML files in $(INSTALL_DIR)/html/random
-RANDOM_DIR = $(INSTALL_DIR)/html/random
-RANDOM_FILES = \
-	$(foreach n,1 2 3 4 5 6 7 8 9 10,2K.$n.html) \
-	$(foreach n,1 2 3 4 5,10K.$n.html) \
-	$(foreach n,1 2 3 4 5,100K.$n.html) \
-	$(foreach n,1 2 3,1M.$n.html) \
-	$(foreach n,1 2 3,10M.$n.html) \
-	$(foreach n,1 2 3,100.$n.html)
-
-TEST_DATA = $(addprefix $(RANDOM_DIR)/,$(RANDOM_FILES))
 
 # We need to first build and install nginx, otherwise nginx' makefiles think that they already
 # filled $(INSTALL_DIR)/html and skip copying installation files.
