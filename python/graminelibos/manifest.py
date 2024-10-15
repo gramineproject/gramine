@@ -309,6 +309,7 @@ class Manifest:
         sgx.setdefault('debug', False)
         sgx.setdefault('enable_stats', False)
         sgx.setdefault('edmm_enable', False)
+        sgx.setdefault('experimental_enable_aex_notify', False)
 
         if sgx['edmm_enable']:
             sgx.setdefault('enclave_size', DEFAULT_ENCLAVE_SIZE_WITH_EDMM)
