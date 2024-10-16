@@ -175,6 +175,24 @@ bool is_wrfsbase_supported(void) {
     return true;
 }
 
+bool is_aexnotify_supported(void) {
+    uint32_t cpuinfo[4];
+
+    cpuid(INTEL_SGX_LEAF, 1, cpuinfo);
+    if (!((cpuinfo[CPUID_WORD_EAX] >> 10) & 0x1)) {
+        log_error("AEX-Notify hardware feature is not supported.");
+        return false;
+    }
+
+    cpuid(INTEL_SGX_LEAF, 0, cpuinfo);
+    if (!((cpuinfo[CPUID_WORD_EAX] >> 11) & 0x1)) {
+        log_error("ENCLU[EDECCSSA] leaf instruction is not supported.");
+        return false;
+    }
+
+    return true;
+}
+
 int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     assert(secs->size && IS_POWER_OF_2(secs->size));
     assert(IS_ALIGNED(secs->base, secs->size));

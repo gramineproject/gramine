@@ -81,6 +81,7 @@ GramineManifestSchema = Schema({
         },
         'debug': bool,
         'edmm_enable': bool,
+        'experimental_enable_aex_notify': bool,
         'enable_stats': bool,
         'enclave_size': _size,
         'file_check_policy': Any('strict', 'allow_all_but_log'),

@@ -90,6 +90,7 @@ static void init_dynamic_thread(void* addr) {
     tcs->ogs_base  = (uint64_t)tcb - g_enclave_base;
     tcs->ofs_limit = 0xfff;
     tcs->ogs_limit = 0xfff;
+    tcs->flags    |= g_aex_notify_enabled ? TCS_FLAGS_AEXNOTIFY : 0;
 }
 
 static int create_dynamic_tcs_if_none_available(void** out_tcs) {
@@ -160,6 +161,8 @@ void pal_start_thread(void) {
     pal_set_tcb_stack_canary(stack_protector_canary);
     PAL_TCB* pal_tcb = pal_get_tcb();
     memset(&pal_tcb->libos_tcb, 0, sizeof(pal_tcb->libos_tcb));
+    init_aex_notify_for_thread();
+
     callback((void*)param);
     _PalThreadExit(/*clear_child_tid=*/NULL);
     /* UNREACHABLE */
@@ -226,6 +229,8 @@ void _PalThreadYieldExecution(void) {
 /* _PalThreadExit for internal use: Thread exiting */
 noreturn void _PalThreadExit(int* clear_child_tid) {
     struct pal_handle_thread* exiting_thread = GET_ENCLAVE_TCB(thread);
+
+    fini_aex_notify_for_thread();
 
     /* thread is ready to exit, must inform LibOS by erasing clear_child_tid;
      * note that we don't do it now (because this thread still occupies SGX

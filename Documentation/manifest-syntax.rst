@@ -1392,6 +1392,30 @@ In addition, the application manifest must also contain ``sgx.debug = true``.
 
 See :ref:`vtune-sgx-profiling` for more information.
 
+Enabling AEX-Notify
+^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.experimental_enable_aex_notify = [true|false]
+    (Default: false)
+
+When enabled, this option instructs Gramine to use the AEX-Notify hardware feature.
+AEX-Notify is a flexible hardware extension that makes SGX enclaves interrupt
+aware: enclaves can register a trusted handler to be run after an interrupt or
+exception. AEX-Notify can be used as a building block for implementing
+countermeasures against different types of interrupt-based attacks in software.
+
+For more information on AEX-Notify, refer to the `academic paper
+<https://www.usenix.org/conference/usenixsecurity23/presentation/constable>`__
+and to the `official whitepaper
+<https://cdrdv2-public.intel.com/736463/aex-notify-white-paper-public.pdf>`__.
+
+.. warning::
+   Support for AEX-Notify in Gramine is not yet thoroughly tested and may
+   contain security vulnerabilities. This is temporary; the prefix
+   ``experimental_`` will be removed in the future after thorough validation.
+
 Deprecated options
 ------------------
 

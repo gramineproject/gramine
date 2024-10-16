@@ -722,6 +722,13 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
         ocall_exit(1, /*is_exitgroup=*/true);
     }
 
+    ret = toml_bool_in(g_pal_public_state.manifest_root, "sgx.experimental_enable_aex_notify",
+                       /*defaultval=*/false, &g_aex_notify_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.experimental_enable_aex_notify'");
+        ocall_exit(1, /*is_exitgroup=*/true);
+    }
+
     /* Get host information about domain name configuration only for the first process.
      * This information will be checkpointed and restored during forking of the child
      * process(es). */
@@ -763,6 +770,8 @@ noreturn void pal_linux_main(void* uptr_libpal_uri, size_t libpal_uri_len, void*
 
     assert(!g_pal_linuxsgx_state.enclave_initialized);
     g_pal_linuxsgx_state.enclave_initialized = true;
+
+    init_aex_notify_for_thread();
 
     /* call main function */
     pal_main(instance_id, parent, first_thread, arguments, environments, post_callback);
