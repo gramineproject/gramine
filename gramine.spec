@@ -28,6 +28,7 @@ BuildRequires: perl
 BuildRequires: protobuf-c-compiler
 BuildRequires: protobuf-c-devel
 BuildRequires: python3-devel
+BuildRequires: python3-jsonschema # required for mbedTLS v3.6.1, see https://github.com/Mbed-TLS/mbedtls/issues/6596#issuecomment-2404530040
 %if %{has_supported_sphinx}
 BuildRequires: python3-sphinx >= 3.4
 BuildRequires: python3-sphinx_rtd_theme

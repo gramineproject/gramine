@@ -33,6 +33,7 @@ makedepends="
     py3-click
     py3-elftools
     py3-jinja2
+    py3-jsonschema
     py3-pytest
     "
 depends="

@@ -3,11 +3,11 @@
  * Copyright (C) 2021 Intel Corp.
  */
 
-/* This mbedTLS config is for v3.6.0 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
+/* This mbedTLS config is for v3.6.1 and assumes Intel x86-64 CPU with AESNI and SSE2 support */
 
 #pragma once
 
-/* mbedTLS v3.6.0 by default enables the following TLS 1.3 features:
+/* mbedTLS v3.6.1 by default enables the following TLS 1.3 features:
  *
  * #define MBEDTLS_SSL_PROTO_TLS1_3
  * #define MBEDTLS_SSL_TLS1_3_COMPATIBILITY_MODE
