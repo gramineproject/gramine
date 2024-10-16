@@ -531,8 +531,8 @@ enclave_entry:
     movq %rdi, SGX_GPR_RIP(%rbx)
 
     # copy the whole SSA[0].XSAVE region to the CPU context's XSAVE on stack;
-    # __restore_xregs / __save_xregs clobber RDX so need to stash it in RBX
-    movq %rdx, %rbx
+    # __restore_xregs / __save_xregs clobber RDX so need to stash it in R10
+    movq %rdx, %r10
     movq %gs:SGX_SSA, %rdi
     leaq 1f(%rip), %r11
     jmp __restore_xregs
@@ -541,7 +541,7 @@ enclave_entry:
     leaq 2f(%rip), %r11
     jmp __save_xregs
 2:
-    movq %rbx, %rdx
+    movq %r10, %rdx
 
 .Lcssa1_exception_eexit:
     # .Lcssa0_ocall_or_cssa1_exception_eexit has an ABI that uses RSI, RDI, RSP; clear the relevant
