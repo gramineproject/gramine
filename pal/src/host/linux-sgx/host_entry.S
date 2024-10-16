@@ -134,6 +134,16 @@ async_exit_pointer:
     movb $0, %gs:PAL_HOST_TCB_IN_AEX
     .cfi_endproc
 
+    # In case of non-AEX-Notify flows, ERESUME never morphs into EENTER, so the value in RDI is
+    # ignored. Below code snippet becomes a no-op.
+    # In case of AEX-Notify flows, ERESUME will morph into EENTER. The only way we could arrive to
+    # this line of code is that there was no pending signal to handle inside the SGX enclave, i.e.,
+    # maybe_raise_pending_signal() didn't do anything. Since there was no real pending signal (but
+    # AEX happened, so AEX-Notify must react to this), we put a dummy PAL_EVENT_INTERRUPTED (aka
+    # SIGCONT). By putting this dummy signal, we survive all checks inside Gramine's in-enclave
+    # logic, because SIGCONT can always arrive and is benign and side-effect-free.
+    movq $PAL_EVENT_INTERRUPTED, %rdi
+
     # fall-through to ERESUME
 
     .global eresume_pointer
