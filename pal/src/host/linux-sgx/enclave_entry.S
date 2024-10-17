@@ -41,7 +41,12 @@
 # Its sole purpose is to prepare the stage-2 handler by:
 #   - copying the interrupted SSA[0] context on the stack ("CPU context")
 #   - rewiring the SSA[0] context to point to _PalExceptionHandler()
-#   - invoking EEXIT (so that untrusted runtime can perform ERESUME)
+#   - handing over control to the SSA[0] context, in one of two ways:
+#       - AEX-Notify disabled or unavailable (legacy default flows): invoke EEXIT (so that untrusted
+#         runtime can perform ERESUME which will resume enclave execution in the SSA[0] context)
+#       - AEX-Notify enabled (explicit opt-in flows): manually restore SSA[0] context, invoke
+#         EDECCSSA instruction to go from SSA[1] to SSA[0] without exiting the enclave, and jump to
+#         SSA[0].GPRSGX.RIP to resume enclave execution
 
 #include "sgx_arch.h"
 #include "asm-offsets.h"
@@ -251,8 +256,9 @@ enclave_entry:
     je .Lcssa1_exception_during_enclave_run
 
     # We are interrupted during the never-returning OCALL_EXIT. Because the thread is going to exit
-    # anyway, we can ignore this exception.
-    jmp .Lcssa1_exception_eexit
+    # anyway, we can ignore this exception. We also don't care about AEX-Notify mitigations at this
+    # point, that's why we don't jump to the .Lcssa1_exception_eexit label.
+    jmp .Lcssa1_exception_eexit_legacy
 
 .Lcssa1_exception_during_ocall_flows:
     # At this point, we are in the stage-1 exception handler (CSSA=1) and
@@ -544,6 +550,12 @@ enclave_entry:
     movq %r10, %rdx
 
 .Lcssa1_exception_eexit:
+    cmpq $0, %gs:SGX_READY_FOR_AEX_NOTIFY
+    jne .Lcssa1_exception_eexit_aexnotify
+
+.Lcssa1_exception_eexit_legacy:
+    # AEX-Notify is disabled/unavailable, stage-1 exception handler follows the normal EEXIT flow
+
     # .Lcssa0_ocall_or_cssa1_exception_eexit has an ABI that uses RSI, RDI, RSP; clear the relevant
     # regs (note that stage-1 handler didn't clobber RSP -- which contains an untrusted pointer to
     # untrusted-runtime stack -- but this flow doesn't read/write RSP at all so there is no need to
@@ -554,6 +566,70 @@ enclave_entry:
     # upon EENTER the exit address was in RDX, mov it to RBX for EEXIT
     movq %rdx, %rbx
     jmp .Lcssa0_ocall_or_cssa1_exception_eexit
+
+.Lcssa1_exception_eexit_aexnotify:
+    # AEX-Notify is enabled, stage-1 exception handler doesn't invoke EEXIT but instead the new
+    # EDECCSSA instruction (before this, need to manually restore SSA[0] context)
+
+    # After restoring SSA[0] context into GPRs, we'll need to jump to the stage-2 handler, so
+    # memorize SSA[0].GPRSGX.RIP in an otherwise-unused R11. There is a corner case of the stage-1
+    # handler's final jmp instruction, see comment at .Lcssa1_exception_eexit_aexnotify_finaljmp.
+    leaq .Lcssa1_exception_eexit_aexnotify_finaljmp(%rip), %r11
+    cmpq %r11, SGX_GPR_RIP(%rbx)
+    je 1f
+
+    # not at the stage-1 handler's final jmp instruction, use SSA0's RIP directly
+    movq SGX_GPR_RIP(%rbx), %r11
+    jmp 2f
+
+1:
+    # at the stage-1 handler's final jmp instruction, skip over this jmp instruction by directly
+    # jumping to the previously-saved SSA0's RIP (which was saved in R11)
+    movq SGX_GPR_R11(%rbx), %r11
+
+2:
+    # Clear bit 0 within SSA[0].GPRSGX.AEXNOTIFY (so that ERESUME actually resumes stage-2
+    # handler if it was interrupted by yet another AEX). The stage-2 handler, _PalExceptionHandler()
+    # func, will re-instate this bit before applying mitigations.
+    movb $0, SGX_GPR_AEXNOTIFY(%rbx)
+
+    # restore context from SSA[0] (which was already modified above to jump to stage-2 C handler);
+    # note that XSAVE area (xregs) was already restored above, so only need to restore GPRs;
+    # note that we don't care about SSA[0].GPRSGX.{URSP,URBP,EXITINFO,RESERVED,GSBASE}
+
+    leaq SGX_GPR_RFLAGS(%rbx), %rsp     # trick to restore RFLAGS directly from SSA[0].GPRSGX.RFLAGS
+    popfq
+
+    movq SGX_GPR_FSBASE(%rbx), %rdi
+    .byte 0xf3, 0x48, 0x0f, 0xae, 0xd7  # WRFSBASE %RDI
+
+    movq SGX_GPR_RDI(%rbx), %rdi     # 1st arg to _PalExceptionHandler()
+    movq SGX_GPR_RSI(%rbx), %rsi     # 2nd arg to _PalExceptionHandler()
+    movq SGX_GPR_RDX(%rbx), %rdx     # 3rd arg to _PalExceptionHandler()
+    movq SGX_GPR_RCX(%rbx), %rcx     # 4th arg to _PalExceptionHandler()
+    movq SGX_GPR_R8(%rbx),  %r8      # 5th arg to _PalExceptionHandler()
+    movq SGX_GPR_R9(%rbx),  %r9      # not strictly needed
+    movq SGX_GPR_R10(%rbx), %r10     # not strictly needed
+    movq SGX_GPR_R12(%rbx), %r12     # not strictly needed
+    movq SGX_GPR_R13(%rbx), %r13     # not strictly needed
+    movq SGX_GPR_R14(%rbx), %r14     # not strictly needed
+    movq SGX_GPR_R15(%rbx), %r15     # not strictly needed
+    movq SGX_GPR_RBP(%rbx), %rbp     # not strictly needed
+    movq SGX_GPR_RSP(%rbx), %rsp
+    xorq %rbx, %rbx                  # for sanity
+
+    # go from SSA[1] to SSA[0] (more specifically, simply decrement CSSA from 1 to 0);
+    # must be careful after this ENCLU instruction because may be interrupted by new exceptions
+    movq $EDECCSSA, %rax
+    enclu
+
+    # Finally jump to the stage-2 C exception handler. An async signal can arrive at this exact jmp
+    # instruction. At this point, SSA0 has the correct internally-consistent context for the
+    # "stage-2 exception handler", so in this corner case the stage-1 exception handler can skip
+    # over this jmp and rewire SSA0's RIP directly to _PalExceptionHandler(), which at this point is
+    # stored in SSA[0].GPRSGX.R11. See also code at .Lcssa1_exception_eexit_aexnotify.
+.Lcssa1_exception_eexit_aexnotify_finaljmp:
+    jmp *%r11
 
     .cfi_endproc
 
@@ -590,6 +666,15 @@ sgx_ocall:
     pushq %rbx
     .cfi_offset %rbx, -24
 
+    # disable AEX-Notify during the ocall-exit assembly logic, as (1) there is no security benefit
+    # in mitigating AEX events during the ocall asm, and (2) AEX-Notify would otherwise clash with
+    # ocall-exit and return-from-ocall corner case flows (see .Lcssa1_exception_during_ocall_flows)
+    cmpq $0, %gs:SGX_READY_FOR_AEX_NOTIFY
+    je 1f
+    movq %gs:SGX_GPR, %rax
+    movb $0, SGX_GPR_AEXNOTIFY(%rax)
+
+1:
     CHECK_IF_SIGNAL_STACK_IS_USED %rsp, .Lon_signal_stack_ocall, .Lout_of_signal_stack_ocall
 
 .Lout_of_signal_stack_ocall:
@@ -744,6 +829,13 @@ sgx_ocall:
     je 1f
     cmpq $PAL_EVENT_NUM_BOUND, %rsi
     jb 2f
+
+1:
+    # re-enable AEX-Notify after return-from-ocall; see .Lcssa0_ocall for details
+    cmpq $0, %gs:SGX_READY_FOR_AEX_NOTIFY
+    je 1f
+    movq %gs:SGX_GPR, %rdi
+    movb $1, SGX_GPR_AEXNOTIFY(%rdi)
 
 1:
     # there was no event, simply call _restore_sgx_context(uc, xsave_area)

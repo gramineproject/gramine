@@ -96,6 +96,7 @@ void restore_xregs(const PAL_XREGS_STATE* xsave_area);
 noreturn void _restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE* xsave_area);
 
 extern bool g_aex_notify_enabled;
+extern uint64_t g_aex_notify_counter;
 void init_aex_notify_for_thread(void);
 void fini_aex_notify_for_thread(void);
 

@@ -246,6 +246,16 @@ out_error:
 noreturn void _PalProcessExit(int exitcode) {
     if (exitcode)
         log_debug("PalProcessExit: Returning exit code %d", exitcode);
+
+    /*
+     * FIXME: remove this when proper AEX-Notify mitigations are implemented;
+     *        see pal_exception.c:apply_aex_notify_mitigations()
+     */
+    if (g_aex_notify_enabled) {
+        uint64_t aex_notify_counter = __atomic_load_n(&g_aex_notify_counter, __ATOMIC_RELAXED);
+        log_warning("AEX-Notify counter at process exit: %lu", aex_notify_counter);
+    }
+
     ocall_exit(exitcode, /*is_exitgroup=*/true);
     /* Unreachable. */
 }

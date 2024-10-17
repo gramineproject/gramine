@@ -56,6 +56,7 @@ const struct generated_offset generated_offsets[] = {
     OFFSET_T(SGX_GPR_RIP, sgx_pal_gpr_t, rip),
     OFFSET_T(SGX_GPR_EXITINFO, sgx_pal_gpr_t, exitinfo),
     OFFSET_T(SGX_GPR_AEXNOTIFY, sgx_pal_gpr_t, aexnotify),
+    OFFSET_T(SGX_GPR_FSBASE, sgx_pal_gpr_t, fsbase),
     DEFINE(SGX_GPR_SIZE, sizeof(sgx_pal_gpr_t)),
 
     /* sgx_cpu_context_t */
@@ -169,6 +170,7 @@ const struct generated_offset generated_offsets[] = {
 
     /* pal.h */
     DEFINE(PAL_EVENT_NO_EVENT, PAL_EVENT_NO_EVENT),
+    DEFINE(PAL_EVENT_INTERRUPTED, PAL_EVENT_INTERRUPTED),
     DEFINE(PAL_EVENT_NUM_BOUND, PAL_EVENT_NUM_BOUND),
 
     /* errno */
