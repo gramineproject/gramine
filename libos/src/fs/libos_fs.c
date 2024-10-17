@@ -33,6 +33,7 @@ static struct libos_fs* g_builtin_fs[] = {
     &synthetic_builtin_fs,
     &path_builtin_fs,
     &shm_builtin_fs,
+    &timerfd_builtin_fs,
 };
 
 static struct libos_lock g_mount_mgr_lock;

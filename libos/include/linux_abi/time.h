@@ -9,10 +9,10 @@
 /* These need to be binary-identical with the ones used by Linux. */
 
 // TODO: remove all of these includes and make this header libc-independent.
-#include <linux/times.h>
-#include <linux/timex.h>
-#include <linux/utime.h>
 #include <linux/version.h>
+
+typedef long __kernel_suseconds_t;
+typedef long __kernel_time_t;
 
 typedef __kernel_time_t time_t;
 
@@ -37,3 +37,28 @@ struct __kernel_timezone {
     int tz_minuteswest; /* minutes west of Greenwich */
     int tz_dsttime;     /* type of dst correction */
 };
+
+/* The IDs of the various system clocks (for POSIX.1b interval timers). */
+#define CLOCK_REALTIME           0
+#define CLOCK_MONOTONIC          1
+#define CLOCK_PROCESS_CPUTIME_ID 2
+#define CLOCK_THREAD_CPUTIME_ID  3
+#define CLOCK_MONOTONIC_RAW      4
+#define CLOCK_REALTIME_COARSE    5
+#define CLOCK_MONOTONIC_COARSE   6
+#define CLOCK_BOOTTIME           7
+#define CLOCK_REALTIME_ALARM     8
+#define CLOCK_BOOTTIME_ALARM     9
+
+#define MAX_CLOCKS               16
+
+#define TFD_TIMER_ABSTIME (1 << 0)
+#define TFD_TIMER_CANCEL_ON_SET (1 << 1)
+#define TFD_CLOEXEC O_CLOEXEC
+#define TFD_NONBLOCK O_NONBLOCK
+
+#define TFD_SHARED_FCNTL_FLAGS (TFD_CLOEXEC | TFD_NONBLOCK)
+/* Flags for timerfd_create. */
+#define TFD_CREATE_FLAGS TFD_SHARED_FCNTL_FLAGS
+/* Flags for timerfd_settime. */
+#define TFD_SETTIME_FLAGS (TFD_TIMER_ABSTIME | TFD_TIMER_CANCEL_ON_SET)
