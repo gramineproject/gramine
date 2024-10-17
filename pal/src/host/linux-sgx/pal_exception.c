@@ -39,9 +39,25 @@ void fini_aex_notify_for_thread(void) {
     if (!g_aex_notify_enabled)
         return;
 
-    SET_ENCLAVE_TCB(ready_for_aex_notify, 0UL);
+    /*
+     * Order is important: first the stage-2 signal handler must be informed to *not* re-enable
+     * AEX-Notify for this thread, then AEX-Notify must be disabled for this thread from the HW
+     * perspective (so that it doesn't morph ERESUME into EENTER), and finally AEX-Notify must be
+     * disabled from the SW perspective (so that it doesn't try EDECCSSA instead of EEXIT).
+     *
+     * Without `stopping_aex_notify`, a signal could arrive and force `restore_sgx_context()` to
+     * re-enable AEX-Notify, even if unsetting `aexnotify` was executed in the meantime.
+     *
+     * If `ready_for_aex_notify` would be unset before unsetting `aexnotify`, then the HW could
+     * morph ERESUME into EENTER, and the flow enclave_entry.S:Lcssa1_exception_eexit would choose
+     * the no-AEX-Notify path and perform EEXIT, which is unsupported in Gramine (Gramine assumes
+     * that ERESUME never returns).
+     */
+    SET_ENCLAVE_TCB(stopping_aex_notify, 1UL);
     MB();
     GET_ENCLAVE_TCB(gpr)->aexnotify = 0U;
+    MB();
+    SET_ENCLAVE_TCB(ready_for_aex_notify, 0UL);
     MB();
 }
 
@@ -71,7 +87,8 @@ noreturn static void restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE*
     asan_unpoison_current_stack(sig_stack_low, sig_stack_high - sig_stack_low);
 #endif
 
-    if (g_aex_notify_enabled && GET_ENCLAVE_TCB(ready_for_aex_notify)) {
+    if (g_aex_notify_enabled && GET_ENCLAVE_TCB(ready_for_aex_notify)
+            && !GET_ENCLAVE_TCB(stopping_aex_notify)) {
         /*
          * AEX-Notify must be re-enabled for this enclave thread before applying any mitigations
          * (and consequently before restoring the regular execution of the enclave thread). For

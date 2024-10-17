@@ -256,8 +256,9 @@ enclave_entry:
     je .Lcssa1_exception_during_enclave_run
 
     # We are interrupted during the never-returning OCALL_EXIT. Because the thread is going to exit
-    # anyway, we can ignore this exception.
-    jmp .Lcssa1_exception_eexit
+    # anyway, we can ignore this exception. We also don't care about AEX-Notify mitigations at this
+    # point, that's why we don't jump to the .Lcssa1_exception_eexit label.
+    jmp .Lcssa1_exception_eexit_legacy
 
 .Lcssa1_exception_during_ocall_flows:
     # At this point, we are in the stage-1 exception handler (CSSA=1) and

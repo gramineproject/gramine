@@ -134,15 +134,19 @@ async_exit_pointer:
     movb $0, %gs:PAL_HOST_TCB_IN_AEX
     .cfi_endproc
 
-    # In case of non-AEX-Notify flows, ERESUME never morphs into EENTER, so the value in RDI is
-    # ignored. Below code snippet becomes a no-op.
+    # In case of non-AEX-Notify flows, ERESUME never morphs into EENTER, so the values in RDI and
+    # RDX are ignored. Below code snippet becomes a no-op.
     # In case of AEX-Notify flows, ERESUME will morph into EENTER. The only way we could arrive to
     # this line of code is that there was no pending signal to handle inside the SGX enclave, i.e.,
     # maybe_raise_pending_signal() didn't do anything. Since there was no real pending signal (but
     # AEX happened, so AEX-Notify must react to this), we put a dummy PAL_EVENT_INTERRUPTED (aka
     # SIGCONT). By putting this dummy signal, we survive all checks inside Gramine's in-enclave
-    # logic, because SIGCONT can always arrive and is benign and side-effect-free.
+    # logic, because SIGCONT can always arrive and is benign and side-effect-free. Additionally,
+    # we put a print-error-and-terminate EEXIT target for EENTER (into which ERESUME morphs) to
+    # improve error diagnostics (such flows must end with EDECCSSA instead of EEXIT, otherwise it
+    # indicates a bug in Gramine's AEX-Notify flows).
     movq $PAL_EVENT_INTERRUPTED, %rdi
+    leaq .Lsgx_fail_on_morphed_eresume(%rip), %rdx
 
     # fall-through to ERESUME
 
@@ -218,4 +222,20 @@ sgx_raise:
     # RDI - return value
     # RSI - external event
     jmp .Ldo_ecall
+    .cfi_endproc
+
+
+.Lsgx_fail_on_morphed_eresume:
+    .cfi_startproc
+
+    pushq %rbp
+    .cfi_adjust_cfa_offset 8
+    movq %rsp, %rbp
+    .cfi_offset %rbp, -16
+    .cfi_def_cfa_register %rbp
+
+    andq $~0xF, %rsp  # Required by System V AMD64 ABI.
+    callq fail_on_morphed_eresume
+    ud2
+
     .cfi_endproc
