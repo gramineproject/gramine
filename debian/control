@@ -71,6 +71,7 @@ Depends:
  gramine (= ${binary:Version}),
 # TODO: libc6
 
+# TODO after deprecating `jammy` and `bookworm`: remove this package
 Package: gramine-dcap
 Depends:
  gramine (= ${binary:Version}),
