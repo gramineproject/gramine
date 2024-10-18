@@ -7,6 +7,7 @@ fs.mounts = [
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '4' }}
+sgx.experimental_enable_aex_notify = {{ 'true' if env.get('AEXNOTIFY', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [
   "file:{{ binary_dir }}/{{ entrypoint }}",
