@@ -2,7 +2,7 @@
 # progress via issue https://github.com/ARMmbed/mbedtls/issues/3141.
 
 diff --git a/library/ssl_tls.c b/library/ssl_tls.c
-index c5e06491c1122002ab35af693cf12f5e0388f502..2a43046d0b9eb85f468e2277757f8011a2f04e77 100644
+index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b9326ce81 100644
 --- a/library/ssl_tls.c
 +++ b/library/ssl_tls.c
 @@ -5072,11 +5072,13 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
