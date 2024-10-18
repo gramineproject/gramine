@@ -43,6 +43,7 @@ struct pal_enclave_tcb {
     uint64_t  thread_started;
     uint64_t  ready_for_exceptions;
     uint64_t  ready_for_aex_notify;
+    uint64_t  stopping_aex_notify;
     uint64_t  manifest_size;
     void*     heap_min;
     void*     heap_max;
@@ -125,5 +126,7 @@ void maybe_dump_and_reset_stats(void);
 #endif /* DEBUG */
 
 void maybe_raise_pending_signal(void);
+
+noreturn void fail_on_morphed_eresume(void);
 
 #endif /* IN_ENCLAVE */

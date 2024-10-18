@@ -391,3 +391,9 @@ void maybe_raise_pending_signal(void) {
         return;
     }
 }
+
+noreturn void fail_on_morphed_eresume(void) {
+    log_error("Bug in AEX-Notify flows: ERESUME morphed into EENTER but then the enclave performed "
+              "EEXIT instead of EDECCSSA. Please debug.");
+    BUG();
+}

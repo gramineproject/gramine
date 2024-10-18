@@ -4,6 +4,7 @@ loader.insecure__use_cmdline_argv = true
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.experimental_enable_aex_notify = {{ 'true' if env.get('AEXNOTIFY', '0') == '1' else 'false' }}
 
 # for Exception test (memfault handler)
 sgx.use_exinfo = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}

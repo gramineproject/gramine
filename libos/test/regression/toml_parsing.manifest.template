@@ -19,6 +19,7 @@ libos.check_invalid_pointers = false
 
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.experimental_enable_aex_notify = {{ 'true' if env.get('AEXNOTIFY', '0') == '1' else 'false' }}
 
 # the manifest options below added only so that they have any test coverage
 sgx.seal_key.flags_mask = "0xffffffffffffffff"
