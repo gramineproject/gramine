@@ -80,19 +80,27 @@ noreturn static void restore_sgx_context(sgx_cpu_context_t* uc, PAL_XREGS_STATE*
     if (xregs_state == NULL)
         xregs_state = (PAL_XREGS_STATE*)g_xsave_reset_state;
 
-#ifdef ASAN
-    /* Unpoison the signal stack before leaving it */
     uintptr_t sig_stack_low = GET_ENCLAVE_TCB(sig_stack_low);
     uintptr_t sig_stack_high = GET_ENCLAVE_TCB(sig_stack_high);
+    bool restored_context_is_sighandler = (uc->rsp >= sig_stack_low && uc->rsp < sig_stack_high);
+
+#ifdef ASAN
+    /* Unpoison the signal stack before leaving it */
     asan_unpoison_current_stack(sig_stack_low, sig_stack_high - sig_stack_low);
 #endif
 
     if (g_aex_notify_enabled && GET_ENCLAVE_TCB(ready_for_aex_notify)
-            && !GET_ENCLAVE_TCB(stopping_aex_notify)) {
+            && !GET_ENCLAVE_TCB(stopping_aex_notify) && !restored_context_is_sighandler) {
         /*
          * AEX-Notify must be re-enabled for this enclave thread before applying any mitigations
          * (and consequently before restoring the regular execution of the enclave thread). For
          * details, see e.g. the official whitepaper on AEX-Notify from Intel.
+         *
+         * Note that we re-enable AEX-Notify only in the outermost signal handler (the one that will
+         * jump to the application code and stack). Otherwise, AEX-Notify would be enabled while
+         * inside this Gramine-internal signal handler, and exceptions like #PF would result in
+         * nested invocations of this signal handler, thus overflowing the signal stack. This is
+         * especially true for the EDMM flows where #PF exceptions are a norm.
          */
         GET_ENCLAVE_TCB(gpr)->aexnotify = 1;
         apply_aex_notify_mitigations(uc, xregs_state);
