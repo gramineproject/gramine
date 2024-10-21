@@ -25,7 +25,7 @@ USES_MUSL = os.environ.get('GRAMINE_MUSL') == '1'
 try:
     GDB_VERSION = tuple(int(i) if i.isdigit() else i for i in subprocess.check_output(
         ['gdb', '-q', '-ex', 'python print(gdb.VERSION)', '-ex', 'q']
-    ).strip().decode('ascii').split('.'))
+    ).strip().decode('ascii').split()[-1].split('.'))
 except (subprocess.SubprocessError, OSError):
     GDB_VERSION = None
 
