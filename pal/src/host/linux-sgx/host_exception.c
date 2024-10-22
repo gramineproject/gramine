@@ -93,25 +93,76 @@ static bool interrupted_in_aex(void) {
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
-    enum pal_event event = signal_to_pal_event(signum);
-
     __UNUSED(info);
+
+    enum pal_event event = signal_to_pal_event(signum);
+    uint64_t rip = ucontext_get_ip(uc);
 
     /* send dummy signal to RPC threads so they interrupt blocked syscalls */
     if (g_rpc_queue)
         for (size_t i = 0; i < g_rpc_queue->rpc_threads_cnt; i++)
             DO_SYSCALL(tkill, g_rpc_queue->rpc_threads[i], SIGUSR2);
 
+    if (event == PAL_EVENT_MEMFAULT && interrupted_in_aex() && rip == (uint64_t)&eenter_pointer) {
+        /*
+         * This is a #GP on EENTER instruction inside sgx_raise(), called during AEX handling by
+         * maybe_raise_pending_signal(). This implies that some async signal arrived and was
+         * injected by AEX logic while the enclave thread is being executed in CSSA=1 (stage-1
+         * exception handler).
+         *
+         * We ignore this #GP fault by skipping EENTER. This newly arrived async signal will be
+         * delivered at some later AEX event, when the enclave thread starts executing in CSSA=0.
+         *
+         * Since last_async_event was reset to NO_EVENT before sgx_raise(), we must restore it to
+         * this failed-to-deliver async signal. We extract async signal number from RDI register.
+         * See also maybe_raise_pending_signal().
+         */
+        enum pal_event faulted_event = uc->uc_mcontext.rdi; /* convention, see .Lcssa1_exception */
+        if (faulted_event != PAL_EVENT_INTERRUPTED && faulted_event != PAL_EVENT_QUIT) {
+            log_error("#GP on EENTER instruction not because of async signal, impossible!");
+            BUG();
+        }
+        if (pal_get_host_tcb()->last_async_event != PAL_EVENT_QUIT) {
+            /* Do not overwrite `PAL_EVENT_QUIT`. For explanation, see handle_async_signal(). */
+            pal_get_host_tcb()->last_async_event = faulted_event;
+        }
+
+        ucontext_set_ip(uc, rip + /*sizeof(ENCLU)=*/3); /* skip EENTER */
+        return;
+    }
+
     if (interrupted_in_enclave(uc)) {
-        /* exception happened in app/LibOS/trusted PAL code, handle signal inside enclave */
+        /*
+         * Exception happened in app/LibOS/trusted PAL code, mark this sync signal as pending. This
+         * singal will be delivered right after this untrusted-runtime signal handler returns
+         * control to the AEX logic, which will call maybe_raise_pending_signal().
+         *
+         * We do not deliver the signal immediately to the enclave (but instead mark it as pending)
+         * because we want to support AEX-Notify hardware feature in SGX. In particular, AEX-Notify
+         * must execute in-enclave flows in regular context of the untrusted runtime, because
+         * AEX-Notify uses EDECCSSA instruction to go from CSSA=1 context to CSSA=0 context (i.e.,
+         * AEX-Notify does not exit the SGX enclave and thus does not give an opportunity to the
+         * untrusted runtime to switch from signal-handling context to regular context).
+         *
+         * Therefore, we must execute the in-enclave stage-1 signal handler in regular context of
+         * the untrusted runtime. This is achieved by interposing on the AEX flow (which executes
+         * right after the host kernel handles control from this signal handler back to regular
+         * context).
+         *
+         * We don't need to use atomics when accessing last_sync_event since we are in the
+         * signal-handling context, and thus no other signal can arrive while we're here.
+         */
+        if (pal_get_host_tcb()->last_sync_event != PAL_EVENT_NO_EVENT) {
+            log_error("Nested sync signal, impossible!");
+            BUG();
+        }
+        pal_get_host_tcb()->last_sync_event = event;
+
         pal_get_host_tcb()->sync_signal_cnt++;
-        sgx_raise(event);
         return;
     }
 
     /* exception happened in untrusted PAL code (during syscall handling): fatal in Gramine */
-
-    unsigned long rip = ucontext_get_ip(uc);
     char buf[LOCATION_BUF_SIZE];
     pal_describe_location(rip, buf, sizeof(buf));
 
@@ -153,13 +204,11 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
         for (size_t i = 0; i < g_rpc_queue->rpc_threads_cnt; i++)
             DO_SYSCALL(tkill, g_rpc_queue->rpc_threads[i], SIGUSR2);
 
-    if (interrupted_in_enclave(uc) || interrupted_in_aex()) {
-        /* signal arrived while in app/LibOS/trusted PAL code or when handling another AEX, handle
-         * signal inside enclave */
+    if (interrupted_in_enclave(uc))
         pal_get_host_tcb()->async_signal_cnt++;
-        sgx_raise(event);
-        return;
-    }
+
+    /* see comments in handle_sync_signal() on why we do not deliver the signal immediately to the
+     * enclave (but instead mark it as pending) */
 
     assert(event == PAL_EVENT_INTERRUPTED || event == PAL_EVENT_QUIT);
     if (pal_get_host_tcb()->last_async_event != PAL_EVENT_QUIT) {
@@ -276,7 +325,7 @@ void pal_describe_location(uintptr_t addr, char* buf, size_t buf_size) {
 }
 
 #ifdef DEBUG
-/* called on each AEX and OCALL (in normal context), see host_entry.S */
+/* called on each AEX and OCALL (in regular context), see host_entry.S */
 void maybe_dump_and_reset_stats(void) {
     if (!g_sgx_enable_stats)
         return;
@@ -288,6 +337,57 @@ void maybe_dump_and_reset_stats(void) {
 }
 #endif
 
+/*
+ * The handle_sync_signal() and handle_async_signal() functions, executed in signal-handling
+ * context, added pending sync/async signal to the thread -- now the AEX flow, executed in regular
+ * context, must inform the enclave about these signals.
+ *
+ * This function is executed as part of the AEX flow, and may result in EENTER -> in-enclave stage-1
+ * signal handler -> EEXIT (if there is any pending signal, and enclave is not in the middle of
+ * another stage-1 signal handler). When the function returns, the AEX flow continues and ends up in
+ * ERESUME, that resumes "regular context" inside the enclave (which may be stage-2 signal handler).
+ *
+ * Only one of potentially two signals (one sync and one async) will be injected into the enclave at
+ * a time by this function. The hope is that the second (async) signal will be added at some later
+ * AEX event.
+ *
+ * Note that async signals are special in Gramine, there are only two of them: SIGCONT (aka
+ * PAL_EVENT_INTERRUPTED) which is dummy (can be ignored) and SIGTERM (aka PAL_EVENT_QUIT) which is
+ * injected only once anyway. Thus we don't need a queue of pending async signals, and a single slot
+ * for a pending async signal is sufficient (which is the `pal_get_host_tcb()->last_async_event`
+ * variable).
+ *
+ * Also note that new sync signals cannot occur while in this function, but new async signals can
+ * occur (since we are in regular context and cannot block async signals), thus handling async
+ * signals must be aware of concurrent signal handling code, i.e., last_async_event must be accessed
+ * atomically. We also access last_sync_event atomically, just for uniformity (though it is not
+ * strictly required).
+ */
 void maybe_raise_pending_signal(void) {
-    /* TODO: check if there is any sync or async pending signal and raise it */
+    enum pal_event event;
+
+    event = __atomic_exchange_n(&pal_get_host_tcb()->last_sync_event, PAL_EVENT_NO_EVENT,
+                                __ATOMIC_RELAXED);
+    if (event != PAL_EVENT_NO_EVENT) {
+        /*
+         * Sync event must always be consumed by the enclave. There is no scenario where the
+         * in-enclave stage-1 handling of another sync/async event would generate a sync event.
+         */
+        sgx_raise(event);
+        return;
+    }
+
+    event = __atomic_exchange_n(&pal_get_host_tcb()->last_async_event, PAL_EVENT_NO_EVENT,
+                                __ATOMIC_RELAXED);
+    if (event != PAL_EVENT_NO_EVENT) {
+        /*
+         * Async event may be *not* consumed by the enclave. This can happen if the enclave was
+         * already in the middle of stage-1 handler and thus EENTER generates #GP (because this
+         * EENTER would imply CSSA=2 which Gramine always programmes as prohibited in Intel SGX).
+         * In such case, this async event is ignored and will be delivered on some later AEX.
+         * See also handle_sync_signal().
+         */
+        sgx_raise(event);
+        return;
+    }
 }
