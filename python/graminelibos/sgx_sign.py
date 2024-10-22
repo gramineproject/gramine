@@ -100,6 +100,7 @@ def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, sec
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
+        'experimental_enable_aex_notify': offs.SGX_FLAGS_AEXNOTIFY,
     }
     flags = collect_bits(manifest_sgx, flags_dict)
     if ARCHITECTURE == 'amd64':
@@ -270,6 +271,9 @@ def gen_area_content(attr, areas, enclave_base, enclave_heap_min):
         set_tcs_field(t, offs.TCS_OGS_BASE, '<Q', tls_area.addr - enclave_base + offs.PAGESIZE * t)
         set_tcs_field(t, offs.TCS_OFS_LIMIT, '<L', 0xfff)
         set_tcs_field(t, offs.TCS_OGS_LIMIT, '<L', 0xfff)
+
+        if attr['enable_aex_notify']:
+            set_tcs_field(t, offs.TCS_FLAGS, '<Q', offs.TCS_FLAGS_AEXNOTIFY)
 
         set_tls_field(t, offs.SGX_COMMON_SELF, tls_area.addr + offs.PAGESIZE * t)
         set_tls_field(t, offs.SGX_COMMON_STACK_PROTECTOR_CANARY,
@@ -473,6 +477,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
     attr = {
         'enclave_size': parse_size(manifest_sgx['enclave_size']),
         'edmm_enable': manifest_sgx.get('edmm_enable', False),
+        'enable_aex_notify': manifest_sgx.get('experimental_enable_aex_notify', False),
         'max_threads': manifest_sgx['max_threads'],
     }
 
@@ -480,6 +485,7 @@ def get_mrenclave_and_manifest(manifest_path, libpal, verbose=False):
         print('Attributes (required for enclave measurement):')
         print(f'    size:        {attr["enclave_size"]:#x}')
         print(f'    edmm:        {attr["edmm_enable"]}')
+        print(f'    aex-notify:  {attr["enable_aex_notify"]}')
         print(f'    max_threads: {attr["max_threads"]}')
 
         print('SGX remote attestation:')
