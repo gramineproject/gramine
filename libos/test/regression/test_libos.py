@@ -11,6 +11,7 @@ import tomli
 
 from graminelibos.regression import (
     GDB_VERSION,
+    HAS_AEXNOTIFY,
     HAS_AVX,
     HAS_EDMM,
     HAS_SGX,
@@ -1394,6 +1395,8 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['close_range'])
         self.assertIn('TEST OK', stdout)
 
+@unittest.skipIf(HAS_AEXNOTIFY,
+    'AEX-Notify HW feature conflicts with debugging tools (in particular, with #BP exceptions)')
 class TC_50_GDB(RegressionTestCase):
     def setUp(self):
         if not self.has_debug():

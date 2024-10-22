@@ -20,6 +20,7 @@ fs.mounts = [
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+sgx.experimental_enable_aex_notify = {{ 'true' if env.get('AEXNOTIFY', '0') == '1' else 'false' }}
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
