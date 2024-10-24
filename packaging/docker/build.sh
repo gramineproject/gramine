@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-    echo "Usage: build.sh [ubuntu20,ubuntu22]"
+    echo "Usage: build.sh [ubuntu20,ubuntu22,ubuntu24]"
     exit 1
 }
 
@@ -20,6 +20,10 @@ case "$1" in
     ubuntu22)
         image="ubuntu:22.04"
         codename="jammy"
+        ;;
+    ubuntu24)
+        image="ubuntu:24.04"
+        codename="noble"
         ;;
     *)
         usage
