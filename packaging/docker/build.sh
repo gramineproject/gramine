@@ -21,6 +21,10 @@ case "$1" in
         image="ubuntu:22.04"
         codename="jammy"
         ;;
+    ubuntu24)
+        image="ubuntu:24.04"
+        codename="noble"
+        ;;
     *)
         usage
         ;;
