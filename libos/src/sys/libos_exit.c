@@ -101,7 +101,9 @@ noreturn void thread_exit(int error_code, int term_signal) {
         cur_thread->clear_child_tid_pal = 1; /* any non-zero value suffices */
         /* We pass this ownership to `cleanup_thread`. */
         get_thread(cur_thread);
-        int64_t ret = install_async_event(NULL, 0, &cleanup_thread, cur_thread);
+        int64_t ret = install_async_event(ASYNC_EVENT_TYPE_ALARM_TIMER, /*object=*/NULL,
+                                          /*time_us=*/0, /*absolute_time=*/false, &cleanup_thread,
+                                          cur_thread);
 
         /* Take the reference to the current thread from the tcb. */
         lock(&cur_thread->lock);

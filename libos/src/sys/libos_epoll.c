@@ -189,6 +189,12 @@ void maybe_epoll_et_trigger(struct libos_handle* handle, int ret, bool in, bool 
                 needs_et = true;
             }
             break;
+        case TYPE_TIMERFD:
+            /* timerfd in edge-triggered mode will notify only on expiration state changes (i.e.,
+             * if the expiration count is not read, the timerfd remains in an expired state, and no
+             * notification will be triggered) */
+            needs_et = in;
+            break;
         default:
             /* Type unsupported with EPOLLET. */
             break;
@@ -461,6 +467,7 @@ long libos_syscall_epoll_ctl(int epfd, int op, int fd, struct epoll_event* event
         case TYPE_PIPE:
         case TYPE_SOCK:
         case TYPE_EVENTFD:
+        case TYPE_TIMERFD:
             break;
         default:
             /* epoll not supported by this type of handle */
