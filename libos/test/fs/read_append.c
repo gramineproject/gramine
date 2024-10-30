@@ -32,8 +32,9 @@ static void read_append(const char* file_path) {
     printf("compare(%s) OK\n", file_path);
     close_fd(file_path, fd);
     printf("close(%s) OK\n", file_path);
-    if (file_size(file_path) != size)
-        fatal_error("File size is wrong (expected sizeof(buf1))\n");
+    size_t file_size1 = file_size(file_path);
+    if (file_size1 != size)
+        fatal_error("File size is wrong (expected %lu got %lu)\n", size, file_size1);
     printf("file_size(%s) OK\n", file_path);
 
 
@@ -69,8 +70,9 @@ static void read_append(const char* file_path) {
     printf("compare(%s) OK\n", file_path);
     close_fd(file_path, fd);
     printf("close(%s) OK\n", file_path);
-    if (file_size(file_path) != size * 2)
-        fatal_error("File size is wrong (expected sizeof(buf1) * 2)\n");
+    size_t file_size2 = file_size(file_path);
+    if (file_size2 != size * 2)
+        fatal_error("File size is wrong (expected %lu got %lu)\n", size * 2, file_size2);
     printf("file_size(%s) OK\n", file_path);
 
     /* test 3: open file created previously (size must be sizeof(buf1) * 2) in no-append mode, reset
@@ -101,8 +103,9 @@ static void read_append(const char* file_path) {
     printf("compare(%s) OK\n", file_path);
     close_fd(file_path, fd);
     printf("close(%s) OK\n", file_path);
-    if (file_size(file_path) != size * 3)
-        fatal_error("File size is wrong (expected sizeof(buf1) * 3)\n");
+    size_t file_size3 = file_size(file_path);
+    if (file_size3 != size * 3)
+        fatal_error("File size is wrong (expected %lu got %lu)\n", size * 3, file_size3);
     printf("file_size(%s) OK\n", file_path);
 
     free(buf1);

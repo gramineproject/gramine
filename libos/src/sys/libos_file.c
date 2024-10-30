@@ -442,10 +442,15 @@ long libos_syscall_sendfile(int out_fd, int in_fd, off_t* offset, size_t count) 
         goto out;
     }
 
-    if (!(in_hdl->acc_mode & MAY_READ) || !(out_hdl->acc_mode & MAY_WRITE)
-            || (out_hdl->flags & O_APPEND)) {
-        /* error out if input fd isn't readable or output fd isn't writable or in append mode */
+    if (!(in_hdl->acc_mode & MAY_READ) || !(out_hdl->acc_mode & MAY_WRITE)) {
+        /* error out if input fd isn't readable or output fd isn't writable */
         ret = -EBADF;
+        goto out;
+    }
+
+    if (out_hdl->flags & O_APPEND) {
+        /* Linux errors out if output fd has the O_APPEND flag set; comply with this behavior */
+        ret = -EINVAL;
         goto out;
     }
 
