@@ -1100,7 +1100,7 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn("(after setrlimit) opened fd: 4096", stdout)
         self.assertIn("TEST OK", stdout)
 
-    def test_165_rlimit_stack(self):
+    def test_162_rlimit_stack(self):
         # rlimit_stack.manifest.template specifies 1MB (= 1048576B) stack size
         stdout, _ = self.run_binary(['rlimit_stack'])
         self.assertIn("old RLIMIT_STACK soft limit: 1048576", stdout)

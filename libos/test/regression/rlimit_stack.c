@@ -15,10 +15,9 @@ int main(void) {
 
     CHECK(getrlimit(RLIMIT_STACK, &rlim));
     printf("old RLIMIT_STACK soft limit: %lu\n", (uint64_t)rlim.rlim_cur);
-    uint64_t old_lim = (uint64_t)rlim.rlim_cur;
 
     /* make sure we can increase the current soft limit */
-    if (old_lim >= (uint64_t)rlim.rlim_max)
+    if (rlim.rlim_cur >= rlim.rlim_max)
         CHECK(-1);
 
     rlim.rlim_cur++;
@@ -36,12 +35,12 @@ int main(void) {
 
         /* NOTE: we currently don't test that the stack limit is indeed enforced */
         exit(0);
-    } else {
-        int status = 0;
-        CHECK(wait(&status));
-        if (!WIFEXITED(status) || WEXITSTATUS(status))
-            errx(1, "child wait status: %#x", status);
     }
+
+    int status = 0;
+    CHECK(wait(&status));
+    if (!WIFEXITED(status) || WEXITSTATUS(status))
+        errx(1, "child wait status: %#x", status);
 
     CHECK(getrlimit(RLIMIT_STACK, &rlim));
     printf("(in parent, after setrlimit) RLIMIT_STACK soft limit: %lu\n", (uint64_t)rlim.rlim_cur);
