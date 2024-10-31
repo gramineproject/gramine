@@ -8,6 +8,7 @@
 #include "libos_internal.h"
 #include "libos_table.h"
 #include "linux_abi/errors.h"
+#include "linux_abi/time.h"
 #include "pal.h"
 
 long libos_syscall_gettimeofday(struct __kernel_timeval* tv, struct __kernel_timezone* tz) {

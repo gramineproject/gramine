@@ -1100,6 +1100,18 @@ class TC_30_Syscall(RegressionTestCase):
         self.assertIn("(after setrlimit) opened fd: 4096", stdout)
         self.assertIn("TEST OK", stdout)
 
+    def test_170_timerfd(self):
+        stdout, _ = self.run_binary(['timerfd'], timeout=120)
+        self.assertIn("TEST OK", stdout)
+
+    def test_171_timerfd_fork(self):
+        try:
+            self.run_binary(['timerfd_fork'])
+            self.fail('timerfd_fork unexpectedly succeeded')
+        except subprocess.CalledProcessError as e:
+            stdout = e.stdout.decode()
+            self.assertIn('child died', stdout)
+
 class TC_31_Syscall(RegressionTestCase):
     def test_000_syscall_redirect(self):
         stdout, _ = self.run_binary(['syscall'])

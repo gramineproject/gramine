@@ -11,6 +11,7 @@
 #include "libos_thread.h"
 #include "libos_utils.h"
 #include "linux_abi/errors.h"
+#include "linux_abi/time.h"
 #include "pal.h"
 
 long libos_syscall_pause(void) {
