@@ -79,16 +79,10 @@ redis-server.manifest: redis-server.manifest.template $(SRCDIR)/src/redis-server
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-redis-server.sig redis-server.manifest.sgx: sgx_outputs
-	@:
-
 # Manifest for Gramine-SGX requires special "gramine-sgx-sign" procedure. This
 # procedure creates the final manifest.sgx file and an SGX-specific
 # redis-server.sig file (SIGSTRUCT object).
-.INTERMEDIATE: sgx_outputs
-sgx_outputs: redis-server.manifest
+redis-server.sig redis-server.manifest.sgx &: redis-server.manifest
 	gramine-sgx-sign \
 		--manifest redis-server.manifest \
 		--output redis-server.manifest.sgx

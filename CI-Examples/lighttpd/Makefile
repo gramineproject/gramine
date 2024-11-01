@@ -54,13 +54,7 @@ lighttpd.manifest: lighttpd.manifest.template $(INSTALL_DIR)/sbin/lighttpd
 		-Dinstall_dir=$(abspath $(INSTALL_DIR)) \
 		$< >$@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-lighttpd.manifest.sgx lighttpd.sig: sgx_sign
-	@:
-
-.INTERMEDIATE: sgx_sign
-sgx_sign: lighttpd.manifest
+lighttpd.manifest.sgx lighttpd.sig &: lighttpd.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

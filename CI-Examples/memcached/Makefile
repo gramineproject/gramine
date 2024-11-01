@@ -39,13 +39,7 @@ memcached.manifest: memcached.manifest.template memcached
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-memcached.manifest.sgx memcached.sig: sgx_sign
-	@:
-
-.INTERMEDIATE: sgx_sign
-sgx_sign: memcached.manifest
+memcached.manifest.sgx memcached.sig &: memcached.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
