@@ -50,13 +50,7 @@ blender.manifest: blender.manifest.template $(BLENDER_DIR)/blender | $(RUN_DIR)
 		-Dblender_ver=$(BLENDER_VER) \
 		$< >$@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-blender.sig blender.manifest.sgx: sgx_outputs
-	@:
-
-.INTERMEDIATE: sgx_outputs
-sgx_outputs: blender.manifest | $(RUN_DIR)
+blender.sig blender.manifest.sgx &: blender.manifest | $(RUN_DIR)
 	gramine-sgx-sign \
 		--output blender.manifest.sgx \
 		--manifest blender.manifest

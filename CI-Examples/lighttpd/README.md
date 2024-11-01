@@ -6,7 +6,7 @@ the Makefile and a template for generating the manifest.
 # Building lighttpd source
 
 For this example, we build lighttpd from source instead of using an existing
-binary. To build lighttpd on Ubuntu 20.04, please make sure that the following
+binary. To build lighttpd on Ubuntu 24.04, please make sure that the following
 packages are installed:
 
     sudo apt-get install -y build-essential libssl-dev zlib1g-dev

@@ -32,13 +32,7 @@ rust-hyper-http-server.manifest: rust-hyper-http-server.manifest.template $(SELF
 		-Dself_exe=$(SELF_EXE) \
 		$< $@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig: sgx_sign
-	@:
-
-.INTERMEDIATE: sgx_sign
-sgx_sign: rust-hyper-http-server.manifest
+rust-hyper-http-server.manifest.sgx rust-hyper-http-server.sig &: rust-hyper-http-server.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

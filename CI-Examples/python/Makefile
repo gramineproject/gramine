@@ -29,13 +29,7 @@ python.manifest: python.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< >$@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-python.manifest.sgx python.sig: sgx_sign
-	@:
-
-.INTERMEDIATE: sgx_sign
-sgx_sign: python.manifest
+python.manifest.sgx python.sig &: python.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

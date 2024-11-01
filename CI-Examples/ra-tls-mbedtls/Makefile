@@ -65,13 +65,7 @@ server.manifest: server.manifest.template server
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-server.manifest.sgx server.sig: sgx_sign_server
-	@:
-
-.INTERMEDIATE: sgx_sign_server
-sgx_sign_server: server.manifest
+server.manifest.sgx server.sig &: server.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx

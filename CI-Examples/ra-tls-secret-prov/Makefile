@@ -87,13 +87,7 @@ secret_prov_minimal/client.manifest: secret_prov_minimal/client.manifest.templat
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$(notdir $<) > $(notdir $@)
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-secret_prov_minimal/client.manifest.sgx secret_prov_minimal/client.sig: sgx_sign_secret_prov_minimal_client
-	@:
-
-.INTERMEDIATE: sgx_sign_secret_prov_minimal_client
-sgx_sign_secret_prov_minimal_client: secret_prov_minimal/client.manifest
+secret_prov_minimal/client.manifest.sgx secret_prov_minimal/client.sig &: secret_prov_minimal/client.manifest
 	cd secret_prov_minimal && \
 	gramine-sgx-sign \
 		--manifest $(notdir $<) \

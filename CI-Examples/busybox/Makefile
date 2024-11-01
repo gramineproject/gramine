@@ -28,13 +28,7 @@ busybox.manifest: busybox.manifest.template
 		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
-# Make on Ubuntu <= 20.04 doesn't support "Rules with Grouped Targets" (`&:`),
-# see the helloworld example for details on this workaround.
-busybox.manifest.sgx busybox.sig: sgx_sign
-	@:
-
-.INTERMEDIATE: sgx_sign
-sgx_sign: busybox.manifest
+busybox.manifest.sgx busybox.sig &: busybox.manifest
 	gramine-sgx-sign \
 		--manifest $< \
 		--output $<.sgx
