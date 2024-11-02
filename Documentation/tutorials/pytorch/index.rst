@@ -1,6 +1,12 @@
 PyTorch PPML Framework Tutorial
 ===============================
 
+.. warning::
+
+   This tutorial is outdated and may not work on the current Gramine version /
+   currently supported Linux distributions. Contributions to refresh it are
+   welcomed!
+
 .. highlight:: sh
 
 This tutorial presents a framework for developing PPML (Privacy-Preserving
@@ -85,8 +91,7 @@ user who will decrypt it and analyze its contents.
 Prerequisites
 -------------
 
-- Ubuntu 20.04. This tutorial should work on other Linux distributions as well,
-  but for simplicity we provide the steps for Ubuntu 20.04 only.
+- Ubuntu 20.04.
 
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
