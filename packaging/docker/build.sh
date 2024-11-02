@@ -13,10 +13,6 @@ image=""
 codename=""
 
 case "$1" in
-    ubuntu20)
-        image="ubuntu:20.04"
-        codename="focal"
-        ;;
     ubuntu22)
         image="ubuntu:22.04"
         codename="jammy"

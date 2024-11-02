@@ -8,8 +8,7 @@
  * the nodiscard attribute introduced in C23. However, because Gramine supports
  * older systems that might not have support for C23, we have to wrap it on our
  * own and change it to a no-op on systems that don't support it.
- * TODO: Remove the macros and use [[nodiscard]] directly, after dropping *EL8
- *       and Ubuntu 20.04 support.
+ * TODO: Remove the macros and use [[nodiscard]] directly after dropping *EL8.
  */
 
 #pragma once

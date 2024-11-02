@@ -1,6 +1,12 @@
 PyTorch PPML Framework Tutorial
 ===============================
 
+.. warning::
+
+   This tutorial is outdated and may not work on the current Gramine version /
+   currently supported Linux distributions. Contributions to refresh it are
+   welcomed!
+
 .. highlight:: sh
 
 This tutorial presents a framework for developing PPML (Privacy-Preserving
