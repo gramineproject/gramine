@@ -1,7 +1,7 @@
 # Example Integrations
 
 This folder contains application integration examples. They are tested on
-Ubuntu 22.04 and 24.04.
+Ubuntu 24.04 and 22.04.
 
 For instructions how to build and run each application under Gramine, please
 see the README.md in each subdirectory.
