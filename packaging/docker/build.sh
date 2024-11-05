@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 usage() {
-    echo "Usage: build.sh [ubuntu20,ubuntu22,ubuntu24]"
+    echo "Usage: build.sh [ubuntu22,ubuntu24]"
     exit 1
 }
 
