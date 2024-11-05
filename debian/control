@@ -40,7 +40,7 @@ Depends:
  python3,
  python3 (>= 3.10) | python3-pkg-resources,
  python3-click (>= 6.7),
- python3-cryptography,
+ python3-cryptography (>= 3.1),
  python3-jinja2,
  python3-pyelftools,
  python3-tomli (>= 1.1.0),

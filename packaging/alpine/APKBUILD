@@ -37,7 +37,7 @@ makedepends="
     "
 depends="
     py3-click>=6.7
-    py3-cryptography
+    py3-cryptography>=3.1
     py3-elftools
     py3-jinja2
     py3-tomli
