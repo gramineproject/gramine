@@ -14,7 +14,6 @@ import struct
 
 import click
 
-from cryptography.hazmat import backends
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
 
@@ -25,10 +24,6 @@ from .manifest import Manifest
 from .sigstruct import Sigstruct
 
 import _graminelibos_offsets as offs # pylint: disable=import-error,wrong-import-order
-
-# TODO after deprecating 20.04: remove backend wrt
-# https://cryptography.io/en/latest/faq/#what-happened-to-the-backend-argument
-_cryptography_backend = backends.default_backend()
 
 # Default / Architectural Options
 
@@ -587,8 +582,7 @@ class InvalidKeyError(Exception):
 
 def load_private_key_from_pem_file(file, passphrase=None):
     with file:
-        private_key = serialization.load_pem_private_key(
-            file.read(), password=passphrase, backend=_cryptography_backend)
+        private_key = serialization.load_pem_private_key(file.read(), password=passphrase)
 
     if not isinstance(private_key, rsa.RSAPrivateKey):
         raise InvalidKeyError(
@@ -714,8 +708,7 @@ def generate_private_key():
     """
     return rsa.generate_private_key(
         public_exponent=SGX_RSA_PUBLIC_EXPONENT,
-        key_size=SGX_RSA_KEY_SIZE,
-        backend=_cryptography_backend)
+        key_size=SGX_RSA_KEY_SIZE)
 
 
 def generate_private_key_pem():
