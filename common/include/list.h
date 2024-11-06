@@ -280,6 +280,7 @@
          (CURSOR) != (HEAD)->first && (HEAD)->first; (CURSOR) = (TMP), (TMP) = (TMP)->FIELD.next)
 
 /* Assertion code written in Gramine project */
+#ifdef DEBUG
 #define CHECK_LIST_HEAD(TYPE, HEAD, FIELD)                               \
     do {                                                                 \
         TYPE pos;                                                        \
@@ -290,6 +291,9 @@
             assert(pos->FIELD.next->FIELD.prev == pos);                  \
         }                                                                \
     } while (0)
+#else
+#define CHECK_LIST_HEAD(TYPE, HEAD, FIELD) ((void)0)
+#endif
 
 // Add NEW to OLD at position first (assuming first is all we need for now)
 // Can probably drop TYPE with some preprocessor smarts
