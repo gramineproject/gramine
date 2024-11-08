@@ -37,14 +37,17 @@ Common dependencies
 Run the following command on Ubuntu LTS to install dependencies::
 
     sudo apt-get install -y build-essential \
-        autoconf bison gawk nasm ninja-build pkg-config python3 python3-click \
-        python3-jinja2 python3-pip python3-pyelftools python3-voluptuous wget
-    sudo python3 -m pip install 'meson>=0.56' 'tomli>=1.1.0' 'tomli-w>=0.4.0'
+        autoconf bison gawk meson nasm pkg-config python3 python3-click \
+        python3-jinja2 python3-pyelftools python3-tomli python3-tomli-w \
+        python3-voluptuous wget
 
-You can also install Meson, python3-tomli and python3-tomli-w from apt instead
-of pip, but only if your distro is new enough to have Meson >= 0.56,
-python3-tomli >= 1.1.0 and python3-tomli-w >= 0.4.0 (e.g. Ubuntu 22.04 or Debian
-11 with ``bullseye-backports`` repo enabled).
+.. TODO after deprecating Debian 11 (bullseye): remove the following paragraph
+
+On Debian 11, ``python3-tomli`` and ``python3-tomli-w`` come from
+``bullseye-backports`` repository, so you need to enable this repo and add
+``-t bullseye-backports`` to ``apt-get install`` invocation above. Please refer
+to `Debian's documentation <https://backports.debian.org/Instructions/>`__ for
+detailed instructions.
 
 For GDB support and to run all tests locally you also need to install::
 
