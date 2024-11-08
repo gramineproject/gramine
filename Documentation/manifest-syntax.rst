@@ -1391,15 +1391,3 @@ In addition, the application manifest must also contain ``sgx.debug = true``.
    independently.
 
 See :ref:`vtune-sgx-profiling` for more information.
-
-Deprecated options
-------------------
-
-Loader entrypoint (deprecated syntax)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-::
-
-   loader.entrypoint = "[URI]"
-
-This syntax was renamed to ``loader.entrypoint.uri``.
