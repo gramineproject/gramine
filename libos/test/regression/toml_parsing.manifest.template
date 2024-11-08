@@ -1,9 +1,9 @@
 # This test contains tricky/legacy TOML syntax, just to test TOML parsing and have some coverage
 
-{% set entrypoint = "helloworld" -%}
+# test explicit setting of the optional `loader.entrypoint`
+loader.entrypoint.uri = "file:{{ gramine.libos }}"
 
-# test deprecated loader.entrypoint syntax, TODO: remove in v1.9
-loader.entrypoint = "file:{{ gramine.libos }}"
+{% set entrypoint = "helloworld" -%}
 
 libos.entrypoint = "{{ entrypoint }}"
 

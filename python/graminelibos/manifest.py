@@ -344,14 +344,8 @@ class Manifest:
         loader = manifest.setdefault('loader', {})
         loader_entrypoint = loader.setdefault('entrypoint', {})
 
-        # found deprecated `loader.entrypoint = "file:..."`; replace with loader.entrypoint.uri
-        # TODO: remove this in Gramine v1.9
-        if isinstance(loader_entrypoint, str):
-            print('WARNING: `loader.entrypoint = "file:..."` manifest syntax is deprecated, '
-                  'please switch to `loader.entrypoint.uri = "file:..."`', file=sys.stderr)
-            loader_entrypoint = { 'uri': loader_entrypoint }
-            loader['entrypoint'] = loader_entrypoint
-
+        if not isinstance(loader_entrypoint, dict):
+            raise ManifestError('Unknown loader.entrypoint format (not a TOML table)')
         if 'uri' not in loader_entrypoint:
             loader_entrypoint['uri'] = loader_entrypoint_uri
         if 'sha256' not in loader_entrypoint:
