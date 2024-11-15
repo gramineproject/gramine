@@ -1,7 +1,6 @@
 *.manifest
 *.manifest.sgx
 *.sig
-*.token
 *.o
 *~
 *.swp

@@ -183,13 +183,5 @@ const struct generated_offset generated_offsets[] = {
     DEFINE(PAL_XSTATE_ALIGN, PAL_XSTATE_ALIGN),
     DEFINE(PAL_FP_XSTATE_MAGIC2_SIZE, PAL_FP_XSTATE_MAGIC2_SIZE),
 
-    /* driver type */
-#ifdef CONFIG_SGX_DRIVER_OOT
-    DEFINE(CONFIG_SGX_DRIVER_OOT, 1),
-#endif
-#ifdef CONFIG_SGX_DRIVER_UPSTREAM
-    DEFINE(CONFIG_SGX_DRIVER_UPSTREAM, 1),
-#endif
-
     OFFSET_END,
 };

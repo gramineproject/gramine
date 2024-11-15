@@ -116,7 +116,7 @@ start-gramine-server: all
 
 .PHONY: clean
 clean:
-	$(RM) *.token *.sig *.manifest.sgx *.manifest redis-server *.rdb
+	$(RM) *.sig *.manifest.sgx *.manifest redis-server *.rdb
 
 .PHONY: distclean
 distclean: clean

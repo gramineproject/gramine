@@ -30,9 +30,7 @@ __pycache__
 # sgx
 *.manifest.sgx
 *.sig
-*.token
 *.cached
-.output.sgx_get_token.*
 .output.sgx_sign.*
 
 # gnu global

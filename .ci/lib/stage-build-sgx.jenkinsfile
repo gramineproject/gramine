@@ -15,19 +15,6 @@ stage('build') {
         env.MESON_OPTIONS += ' -Ddcap=enabled'
     }
 
-    if (env.SGX_DRIVER == null) {
-        env.SGX_DRIVER = 'upstream'
-    }
-    if (env.SGX_DRIVER == 'oot') {
-        sh '''
-            git clone https://github.com/intel/linux-sgx-driver.git
-            cd linux-sgx-driver
-            git checkout 276c5c6a064d22358542f5e0aa96b1c0ace5d695
-        '''
-
-        env.MESON_OPTIONS += ' -Dsgx_driver_include_path=' + env.WORKSPACE + '/linux-sgx-driver'
-    }
-
     try {
         sh '''
             meson setup build/ \
@@ -37,7 +24,6 @@ stage('build') {
                 -Ddirect=disabled \
                 -Dsgx=enabled \
                 -Dtests=enabled \
-                -Dsgx_driver="$SGX_DRIVER" \
                 $MESON_OPTIONS
             ninja -vC build/
         '''

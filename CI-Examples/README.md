@@ -45,8 +45,8 @@ addition, your application sample should have the following elements:
   command. If your application needs extra building steps, please document them
   in the `README.md`. In addition, we ask you to provide sufficient comments in
   the `Makefile` to help users understand the build process. If your application
-  also runs on Gramine-SGX, please include the commands for signing and
-  retrieving the token in the `Makefile`.
+  also runs on Gramine-SGX, please include the command for signing in the
+  `Makefile`.
 
 - Manifest:
   Please provide the manifest needed for running your application sample. Do not

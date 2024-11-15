@@ -63,8 +63,7 @@ unset PKG_CONFIG_PATH
 %meson \
     --buildtype=release \
     -Ddirect=enabled \
-    -Dsgx=enabled \
-    -Dsgx_driver=upstream
+    -Dsgx=enabled
 
 # assert correct version
 if ! test "$(meson introspect --projectinfo "%{_vpath_builddir}" | jq -r .version)" = %{version}
