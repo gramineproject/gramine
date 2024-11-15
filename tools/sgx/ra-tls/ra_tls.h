@@ -21,8 +21,6 @@
 #define TCG_DICE_TAGGED_EVIDENCE_OID { 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
 #define TCG_DICE_TAGGED_EVIDENCE_OID_RAW { 0x06, 0x06, 0x67, 0x81, 0x05, 0x05, 0x04, 0x09 }
 
-#define RA_TLS_EPID_API_KEY "RA_TLS_EPID_API_KEY"
-
 #define RA_TLS_ALLOW_OUTDATED_TCB_INSECURE  "RA_TLS_ALLOW_OUTDATED_TCB_INSECURE"
 #define RA_TLS_ALLOW_HW_CONFIG_NEEDED       "RA_TLS_ALLOW_HW_CONFIG_NEEDED"
 #define RA_TLS_ALLOW_SW_HARDENING_NEEDED    "RA_TLS_ALLOW_SW_HARDENING_NEEDED"
@@ -42,7 +40,6 @@
 
 typedef enum {
     RA_TLS_ATTESTATION_SCHEME_UNKNOWN = 0,
-    RA_TLS_ATTESTATION_SCHEME_EPID    = 1,
     RA_TLS_ATTESTATION_SCHEME_DCAP    = 2,
 } ra_tls_attestation_scheme_t;
 
@@ -63,10 +60,6 @@ struct ra_tls_verify_callback_results {
     ra_tls_err_loc_t err_loc; /* the step at which RA-TLS failed */
 
     union {
-        struct {
-            /* str returned in `isvEnclaveQuoteStatus`; possibly truncated (but NULL-terminated) */
-            char ias_enclave_quote_status[128];
-        } epid;
         struct {
             int func_verify_quote_result; /* return value of `sgx_qv_verify_quote()` itself */
             int quote_verification_result; /* value stored in `p_quote_verification_result` arg */
@@ -99,7 +92,7 @@ typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsig
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 
 /*!
- * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
+ * \brief Generic verification callback for ECDSA-based (DCAP) quote
  *        verification (DER format). Deprecated in favor of the
  *        `ra_tls_verify_callback_extended_der()` version of API (see below).
  *
@@ -116,7 +109,7 @@ void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size);
 
 /*!
- * \brief Generic verification callback for EPID-based (IAS) or ECDSA-based (DCAP) quote
+ * \brief Generic verification callback for ECDSA-based (DCAP) quote
  *        verification (DER format) with additional information.
  *
  * \param der_crt       Self-signed RA-TLS certificate with SGX quote embedded in DER format.

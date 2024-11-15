@@ -26,11 +26,3 @@ production, another HTTPS client performing remote attestation should be used.
 
 See also `run.sh` script, which starts the enclave, performs a request, then
 kills it and reports the status.
-
-## EPID remote attestation
-
-If you use EPID attestation, add those arguments to `make` invocation above:
-
-```sh
-make RA_TYPE=epid RA_CLIENT_SPID=... RA_CLIENT_LINKABLE=[0|1]
-```

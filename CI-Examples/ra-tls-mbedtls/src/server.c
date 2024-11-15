@@ -127,19 +127,6 @@ int main(int argc, char** argv) {
     if (ret == -ENOENT || !strcmp(attestation_type_str, "none")) {
         ra_tls_attest_lib = NULL;
         ra_tls_create_key_and_crt_der_f = NULL;
-    } else if (!strcmp(attestation_type_str, "epid") || !strcmp(attestation_type_str, "dcap")) {
-        ra_tls_attest_lib = dlopen("libra_tls_attest.so", RTLD_LAZY);
-        if (!ra_tls_attest_lib) {
-            mbedtls_printf("User requested RA-TLS attestation but cannot find lib\n");
-            return 1;
-        }
-
-        char* error;
-        ra_tls_create_key_and_crt_der_f = dlsym(ra_tls_attest_lib, "ra_tls_create_key_and_crt_der");
-        if ((error = dlerror()) != NULL) {
-            mbedtls_printf("%s\n", error);
-            return 1;
-        }
     } else {
         mbedtls_printf("Unrecognized remote attestation type: %s\n", attestation_type_str);
         return 1;

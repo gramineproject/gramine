@@ -333,10 +333,6 @@ provisioned secret is the encryption key to encrypt/decrypt user files. To
 inform Gramine that the obtained secret is indeed the key for file encryption,
 it is enough to set the environment variable ``SECRET_PROVISION_SET_KEY``.
 
-Note that RA-TLS and Secret Provisioning work both with the EPID-based and the
-ECDSA/DCAP schemes of SGX remote attestation. Since this tutorial concentrates
-on an untrusted-cloud scenario, we use the ECDSA/DCAP attestation framework.
-
 Background on Encrypted Files
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

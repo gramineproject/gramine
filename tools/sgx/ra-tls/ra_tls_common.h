@@ -51,5 +51,5 @@ int extract_quote_and_verify_claims(mbedtls_x509_crt* crt, sgx_quote_t** out_quo
 int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_body);
 int ra_tls_create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt);
 
-/* to be implemented by an RA-TLS implementation (e.g. talk to IAS for EPID implementation) */
+/* to be implemented by an RA-TLS implementation */
 int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_t* flags);

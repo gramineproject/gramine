@@ -12,9 +12,5 @@ env.RA_TLS_ALLOW_HW_CONFIG_NEEDED = '1'
 env.RA_TLS_ALLOW_SW_HARDENING_NEEDED = '1'
 env.RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE = '1'
 
-if (env.RA_TYPE == null) {
-    env.RA_TYPE = 'dcap'
-}
-
 env.LC_ALL = 'C.UTF-8'
 env.LANG = env.LC_ALL

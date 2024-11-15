@@ -26,8 +26,8 @@ Gramine provides support for all three levels of attestation flows:
 #. :term:`Local Attestation` and :term:`Remote Attestation` are exposed to the
    application via ``/dev/attestation`` pseudo-filesystem. SGX local attestation
    in Gramine relies on the ``EREPORT`` hardware instruction. SGX remote
-   attestation uses the Intel SGX PSW's AESM service and the Intel IAS service
-   (for EPID flows) or DCAP libraries (for ECDSA/DCAP flows) under the hood.
+   attestation uses the Intel SGX PSW's AESM service and DCAP libraries for
+   ECDSA/DCAP flows under the hood.
 
 #. :term:`Secure Channel` is constructed using the RA-TLS libraries.
    :term:`RA-TLS` uses raw ``/dev/attestation`` pseudo-files under the hood.
@@ -49,67 +49,53 @@ vendor. Please refer to :ref:`vendor_specific_plugins` and
 :ref:`third_party_solutions` sections for specific examples.
 
 
-Remote Attestation flows for EPID and DCAP
-------------------------------------------
+Remote Attestation flow for DCAP
+--------------------------------
 
 Remote attestation in Intel SGX comes in two flavours: :term:`EPID` and
-:term:`DCAP`. The former is used in client machines whereas the latter is used
-in data center environments. The details of these flows will be described in the
-following sections. Here we give a high-level description of both of these
-remote attestation schemes.
-
-.. image:: ./img/epid.svg
-   :target: ./img/epid.svg
-   :alt: Figure: EPID based remote attestation in Intel SGX
-
-The diagram above shows EPID based remote attestation. The user application runs
-in an SGX enclave on a remote untusted machine, whereas the end user waits for
-the attestation evidence from this enclave on a trusted machine.
-
-EPID based remote attestation starts with the enclavized user application
-opening the special file ``/dev/attestation/user_report_data`` for write (step
-1). Under the hood, Gramine uses the ``EREPORT`` hardware instruction to
-generate an :term:`SGX Report` (step 2). After the SGX report is generated, the
-application opens another special file ``/dev/attestation/quote`` for read (step
-3). Under the hood, Gramine communicates with the :term:`Quoting Enclave` to
-receive the :term:`SGX Quote` (step 4). In turn, the Quoting Enclave uses the
-EPID key provided by the :term:`Provisioning Enclave` (step 5, only during
-initial deployment of this SGX machine). The Provisioning Enclave requests the
-EPID key associated with this SGX machine from the internet-accessible
-:term:`Intel Provisioning Service` (step 6, only during initial deployment).
-The Quoting Enclave generates the SGX quote from the provided-by-application SGX
-report and sends it back to the enclavized user application. The application
-stores this SGX quote in its enclave memory and can later send it to the remote
-user (verifier) upon request. When the remote user wants to validate the SGX
-enclave, it requests remote attestation with it, and the enclavized application
-forwards the SGX quote to the remote trusted machine (step 8). Finally, the
-remote user consults the :term:`Intel Attestation Service` (by forwarding the
-SGX quote to this service), which returns back whether this SGX quote can be
-trusted (step 9). Finally, the remote user also verifies the enclave
-measurements embedded in the SGX quote against the expected ones. After this
-verification procedure, the remote user can trust the SGX enclave on the
-untrusted machine and start sending inputs/receiving enclave outputs.
+:term:`DCAP`. The former was used in client machines and is EOL, whereas the
+latter is used in data center environments. The details of DCAP flow will be
+described in the following section. Here we give a high-level description of
+this remote attestation scheme.
 
 .. image:: ./img/dcap.svg
    :target: ./img/dcap.svg
    :alt: Figure: DCAP based remote attestation in Intel SGX
 
-The diagram above shows DCAP based remote attestation. The DCAP flows are very
-similar to EPID flows, but rather than using the EPID keys and consulting the
-Intel Attestation Service, the DCAP flows instead use the classic PKI with X.509
-certificate chains.
+The diagram above shows DCAP based remote attestation. The user application runs
+in an SGX enclave on a remote untusted machine, whereas the end user waits for
+the attestation evidence from this enclave on a trusted machine.
 
-The DCAP flows are the same as EPID flows in steps 1-4. However, the Quoting
-Enclave talks to the :term:`Provisioning Certification Enclave` (PCE) rather
-than the :term:`Provisioning Enclave` (step 5). The PCE uses another Intel
-service called :term:`Intel Provisioning Certification Service` (PCS) to obtain
-the attestation collateral: attestation certificates and certificate revocation
-lists for the SGX machine (step 6). Also, the end user does not need to consult
-a web service from Intel each time a new SGX quote arrives -- instead the end
-user periodically fetches the DCAP attestation certificates and caches them on a
-local machine (preliminary step 0). When the SGX quote arrives, the user
-compares the certificates embedded in the quote against these cached
-certificates (step 9).
+DCAP based remote attestation starts with the enclavized user application
+opening the special file ``/dev/attestation/user_report_data`` for write
+(step 1). Under the hood, Gramine uses the ``EREPORT`` hardware instruction to
+generate an :term:`SGX Report` (step 2). After the SGX report is generated, the
+application opens another special file ``/dev/attestation/quote`` for read
+(step 3). Under the hood, Gramine communicates with the :term:`Quoting Enclave`
+to receive the :term:`SGX Quote` (step 4).
+
+In turn, the Quoting Enclave uses the key provided by :term:`Provisioning
+Certification Enclave` (PCE; step 5, only during initial deployment of this SGX
+machine). The PCE uses an Intel service called :term:`Intel Provisioning
+Certification Service` (PCS) to obtain the attestation collateral: attestation
+certificates and certificate revocation lists for the SGX machine (step 6).
+
+The Quoting Enclave generates the SGX quote from the provided-by-application SGX
+report and sends it back to the enclavized user application. The application
+stores this SGX quote in its enclave memory and can later send it to the remote
+user (verifier) upon request. When the remote user wants to validate the SGX
+enclave, it requests remote attestation with it, and the enclavized application
+forwards the SGX quote to the remote trusted machine (step 8).
+
+Finally, the remote user verifies the quote. It does so by verifying the
+certificates embedded in the quote against a |~| cache of DCAP attestation
+certificates (step 9) stored in a |~| local cache. The cache is periodically
+fetched from PCS (preliminary step 0).
+
+Finally, the remote user also verifies the enclave measurements embedded in the
+SGX quote against the expected ones. After this verification procedure, the
+remote user can trust the SGX enclave on the untrusted machine and start sending
+inputs/receiving enclave outputs.
 
 .. _low-level-dev-attestation-interface:
 
@@ -122,8 +108,8 @@ low-level abstractions of *attestation report* and *attestation quote* objects
 below pseudo-files:
 
 - ``/dev/attestation/attestation_type`` pseudo-file can be opened for read and
-  contains the name of the attestation scheme used (currently one of ``none``,
-  ``epid`` and ``dcap``).
+  contains the name of the attestation scheme used (currently one of ``none``
+  and ``dcap``).
 
 - ``/dev/attestation/user_report_data`` pseudo-file can be opened for read or
   write access. Typically, it is opened and written into before opening and
@@ -187,29 +173,16 @@ remote attestation flow may look like in your application::
 
     /* ...send `quote` to the remote user for verification... */
 
-The remote user should receive this attestation quote and verify it. In case of
-Intel SGX, this verification flow depends on whether the SGX remote attestation
-is EPID based or DCAP/ECDSA based:
-
-- :term:`EPID` based quote verification is done with the help of the Intel
-  Attestation Service (:term:`IAS`). In particular, the remote user should
-  forward the received SGX quote to the well-known IAS endpoint via a secure
-  internet connection and get the IAS attestation report (not to be confused
-  with SGX report!) back. The user then should examine the contents of the IAS
-  attestation report and decide whether to trust the remote SGX enclave or not.
-
-- :term:`DCAP` based quote verification is done with the help of the Intel DCAP
-  libraries. These libraries encapsulate the complicated DCAP flows (extracting
-  Intel SGX certificates from the
-  :term:`Intel Provisioning Certification Service`, caching these certificates
-  in the Provisioning Certificate Caching Service, etc.).
+The remote user should receive this attestation quote and verify it.
+:term:`DCAP` based quote verification is done with the help of the Intel DCAP
+libraries. These libraries encapsulate the complicated DCAP flows (extracting
+Intel SGX certificates from the :term:`Intel Provisioning Certification
+Service`, caching these certificates in the Provisioning Certificate Caching
+Service, etc.).
 
 Gramine does *not* provide any pseudo-files under ``/dev/attestation`` for
 verification of the attestation quote. Instead, the remote user is encouraged to
-use the :program:`quote_dump`, :program:`ias_request` and
-:program:`verify_ias_report` tools shipped together with Gramine (for
-EPID based quote verification) or to use the Intel DCAP libraries and tools (for
-DCAP based quote verification).
+use the :program:`quote_dump`, or to use the Intel DCAP libraries and tools.
 
 The ``/dev/attestation`` pseudo-filesystem also exposes pseudo-files to set the
 encryption keys (see also :doc:`manifest-syntax`):
@@ -246,11 +219,9 @@ SGX enclave (attester).
    :target: ./img/ratls-interoperable.svg
    :alt: Figure: The X.509 certificate generated by RA-TLS (standardized)
 
-The diagram above shows the standard X.509 certificate generated by RA-TLS (the
-diagram shows the DCAP based RA-TLS certificate, but the EPID based RA-TLS
-certificate is conceptually similar). This certificate is self-signed because
-the actual chain of trust is stored in the Intel SGX certificates embedded in
-the SGX quote.
+The diagram above shows the standard X.509 certificate generated by RA-TLS. This
+certificate is self-signed because the actual chain of trust is stored in the
+Intel SGX certificates embedded in the SGX quote.
 
 The most important concept behind the RA-TLS certificate is that it embeds the
 SGX quote (in the standardized X.509 extension field with the TCG DICE "tagged
@@ -283,10 +254,9 @@ the legacy non-standard OID, for backward compatibility. In the future, legacy
 OID will be dropped, and only the new standard OID will be available in the
 X.509 certificates generated by Gramine.
 
-RA-TLS is shipped as three libraries: ``ra_tls_attest.so``, EPID based
-``ra_tls_verify_epid.so`` and DCAP/ECDSA based ``ra_tls_verify_dcap.so``.
-The interfaces exposed by these libraries can be found in the following header:
-:file:`tools/sgx/ra-tls/ra_tls.h`.
+RA-TLS is shipped as two libraries: ``ra_tls_attest.so`` and DCAP/ECDSA based
+``ra_tls_verify_dcap.so``. The interfaces exposed by these libraries can be
+found in the following header: :file:`tools/sgx/ra-tls/ra_tls.h`.
 
 The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-mbedtls``.
 
@@ -298,14 +268,7 @@ loaded into the SGX enclave. The library relies on the pseudo-FS
 ``/dev/attestation`` to retrieve the SGX quote and embed it into the RA-TLS
 certificate. The library is *not* thread-safe.
 
-The library expects the following information in the manifest for EPID based
-attestation:
-
-- ``sgx.remote_attestation = "epid"`` -- EPID remote attestation is enabled.
-- ``sgx.ra_client_spid`` -- client SPID for EPID remote attestation.
-- ``sgx.ra_client_linkable`` -- client linkable/unlinkable attestation mode.
-
-For DCAP/ECDSA based attestation, the library expects instead:
+The library expects the following information in the manifest:
 
 - ``sgx.remote_attestation = "dcap"`` -- DCAP remote attestation is enabled.
 
@@ -318,14 +281,15 @@ The library uses the following environment variables if available:
   this timestamp-not-after value, in the format "20301231235959" (this is also
   the default value if environment variable is not available).
 
-``ra_tls_verify_epid.so``
+``ra_tls_verify_dcap.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This library contains the verification callback that should be registered with
 the TLS library during verification of the TLS certificate. It verifies the
-RA-TLS certificate and the SGX quote by sending it to the Intel Attestation
-Service (IAS) and retrieving the attestation report from IAS. This library is
-*not* thread-safe.
+RA-TLS certificate and the SGX quote by forwarding it to DCAP verification
+library (``libsgx_dcap_quoteverify.so``) and checking the result. This library
+is *not* thread-safe. The library expects all the DCAP infrastructure to be
+installed and working correctly on the host.
 
 The library uses the following SGX-specific environment variables, representing
 SGX measurements:
@@ -380,41 +344,8 @@ corresponding status. By default, all of the above environment variables are not
 set, and thus all not-OK statuses are disallowed. For more information, please
 refer to the official Intel documentation:
 
-- `Intel EPID/IAS
-  <https://api.trustedservices.intel.com/documents/sgx-attestation-api-spec.pdf>`__
 - `Intel ECDSA/DCAP
   <https://download.01.org/intel-sgx/latest/dcap-latest/linux/docs/Intel_SGX_ECDSA_QuoteLibReference_DCAP_API.pdf>`__
-
-The library uses the following EPID-specific environment variables if available:
-
-- ``RA_TLS_EPID_API_KEY`` (mandatory) -- client API key for EPID remote
-  attestation.
-- ``RA_TLS_IAS_REPORT_URL`` (optional) -- URL for IAS "verify attestation
-  evidence" API endpoint. If not specified, the default hard-coded URL for IAS
-  is used.
-- ``RA_TLS_IAS_SIGRL_URL`` (optional) -- URL for IAS "Retrieve SigRL" API
-  endpoint. If not specified, the default hard-coded URL for IAS is used.
-- ``RA_TLS_IAS_PUB_KEY_PEM`` (optional) -- public key of IAS. If not specified,
-  the default hard-coded public key is used.
-
-``ra_tls_verify_dcap.so``
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Similarly to ``ra_tls_verify_epid.so``, this library contains the verification
-callback that should be registered with the TLS library during verification of
-the TLS certificate. Verifies the RA-TLS certificate and the SGX quote by
-forwarding it to DCAP verification library (``libsgx_dcap_quoteverify.so``) and
-checking the result. This library is *not* thread-safe.
-
-The library uses the same SGX-specific environment variables as
-``ra_tls_verify_epid.so`` and ignores the EPID-specific environment variables.
-Similarly to the EPID version, instead of using environment variables, the four
-SGX measurements may be verified via a user-specified callback registered via
-``ra_tls_set_measurement_callback()``.
-
-The library expects all the DCAP infrastructure to be installed and working
-correctly on the host.
-
 
 High-level Secret Provisioning interface
 ----------------------------------------
@@ -447,9 +378,8 @@ The established TLS channel may be either closed after provisioning these
 initial secrets or may be further used by both parties for continued secure
 communication.
 
-Secret Provisioning is shipped as three libraries: ``secret_prov_attest.so``,
-EPID based ``secret_prov_verify_epid.so`` and DCAP/ECDSA based
-``secret_prov_verify_dcap.so``.
+Secret Provisioning is shipped as two libraries: ``secret_prov_attest.so`` and
+DCAP/ECDSA based ``secret_prov_verify_dcap.so``.
 
 The examples of using RA-TLS can be found under ``CI-Examples/ra-tls-secret-prov``.
 The examples include minimalistic provisioning of constant-string secrets as
@@ -522,7 +452,7 @@ The secret may be retrieved by the application in two ways:
    ``mbedtls_base64_decode()``) instead of non-crypto-secure functions (e.g.,
    self-written decoding logic or a standard library function).
 
-``secret_prov_verify_epid.so``
+``secret_prov_verify_dcap.so``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 This library is typically linked into a normal, non-enclavized application
@@ -532,23 +462,15 @@ RA-TLS session with the client, verifies the RA-TLS X.509 certificate of the
 client, and provisions the secret to the client if verification is successful.
 The service can register a callback to continue secure communication with the
 client (instead of simply closing the session after the first secret is sent to
-the client). This library is *not* thread-safe. This library uses EPID based
+the client). This library is *not* thread-safe. This library uses DCAP based
 RA-TLS flows underneath.
 
 The library expects the same configuration information in the manifest and
 environment variables as RA-TLS.
 
-``secret_prov_verify_dcap.so``
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Similarly to ``secret_prov_verify_epid.so``, this library is used in
-secret-provisioning services. The only difference is that this library uses
-DCAP based RA-TLS flows underneath.
-
 The library uses the same SGX-specific environment variables as
-``secret_prov_verify_epid.so`` and ignores the EPID-specific environment
-variables. The library expects all the DCAP infrastructure to be installed and
-working correctly on the host.
+``secret_prov_verify_dcap.so``. The library expects all the DCAP infrastructure
+to be installed and working correctly on the host.
 
 
 .. _vendor_specific_plugins:
@@ -557,9 +479,9 @@ Vendor-specific plugins
 -----------------------
 
 The RA-TLS and Secret Provisioning interfaces described above work only with
-default Intel-provided attestation infrastructures (IAS for the EPID flows and
-Intel PCCS/PCS flows). There are several other attestation infrastructures built
-by vendors other than Intel. For these cases, Gramine provides plugins to RA-TLS
+default Intel-provided attestation infrastructures (Intel PCCS/PCS for DCAP
+attestation flows). There are several other attestation infrastructures built by
+vendors other than Intel. For these cases, Gramine provides plugins to RA-TLS
 and Secret Provisioning, which currently can be found in the companion `contrib
 <https://github.com/gramineproject/contrib>`__ repository.
 
