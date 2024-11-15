@@ -43,7 +43,6 @@ direct = get_option('direct') == 'enabled'
 sgx = get_option('sgx') == 'enabled'
 skeleton = get_option('skeleton') == 'enabled'
 
-dcap = get_option('dcap') == 'enabled'
 ubsan = get_option('ubsan') == 'enabled'
 asan = get_option('asan') == 'enabled'
 vtune = get_option('vtune') == 'enabled'
@@ -219,9 +218,8 @@ if sgx
     #       https://github.com/mesonbuild/meson/issues/10764.
     libcbor_dep = libcbor_proj.get_variable('libcbor_dep')
 
-    if dcap
-        sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify')
-    endif
+    sgx_dcap_quoteverify_dep = cc.find_library('sgx_dcap_quoteverify',
+        required: get_option('dcap'))
 
     vtune_dep = []
     dl_dep = []

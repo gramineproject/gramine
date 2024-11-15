@@ -1,3 +1,6 @@
+option('dcap', type: 'feature',
+    description: 'Build additional utilities linked against DCAP library')
+
 # TODO: after deprecating 18.04/bionic, change these to type: 'feature'
 option('direct', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build and install gramine-direct (aka Linux aka nonsgx)')
@@ -12,8 +15,6 @@ option('libc', type: 'combo', choices: ['none', 'glibc', 'musl'],
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
 
-option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
-    description: 'Build additional utilities linked against DCAP library')
 option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable undefined behavior sanitizer')
 option('asan', type: 'combo', choices: ['disabled', 'enabled'],
