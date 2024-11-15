@@ -11,9 +11,6 @@ stage('build') {
     if (env.ASAN == '1') {
         env.MESON_OPTIONS += ' -Dasan=enabled'
     }
-    if (env.RA_TYPE == 'dcap') {
-        env.MESON_OPTIONS += ' -Ddcap=enabled'
-    }
 
     try {
         sh '''

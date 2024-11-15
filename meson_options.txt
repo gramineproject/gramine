@@ -12,7 +12,7 @@ option('libc', type: 'combo', choices: ['none', 'glibc', 'musl'],
 option('tests', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build test binaries')
 
-option('dcap', type: 'combo', choices: ['disabled', 'enabled'],
+option('dcap', type: 'feature',
     description: 'Build additional utilities linked against DCAP library')
 option('ubsan', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Enable undefined behavior sanitizer')

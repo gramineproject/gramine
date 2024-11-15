@@ -148,7 +148,7 @@ if get_option('libc') == 'glibc' and host_has_glibc
             get_option('libdir'), get_option('libc')))
 endif
 
-if dcap
+if sgx_dcap_quoteverify_dep.found()
     libra_tls_verify_dcap = shared_library('ra_tls_verify_dcap',
         'ra_tls_verify_dcap.c',
 
