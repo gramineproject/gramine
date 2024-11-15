@@ -50,7 +50,7 @@ regression: all
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT db/*
+	$(RM) *.manifest *.manifest.sgx *.sig OUTPUT db/*
 
 .PHONY: distclean
 distclean: clean

@@ -128,7 +128,7 @@ start-gramine-server: all
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT result-* tmp nginx_args
+	$(RM) *.manifest *.manifest.sgx *.sig OUTPUT result-* tmp nginx_args
 
 .PHONY: distclean
 distclean: clean

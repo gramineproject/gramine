@@ -216,9 +216,9 @@ check_dcap: app dcap
 .PHONY: clean
 clean:
 	$(RM) OUTPUT
-	cd secret_prov_minimal; $(RM) client server_* *.token *.sig *.manifest.sgx *.manifest
-	cd secret_prov;         $(RM) client server_* *.token *.sig *.manifest.sgx *.manifest
-	cd secret_prov_pf;      $(RM) client server_* *.token *.sig *.manifest.sgx *.manifest
+	cd secret_prov_minimal; $(RM) client server_* *.sig *.manifest.sgx *.manifest
+	cd secret_prov;         $(RM) client server_* *.sig *.manifest.sgx *.manifest
+	cd secret_prov_pf;      $(RM) client server_* *.sig *.manifest.sgx *.manifest
 
 .PHONY: distclean
 distclean: clean

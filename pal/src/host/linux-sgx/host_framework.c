@@ -14,19 +14,9 @@ static size_t g_zero_pages_size = 0;
 
 int open_sgx_driver(void) {
     const char* paths_to_try[] = {
-#ifdef CONFIG_SGX_DRIVER_DEVICE
-    /* Always try to use the device path specified in the build config first. */
-    CONFIG_SGX_DRIVER_DEVICE,
-#endif
-#if defined(CONFIG_SGX_DRIVER_OOT)
-    "/dev/isgx",
-#elif defined(CONFIG_SGX_DRIVER_UPSTREAM)
-    /* DCAP and upstreamed version used different paths in the past. */
-    "/dev/sgx_enclave",
-    "/dev/sgx/enclave",
-#else
-    #error This config should be unreachable.
-#endif
+        /* DCAP and upstreamed version used different paths in the past. */
+        "/dev/sgx_enclave",
+        "/dev/sgx/enclave",
     };
     int ret;
     for (size_t i = 0; i < ARRAY_SIZE(paths_to_try); i++) {
@@ -46,47 +36,7 @@ int open_sgx_driver(void) {
     return ret;
 }
 
-int read_enclave_token(int token_file, sgx_arch_token_t* out_token) {
-    struct stat stat;
-    int ret;
-    ret = DO_SYSCALL(fstat, token_file, &stat);
-    if (ret < 0)
-        return ret;
-
-    if (stat.st_size != sizeof(sgx_arch_token_t)) {
-        log_error("Token size does not match.");
-        return -EINVAL;
-    }
-
-    int bytes = DO_SYSCALL(read, token_file, out_token, sizeof(sgx_arch_token_t));
-    if (bytes < 0) {
-        return bytes;
-    } else if (bytes != sizeof(sgx_arch_token_t)) {
-        log_error("Short read while reading token file.");
-        return -EINVAL;
-    }
-
-    char hex[64 * 2 + 1]; /* large enough to hold any of the below fields */
-#define BYTES2HEX(bytes) (bytes2hex(bytes, sizeof(bytes), hex, sizeof(hex)))
-    log_debug("Read token:");
-    log_debug("    valid:                 0x%08x",   out_token->body.valid);
-    log_debug("    attr.flags:            0x%016lx", out_token->body.attributes.flags);
-    log_debug("    attr.xfrm:             0x%016lx", out_token->body.attributes.xfrm);
-    log_debug("    mr_enclave:            %s",       BYTES2HEX(out_token->body.mr_enclave.m));
-    log_debug("    mr_signer:             %s",       BYTES2HEX(out_token->body.mr_signer.m));
-    log_debug("    LE cpu_svn:            %s",       BYTES2HEX(out_token->cpu_svn_le.svn));
-    log_debug("    LE isv_prod_id:        %02x",     out_token->isv_prod_id_le);
-    log_debug("    LE isv_svn:            %02x",     out_token->isv_svn_le);
-    log_debug("    LE masked_misc_select: 0x%08x",   out_token->masked_misc_select_le);
-    log_debug("    LE attr.flags:         0x%016lx", out_token->attributes_le.flags);
-    log_debug("    LE attr.xfrm:          0x%016lx", out_token->attributes_le.xfrm);
-#undef BYTES2HEX
-
-    return 0;
-}
-
-static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
-    /* see also sgx_get_token.py:get_optional_sgx_features(), used for legacy non-FLC machines */
+static void get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
     const struct {
         uint64_t bits;
         const struct {
@@ -116,17 +66,6 @@ static int get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t
                 *out_xfrm |= xfrm_flags[i].bits;
         }
     }
-
-    return 0;
-}
-
-int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token) {
-    memset(out_token, 0, sizeof(*out_token));
-    memcpy(&out_token->body.attributes, &sig->attributes, sizeof(sgx_attributes_t));
-    out_token->masked_misc_select_le = sig->misc_select;
-
-    return get_optional_sgx_features(sig->attributes.xfrm, sig->attribute_mask.xfrm,
-                                     &out_token->body.attributes.xfrm);
 }
 
 int read_enclave_sigstruct(char* sig_path, sgx_sigstruct_t* sig) {
@@ -175,13 +114,15 @@ bool is_wrfsbase_supported(void) {
     return true;
 }
 
-int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
+int create_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sig) {
     assert(secs->size && IS_POWER_OF_2(secs->size));
     assert(IS_ALIGNED(secs->base, secs->size));
 
     secs->ssa_frame_size = SSA_FRAME_SIZE / g_page_size; /* SECS expects SSA frame size in pages */
-    secs->misc_select    = token->masked_misc_select_le;
-    memcpy(&secs->attributes, &token->body.attributes, sizeof(sgx_attributes_t));
+    secs->misc_select = sig->misc_select;
+    secs->attributes.flags = sig->attributes.flags;
+    get_optional_sgx_features(sig->attributes.xfrm, sig->attribute_mask.xfrm,
+                              &secs->attributes.xfrm);
 
     /* Do not initialize secs->mr_signer and secs->mr_enclave here as they are
      * not used by ECREATE to populate the internal SECS. SECS's mr_enclave is
@@ -192,14 +133,12 @@ int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token) {
     uint64_t request_mmap_addr = secs->base;
     uint64_t request_mmap_size = secs->size;
 
-#ifndef CONFIG_SGX_DRIVER_OOT
     /* newer DCAP/in-kernel SGX drivers allow starting enclave address space with non-zero;
      * the below trick to start from MMAP_MIN_ADDR is to avoid vm.mmap_min_addr==0 issue */
     if (request_mmap_addr < MMAP_MIN_ADDR) {
         request_mmap_size -= MMAP_MIN_ADDR - request_mmap_addr;
         request_mmap_addr  = MMAP_MIN_ADDR;
     }
-#endif
 
     uint64_t addr = DO_SYSCALL(mmap, request_mmap_addr, request_mmap_size,
                                PROT_READ | PROT_WRITE | PROT_EXEC, MAP_FIXED_NOREPLACE | MAP_SHARED,
@@ -323,38 +262,6 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         log_debug("Adding pages to enclave: %p-%p [%s:%s] (%s)%s", addr, addr + size, t, p,
                   comment, m);
 
-#ifdef CONFIG_SGX_DRIVER_OOT
-    /* legacy out-of-tree driver only supports adding one page at a time */
-    struct sgx_enclave_add_page param = {
-        .addr    = (uint64_t)addr,
-        .src     = (uint64_t)(user_addr ?: g_zero_pages),
-        .secinfo = (uint64_t)&secinfo,
-        .mrmask  = skip_eextend ? 0 : (uint16_t)-1,
-    };
-
-    uint64_t added_size = 0;
-    while (added_size < size) {
-        ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_ADD_PAGE, &param);
-        if (ret < 0) {
-            if (ret == -EINTR)
-                continue;
-            log_error("Enclave add-pages IOCTL failed: %s", unix_strerror(ret));
-            return ret;
-        }
-
-        param.addr += g_page_size;
-        if (param.src != (uint64_t)g_zero_pages)
-            param.src += g_page_size;
-        added_size += g_page_size;
-    }
-
-    /* need to change permissions for EADDed pages since the initial mmap was with PROT_NONE */
-    ret = DO_SYSCALL(mprotect, addr, size, prot);
-    if (ret < 0) {
-        log_error("Changing protections of EADDed pages failed: %s", unix_strerror(ret));
-        return ret;
-    }
-#else
     if (!user_addr && g_zero_pages_size < size) {
         /* not enough contigious zero pages to back up enclave pages, allocate more */
         /* TODO: this logic can be removed if we introduce a size cap in ENCLAVE_ADD_PAGES ioctl */
@@ -425,7 +332,6 @@ int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, uns
         log_error("Cannot map enclave pages: %s", unix_strerror(ret));
         return ret;
     }
-#endif /* CONFIG_SGX_DRIVER_OOT */
 
     return 0;
 }
@@ -546,10 +452,7 @@ int edmm_supported_by_driver(bool* out_supported) {
     return 0;
 }
 
-int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_token_t* token) {
-#ifndef CONFIG_SGX_DRIVER_OOT
-    __UNUSED(token);
-#endif
+int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct) {
     unsigned long enclave_valid_addr = secs->base + secs->size - g_page_size;
 
     char hex[sizeof(sigstruct->enclave_hash.m) * 2 + 1];
@@ -562,13 +465,7 @@ int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_tok
     log_debug("    isv_svn:      %d", sigstruct->isv_svn);
 
     struct sgx_enclave_init param = {
-#ifdef CONFIG_SGX_DRIVER_OOT
-        .addr = enclave_valid_addr,
-#endif
         .sigstruct = (uint64_t)sigstruct,
-#ifdef CONFIG_SGX_DRIVER_OOT
-        .einittoken = (uint64_t)token,
-#endif
     };
     int ret = DO_SYSCALL(ioctl, g_isgx_device, SGX_IOC_ENCLAVE_INIT, &param);
     if (ret < 0) {

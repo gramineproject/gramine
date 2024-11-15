@@ -40,7 +40,7 @@ class TestConfig:
 
     Ninja handles the following targets:
 
-    - `NAME.manifest`, `NAME.manifest.sgx`, `NAME.sig`, `NAME.token`
+    - `NAME.manifest`, `NAME.manifest.sgx`, `NAME.sig`
     - `direct`, `sgx`: all files
     - `direct-NAME`, `sgx-NAME`: files related to a single manifest
     '''
@@ -144,13 +144,6 @@ class TestConfig:
         ninja.newline()
 
         ninja.rule(
-            name='sgx-get-token',
-            command='gramine-sgx-get-token --quiet --sig $in --output $out',
-            description='SGX token: $out',
-        )
-        ninja.newline()
-
-        ninja.rule(
             name='regenerate',
             command='gramine-test regenerate',
             description='Regenerating build file',
@@ -180,8 +173,7 @@ class TestConfig:
             rule='phony',
             inputs=([f'{name}.manifest' for name in self.all_manifests] +
                     [f'{name}.manifest.sgx' for name in self.all_manifests] +
-                    [f'{name}.sig' for name in self.all_manifests] +
-                    [f'{name}.token' for name in self.all_manifests]),
+                    [f'{name}.sig' for name in self.all_manifests]),
         )
         ninja.newline()
 
@@ -206,12 +198,6 @@ class TestConfig:
             )
 
             ninja.build(
-                outputs=[f'{name}.token'],
-                rule='sgx-get-token',
-                inputs=[f'{name}.sig'],
-            )
-
-            ninja.build(
                 outputs=[f'direct-{name}'],
                 rule='phony',
                 inputs=[f'{name}.manifest'],
@@ -220,7 +206,7 @@ class TestConfig:
             ninja.build(
                 outputs=[f'sgx-{name}'],
                 rule='phony',
-                inputs=[f'{name}.manifest', f'{name}.manifest.sgx', f'{name}.sig', f'{name}.token'],
+                inputs=[f'{name}.manifest', f'{name}.manifest.sgx', f'{name}.sig'],
             )
 
             ninja.newline()

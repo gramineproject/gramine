@@ -14,13 +14,6 @@ Currently officially supported distributions:
 Exceptions
 ----------
 
-Linux kernel
-^^^^^^^^^^^^
-Because upstream support for SGX was only merged relatively recently and in
-non-longterm release, together with the fact that EPID attestation is
-unsupported in upstream driver, **it is acceptable to require the user to use
-kernel other that provided by distro**.
-
 .. _glibc:
 
 glibc

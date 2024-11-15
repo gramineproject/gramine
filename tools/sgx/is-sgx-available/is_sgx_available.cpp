@@ -178,9 +178,7 @@ public:
 };
 
 bool sgx_driver_loaded() {
-    return file_exists("/dev/isgx") // LKM version
-        || file_exists("/dev/sgx")  // old in-kernel patchset (<= 5.10) or DCAP drivers
-        || file_exists("/dev/sgx_enclave"); // upstreamed drivers (>= 5.11)
+    return file_exists("/dev/sgx_enclave"); // upstreamed drivers (>= 5.11)
 }
 
 bool psw_installed() {

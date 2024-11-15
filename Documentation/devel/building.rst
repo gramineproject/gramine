@@ -70,21 +70,25 @@ to older kernels in certain distros).
 
 Kernel version can be checked using the following command::
 
-       uname -r
+    uname -r
 
 If your current kernel version is 5.11 or higher, you have a built-in SGX
-support. The driver is accessible through /dev/sgx_enclave
-and /dev/sgx_provision.
+support. The driver is accessible through :file:`/dev/sgx_enclave`
+and :file:`/dev/sgx_provision`.
 
-If your current kernel version is lower than 5.11, then you have two options:
+Beware that some enterprise distributions provide kernels that report some old
+version, but actually provide upstream SGX driver that has been backported (like
+RHEL and derivatives since version 8, which has nominally kernel 4.18). If you
+have one of those enterprise kernels, this point does not apply. If in doubt,
+check kernel's ``.config`` and consult your distro documentation.
 
-- Update the Linux kernel to at least 5.11 in your OS distro. If you use Ubuntu,
-  you can follow `this tutorial
-  <https://itsfoss.com/upgrade-linux-kernel-ubuntu/>`__.
-
-- Install out-of-tree driver and use our provided patches to the Linux kernel
-  version 5.4. See section :ref:`legacy-kernel-and-hardware` for the exact
-  steps.
+If your current kernel version is lower than 5.11, then you need to upgrade the
+whole distribution. This is because ``linux-libc-dev`` package, which supplies
+``<asm/sgx.h>`` header that we use, is typically tied to distro's stable kernel.
+Just installing newer kernel image and rebooting might not be sufficient, unless
+you set up ``CFLAGS="-I ..."`` pointing to a |~| directory containing uapi
+(userspace API) headers matching that newer kernel. This approach is unsupported
+and outside of the scope in this guide.
 
 1. Required packages
 """"""""""""""""""""
@@ -132,8 +136,7 @@ To build Gramine, you need to first set up the build directory. In the root
 directory of Gramine repo, run the following command (recall that "direct" means
 non-SGX version)::
 
-   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
-       -Dsgx_driver=(upstream|oot) -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
 
 .. note::
 
@@ -152,25 +155,9 @@ Set ``-Ddirect=`` and ``-Dsgx=`` options to ``enabled`` or ``disabled``
 according to whether you built the corresponding PAL (the snippet assumes you
 built both).
 
-The ``-Dsgx_driver`` parameter controls which SGX driver to use:
-
-* ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
-  5.11+),
-* ``oot`` for non-DCAP, out-of-tree version of the driver.
-
-The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
-where the SGX driver was downloaded or installed in the previous step. For
-example, for the OOT driver installed at the default path, you can specify
-``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
-is omitted, Gramine's build system will try to determine the right path, so,
-it's usually not needed.
-
-.. note::
-
-   If you have a DCAP driver installed on the system (e.g. on 18.04 Azure),
-   then you can still use the upstream driver and specify the `upstream header
-   file <https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11>`__.
-   This is because the DCAP and the upstream drivers have compatible APIs.
+Since Gramine v1.9, we only support upstream, in-kernel driver and the
+``-Dsgx_driver`` option, as well as associated ``-Dsgx_driver_include_path`` and
+``-Dsgx_driver_device`` options, are gone.
 
 Set ``-Dlibc`` option to ``musl`` if you wish to build musl instead of glibc
 (which is built by default), or to ``none`` if you do not want to build any
@@ -178,8 +165,8 @@ libc.
 
 Then, build and install Gramine by running the following::
 
-   ninja -C build/
-   sudo ninja -C build/ install
+   meson compile -C build/
+   sudo meson compile -C build/ install
 
 Installation prefix
 ^^^^^^^^^^^^^^^^^^^
@@ -303,8 +290,8 @@ Protect this key and do not disclose it to anyone::
 
 After signing the application's manifest, users may ship the application and
 Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
-extension), the SIGSTRUCT signature file (``.sig`` extension), and the
-EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
+extension), the SIGSTRUCT signature file (``.sig`` extension) to execute on
+another SGX-enabled host.
 
 Advanced: building without network access
 -----------------------------------------
@@ -352,111 +339,14 @@ Proceed with compiling and installing as usual.
 ::
 
     meson setup build/ --prefix=/usr --wrap-mode=nodownload \
-        -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
+        -Ddirect=enabled -Dsgx=enabled
     meson compile -C build/
     meson install -C build/
-
 
 .. _legacy-kernel-and-hardware:
 
 Legacy kernel and hardware
 --------------------------
 
-Although we recommend kernel version 5.11 or later, Gramine can be run on older
-kernels with out-of-tree SGX driver. OOT driver is also the only possibility to
-run Gramine on non-FLC hardware. In this configuration, we require kernel at
-least 5.4, and for kernels between 5.4 (inclusive) and 5.9 (exclusive) we
-additionally require FSGSBASE patchset (see below).
-
-Beware that some enterprise distributions provide kernels that report some old
-version, but actually provide upstream SGX driver that has been backported (like
-RHEL and derivatives since version 8, which has nominally kernel 4.18). If you
-have one of those enterprise kernels, this section does not apply. If in doubt,
-check kernel's ``.config`` and consult your distro documentation.
-
-1. Install Linux kernel with patched FSGSBASE
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-FSGSBASE is a feature in recent processors which allows direct access to the FS
-and GS segment base addresses. For more information about FSGSBASE and its
-benefits, see `this discussion <https://lwn.net/Articles/821719>`__.
-
-FSGSBASE patchset was merged in Linux kernel version 5.9, so if your kernel
-version is 5.9 or higher, then the FSGSBASE feature is already supported and you
-can skip this step. For older kernels it is available as `separate patches
-<https://github.com/oscarlab/graphene-sgx-driver/tree/master/fsgsbase_patches>`__.
-(Note that Gramine was prevously called *Graphene* and was hosted under
-a different organization, hence the name of the linked repository.)
-
-The following instructions to patch and compile a Linux kernel with FSGSBASE
-support below are written around Ubuntu 18.04 LTS (Bionic Beaver) with a Linux
-5.4 LTS stable kernel but can be adapted for other distros as necessary. These
-instructions ensure that the resulting kernel has FSGSBASE support.
-
-#. Clone the repository with patches::
-
-       git clone https://github.com/oscarlab/graphene-sgx-driver
-
-#. Setup a build environment for kernel development following `the instructions
-   in the Ubuntu wiki <https://wiki.ubuntu.com/KernelTeam/GitKernelBuild>`__.
-   Clone Linux version 5.4 via::
-
-       git clone --single-branch --branch linux-5.4.y \
-           https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git
-       cd linux
-
-#. Apply the provided FSGSBASE patches to the kernel source tree::
-
-       git am <graphene-sgx-driver>/fsgsbase_patches/*.patch
-
-   The conversation regarding this patchset can be found in the kernel mailing
-   list archives `here
-   <https://lore.kernel.org/lkml/20200528201402.1708239-1-sashal@kernel.org>`__.
-
-#. Build and install the kernel following `the instructions in the Ubuntu wiki
-   <https://wiki.ubuntu.com/KernelTeam/GitKernelBuild>`__.
-
-#. After rebooting, verify the patched kernel is the one that has been booted
-   and is running::
-
-       uname -r
-
-#. Also verify that the patched kernel supports FSGSBASE (the below command
-   must return that bit 1 is set)::
-
-       # Linux kernel doesn't support FSGSBASE: patch or use higher version!
-       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
-       AT_HWCAP2:       0x0
-
-       # Linux kernel supports FSGSBASE (example where only bit 1 is set)
-       $ LD_SHOW_AUXV=1 /bin/true | grep AT_HWCAP2
-       AT_HWCAP2:       0x2
-
-After the patched Linux kernel is installed, you may proceed with installations
-of other SGX software infrastructure: the Intel SGX Linux driver, the Intel SGX
-SDK/PSW, and Gramine itself.
-
-2. Install the Intel SGX driver
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This step depends on your hardware and kernel version. Note that if your kernel
-version is 5.11 or higher, then the Intel SGX driver is already installed and
-you can skip this step.
-
-If you have an older CPU without :term:`FLC` support, you need to download and
-install the following out-of-tree (OOT) Intel SGX driver:
-
-- https://github.com/intel/linux-sgx-driver
-
-For this driver, you need to set ``vm.mmap_min_addr=0`` in the system (*only
-required for the legacy SGX driver and not needed for newer DCAP/in-kernel
-drivers*)::
-
-   sudo sysctl vm.mmap_min_addr=0
-
-Note that this is an inadvisable configuration for production systems.
-
-Alternatively, if your CPU supports :term:`FLC`, you can choose to install the
-DCAP version of the Intel SGX driver from:
-
-- https://github.com/intel/SGXDataCenterAttestationPrimitives
+Gramine v1.9 and later no longer supports non-FLC hardware, nor kernels older
+than 5.11.
