@@ -105,60 +105,12 @@ if debug
 endif
 
 if sgx
-    conf_sgx = configuration_data()
-
-    # SGX driver options
-    sgx_driver = get_option('sgx_driver')
-    sgx_driver_include_path = get_option('sgx_driver_include_path')
-    sgx_driver_device = get_option('sgx_driver_device')
-
-    if sgx_driver == 'upstream'
-        # upstream in-kernel driver (Linux 5.11+)
-        conf_sgx.set('CONFIG_SGX_DRIVER_UPSTREAM', true)
-        sgx_driver_header = 'asm/sgx.h'
-        sgx_driver_include_path_defaults = [
-            # standard /usr/include[/x86_64-linux-gnu] from linux-libc-dev
-            '',
-            # Ubuntu `linux-headers` package
-            '/usr/src/linux-headers-@0@/arch/x86/include/uapi'.format(
-                run_command('uname', '-r').stdout().strip()),
-        ]
-    elif sgx_driver == 'oot'
-        # old non-DCAP driver (https://github.com/intel/linux-sgx-driver)
-        conf_sgx.set('CONFIG_SGX_DRIVER_OOT', true)
-        sgx_driver_header = 'sgx_user.h'
-        sgx_driver_include_path_defaults = ['/opt/intel/linux-sgx-driver']
-    else
-        error('Unknown sgx_driver value')
-    endif
-
-    if sgx_driver_device != ''
-        conf_sgx.set_quoted('CONFIG_SGX_DRIVER_DEVICE', sgx_driver_device)
-    endif
-
-    if sgx_driver_include_path == ''
-        foreach path : sgx_driver_include_path_defaults
-            if cc.has_header(path / sgx_driver_header)
-                sgx_driver_include_path = path
-                break
-            endif
-        endforeach
-    endif
-
-    sgx_driver_include = sgx_driver_include_path / sgx_driver_header
-
-    if not cc.has_header(sgx_driver_include)
-        error('Invalid SGX driver configuration (-Dsgx_driver and/or -Dsgx_driver_include_path); ' +
-              'expected "@0@" to exist under "@1@"'.format(
-                  sgx_driver_header, sgx_driver_include_path))
-    endif
+    cc.has_header('asm/sgx.h', required: true)
 
     if vtune
         add_project_arguments('-DSGX_VTUNE_PROFILE', language: 'c')
         vtune_sdk_path = get_option('vtune_sdk_path')
     endif
-
-    conf_sgx.set('CONFIG_SGX_DRIVER_INCLUDE', sgx_driver_include)
 endif
 
 gen_symbol_map_cmd = [
@@ -253,10 +205,6 @@ if sgx
     # in <asm/sgx.h> so we won't have to mess with the paths anymore
 
     protoc_c_prog = find_program('protoc-c')
-
-    if sgx_driver == 'oot'
-        protoc_prog = find_program('protoc')
-    endif
 
     threads_dep = dependency('threads')
 

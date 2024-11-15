@@ -7,7 +7,7 @@ Python API
 Introduction
 ------------
 
-We expose a Python API for manifest, SIGSTRUCT and SGX token management.
+We expose a Python API for manifest and SIGSTRUCT management.
 
 Examples
 --------
@@ -37,18 +37,6 @@ To create a |~| signed SIGSTRUCT file from a manifest::
     with open('path_to_sigstruct', 'wb') as f:
         f.write(sigstruct.to_bytes())
 
-To create a |~| SGX token file from a |~| signed SIGSTRUCT file::
-
-    from graminelibos import Sigstruct, get_token
-
-    with open('path_to_sigstruct', 'rb') as f:
-        sigstruct = Sigstruct.from_bytes(f.read())
-
-    token = get_token(sigstruct)
-
-    with open('path_to_token_file', 'wb') as f:
-        f.write(token)
-
 API Reference
 -------------
 
@@ -65,4 +53,3 @@ API Reference
      :members:
   .. autofunction:: graminelibos.get_tbssigstruct
   .. autofunction:: graminelibos.sign_with_local_key
-  .. autofunction:: graminelibos.get_token

@@ -10,15 +10,9 @@
 #endif
 
 #include <asm/ioctl.h>
+#include <asm/sgx.h>
 #include <linux/stddef.h>
 #include <linux/types.h>
-
-#include <@CONFIG_SGX_DRIVER_INCLUDE@>
-
-#mesondefine CONFIG_SGX_DRIVER_UPSTREAM
-#mesondefine CONFIG_SGX_DRIVER_OOT
-
-#mesondefine CONFIG_SGX_DRIVER_DEVICE
 
 /* Gramine needs the below subset of SGX instructions' return values */
 #ifndef SGX_INVALID_SIG_STRUCT

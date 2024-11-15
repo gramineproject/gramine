@@ -77,19 +77,6 @@ if [ ! -f "$PAL_CMD" ]; then
     exit 1
 fi
 
-# shellcheck disable=SC2050
-if [ "$SGX" == "1" ] \
-&& [ @CONFIG_SGX_DRIVER@ = oot ] \
-&& [ ! -e "$APPLICATION".token ] \
-&& [ -f "$APPLICATION".sig ] \
-&& [ -z "$GRAMINE_NO_AUTO_GET_TOKEN" ]
-then
-    @PREFIX@/@BINDIR@/gramine-sgx-get-token \
-        --output "$APPLICATION".token \
-        --sig "$APPLICATION".sig \
-    >&2
-fi
-
 
 CMD=("${ENVS[@]}")
 CMD+=("${PREFIX[@]}")
