@@ -101,10 +101,6 @@ static void* client_connection(void* data) {
         ERROR("ra_tls_verify_callback_results:\n    attestation_scheme=%d, err_loc=%d, \n",
               results.attestation_scheme, results.err_loc);
         switch (results.attestation_scheme) {
-            case RA_TLS_ATTESTATION_SCHEME_EPID:
-                ERROR("    epid.ias_enclave_quote_status=%s\n",
-                      results.epid.ias_enclave_quote_status);
-                break;
             case RA_TLS_ATTESTATION_SCHEME_DCAP:
                 ERROR("    dcap.func_verify_quote_result=0x%x, "
                       "dcap.quote_verification_result=0x%x\n",
