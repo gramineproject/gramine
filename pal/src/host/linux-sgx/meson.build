@@ -1,9 +1,3 @@
-host_sgx_driver_h = configure_file(
-    input: 'host_sgx_driver.h.in',
-    output: 'host_sgx_driver.h',
-    configuration: conf_sgx,
-)
-
 pal_sgx_inc = [
     include_directories(
         '.',
@@ -89,7 +83,6 @@ libpal_sgx = shared_library('pal',
     pal_sgx_asm_offsets_h,
     pal_common_sources,
     pal_linux_common_sources_enclave,
-    host_sgx_driver_h,
 
     include_directories: sgx_inc,
 
@@ -153,7 +146,6 @@ libpal_sgx_host = executable('loader',
     pal_linux_common_sources_host,
     pal_sgx_asm_offsets_h,
     aesm_proto_ch,
-    host_sgx_driver_h,
 
     include_directories: sgx_inc,
     c_args: [

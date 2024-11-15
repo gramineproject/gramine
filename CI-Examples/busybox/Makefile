@@ -47,7 +47,7 @@ check: all
 
 .PHONY: clean
 clean:
-	$(RM) *.token *.sig *.manifest.sgx *.manifest OUTPUT
+	$(RM) *.sig *.manifest.sgx *.manifest OUTPUT
 
 .PHONY: distclean
 distclean: clean

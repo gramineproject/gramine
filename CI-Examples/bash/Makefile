@@ -63,7 +63,7 @@ regression: all
 
 .PHONY: clean
 clean:
-	$(RM) *.manifest *.manifest.sgx *.token *.sig OUTPUT scripts/testdir/*
+	$(RM) *.manifest *.manifest.sgx *.sig OUTPUT scripts/testdir/*
 
 .PHONY: distclean
 distclean: clean

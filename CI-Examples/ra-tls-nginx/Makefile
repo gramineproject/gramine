@@ -41,5 +41,4 @@ clean:
 	$(RM) -r \
 		*.manifest \
 		*.manifest.sgx \
-		*.sig \
-		*.token
+		*.sig

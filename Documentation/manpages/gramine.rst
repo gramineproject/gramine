@@ -26,14 +26,3 @@ Options
 .. option:: --version
 
    Show version and exit.
-
-Environment variables
-=====================
-
-.. envvar:: GRAMINE_NO_AUTO_GET_TOKEN
-
-   If not empty, for out-of-tree EPID driver :command:`gramine-sgx` will not
-   automatically generate EINITTOKEN.
-
-   On upstream/DCAP driver the token is never generated and this variable has no
-   effect.
