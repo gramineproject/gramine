@@ -174,22 +174,12 @@ int main(int argc, char** argv) {
 #endif /* MBEDTLS_USE_PSA_CRYPTO || MBEDTLS_SSL_PROTO_TLS1_3 */
 
     if (argc < 2 ||
-            (strcmp(argv[1], "native") && strcmp(argv[1], "epid") && strcmp(argv[1], "dcap"))) {
-        mbedtls_printf("USAGE: %s native|epid|dcap [SGX measurements]\n", argv[0]);
+            (strcmp(argv[1], "native") && strcmp(argv[1], "dcap"))) {
+        mbedtls_printf("USAGE: %s native|dcap [SGX measurements]\n", argv[0]);
         return 1;
     }
 
-    if (!strcmp(argv[1], "epid")) {
-        ra_tls_verify_lib = dlopen("libra_tls_verify_epid.so", RTLD_LAZY);
-        if (!ra_tls_verify_lib) {
-            mbedtls_printf("%s\n", dlerror());
-            mbedtls_printf("User requested RA-TLS verification with EPID but cannot find lib\n");
-            if (in_sgx) {
-                mbedtls_printf("Please make sure that you are using client_epid.manifest\n");
-            }
-            return 1;
-        }
-    } else if (!strcmp(argv[1], "dcap")) {
+    if (!strcmp(argv[1], "dcap")) {
         if (in_sgx) {
             /*
              * RA-TLS verification with DCAP inside SGX enclave uses dummies instead of real
@@ -386,10 +376,6 @@ int main(int argc, char** argv) {
                            my_verify_callback_results.attestation_scheme,
                            my_verify_callback_results.err_loc);
             switch (my_verify_callback_results.attestation_scheme) {
-                case RA_TLS_ATTESTATION_SCHEME_EPID:
-                    mbedtls_printf("    epid.ias_enclave_quote_status=%s\n\n",
-                                   my_verify_callback_results.epid.ias_enclave_quote_status);
-                    break;
                 case RA_TLS_ATTESTATION_SCHEME_DCAP:
                     mbedtls_printf("    dcap.func_verify_quote_result=0x%x, "
                                    "dcap.quote_verification_result=0x%x\n\n",

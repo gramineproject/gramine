@@ -9,9 +9,7 @@ else
 GRAMINE_LOG_LEVEL = error
 endif
 
-RA_TYPE ?= none
-RA_CLIENT_SPID ?=
-RA_CLIENT_LINKABLE ?= 0
+RA_TYPE ?= dcap
 
 .PHONY: all
 all: busybox.manifest
@@ -24,8 +22,6 @@ busybox.manifest: busybox.manifest.template
 		-Dbusybox=$(BUSYBOX) \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
 		-Dra_type=$(RA_TYPE) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< > $@
 
 busybox.manifest.sgx busybox.sig &: busybox.manifest

@@ -133,80 +133,50 @@ out:
     return ret;
 }
 
-int init_quoting_enclave_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo) {
+int init_quoting_enclave_targetinfo(sgx_target_info_t* qe_targetinfo) {
     int ret;
 
     Request req   = REQUEST__INIT;
     Response* res = NULL;
 
-    if (is_epid) {
-        Request__InitQuoteRequest initreq = REQUEST__INIT_QUOTE_REQUEST__INIT;
-        req.initquotereq = &initreq;
+    sgx_att_key_id_t default_att_key_id;
+    memset(&default_att_key_id, 0, sizeof(default_att_key_id));
+    memcpy(&default_att_key_id, &g_default_ecdsa_p256_att_key_id,
+            sizeof(g_default_ecdsa_p256_att_key_id));
 
-        ret = request_aesm_service(&req, &res);
-        if (ret < 0)
-            return ret;
+    Request__InitQuoteExRequest initexreq = REQUEST__INIT_QUOTE_EX_REQUEST__INIT;
+    initexreq.has_att_key_id  = true;
+    initexreq.att_key_id.data = (uint8_t*)&default_att_key_id;
+    initexreq.att_key_id.len  = sizeof(default_att_key_id);
+    initexreq.b_pub_key_id    = true;
+    initexreq.has_buf_size    = true;
+    initexreq.buf_size        = SGX_HASH_SIZE;
+    req.initquoteexreq = &initexreq;
 
-        ret = -EPERM;
-        if (!res->initquoteres) {
-            log_error("AESM service returned wrong message");
-            goto failed;
-        }
+    ret = request_aesm_service(&req, &res);
+    if (ret < 0)
+        return ret;
 
-        Response__InitQuoteResponse* r = res->initquoteres;
-        if (r->errorcode != 0) {
-            log_error("AESM service returned error %d; this may indicate that infrastructure for "
-                      "the EPID attestation requested by Gramine is missing on this machine",
-                      r->errorcode);
-            goto failed;
-        }
-
-        if (r->targetinfo.len != sizeof(*qe_targetinfo)) {
-            log_error("Quoting Enclave returned invalid target info");
-            goto failed;
-        }
-
-        memcpy(qe_targetinfo, r->targetinfo.data, sizeof(*qe_targetinfo));
-    } else {
-        sgx_att_key_id_t default_att_key_id;
-        memset(&default_att_key_id, 0, sizeof(default_att_key_id));
-        memcpy(&default_att_key_id, &g_default_ecdsa_p256_att_key_id,
-                sizeof(g_default_ecdsa_p256_att_key_id));
-
-        Request__InitQuoteExRequest initexreq = REQUEST__INIT_QUOTE_EX_REQUEST__INIT;
-        initexreq.has_att_key_id  = true;
-        initexreq.att_key_id.data = (uint8_t*)&default_att_key_id;
-        initexreq.att_key_id.len  = sizeof(default_att_key_id);
-        initexreq.b_pub_key_id    = true;
-        initexreq.has_buf_size    = true;
-        initexreq.buf_size        = SGX_HASH_SIZE;
-        req.initquoteexreq = &initexreq;
-
-        ret = request_aesm_service(&req, &res);
-        if (ret < 0)
-            return ret;
-
-        ret = -EPERM;
-        if (!res->initquoteexres) {
-            log_error("AESM service returned wrong message");
-            goto failed;
-        }
-
-        Response__InitQuoteExResponse* r = res->initquoteexres;
-        if (r->errorcode != 0) {
-            log_error("AESM service returned error %d; this may indicate that infrastructure for "
-                      "the DCAP attestation requested by Gramine is missing on this machine",
-                      r->errorcode);
-            goto failed;
-        }
-
-        if (r->target_info.len != sizeof(*qe_targetinfo)) {
-            log_error("Quoting Enclave returned invalid target info");
-            goto failed;
-        }
-
-        memcpy(qe_targetinfo, r->target_info.data, sizeof(*qe_targetinfo));
+    ret = -EPERM;
+    if (!res->initquoteexres) {
+        log_error("AESM service returned wrong message");
+        goto failed;
     }
+
+    Response__InitQuoteExResponse* r = res->initquoteexres;
+    if (r->errorcode != 0) {
+        log_error("AESM service returned error %d; this may indicate that infrastructure for "
+                    "the DCAP attestation requested by Gramine is missing on this machine",
+                    r->errorcode);
+        goto failed;
+    }
+
+    if (r->target_info.len != sizeof(*qe_targetinfo)) {
+        log_error("Quoting Enclave returned invalid target info");
+        goto failed;
+    }
+
+    memcpy(qe_targetinfo, r->target_info.data, sizeof(*qe_targetinfo));
 
     ret = 0;
 failed:
@@ -214,8 +184,7 @@ failed:
     return ret;
 }
 
-int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                   const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
+int retrieve_quote(const sgx_report_t* report, char** quote, size_t* quote_len) {
     int ret;
 
     Request req   = REQUEST__INIT;
@@ -223,94 +192,50 @@ int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* re
 
     sgx_quote_t* actual_quote = NULL;
 
-    if (!spid) {
-        /* No Software Provider ID (SPID) specified, it is DCAP attestation */
-        __UNUSED(linkable);
-        __UNUSED(nonce);
+    sgx_att_key_id_t default_att_key_id;
+    memset(&default_att_key_id, 0, sizeof(default_att_key_id));
+    memcpy(&default_att_key_id, &g_default_ecdsa_p256_att_key_id,
+            sizeof(g_default_ecdsa_p256_att_key_id));
 
-        sgx_att_key_id_t default_att_key_id;
-        memset(&default_att_key_id, 0, sizeof(default_att_key_id));
-        memcpy(&default_att_key_id, &g_default_ecdsa_p256_att_key_id,
-                sizeof(g_default_ecdsa_p256_att_key_id));
+    Request__GetQuoteExRequest getreq = REQUEST__GET_QUOTE_EX_REQUEST__INIT;
+    getreq.report.data         = (uint8_t*)report;
+    getreq.report.len          = SGX_REPORT_ACTUAL_SIZE;
+    getreq.has_att_key_id      = true;
+    getreq.att_key_id.data     = (uint8_t*)&default_att_key_id;
+    getreq.att_key_id.len      = sizeof(default_att_key_id);
+    getreq.has_qe_report_info  = false; /* used to detect early that QE was spoofed; ignore now */
+    getreq.qe_report_info.data = NULL;
+    getreq.qe_report_info.len  = 0;
+    getreq.buf_size            = SGX_QUOTE_MAX_SIZE;
+    req.getquoteexreq          = &getreq;
 
-        Request__GetQuoteExRequest getreq = REQUEST__GET_QUOTE_EX_REQUEST__INIT;
-        getreq.report.data         = (uint8_t*)report;
-        getreq.report.len          = SGX_REPORT_ACTUAL_SIZE;
-        getreq.has_att_key_id      = true;
-        getreq.att_key_id.data     = (uint8_t*)&default_att_key_id;
-        getreq.att_key_id.len      = sizeof(default_att_key_id);
-        getreq.has_qe_report_info  = false; /* used to detect early that QE was spoofed; ignore now */
-        getreq.qe_report_info.data = NULL;
-        getreq.qe_report_info.len  = 0;
-        getreq.buf_size            = SGX_QUOTE_MAX_SIZE;
-        req.getquoteexreq          = &getreq;
+    ret = request_aesm_service(&req, &res);
+    if (ret < 0)
+        return ret;
 
-        ret = request_aesm_service(&req, &res);
-        if (ret < 0)
-            return ret;
-
-        ret = -EPERM;
-        if (!res->getquoteexres) {
-            log_error("AESM service returned wrong message");
-            goto out;
-        }
-
-        Response__GetQuoteExResponse* r = res->getquoteexres;
-        if (r->errorcode == AESM_ATT_KEY_NOT_INITIALIZED) {
-            /* special case, the caller must perform init_quoting_enclave_targetinfo() and retry */
-            ret = -EAGAIN;
-            goto out;
-        }
-        if (r->errorcode != 0) {
-            log_error("AESM service returned error %d", r->errorcode);
-            goto out;
-        }
-
-        if (!r->has_quote || r->quote.len < sizeof(sgx_quote_t)) {
-            log_error("AESM service returned invalid quote");
-            goto out;
-        }
-
-        actual_quote = (sgx_quote_t*)r->quote.data;
-    } else {
-        /* SPID specified, it is EPID attestation */
-        Request__GetQuoteRequest getreq = REQUEST__GET_QUOTE_REQUEST__INIT;
-        getreq.report.data   = (uint8_t*)report;
-        getreq.report.len    = SGX_REPORT_ACTUAL_SIZE;
-        getreq.quote_type    = linkable ? SGX_LINKABLE_SIGNATURE : SGX_UNLINKABLE_SIGNATURE;
-        getreq.spid.data     = (uint8_t*)spid;
-        getreq.spid.len      = sizeof(*spid);
-        getreq.has_nonce     = true;
-        getreq.nonce.data    = (uint8_t*)nonce;
-        getreq.nonce.len     = sizeof(*nonce);
-        getreq.buf_size      = SGX_QUOTE_MAX_SIZE;
-        getreq.has_qe_report = true;
-        getreq.qe_report     = true;
-        req.getquotereq      = &getreq;
-
-        ret = request_aesm_service(&req, &res);
-        if (ret < 0)
-            return ret;
-
-        ret = -EPERM;
-        if (!res->getquoteres) {
-            log_error("AESM service returned wrong message");
-            goto out;
-        }
-
-        Response__GetQuoteResponse* r = res->getquoteres;
-        if (r->errorcode != 0) {
-            log_error("AESM service returned error %d", r->errorcode);
-            goto out;
-        }
-
-        if (!r->has_quote || r->quote.len < sizeof(sgx_quote_t)) {
-            log_error("AESM service returned invalid quote");
-            goto out;
-        }
-
-        actual_quote = (sgx_quote_t*)r->quote.data;
+    ret = -EPERM;
+    if (!res->getquoteexres) {
+        log_error("AESM service returned wrong message");
+        goto out;
     }
+
+    Response__GetQuoteExResponse* r = res->getquoteexres;
+    if (r->errorcode == AESM_ATT_KEY_NOT_INITIALIZED) {
+        /* special case, the caller must perform init_quoting_enclave_targetinfo() and retry */
+        ret = -EAGAIN;
+        goto out;
+    }
+    if (r->errorcode != 0) {
+        log_error("AESM service returned error %d", r->errorcode);
+        goto out;
+    }
+
+    if (!r->has_quote || r->quote.len < sizeof(sgx_quote_t)) {
+        log_error("AESM service returned invalid quote");
+        goto out;
+    }
+
+    actual_quote = (sgx_quote_t*)r->quote.data;
 
     /* Intel SGX SDK implementation of the Quoting Enclave always sets `quote.len` to user-provided
      * `getreq.buf_size` (see above) instead of the actual size. We calculate the actual size here

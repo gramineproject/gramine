@@ -189,8 +189,6 @@ man_pages = [
     ('manpages/gramine-manifest-check', 'gramine-manifest-check', 'Gramine manifest schema validator', [author], 1),
     ('manpages/gramine-ratls', 'gramine-ratls', 'RA-TLS wrapper', [author], 1),
     ('manpages/gramine-sgx-gen-private-key', 'gramine-sgx-gen-private-key', 'Gramine SGX key generator', [author], 1),
-    ('manpages/gramine-sgx-ias-request', 'gramine-sgx-ias-request', 'Submit Intel Attestation Service request', [author], 1),
-    ('manpages/gramine-sgx-ias-verify-report', 'gramine-sgx-ias-verify-report', 'Verify Intel Attestation Service report', [author], 1),
     ('manpages/gramine-sgx-quote-view', 'gramine-sgx-quote-view', 'Display SGX quote', [author], 1),
     ('manpages/gramine-sgx-sigstruct-view', 'gramine-sgx-sigstruct-view', 'Display SGX SIGSTRUCT', [author], 1),
     ('manpages/gramine-sgx-sign', 'gramine-sgx-sign', 'Gramine SIGSTRUCT generator', [author], 1),

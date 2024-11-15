@@ -12,11 +12,13 @@ newer Linux distros.
 
 For details see https://github.com/gramineproject/gramine/issues/1909.
 
-## Building with SGX remote attestation
+## Building without SGX remote attestation
 
-If you want to try out [`/dev/attestation/` files][attestation], you must build
-the example with SGX remote attestation enabled. By default, the example is
-built *without* remote attestation.
+By default, the example is built with [`dcap` attestation][attestation]. To
+build *without* remote attestation (e.g. if you have SGX-capable hardware, but
+not correctly provisioned yet), pass `RA_TYPE=none` argument to `make`
+invocation below. When you build without attestation, most of pseudo-files in
+`/dev/attestation` are not available.
 
 [attestation]: https://gramine.readthedocs.io/en/stable/attestation.html
 
@@ -25,20 +27,6 @@ a working DCAP setup. Then build the example as follows:
 ```
 make SGX=1 RA_TYPE=dcap
 ```
-
-Otherwise, you will probably want to use EPID attestation. For this, you will
-additionally need to provide an SPID and specify whether it is set up for
-linkable quotes or not:
-```
-make SGX=1 RA_TYPE=epid RA_CLIENT_SPID=12345678901234567890123456789012 \
-    RA_CLIENT_LINKABLE=0
-```
-
-The above dummy values will suffice for simple experiments, but if you wish to
-generate real SGX quotes, you will need to provide an [SPID recognized by
-Intel][spid].
-
-[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
 
 # Quick Start
 
