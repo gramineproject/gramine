@@ -2110,8 +2110,7 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg) {
     return retval;
 }
 
-int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len) {
+int ocall_get_quote(const sgx_report_t* report, char** quote, size_t* quote_len) {
     int retval;
     struct ocall_get_quote* ocall_quote_args;
     char* buf = NULL;
@@ -2124,17 +2123,7 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
         goto out;
     }
 
-    if (spid) {
-        COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->is_epid, true);
-        memcpy(&ocall_quote_args->spid, spid, sizeof(*spid));
-    } else {
-        COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->is_epid, false);
-        memset(&ocall_quote_args->spid, 0, sizeof(ocall_quote_args->spid)); /* for sanity */
-    }
-
     memcpy(&ocall_quote_args->report, report, sizeof(*report));
-    memcpy(&ocall_quote_args->nonce, nonce, sizeof(*nonce));
-    COPY_VALUE_TO_UNTRUSTED(&ocall_quote_args->linkable, linkable);
 
     do {
         retval = sgx_exitless_ocall(OCALL_GET_QUOTE, ocall_quote_args);
@@ -2191,7 +2180,7 @@ out:
     return retval;
 }
 
-int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo) {
+int ocall_get_qe_targetinfo(sgx_target_info_t* qe_targetinfo) {
     int retval;
     struct ocall_get_qe_targetinfo* ocall_qe_ti_args;
 
@@ -2203,7 +2192,6 @@ int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo) {
         return -EPERM;
     }
 
-    COPY_VALUE_TO_UNTRUSTED(&ocall_qe_ti_args->is_epid, is_epid);
     memset(&ocall_qe_ti_args->qe_targetinfo, 0, sizeof(ocall_qe_ti_args->qe_targetinfo));
 
     do {

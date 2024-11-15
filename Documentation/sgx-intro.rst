@@ -108,21 +108,22 @@ Linux kernel drivers
 
 For historical reasons, there are three SGX drivers currently (March 2024):
 
-- https://github.com/intel/linux-sgx-driver -- old one, does not support DCAP,
-  deprecated
-
-- https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver
-  -- out-of-tree, supports both non-DCAP software infrastructure (with old EPID
-  remote-attestation technique) and the new DCAP (with new ECDSA and
-  more "normal" PKI infrastructure). Deprecated in favor of the upstreamed
-  driver (see below).
-
 - The upstreamed Linux driver -- SGX support was upstreamed to the Linux
-  mainline starting from 5.11. It currently supports only DCAP attestation.
+  mainline starting from 5.11. It supports only DCAP attestation.
 
   Also, it doesn't require :term:`IAS` and kernel maintainers consider
   non-writable :term:`FLC` MSRs as non-functional SGX:
   https://lore.kernel.org/lkml/20191223094614.GB16710@zn.tnic/
+
+- https://github.com/intel/linux-sgx-driver -- older out-of-tree one, therefore
+  sometimes called "OOT". It's incompatible with kernels >= 5.11, so virtually
+  unuseable on supported distributions.
+
+- https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver
+  -- Newer out-of-tree, supports both non-DCAP software infrastructure (with old
+  EPID remote-attestation technique) and the new DCAP (with new ECDSA and more
+  "normal" PKI infrastructure). Deprecated in favor of the upstreamed driver
+  (see above).
 
 SGX terminology
 ---------------
@@ -340,10 +341,14 @@ SGX terminology
    Enhanced Privacy Identifier
    EPID
 
-      EPID is the attestation protocol originally shipped with SGX. Unlike
+      EPID was the attestation protocol originally shipped with SGX. Unlike
       :term:`DCAP`, a |~| remote verifier making use of the EPID protocol needs
       to contact the :term:`Intel Attestation Service` each time it wishes
       to attest an |~| enclave.
+
+      EPID is deprecated, will be EOL for production environments on 2. |~|
+      April 2025 and is already broken for developer's keys (see `announcement
+      <https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/sgx-ias-using-epid-eol-timeline.html>`__).
 
       Contrary to DCAP, EPID may be understood as "opinionated", with most
       moving parts fixed and tied to services provided by Intel. This is

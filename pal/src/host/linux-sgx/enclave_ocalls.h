@@ -112,11 +112,7 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
 /*!
  * \brief Execute untrusted code in PAL to obtain a quote from the Quoting Enclave.
  *
- * \param      spid       Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
- * \param      linkable   Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
  * \param      report     Enclave report to be sent to the Quoting Enclave.
- * \param      nonce      16B nonce to be included in the quote for freshness; ignored if
- *                        DCAP/ECDSA is used.
  * \param[out] quote      Quote returned by the Quoting Enclave (allocated via malloc() in this
  *                        function; the caller gets the ownership of the quote).
  * \param[out] quote_len  Length of the quote returned by the Quoting Enclave.
@@ -126,13 +122,11 @@ int ocall_ioctl(int fd, unsigned int cmd, unsigned long arg);
  * The obtained quote is not validated in any way (i.e., this function does not check whether the
  * returned quote corresponds to this enclave or whether its contents make sense).
  */
-int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
+int ocall_get_quote(const sgx_report_t* report, char** quote, size_t* quote_len);
 
 /*!
  * \brief Execute untrusted code in PAL to obtain Target Info of the Quoting Enclave (QE).
  *
- * \param      is_epid            True if EPID is used, false if DCAP/ECDSA is used.
  * \param[out] qe_targetinfo      Retrieved Quoting Enclave's target info; buffer must be provided
  *                                by the caller.
  *
@@ -141,7 +135,7 @@ int ocall_get_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* r
  * The obtained QE Target Info is not validated in any way (i.e., this function does not check
  * whether Target Info contents make sense).
  */
-int ocall_get_qe_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo);
+int ocall_get_qe_targetinfo(sgx_target_info_t* qe_targetinfo);
 
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
