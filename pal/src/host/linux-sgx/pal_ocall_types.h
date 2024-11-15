@@ -337,17 +337,12 @@ struct ocall_ioctl {
 };
 
 struct ocall_get_quote {
-    bool              is_epid;
-    sgx_spid_t        spid;
-    bool              linkable;
     sgx_report_t      report;
-    sgx_quote_nonce_t nonce;
     char*             quote;
     size_t            quote_len;
 };
 
 struct ocall_get_qe_targetinfo {
-    bool              is_epid;
     sgx_target_info_t qe_targetinfo;
 };
 
