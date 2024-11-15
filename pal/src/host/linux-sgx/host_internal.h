@@ -82,29 +82,23 @@ int edmm_supported_by_driver(bool* out_supported);
 /*!
  * \brief Retrieve Quoting Enclave's sgx_target_info_t by talking to AESMD.
  *
- * \param      is_epid        Use EPID attestation if true, DCAP/ECDSA if false.
  * \param[out] qe_targetinfo  Retrieved Quoting Enclave's target info.
  *
  * \returns 0 on success, negative error code otherwise.
  */
-int init_quoting_enclave_targetinfo(bool is_epid, sgx_target_info_t* qe_targetinfo);
+int init_quoting_enclave_targetinfo(sgx_target_info_t* qe_targetinfo);
 
 /*!
  * \brief Obtain SGX Quote from the Quoting Enclave (communicate via AESM).
  *
- * \param      spid       Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
- * \param      linkable   Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
  * \param      report     Enclave report to convert into a quote.
- * \param      nonce      16B nonce to be included in the quote for freshness; ignored if
- *                        DCAP/ECDSA is used.
  * \param[out] quote      Quote returned by the Quoting Enclave (allocated via mmap() in this
  *                        function; the caller gets the ownership of the quote).
  * \param[out] quote_len  Length of the quote returned by the Quoting Enclave.
  *
  * \returns 0 on success, negative Linux error code otherwise.
  */
-int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
-                   const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
+int retrieve_quote(const sgx_report_t* report, char** quote, size_t* quote_len);
 
 int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct);
 

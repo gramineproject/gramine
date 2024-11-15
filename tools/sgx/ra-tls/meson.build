@@ -60,26 +60,6 @@ libra_tls_verify_dep = declare_dependency(
     include_directories: pal_sgx_inc,
 )
 
-libra_tls_verify_epid = shared_library('ra_tls_verify_epid',
-    'ra_tls_verify_epid.c',
-
-    link_args: ra_tls_link_args,
-    dependencies: [
-        libra_tls_verify_dep.as_link_whole(),
-        mbedtls_static_dep,
-        sgx_ias_util_dep,
-        sgx_util_dep,
-    ],
-    install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
-)
-if get_option('libc') == 'glibc' and host_has_glibc
-    meson.add_install_script('/bin/sh', '-c',
-        'ln -sf ../../../libra_tls_verify_epid.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
-            get_option('libdir'), get_option('libc')))
-endif
-
 libsecret_prov_attest = shared_library('secret_prov_attest',
     'secret_prov_attest.c',
     'secret_prov_common.c',
@@ -126,27 +106,6 @@ libsecret_prov_verify_dep = declare_dependency(
     link_with: libsecret_prov_verify,
     include_directories: pal_sgx_inc,
 )
-
-libsecret_prov_verify_epid = shared_library('secret_prov_verify_epid',
-    'ra_tls_verify_epid.c',
-
-    link_args: secret_prov_link_args,
-    dependencies: [
-        libsecret_prov_verify_dep.as_link_whole(),
-        mbedtls_static_dep,
-        sgx_ias_util_dep,
-        sgx_util_dep,
-        threads_dep,
-    ],
-    install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
-)
-if get_option('libc') == 'glibc' and host_has_glibc
-    meson.add_install_script('/bin/sh', '-c',
-        'ln -sf ../../../libsecret_prov_verify_epid.so ' +
-        '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
-            get_option('libdir'), get_option('libc')))
-endif
 
 if sgx_dcap_quoteverify_dep.found()
     libra_tls_verify_dcap = shared_library('ra_tls_verify_dcap',
