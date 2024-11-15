@@ -57,7 +57,6 @@ stage('build') {
                 -Ddirect=disabled \
                 -Dsgx=enabled \
                 -Dtests=enabled \
-                -Dsgx_driver=upstream \
                 $MESON_OPTIONS
             ninja -vC build/
         '''

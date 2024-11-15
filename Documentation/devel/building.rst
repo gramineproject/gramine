@@ -73,8 +73,8 @@ Kernel version can be checked using the following command::
        uname -r
 
 If your current kernel version is 5.11 or higher, you have a built-in SGX
-support. The driver is accessible through /dev/sgx_enclave
-and /dev/sgx_provision.
+support. The driver is accessible through :file:`/dev/sgx_enclave`
+and :file:`/dev/sgx_provision`.
 
 If your current kernel version is lower than 5.11, then you have two options:
 
@@ -132,8 +132,7 @@ To build Gramine, you need to first set up the build directory. In the root
 directory of Gramine repo, run the following command (recall that "direct" means
 non-SGX version)::
 
-   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled \
-       -Dsgx_driver=(upstream|oot) -Dsgx_driver_include_path=<path-to-sgx-driver-sources>
+   meson setup build/ --buildtype=release -Ddirect=enabled -Dsgx=enabled
 
 .. note::
 
@@ -152,25 +151,9 @@ Set ``-Ddirect=`` and ``-Dsgx=`` options to ``enabled`` or ``disabled``
 according to whether you built the corresponding PAL (the snippet assumes you
 built both).
 
-The ``-Dsgx_driver`` parameter controls which SGX driver to use:
-
-* ``upstream`` (default) for upstreamed in-kernel driver (mainline Linux kernel
-  5.11+),
-* ``oot`` for non-DCAP, out-of-tree version of the driver.
-
-The ``-Dsgx_driver_include_path`` parameter must point to the absolute path
-where the SGX driver was downloaded or installed in the previous step. For
-example, for the OOT driver installed at the default path, you can specify
-``-Dsgx_driver_include_path="/opt/intel/linux-sgx-driver"``. If this parameter
-is omitted, Gramine's build system will try to determine the right path, so,
-it's usually not needed.
-
-.. note::
-
-   If you have a DCAP driver installed on the system (e.g. on 18.04 Azure),
-   then you can still use the upstream driver and specify the `upstream header
-   file <https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git/plain/arch/x86/include/uapi/asm/sgx.h?h=v5.11>`__.
-   This is because the DCAP and the upstream drivers have compatible APIs.
+Since Gramine 1.9, we only support upstream, in-kernel driver and the
+``-Dsgx_driver`` option, as well as associated ``-Dsgx_driver_include_path`` and
+``-Dsgx_driver_device`` options, are gone.
 
 Set ``-Dlibc`` option to ``musl`` if you wish to build musl instead of glibc
 (which is built by default), or to ``none`` if you do not want to build any
@@ -303,8 +286,8 @@ Protect this key and do not disclose it to anyone::
 
 After signing the application's manifest, users may ship the application and
 Gramine binaries, along with an SGX-specific manifest (``.manifest.sgx``
-extension), the SIGSTRUCT signature file (``.sig`` extension), and the
-EINITTOKEN file (``.token`` extension) to execute on another SGX-enabled host.
+extension), the SIGSTRUCT signature file (``.sig`` extension) to execute on
+another SGX-enabled host.
 
 Advanced: building without network access
 -----------------------------------------
@@ -352,7 +335,7 @@ Proceed with compiling and installing as usual.
 ::
 
     meson setup build/ --prefix=/usr --wrap-mode=nodownload \
-        -Ddirect=enabled -Dsgx=enabled -Dsgx_driver=upstream
+        -Ddirect=enabled -Dsgx=enabled
     meson compile -C build/
     meson install -C build/
 

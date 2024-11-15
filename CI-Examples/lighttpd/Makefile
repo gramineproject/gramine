@@ -108,7 +108,7 @@ start-gramine-server: all
 .PHONY: clean
 clean:
 	$(RM) \
-		*.manifest *.manifest.sgx *.token *.sig OUTPUT result-* $(CONF_FILES)
+		*.manifest *.manifest.sgx *.sig OUTPUT result-* $(CONF_FILES)
 
 .PHONY: distclean
 distclean: clean

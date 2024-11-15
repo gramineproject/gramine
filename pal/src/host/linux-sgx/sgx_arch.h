@@ -339,28 +339,6 @@ typedef struct _sgx_key_id_t {
     uint8_t id[SGX_KEYID_SIZE];
 } sgx_key_id_t;
 
-typedef struct {
-    uint32_t          valid;
-    uint32_t          reserved1[11];
-    sgx_attributes_t  attributes;
-    sgx_measurement_t mr_enclave;
-    uint8_t           reserved2[32];
-    sgx_measurement_t mr_signer;
-    uint8_t           reserved3[32];
-} launch_body_t;
-
-typedef struct {
-    launch_body_t     body;
-    sgx_cpu_svn_t     cpu_svn_le;
-    sgx_prod_id_t     isv_prod_id_le;
-    sgx_isv_svn_t     isv_svn_le;
-    uint8_t           reserved2[24];
-    sgx_misc_select_t masked_misc_select_le;
-    sgx_attributes_t  attributes_le;
-    sgx_key_id_t      key_id;
-    sgx_mac_t         mac;
-} sgx_arch_token_t;
-
 typedef struct _sgx_report_data_t {
     uint8_t d[SGX_REPORT_DATA_SIZE];
 } sgx_report_data_t;

@@ -67,11 +67,9 @@ void* realloc(void* ptr, size_t new_size);
 int open_sgx_driver(void);
 bool is_wrfsbase_supported(void);
 
-int read_enclave_token(int token_file, sgx_arch_token_t* out_token);
-int create_dummy_enclave_token(sgx_sigstruct_t* sig, sgx_arch_token_t* out_token);
 int read_enclave_sigstruct(char* sig_path, sgx_sigstruct_t* sig);
 
-int create_enclave(sgx_arch_secs_t* secs, sgx_arch_token_t* token);
+int create_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sig);
 
 int add_pages_to_enclave(sgx_arch_secs_t* secs, void* addr, void* user_addr, unsigned long size,
                          enum sgx_page_type type, int prot, bool skip_eextend, const char* comment);
@@ -108,7 +106,7 @@ int init_quoting_enclave_targetinfo(bool is_epid, sgx_target_info_t* qe_targetin
 int retrieve_quote(const sgx_spid_t* spid, bool linkable, const sgx_report_t* report,
                    const sgx_quote_nonce_t* nonce, char** quote, size_t* quote_len);
 
-int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct, sgx_arch_token_t* token);
+int init_enclave(sgx_arch_secs_t* secs, sgx_sigstruct_t* sigstruct);
 
 int sgx_ecall(long ecall_no, void* ms);
 int sgx_raise(int event);

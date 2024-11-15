@@ -151,7 +151,7 @@ check_dcap_fail: app dcap
 .PHONY: clean
 clean:
 	$(RM) -r \
-		*.token *.sig *.manifest.sgx *.manifest server client *.so *.so.* OUTPUT
+		*.sig *.manifest.sgx *.manifest server client *.so *.so.* OUTPUT
 
 .PHONY: distclean
 distclean: clean

@@ -65,8 +65,7 @@ check: all
 .PHONY: clean
 clean:
 	$(RM) -r \
-		$(RUN_DIR) $(DATA_DIR)/images blender.manifest blender.manifest.sgx blender.sig \
-		blender.token
+		$(RUN_DIR) $(DATA_DIR)/images blender.manifest blender.manifest.sgx blender.sig
 
 .PHONY: distclean
 distclean: clean

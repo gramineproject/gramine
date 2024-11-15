@@ -21,14 +21,6 @@ option('asan', type: 'combo', choices: ['disabled', 'enabled'],
 option('libgomp', type: 'combo', choices: ['disabled', 'enabled'],
     description: 'Build patched libgomp (takes long time)')
 
-option('sgx_driver', type: 'combo',
-    choices: ['upstream', 'oot'],
-    description: 'Flavour of the SGX driver')
-option('sgx_driver_include_path', type: 'string',
-    description: 'Path to SGX driver headers (default value depends on sgx_driver)')
-option('sgx_driver_device', type: 'string',
-    description: 'Path to "enclave" device in /dev (default value depends on sgx_driver)')
-
 option('syslibdir', type: 'string',
     description: 'Path to the system library directory')
 
