@@ -21,9 +21,7 @@ int init_qe_targetinfo(void* uptr_qe_targetinfo) {
     return 0;
 }
 
-int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
-                  const sgx_report_data_t* report_data, bool linkable, char** quote,
-                  size_t* quote_len) {
+int sgx_get_quote(const sgx_report_data_t* report_data, char** quote, size_t* quote_len) {
     int ret;
     int retries = 0;
     while (retries < 5) {
@@ -35,7 +33,7 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
         bool new_qe_targetinfo = false;
         if (retries) {
             /* new attempt, need to update QE target info */
-            ret = ocall_get_qe_targetinfo(/*is_epid=*/!!spid, &targetinfo);
+            ret = ocall_get_qe_targetinfo(&targetinfo);
             if (ret < 0) {
                 log_error("Failed to get QE target info (error code=%d)", ret);
                 return unix_to_pal_error(ret);
@@ -70,7 +68,7 @@ int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
          * In our OCALLs, AESM_ATT_KEY_NOT_INITIALIZED is transformed into EAGAIN, and
          * INIT_QUOTE_REQUEST corresponds to ocall_get_qe_targetinfo().
          */
-        ret = ocall_get_quote(spid, linkable, &report, nonce, quote, quote_len);
+        ret = ocall_get_quote(&report, quote, quote_len);
         if (ret < 0 && ret != -EAGAIN) {
             log_error("Failed to get quote (error code=%d)", ret);
             return unix_to_pal_error(ret);

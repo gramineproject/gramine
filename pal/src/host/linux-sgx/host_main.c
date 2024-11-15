@@ -985,8 +985,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         /* initialize communication with Quoting Enclave only if app requests attestation */
         log_debug("Using SGX attestation type \"%s\"",
                   attestation_type_to_str(enclave->attestation_type));
-        bool is_epid = enclave->attestation_type == SGX_ATTESTATION_EPID;
-        ret = init_quoting_enclave_targetinfo(is_epid, &qe_targetinfo);
+        ret = init_quoting_enclave_targetinfo(&qe_targetinfo);
         if (ret < 0)
             return ret;
     }

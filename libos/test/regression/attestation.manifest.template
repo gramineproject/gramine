@@ -14,9 +14,7 @@ sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '8' }}
 sgx.debug = true
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 
-sgx.remote_attestation = "{{ env.get('RA_TYPE', 'none') }}"
-sgx.ra_client_spid = "{{ env.get('RA_CLIENT_SPID', '') }}"
-sgx.ra_client_linkable = {{ 'true' if env.get('RA_CLIENT_LINKABLE', '0') == '1' else 'false' }}
+sgx.remote_attestation = "dcap"
 
 sgx.trusted_files = [
   "file:{{ gramine.runtimedir(libc) }}/",
