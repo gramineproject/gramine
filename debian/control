@@ -48,13 +48,14 @@ Depends:
  python3-voluptuous,
 Recommends:
  gramine-ratls-dcap,
- gramine-ratls-epid,
 Conflicts:
  gramine-oot,
+ gramine-ratls-epid,
 Replaces:
  gramine-dcap (<< 1.4~),
 Breaks:
  gramine-dcap (<< 1.4~),
+ gramine-ratls-epid,
 
 Package: gramine-ratls-dcap
 Architecture: amd64
@@ -63,13 +64,6 @@ Depends:
  gramine (= ${binary:Version}),
  libsgx-dcap-quote-verify,
 # TODO: add appropriate dependency against libc6, possibly (>= 2.28)
-
-Package: gramine-ratls-epid
-Architecture: amd64
-Description: EPID-based Remote Attestation TLS (RA-TLS) library for Gramine
-Depends:
- gramine (= ${binary:Version}),
-# TODO: libc6
 
 # TODO after deprecating `jammy` and `bookworm`: remove this package
 Package: gramine-dcap

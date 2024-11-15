@@ -38,11 +38,7 @@ fs.mounts = [
     { path = "/tmp/nginx/uwsgi", type = "tmpfs" },
 ]
 
-sgx.remote_attestation = "{{ ra_type }}"
-{%- if ra_type == "epid" %}
-sgx.ra_client_spid = "{{ ra_client_spid }}"
-sgx.ra_client_linkable = {{ 'true' if ra_client_linkable else 'false' }}
-{%- endif %}
+sgx.remote_attestation = "dcap"
 
 sgx.edmm_enable = {{ "true" if env.get("EDMM", "0") | int > 0 else "false" }}
 sys.enable_sigterm_injection = true
