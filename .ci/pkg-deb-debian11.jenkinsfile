@@ -5,6 +5,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename '.ci/debian11.dockerfile'
+                    args "--security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json"
                     reuseNode true
                 }
             }
@@ -16,7 +17,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename '.ci/debian11.dockerfile'
-                    args '--network=none'
+                    args "--security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json --network=none"
                     reuseNode true
                 }
             }
