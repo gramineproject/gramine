@@ -143,12 +143,12 @@ enclave_entry:
     popfq
 
     # Clear "extended" state (FPU aka x87, SSE, AVX, ...).
-    # TODO: We currently clear only state covered by FXRSTOR but not by XRSTOR (e.g., no clearing of
-    #       YMM/ZMM regs). This is because we didn't read the value of XFRM yet, so we don't know
-    #       whether XRSTOR is safe at this point.
-    leaq g_xsave_reset_state(%rip), %rax
-    fxrstor (%rax)
+    movq %rdx, %rbx
+    mov $0xffffffff, %eax
+    mov %eax, %edx
+    xrstor64 g_xsave_reset_state(%rip)
     xorq %rax, %rax
+    movq %rbx, %rdx
 
     # register states need to be carefully checked, so we move handling to handle_ecall() in C code
     callq handle_ecall
@@ -682,16 +682,10 @@ sgx_ocall:
     #
     # g_pal_linuxsgx_state.enclave_info.attributes.xfrm will always be zero before init_enclave has
     # been called by pal_linux_main. So during early init nothing should use features not covered by
-    # fxrstor, like AVX.
-    cmpl $0, g_xsave_enabled(%rip)
-    jne 1f
-    fxrstor64 g_xsave_reset_state(%rip)
-    jmp 2f
-1:
+    # xrstor, like AVX.
     mov $0xffffffff, %eax
     mov %eax, %edx
     xrstor64 g_xsave_reset_state(%rip)
-2:
 
 #ifdef DEBUG
     # Store pointer to context in RDX, for the SGX profiler.
@@ -864,10 +858,6 @@ _restore_sgx_context:
     .type __save_xregs, @function
 __save_xregs:
     .cfi_startproc
-    movl g_xsave_enabled(%rip), %eax
-    cmpl $0, %eax
-    jz 1f
-
     # clear XSAVE area header
     movq $0, XSAVE_HEADER_OFFSET + 0 * 8(%rdi)
     movq $0, XSAVE_HEADER_OFFSET + 1 * 8(%rdi)
@@ -881,9 +871,6 @@ __save_xregs:
     movl $0xffffffff, %eax
     movl $0xffffffff, %edx
     xsave64 (%rdi)
-    jmp *%r11
-1:
-    fxsave64 (%rdi)
     jmp *%r11
     .cfi_endproc
 
@@ -909,16 +896,9 @@ save_xregs:
     .type __restore_xregs, @function
 __restore_xregs:
     .cfi_startproc
-    movl g_xsave_enabled(%rip), %eax
-    cmpl $0, %eax
-    jz 1f
-
     movl $0xffffffff, %eax
     movl $0xffffffff, %edx
     xrstor64 (%rdi)
-    jmp *%r11
-1:
-    fxrstor64 (%rdi)
     jmp *%r11
     .cfi_endproc
 
