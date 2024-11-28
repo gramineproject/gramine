@@ -74,6 +74,20 @@ build time.
 
 # Quick Start
 
+In most of the examples below, you need to tell the client what values it should
+expect for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID` and `ISV_SVN`. One way to
+obtain them is to run `gramine-sgx-sigstruct-view client.sig`.
+
+Each of these variables has to be explicitly set, but you may specify the
+special value ``any`` to skip verifying a particular measurement.
+
+```sh
+export RA_TLS_MRSIGNER=any
+export RA_TLS_MRENCLAVE=any
+export RA_TLS_ISV_PROD_ID=any
+export RA_TLS_ISV_SVN=any
+```
+
 For all examples, we set the following environment variables:
 ```sh
 export RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1
@@ -113,4 +127,10 @@ cd secret_prov_pf
 gramine-sgx ./client
 
 kill %%
+```
+
+- To Run all the flows in one go, you can use the following command:
+
+```sh
+make check_dcap
 ```
