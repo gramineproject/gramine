@@ -74,12 +74,12 @@ build time.
 
 # Quick Start
 
-In most of the examples below, you need to tell the client what values it should
-expect for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID` and `ISV_SVN`. One way to
-obtain them is to run `gramine-sgx-sigstruct-view client.sig`.
+> **Note:** To obtain the values for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID`, and
+ `ISV_SVN`, you can run `gramine-sgx-sigstruct-view client.sig`.
 
-Each of these variables has to be explicitly set, but you may specify the
-special value ``any`` to skip verifying a particular measurement.
+  For testing purposes,
+ you can set these values to `any` to skip verifying a particular measurement.
+
 
 ```sh
 export RA_TLS_MRSIGNER=any
