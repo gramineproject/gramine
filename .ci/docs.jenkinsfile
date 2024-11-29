@@ -5,7 +5,14 @@ pipeline {
     stages {
         stage('build') {
             steps {
-                sh 'make -C Documentation html SPHINXOPTS="-W"'
+                sh '''
+                    cd Documentation
+                    git tag vTEST-FOR-DOCS-PIPELINE
+                    READTHEDOCS=1 READTHEDOCS_VERSION=stable make html SPHINXOPTS="-W"'
+                    make clean
+                    git tag -d vTEST-FOR-DOCS-PIPELINE
+                    make html SPHINXOPTS="-W"'
+                '''
             }
         }
     }
