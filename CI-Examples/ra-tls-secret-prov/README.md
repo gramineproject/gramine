@@ -83,7 +83,7 @@ without worrying about the exact enclave measurements.
 
 ```sh
 export RA_TLS_MRSIGNER=<MRSIGNER of the client enclave>
-export RA_TLS_MRENCLAVE=<MR_ENCLAVE of the client enclave>
+export RA_TLS_MRENCLAVE=<MRENCLAVE of the client enclave>
 export RA_TLS_ISV_PROD_ID=<ISV_PROD_ID of the client enclave>
 export RA_TLS_ISV_SVN=<ISV_SVN of the client enclave>
 ```
@@ -130,7 +130,7 @@ gramine-sgx ./client
 kill %%
 ```
 
-- To run all the 3 examples in one go, you can use the following command:
+- To run all three examples in one go, you can use the following command:
 
 ```sh
 make check_dcap
