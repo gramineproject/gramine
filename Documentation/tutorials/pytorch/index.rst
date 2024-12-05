@@ -85,7 +85,7 @@ user who will decrypt it and analyze its contents.
 Prerequisites
 -------------
 
-- A Linux-based operating system (e.g., Ubuntu 20.04 or later)
+- A Linux-based operating system (e.g., Ubuntu 22.04 or later)
 
 - PyTorch (Python3). PyTorch is a framework for machine learning based on
   Python. Please `install PyTorch <https://pytorch.org/get-started/locally/>`__
@@ -93,14 +93,14 @@ Prerequisites
   the compute platform).
 
 - Gramine with DCAP support. DCAP software infrastructure must also be
-   installed.
-
-Please refer to the `Gramine Attestation Documentation
-<https://gramine.readthedocs.io/en/latest/attestation.html>`__ for more details.
+  installed. Please refer to the `Gramine Attestation Documentation
+  <https://gramine.readthedocs.io/en/latest/attestation.html>`__ for more
+  details.
 
 .. warning::
 
-   After running Ubuntu 24.04, it is required to use a virtual environment to manage
+   If you're on a recent distro that implements PEP 668 (e.g., Debian 12,
+   Ubuntu 24.04), it is required to use a virtual environment to manage
    dependencies. You can create and activate a virtual environment with the
    following commands:
 
@@ -122,7 +122,7 @@ example as a basis and will improve it to protect all user files.
 
 Go to the directory with Gramine's PyTorch example::
 
-   git clone https://github.com/gramineproject/examples.git
+   git clone --depth 1 https://github.com/gramineproject/examples.git
    cd examples/pytorch
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
@@ -375,7 +375,7 @@ We will use the reference implementation of the Secret Provisioning server found
 under ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine
 repository), so let's build the secret provisioning server::
 
-   git clone https://github.com/gramineproject/gramine.git
+   git clone --depth 1 https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
    make app dcap RA_TYPE=dcap
 
