@@ -701,8 +701,6 @@ int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_s
         return PAL_ERROR_INVAL;
 
     enum sgx_attestation_type attestation_type;
-    sgx_spid_t spid;
-    bool linkable = false;
 
     ret = parse_attestation_type(g_pal_public_state.manifest_root, &attestation_type);
     if (ret < 0) {
@@ -710,23 +708,9 @@ int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_s
         return unix_to_pal_error(ret);
     }
 
-    if (attestation_type == SGX_ATTESTATION_EPID) {
-        ret = parse_attestation_epid_params(g_pal_public_state.manifest_root, &spid, &linkable);
-        if (ret < 0) {
-            /* error was already printed by the called func */
-            return unix_to_pal_error(ret);
-        }
-    }
-
-    sgx_quote_nonce_t nonce;
-    ret = _PalRandomBitsRead(&nonce, sizeof(nonce));
-    if (ret < 0)
-        return ret;
-
     char* pal_quote = NULL;
     size_t pal_quote_size = 0;
-    ret = sgx_get_quote(attestation_type == SGX_ATTESTATION_EPID ? &spid : NULL, &nonce,
-                        user_report_data, linkable, &pal_quote, &pal_quote_size);
+    ret = sgx_get_quote(user_report_data, &pal_quote, &pal_quote_size);
     if (ret < 0)
         return ret;
 

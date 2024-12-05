@@ -219,10 +219,6 @@ Additional build options
   (``ra_tls_verify_dcap.so``), build with :command:`meson -Ddcap=enabled` option.
   See `RA-TLS example's README <https://github.com/gramineproject/gramine/blob/master/CI-Examples/ra-tls-mbedtls/README.md>`__.
 
-  .. note::
-     EPID version of RA-TLS library (``ra_tls_verify_epid.so``) is built by
-     default.
-
 - To create a debug build, run :command:`meson --buildtype=debug`. This adds
   debug symbols in all Gramine components, builds them without optimizations,
   and enables detailed debug logs in Gramine.

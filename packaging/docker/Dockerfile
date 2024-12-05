@@ -19,7 +19,6 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y gramine \
     sgx-aesm-service \
     libsgx-aesm-launch-plugin \
-    libsgx-aesm-epid-plugin \
     libsgx-aesm-quote-ex-plugin \
     libsgx-aesm-ecdsa-plugin \
     libsgx-dcap-quote-verify \

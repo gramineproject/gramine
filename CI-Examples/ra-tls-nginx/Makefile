@@ -1,7 +1,6 @@
 # Copyright (C) 2023 Gramine contributors
 # SPDX-License-Identifier: BSD-3-Clause
 
-RA_TYPE ?= dcap
 ARCH_LIBDIR ?= /lib/$(shell $(CC) -dumpmachine)
 
 ifeq ($(DEBUG),1)
@@ -17,9 +16,6 @@ all: nginx.manifest.sgx nginx.sig
 	gramine-manifest \
 		-Dentrypoint=$$(command -v gramine-ratls) \
 		-Dlog_level=$(GRAMINE_LOG_LEVEL) \
-		-Dra_type=$(RA_TYPE) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		$< > $@
 

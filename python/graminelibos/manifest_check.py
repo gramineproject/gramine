@@ -96,9 +96,7 @@ GramineManifestSchema = Schema({
             'with_stack': bool,
             'frequency': int,
         },
-        'ra_client_linkable': bool,
-        'ra_client_spid': str,
-        'remote_attestation': Any('none', 'dcap', 'epid'),
+        'remote_attestation': Any('none', 'dcap'),
         'seal_key': {
             'flags_mask': _mask64,
             'xfrm_mask': _mask64,

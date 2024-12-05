@@ -15,8 +15,7 @@ stage('test') {
         try {
             sh '''
                 cd libos/test/regression
-                RA_TYPE=$RA_TYPE RA_CLIENT_SPID=${ra_client_spid} \
-                    gramine-test -n tests${GRAMINE_MUSL+_musl}.toml build -v
+                gramine-test -n tests${GRAMINE_MUSL+_musl}.toml build -v
                 python3 -m pytest -v --junit-xml libos-regression.xml
             '''
         } finally {

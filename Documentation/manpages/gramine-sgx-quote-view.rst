@@ -29,6 +29,8 @@ Command line arguments
 Example
 =======
 
+.. TODO: get a quote from DCAP, not from EPID
+
 .. code-block:: sh
 
     $ gramine-sgx-quote-view -m gr.quote

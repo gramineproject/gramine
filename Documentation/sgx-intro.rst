@@ -90,6 +90,8 @@ Official documentation
   <https://www.intel.com/content/dam/www/public/us/en/documents/manuals/64-ia-32-architectures-software-developer-vol-3d-part-4-manual.pdf>`__
 - `SDK for Linux <https://01.org/intel-software-guard-extensions/downloads>`__
   (download of both the binaries and the documentation)
+- `PCS API Documentation <https://api.portal.trustedservices.intel.com/content/documentation.html>`__
+- `PCK Cert Profile <https://api.trustedservices.intel.com/documents/Intel_SGX_PCK_Certificate_CRL_Spec-1.5.pdf>`__ (esp. section 1.1.1 "Terminology")
 
 Academic research
 -----------------
@@ -108,21 +110,22 @@ Linux kernel drivers
 
 For historical reasons, there are three SGX drivers currently (March 2024):
 
-- https://github.com/intel/linux-sgx-driver -- old one, does not support DCAP,
-  deprecated
-
-- https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver
-  -- out-of-tree, supports both non-DCAP software infrastructure (with old EPID
-  remote-attestation technique) and the new DCAP (with new ECDSA and
-  more "normal" PKI infrastructure). Deprecated in favor of the upstreamed
-  driver (see below).
-
 - The upstreamed Linux driver -- SGX support was upstreamed to the Linux
-  mainline starting from 5.11. It currently supports only DCAP attestation.
+  mainline starting from 5.11. It supports only DCAP attestation.
 
   Also, it doesn't require :term:`IAS` and kernel maintainers consider
   non-writable :term:`FLC` MSRs as non-functional SGX:
   https://lore.kernel.org/lkml/20191223094614.GB16710@zn.tnic/
+
+- https://github.com/intel/linux-sgx-driver -- older out-of-tree one, therefore
+  sometimes called "OOT". It's incompatible with kernels >= 5.11, so virtually
+  unuseable on supported distributions.
+
+- https://github.com/intel/SGXDataCenterAttestationPrimitives/tree/master/driver
+  -- Newer out-of-tree, supports both non-DCAP software infrastructure (with old
+  EPID remote-attestation technique) and the new DCAP (with new ECDSA and more
+  "normal" PKI infrastructure). Deprecated in favor of the upstreamed driver
+  (see above).
 
 SGX terminology
 ---------------
@@ -340,10 +343,14 @@ SGX terminology
    Enhanced Privacy Identifier
    EPID
 
-      EPID is the attestation protocol originally shipped with SGX. Unlike
+      EPID was the attestation protocol originally shipped with SGX. Unlike
       :term:`DCAP`, a |~| remote verifier making use of the EPID protocol needs
       to contact the :term:`Intel Attestation Service` each time it wishes
       to attest an |~| enclave.
+
+      EPID is deprecated, will be EOL for production environments on 2. |~|
+      April 2025 and is already broken for developer's keys (see `announcement
+      <https://www.intel.com/content/www/us/en/developer/articles/technical/software-security-guidance/resources/sgx-ias-using-epid-eol-timeline.html>`__).
 
       Contrary to DCAP, EPID may be understood as "opinionated", with most
       moving parts fixed and tied to services provided by Intel. This is
@@ -371,8 +378,8 @@ SGX terminology
             infrastructure (after initial setup).
 
          :term:`SPID`
-            An identifier one can obtain from Intel, required to make use of EPID
-            attestation.
+            An identifier one could have obtained from Intel (while EPID was
+            operational), required to make use of EPID attestation.
 
    Attestation evidence
 
@@ -574,6 +581,32 @@ SGX terminology
 
          :term:`Architectural Enclaves`
 
+   Provisioning Certification Key
+   PCK
+
+      Signing key available to :term:`Provisioning Certification Enclave`
+      (:term:`PCE`). The key is unique to the processor package or platform
+      instance and its Trusted Computing Base (HW and PCE). The public part of
+      the key is distributed as a :term:`PCK Certificate`.
+
+      .. seealso::
+
+         :term:`PCK Certificate`
+
+         :term:`Provisioning Certification Enclave`
+            Architectural Enclave that uses this key to sign :term:`Quoting
+            Enclave`\ 's attestation key.
+
+   PCK Certificate
+
+      An X.509 certificate that signs :term:`PCK`. It chains to Intel's SGX Root
+      CA Certificate.
+
+      .. seealso::
+
+         https://api.trustedservices.intel.com/documents/Intel_SGX_PCK_Certificate_CRL_Spec-1.5.pdf
+            Specification of the certificate profile
+
    Intel Provisioning Service
    IPS
 
@@ -611,6 +644,9 @@ SGX terminology
 
          :term:`IAS`
             Intel Attestation Service, another Internet service.
+
+         https://api.portal.trustedservices.intel.com/content/documentation.html
+            PCS REST API documentation
 
    Attestation policy
 
@@ -723,9 +759,8 @@ SGX terminology
    SPID
 
       An identifier provided by Intel, used together with an |~| :term:`EPID`
-      API key to authenticate to the :term:`Intel Attestation Service`. You can
-      obtain an |~| SPID through Intel's `Trusted Services Portal
-      <https://api.portal.trustedservices.intel.com/EPID-attestation>`_.
+      API key to authenticate to the :term:`Intel Attestation Service`. (Intel
+      no longer provides SPIDs, because :term:`EPID` is deprecated).
 
       See :term:`EPID` for a |~| description of the difference between
       *linkable* and *unlinkable* quotes.

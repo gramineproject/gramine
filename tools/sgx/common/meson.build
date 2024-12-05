@@ -32,25 +32,3 @@ sgx_util_dep = declare_dependency(
         protected_files_inc,
     ],
 )
-
-sgx_ias_util = static_library('sgx_ias_util',
-    'ias.c',
-    'ias.h',
-
-    include_directories: [
-        common_inc,
-    ],
-    dependencies: [
-        cjson_dep,
-        common_utils_dep,
-        libcurl_dep,
-        mbedtls_static_dep,
-    ],
-)
-
-sgx_ias_util_dep = declare_dependency(
-    link_with: sgx_ias_util,
-    include_directories: [
-        include_directories('.'),
-    ],
-)

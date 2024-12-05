@@ -5,13 +5,13 @@ examples of servers and clients written against the Secret Provisioning
 library.
 
 These examples use the Secret Provisioning library `secret_prov_attest.so` for
-the clients and `secret_prov_verify_epid.so`/`secret_prov_verify_dcap.so` for
-the servers. These libraries are installed together with Gramine (but for DCAP
-version, you need `meson setup ... -Ddcap=enabled`). For DCAP attestation, the
-DCAP software infrastructure must be installed and work correctly on the host.
+the clients and `secret_prov_verify_dcap.so` for the servers. These libraries
+are installed together with Gramine (you need `meson setup ... -Ddcap=enabled`,
+which is the default). The DCAP software infrastructure must be installed and
+work correctly on the host.
 
-The current example works with both EPID (IAS) and ECDSA (DCAP) remote
-attestation schemes. For more documentation, refer to
+The current example works only with ECDSA (DCAP) remote attestation schemes.
+For more documentation, refer to
 https://gramine.readthedocs.io/en/stable/attestation.html.
 
 ## Secret Provisioning servers
@@ -32,10 +32,6 @@ servers listen for client connections. For each connected client, the servers
 verify the client's RA-TLS certificate and the embedded SGX quote and, if
 verification succeeds, sends secrets back to the client (e.g. the master key
 for encrypted files in `secret_prov_pf` example).
-
-There are two versions of each server: the EPID one and the DCAP one. Each of
-them links against the corresponding EPID/DCAP secret-provisioning library at
-build time.
 
 Because this example builds and uses debug SGX enclaves (`sgx.debug` is set
 to `true`), we use environment variable `RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE=1`.
@@ -82,29 +78,10 @@ export RA_TLS_ALLOW_HW_CONFIG_NEEDED=1
 export RA_TLS_ALLOW_SW_HARDENING_NEEDED=1
 ```
 
-- Secret Provisioning flows, EPID-based (IAS) attestation (you will need to
-  provide an [SPID and the corresponding IAS API keys][spid]):
-
-[spid]: https://gramine.readthedocs.io/en/stable/sgx-intro.html#term-spid
-
-```sh
-make app epid RA_TYPE=epid RA_CLIENT_SPID=<your SPID> \
-     RA_CLIENT_LINKABLE=<1 if SPID is linkable, else 0>
-
-# test encrypted files client (other examples can be tested similarly)
-cd secret_prov_pf
-RA_TLS_EPID_API_KEY=<your EPID API key> \
-./server_epid wrap_key &
-
-gramine-sgx ./client
-
-kill %%
-```
-
 - Secret Provisioning flows, ECDSA-based (DCAP) attestation:
 
 ```sh
-make app dcap RA_TYPE=dcap
+make app dcap
 
 # test encrypted files client (other examples can be tested similarly)
 cd secret_prov_pf

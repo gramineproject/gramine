@@ -212,8 +212,8 @@ static int test_quote_interface(void) {
 
     sgx_quote_body_t* quote_body = (sgx_quote_body_t*)g_quote;
 
-    if (quote_body->version != /*EPID*/2 && quote_body->version != /*DCAP*/3) {
-        fprintf(stderr, "version of SGX quote is not EPID (2) and not ECDSA/DCAP (3)\n");
+    if (quote_body->version != /*DCAP*/3) {
+        fprintf(stderr, "version of SGX quote is not ECDSA/DCAP (3)\n");
         return FAILURE;
     }
 

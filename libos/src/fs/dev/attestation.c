@@ -23,7 +23,7 @@
 
 /* user_report_data, target_info and quote are opaque blobs of predefined maximum sizes. Currently
  * these sizes are overapproximations of SGX requirements (report_data is 64B, target_info is
- * 512B, EPID quote is about 1KB, DCAP quote is about 4KB). */
+ * 512B, DCAP quote is about 4KB). */
 #define USER_REPORT_DATA_MAX_SIZE 256
 #define TARGET_INFO_MAX_SIZE      1024
 #define QUOTE_MAX_SIZE            8192

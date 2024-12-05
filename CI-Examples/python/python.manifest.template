@@ -40,8 +40,6 @@ sgx.enclave_size = "1G"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '32' }}
 
 sgx.remote_attestation = "{{ ra_type }}"
-sgx.ra_client_spid = "{{ ra_client_spid }}"
-sgx.ra_client_linkable = {{ 'true' if ra_client_linkable == '1' else 'false' }}
 
 sgx.trusted_files = [
   "file:{{ entrypoint }}",

@@ -15,9 +15,7 @@ ifeq ($(SGX),1)
 all: python.manifest.sgx python.sig
 endif
 
-RA_TYPE ?= none
-RA_CLIENT_SPID ?=
-RA_CLIENT_LINKABLE ?= 0
+RA_TYPE ?= dcap
 
 python.manifest: python.manifest.template
 	gramine-manifest \
@@ -25,8 +23,6 @@ python.manifest: python.manifest.template
 		-Darch_libdir=$(ARCH_LIBDIR) \
 		-Dentrypoint=$(realpath $(shell sh -c "command -v python3")) \
 		-Dra_type=$(RA_TYPE) \
-		-Dra_client_spid=$(RA_CLIENT_SPID) \
-		-Dra_client_linkable=$(RA_CLIENT_LINKABLE) \
 		$< >$@
 
 python.manifest.sgx python.sig &: python.manifest

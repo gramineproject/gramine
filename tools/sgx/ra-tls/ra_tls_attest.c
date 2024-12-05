@@ -5,9 +5,9 @@
  * \file
  *
  * This file contains the implementation of server-side attestation for TLS libraries. It contains
- * functions to create a self-signed RA-TLS certificate with an SGX quote embedded in it. It works
- * with both EPID-based (quote v2) and ECDSA-based (quote v3 or DCAP) SGX quotes (in fact, it is
- * agnostic to the format of the SGX quote).
+ * functions to create a self-signed RA-TLS certificate with an SGX quote embedded in it. It is
+ * agnostic to the format of the SGX quote, formerly worked with both
+ * EPID-based (quote v2) and ECDSA-based (quote v3 or DCAP) SGX quotes.
  *
  * This file is part of the RA-TLS attestation library which is typically linked into server
  * applications. This library is *not* thread-safe.

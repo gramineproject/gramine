@@ -713,16 +713,13 @@ static long sgx_ocall_ioctl(void* args) {
 
 static long sgx_ocall_get_quote(void* args) {
     struct ocall_get_quote* ocall_quote_args = args;
-    return retrieve_quote(ocall_quote_args->is_epid ? &ocall_quote_args->spid : NULL,
-                          ocall_quote_args->linkable, &ocall_quote_args->report,
-                          &ocall_quote_args->nonce, &ocall_quote_args->quote,
+    return retrieve_quote(&ocall_quote_args->report, &ocall_quote_args->quote,
                           &ocall_quote_args->quote_len);
 }
 
 static long sgx_ocall_get_qe_targetinfo(void* args) {
     struct ocall_get_qe_targetinfo* ocall_qe_ti_args = args;
-    return init_quoting_enclave_targetinfo(ocall_qe_ti_args->is_epid,
-                                           &ocall_qe_ti_args->qe_targetinfo);
+    return init_quoting_enclave_targetinfo(&ocall_qe_ti_args->qe_targetinfo);
 }
 
 static long sgx_ocall_edmm_modify_pages_type(void* _args) {

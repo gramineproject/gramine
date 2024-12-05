@@ -60,25 +60,13 @@ typedef struct _sgx_quote_t {
     uint8_t signature[];
 } sgx_quote_t;
 
-typedef uint8_t sgx_spid_t[16];
-typedef uint8_t sgx_quote_nonce_t[16];
-
-enum {
-    SGX_UNLINKABLE_SIGNATURE,
-    SGX_LINKABLE_SIGNATURE
-};
-
-/* EPID SGX quotes are ~1K in size, DCAP SGX quotes ~4K, overapproximate to 8K */
+/* DCAP SGX quotes are ~4K in size, overapproximate to 8K */
 #define SGX_QUOTE_MAX_SIZE 8192
 
 /*!
  * \brief Obtain SGX Quote from the Quoting Enclave (communicate via AESM).
  *
- * \param      spid         Software provider ID (SPID); if NULL then DCAP/ECDSA is used.
- * \param      nonce        16B nonce to be included in the quote for freshness; ignored if
- *                          DCAP/ECDSA is used.
  * \param      report_data  64B bytestring to be included in the report and the quote.
- * \param      linkable     Quote type (linkable vs unlinkable); ignored if DCAP/ECDSA is used.
  * \param[out] quote        Quote returned by the Quoting Enclave (allocated via malloc() in this
  *                          function; the caller gets the ownership of the quote).
  * \param[out] quote_len    Length of the quote returned by the Quoting Enclave.
@@ -89,9 +77,7 @@ enum {
  * then call out of the enclave to request the corresponding Quote from the Quoting Enclave.
  * Communication is done via AESM service, in the form of protobuf request/response messages.
  */
-int sgx_get_quote(const sgx_spid_t* spid, const sgx_quote_nonce_t* nonce,
-                  const sgx_report_data_t* report_data, bool linkable, char** quote,
-                  size_t* quote_len);
+int sgx_get_quote(const sgx_report_data_t* report_data, char** quote, size_t* quote_len);
 
 int init_qe_targetinfo(void* uptr_qe_targetinfo);
 
