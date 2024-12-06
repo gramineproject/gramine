@@ -122,7 +122,8 @@ example as a basis and will improve it to protect all user files.
 
 Go to the directory with Gramine's PyTorch example::
 
-   git clone --depth 1 https://github.com/gramineproject/examples.git
+
+   git clone --depth 1 `|stable-checkout|` \https://github.com/gramineproject/gramine.git
    cd examples/pytorch
 
 The directory contains a Python script ``pytorchexample.py`` and other relevant
