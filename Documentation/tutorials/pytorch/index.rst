@@ -377,7 +377,7 @@ repository), so let's build the secret provisioning server::
 
 .. parsed-literal::
 
-   git clone --depth 1 |stable-checkout| \https://github.com/gramineproject/examples.git
+   git clone --depth 1 `|stable-checkout|` https://github.com/gramineproject/gramine.git
    cd gramine/CI-Examples/ra-tls-secret-prov
    make app dcap RA_TYPE=dcap
 
