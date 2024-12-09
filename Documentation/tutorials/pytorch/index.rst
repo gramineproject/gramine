@@ -443,7 +443,7 @@ These certificates are dummy auto-generated localhost certificates; in productio
 you would want to generate real certificates for your secret-provisioning server
 and use them.
 
-Now we can launch the secret provisioning server::
+Now we can launch the secret provisioning server:
 
    cd secret_prov_pf
    ./server_dcap ../files/wrap_key &
