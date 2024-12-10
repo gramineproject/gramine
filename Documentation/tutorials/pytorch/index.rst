@@ -373,7 +373,7 @@ inference.
 
 We will use the reference implementation of the Secret Provisioning server found
 under ``CI-Examples/ra-tls-secret-prov`` directory (in the core Gramine
-repository), so let's build the secret provisioning server::
+repository), so let's build the secret provisioning server:
 
 .. parsed-literal::
 
@@ -443,7 +443,7 @@ These certificates are dummy auto-generated localhost certificates; in productio
 you would want to generate real certificates for your secret-provisioning server
 and use them.
 
-Now we can launch the secret provisioning server:
+Now we can launch the secret provisioning server::
 
    cd secret_prov_pf
    ./server_dcap ../files/wrap_key &
