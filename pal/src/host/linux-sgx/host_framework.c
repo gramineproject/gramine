@@ -13,27 +13,15 @@ static void*  g_zero_pages      = NULL;
 static size_t g_zero_pages_size = 0;
 
 int open_sgx_driver(void) {
-    const char* paths_to_try[] = {
-        /* DCAP and upstreamed version used different paths in the past. */
-        "/dev/sgx_enclave",
-        "/dev/sgx/enclave",
-    };
-    int ret;
-    for (size_t i = 0; i < ARRAY_SIZE(paths_to_try); i++) {
-        ret = DO_SYSCALL(open, paths_to_try[i], O_RDWR | O_CLOEXEC, 0);
-        if (ret == -EACCES) {
-            log_error("Cannot open %s (permission denied). This may happen because the current "
-                      "user has insufficient permissions to this device.", paths_to_try[i]);
-            return ret;
-        }
-        if (ret >= 0) {
-            g_isgx_device = ret;
-            return 0;
-        }
+    const char* path = "/dev/sgx_enclave";
+    int ret = DO_SYSCALL(open, path, O_RDWR | O_CLOEXEC, 0);
+    if (ret < 0) {
+        log_error("Cannot open %s (%s). This may happen because the current user has insufficient"
+                  "permissions to this device.", path, unix_strerror(ret));
+        return ret;
     }
-    log_error("Cannot open SGX driver device. Please make sure you're using an up-to-date kernel "
-              "or the standalone Intel SGX kernel module is loaded.");
-    return ret;
+    g_isgx_device = ret;
+    return 0;
 }
 
 static void get_optional_sgx_features(uint64_t xfrm, uint64_t xfrm_mask, uint64_t* out_xfrm) {
