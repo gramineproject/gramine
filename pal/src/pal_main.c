@@ -369,7 +369,7 @@ noreturn void pal_main(uint64_t instance_id,       /* current instance id */
                        PAL_HANDLE parent_process,  /* parent process if it's a child */
                        PAL_HANDLE first_thread,    /* first thread handle */
                        const char** arguments,     /* application arguments */
-                       const char** environments   /* environment variables */,
+                       const char** environments,  /* environment variables */
                        void (*post_callback)(void) /* callback into host-specific loader */) {
     if (!instance_id) {
         assert(!parent_process);

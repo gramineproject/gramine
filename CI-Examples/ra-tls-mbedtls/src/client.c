@@ -124,7 +124,7 @@ static int my_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint
                                                  (struct ra_tls_verify_callback_results*)data);
 }
 
-static bool getenv_client_inside_sgx() {
+static bool getenv_client_inside_sgx(void) {
     char* str = getenv("RA_TLS_CLIENT_INSIDE_SGX");
     if (!str)
         return false;
