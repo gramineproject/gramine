@@ -200,3 +200,10 @@ Meson
    tied to the script name (see :file:`meson.build` there). The scripts should
    be written in Python except for things that clearly benefit from being
    written in ``sh``.
+
+Tools outputs
+-------------
+
+When writing a Gramine tool which outputs data (e.g. dumps some SGX structures)
+please follow the formatting and conventions used in
+:program:`gramine-sgx-sigstruct-view`.
