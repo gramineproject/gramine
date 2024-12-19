@@ -551,7 +551,7 @@ out_update:
 
 out:
     if (buf == g_sendfile_buf)
-        __atomic_store_n(&g_sendfile_buf_in_use, 0, __ATOMIC_RELEASE);
+        __atomic_store_n(&g_sendfile_buf_in_use, false, __ATOMIC_RELEASE);
     else
         free(buf);
     put_handle(in_hdl);
