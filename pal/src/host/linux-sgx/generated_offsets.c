@@ -106,7 +106,7 @@ const struct generated_offset generated_offsets[] = {
 
     /* struct pal_host_tcb aka PAL_HOST_TCB */
     OFFSET(PAL_HOST_TCB_TCS, pal_host_tcb, tcs),
-    OFFSET(PAL_HOST_TCB_IN_AEX_PROF, pal_host_tcb, is_in_aex_profiling),
+    OFFSET(PAL_HOST_TCB_IN_AEX, pal_host_tcb, is_in_aex),
     OFFSET(PAL_HOST_TCB_EENTER_CNT, pal_host_tcb, eenter_cnt),
     OFFSET(PAL_HOST_TCB_EEXIT_CNT, pal_host_tcb, eexit_cnt),
     OFFSET(PAL_HOST_TCB_AEX_CNT, pal_host_tcb, aex_cnt),
