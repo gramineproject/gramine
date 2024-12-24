@@ -49,7 +49,6 @@ def main(sigfile, verbose, output_format, output):
     elif output_format == "json":
         json.dump(sig_readable, output_txt, indent=4)
     else:
-        # plaintext format imitates the legacy output of `gramine-sgx-get-token` tool
         print('Attributes:', file=output_txt)
         for key, value in sig_readable.items():
             print(f'    {key}: {value}', file=output_txt)
