@@ -17,7 +17,9 @@ int open_sgx_driver(void) {
     int ret = DO_SYSCALL(open, path, O_RDWR | O_CLOEXEC, 0);
     if (ret < 0) {
         log_error("Cannot open %s (%s). This may happen because the current user has insufficient"
-                  "permissions to this device.", path, unix_strerror(ret));
+                  "permissions to this device, your kernel is too old or your machine doesn't "
+                  "support SGX. Use is-sgx-available tool to get more information.",
+                  path, unix_strerror(ret));
         return ret;
     }
     g_isgx_device = ret;
