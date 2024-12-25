@@ -63,8 +63,10 @@ int init_ipc_worker(void);
 
 /*!
  * \brief Terminate the IPC worker thread.
+ *
+ * \param force  Whether to force the termination of the IPC thread
  */
-void terminate_ipc_worker(void);
+void terminate_ipc_worker(bool force);
 
 /*!
  * \brief Establish a one-way IPC connection to another process.
