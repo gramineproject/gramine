@@ -51,8 +51,8 @@ bytes.
 NOTE
 ----
 
-The ``tools`` directory in Linux-SGX PAL contains the ``pf_crypt`` utility that
-converts files to/from the protected format.
+The ``tools`` directory contains the ``pf_crypt`` utility that converts files
+to/from the protected format.
 
 Internal protected file format in this version was ported from the `SGX SDK
 <https://github.com/intel/linux-sgx/tree/1eaa4551d4b02677eec505684412dc288e6d6361/sdk/protected_fs>`_.
