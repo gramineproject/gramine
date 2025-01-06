@@ -18,9 +18,6 @@ How to execute
 
 - `gramine-test pytest -v`
 
-Encrypted file tests assume that Gramine was built with SGX enabled (see comment
-in `test_enc.py`).
-
 This test suite automatically creates files-under-test on startup and removes
 them afterwards. When some test fails and you want to debug this failure, it's
 more convenient to skip this automatic removal of files (and manually

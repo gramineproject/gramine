@@ -2,18 +2,10 @@ import filecmp
 import os
 import shutil
 import subprocess
-import unittest
 
 # Named import, so that Pytest does not pick up TC_00_FileSystem as belonging to this module.
 import test_fs
 
-from graminelibos import _CONFIG_SGX_ENABLED
-
-# TODO: While encrypted files are no longer SGX-only, the related tools (gramine-sgx-pf-crypt,
-# gramine-sgx-pf-tamper) are still part of Linux-SGX PAL. As a result, we are able to run the tests
-# with other PALs, but only if Gramine was built with SGX enabled.
-
-@unittest.skipUnless(_CONFIG_SGX_ENABLED, 'Encrypted files tests require SGX to be enabled')
 class TC_50_EncryptedFiles(test_fs.TC_00_FileSystem):
     @classmethod
     def setUpClass(cls):

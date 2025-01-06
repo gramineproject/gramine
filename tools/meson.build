@@ -11,6 +11,10 @@ common_render_defines = [
     '-D', 'BINDIR=@0@'.format(get_option('bindir')),
 ]
 
+subdir('common')
+subdir('pf_crypt')
+subdir('pf_tamper')
+
 if direct
     hostpalpath_direct = get_option('prefix') / pkglibdir / 'direct'
     custom_target('gramine-direct',
