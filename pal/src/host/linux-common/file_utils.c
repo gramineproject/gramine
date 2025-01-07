@@ -168,3 +168,71 @@ out:;
 
     return ret;
 }
+
+/* The recovery file is in the format of pairs of 8-byte offsets (physical node numbers) and
+ * encrypted file nodes. This function reads each pair from the recovery file and applies the
+ * encrypted file nodes to the corresponding offsets in the main file. */
+int recover_encrypted_file(int file_fd, int recovery_file_fd, size_t node_size) {
+    long ret;
+    size_t recovery_node_size = sizeof(uint64_t) + node_size;
+    char* recovery_node = NULL;
+
+    ret = DO_SYSCALL(lseek, recovery_file_fd, 0, SEEK_END);
+    if (ret < 0) {
+        log_error("lseek failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    if (ret == 0 || ret % recovery_node_size != 0) {
+        log_error("recovery file size is not right [%lu]", ret);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    size_t nodes_count = ret / recovery_node_size;
+
+    ret = DO_SYSCALL(lseek, recovery_file_fd, 0, SEEK_SET);
+    if (ret < 0) {
+        log_error("lseek failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    recovery_node = malloc(recovery_node_size);
+    if (!recovery_node) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    for (size_t i = 0; i < nodes_count; i++) {
+        ret = read_all(recovery_file_fd, recovery_node, recovery_node_size);
+        if (ret < 0) {
+            log_error("read_all failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        size_t offset = 0;
+        memcpy(&offset, recovery_node, sizeof(uint64_t));
+        ret = DO_SYSCALL(lseek, file_fd, offset * node_size, SEEK_SET);
+        if (ret < 0) {
+            log_error("lseek failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        ret = write_all(file_fd, recovery_node + sizeof(uint64_t), node_size);
+        if (ret < 0) {
+            log_error("write_all failed: %s", unix_strerror(ret));
+            goto out;
+        }
+    }
+
+    ret = DO_SYSCALL(fsync, file_fd);
+    if (ret < 0) {
+        log_error("fsync failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    ret = 0;
+out:
+    free(recovery_node);
+    return (int)ret;
+}

@@ -11,7 +11,7 @@ fs.mounts = [
   { path = "/mounted", uri = "file:tmp" },
 
   { type = "encrypted", path = "/tmp/enc_input", uri = "file:tmp/enc_input" },
-  { type = "encrypted", path = "/tmp/enc_output", uri = "file:tmp/enc_output" },
+  { type = "encrypted", path = "/tmp/enc_output", uri = "file:tmp/enc_output", enable_recovery = true },
   { type = "encrypted", path = "/mounted/enc_input", uri = "file:tmp/enc_input" },
   { type = "encrypted", path = "/mounted/enc_output", uri = "file:tmp/enc_output" },
   { type = "tmpfs", path = "/mnt-tmpfs" },

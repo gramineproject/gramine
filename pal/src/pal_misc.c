@@ -67,3 +67,10 @@ int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
 
     return _PalFreeThenLazyReallocCommittedPages(addr, size);
 }
+
+int PalRecoverEncryptedFile(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
+                            size_t node_size) {
+    assert(file_handle && recovery_file_handle);
+
+    return _PalRecoverEncryptedFile(file_handle, recovery_file_handle, node_size);
+}

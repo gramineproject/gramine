@@ -140,3 +140,5 @@ int ocall_get_qe_targetinfo(sgx_target_info_t* qe_targetinfo);
 int ocall_edmm_restrict_pages_perm(uint64_t addr, size_t count, uint64_t prot);
 int ocall_edmm_modify_pages_type(uint64_t addr, size_t count, uint64_t type);
 int ocall_edmm_remove_pages(uint64_t addr, size_t count);
+
+int ocall_recover_encrypted_file(int fd, int recovery_fd, size_t node_size);

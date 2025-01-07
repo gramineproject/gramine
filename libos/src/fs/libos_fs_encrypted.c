@@ -165,6 +165,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
 
     int ret;
     char* normpath = NULL;
+    PAL_HANDLE recovery_file_pal_handle = NULL;
+    bool maybe_recovery_needed = !create && !pal_handle;
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
@@ -174,7 +176,32 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
             log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
             return pal_to_unix_errno(ret);
         }
+
+        if (enc->enable_recovery) {
+            const char* recovery_file_suffix = "_gramine_recovery";
+            size_t uri_len = strlen(enc->uri);
+            size_t suffix_len = strlen(recovery_file_suffix);
+            size_t recovery_file_uri_len = uri_len + suffix_len + 1;
+            char* recovery_file_uri = malloc(recovery_file_uri_len);
+            if (!recovery_file_uri) {
+                ret = -ENOMEM;
+                goto out;
+            }
+            memcpy(recovery_file_uri, enc->uri, uri_len);
+            memcpy(recovery_file_uri + uri_len, recovery_file_suffix, suffix_len);
+            recovery_file_uri[uri_len + suffix_len] = '\0';
+
+            ret = PalStreamOpen(recovery_file_uri, PAL_ACCESS_RDWR, RECOVERY_FILE_PERM_RW,
+                                PAL_CREATE_TRY, /*options=*/0, &recovery_file_pal_handle);
+            free(recovery_file_uri);
+            if (ret < 0) {
+                log_warning("PalStreamOpen failed: %s", pal_strerror(ret));
+                ret = pal_to_unix_errno(ret);
+                goto out;
+            }
+        }
     }
+    assert(enc->enable_recovery == (recovery_file_pal_handle != NULL));
 
     PAL_STREAM_ATTR pal_attr;
     ret = PalStreamAttributesQueryByHandle(pal_handle, &pal_attr);
@@ -209,7 +236,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         goto out;
     }
     pf_status_t pfs = pf_open(pal_handle, normpath, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
-                              create, &enc->key->pf_key, &pf);
+                              create, &enc->key->pf_key, recovery_file_pal_handle, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_open failed: %s", pf_strerror(pfs));
@@ -217,13 +244,61 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         goto out;
     }
 
+    if (maybe_recovery_needed) {
+        bool recovery_needed;
+        size_t node_size;
+        pfs = pf_get_recovery_info(pf, &recovery_needed, &node_size);
+        if (PF_FAILURE(pfs)) {
+            log_warning("get file recovery info failed: %s", pf_strerror(pfs));
+            ret = -EACCES;
+            goto out;
+        }
+
+        if (recovery_needed) {
+            if (!enc->enable_recovery) {
+                log_warning("%s: file recovery needed but feature disabled; please consider "
+                            "setting 'enable_recovery = true' for the mount", normpath);
+                ret = -EACCES;
+                goto out;
+            }
+
+            log_debug("%s: starting file recovery", normpath);
+
+            ret = PalRecoverEncryptedFile(pal_handle, recovery_file_pal_handle, node_size);
+            if (ret < 0) {
+                log_warning("PalRecoverEncryptedFile failed: %s", pal_strerror(ret));
+                ret = pal_to_unix_errno(ret);
+                goto out;
+            }
+
+            pfs = pf_get_recovery_info(pf, &recovery_needed, /*out_node_size=*/NULL);
+            if (PF_FAILURE(pfs)) {
+                log_warning("get file recovery info: %s", pf_strerror(pfs));
+                ret = -EACCES;
+                goto out;
+            }
+
+            if (recovery_needed) {
+                log_warning("%s: file recovery attempted but failed", normpath);
+                ret = -EACCES;
+                goto out;
+            }
+
+            log_debug("%s: file recovery completed", normpath);
+        }
+    }
+
     enc->pf = pf;
     enc->pal_handle = pal_handle;
+    enc->recovery_file_pal_handle = recovery_file_pal_handle;
     ret = 0;
 out:
     free(normpath);
-    if (ret < 0)
+    if (ret < 0) {
         PalObjectDestroy(pal_handle);
+        if (recovery_file_pal_handle)
+            PalObjectDestroy(recovery_file_pal_handle);
+    }
     return ret;
 }
 
@@ -251,11 +326,21 @@ static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
     pf_status_t pfs = pf_close(enc->pf);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_close failed: %s", pf_strerror(pfs));
+        /* `pf_close` may fail due to a recoverable flush error; keep the recovery file for
+         * potential recovery. */
+        goto out;
     }
 
+    if (enc->recovery_file_pal_handle)
+        (void)PalStreamDelete(enc->recovery_file_pal_handle, PAL_DELETE_ALL);
+
+out:
     enc->pf = NULL;
     PalObjectDestroy(enc->pal_handle);
     enc->pal_handle = NULL;
+    if (enc->recovery_file_pal_handle)
+        PalObjectDestroy(enc->recovery_file_pal_handle);
+    enc->recovery_file_pal_handle = NULL;
     return;
 }
 
@@ -446,7 +531,7 @@ void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_
 }
 
 static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_key* key,
-                                struct libos_encrypted_file** out_enc) {
+                                bool enable_recovery, struct libos_encrypted_file** out_enc) {
     assert(strstartswith(uri, URI_PREFIX_FILE));
 
     if (!key) {
@@ -467,14 +552,18 @@ static int encrypted_file_alloc(const char* uri, struct libos_encrypted_files_ke
     enc->use_count = 0;
     enc->pf = NULL;
     enc->pal_handle = NULL;
+
+    enc->enable_recovery = enable_recovery;
+    enc->recovery_file_pal_handle = NULL;
+
     *out_enc = enc;
     return 0;
 }
 
 int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
-                        struct libos_encrypted_file** out_enc) {
+                        bool enable_recovery, struct libos_encrypted_file** out_enc) {
     struct libos_encrypted_file* enc;
-    int ret = encrypted_file_alloc(uri, key, &enc);
+    int ret = encrypted_file_alloc(uri, key, enable_recovery, &enc);
     if (ret < 0)
         return ret;
 
@@ -490,9 +579,9 @@ int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
 }
 
 int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
-                          struct libos_encrypted_file** out_enc) {
+                          bool enable_recovery, struct libos_encrypted_file** out_enc) {
     struct libos_encrypted_file* enc;
-    int ret = encrypted_file_alloc(uri, key, &enc);
+    int ret = encrypted_file_alloc(uri, key, enable_recovery, &enc);
     if (ret < 0)
         return ret;
 
@@ -510,6 +599,7 @@ void encrypted_file_destroy(struct libos_encrypted_file* enc) {
     assert(enc->use_count == 0);
     assert(!enc->pf);
     assert(!enc->pal_handle);
+    assert(!enc->recovery_file_pal_handle);
     free(enc->uri);
     free(enc);
 }
@@ -762,6 +852,8 @@ BEGIN_CP_FUNC(encrypted_file) {
     new_enc = (struct libos_encrypted_file*)(base + off);
 
     new_enc->use_count = enc->use_count;
+    new_enc->enable_recovery = enc->enable_recovery;
+
     DO_CP_MEMBER(str, enc, new_enc, uri);
 
     lock(&g_keys_lock);
@@ -775,6 +867,12 @@ BEGIN_CP_FUNC(encrypted_file) {
         struct libos_palhdl_entry* entry;
         DO_CP(palhdl_ptr, &enc->pal_handle, &entry);
         entry->phandle = &new_enc->pal_handle;
+    }
+
+    if (enc->recovery_file_pal_handle) {
+        struct libos_palhdl_entry* entry;
+        DO_CP(palhdl_ptr, &enc->recovery_file_pal_handle, &entry);
+        entry->phandle = &new_enc->recovery_file_pal_handle;
     }
     ADD_CP_FUNC_ENTRY(off);
 

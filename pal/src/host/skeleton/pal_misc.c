@@ -82,3 +82,11 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
     __UNUSED(size);
     return PAL_ERROR_NOTIMPLEMENTED;
 }
+
+int _PalRecoverEncryptedFile(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
+                             size_t node_size) {
+    __UNUSED(file_handle);
+    __UNUSED(recovery_file_handle);
+    __UNUSED(node_size);
+    return 0;
+}

@@ -1043,4 +1043,16 @@ void PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
  */
 int PalFreeThenLazyReallocCommittedPages(void* addr, size_t size);
 
+/*!
+ * \brief Recover an encrypted file.
+ *
+ * \param handle                Handle to the file.
+ * \param recovery_file_handle  Handle to the recovery file.
+ * \param node_size             Size of the pf node.
+ *
+ * \returns 0 on success, negative error code on failure.
+ */
+int PalRecoverEncryptedFile(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
+                            size_t node_size);
+
 #undef INSIDE_PAL_H

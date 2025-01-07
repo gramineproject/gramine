@@ -54,3 +54,4 @@ PalDebugLog
 PalGetPalPublicState
 PalGetLazyCommitPages
 PalFreeThenLazyReallocCommittedPages
+PalRecoverEncryptedFile

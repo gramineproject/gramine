@@ -74,6 +74,7 @@ enum {
     OCALL_EDMM_RESTRICT_PAGES_PERM,
     OCALL_EDMM_MODIFY_PAGES_TYPE,
     OCALL_EDMM_REMOVE_PAGES,
+    OCALL_RECOVER_ENCRYPTED_FILE,
     OCALL_NR,
 };
 
@@ -361,6 +362,12 @@ struct ocall_edmm_modify_pages_type {
 struct ocall_edmm_remove_pages {
     uint64_t addr;
     size_t count;
+};
+
+struct ocall_recover_encrypted_file {
+    int fd;
+    int recovery_fd;
+    size_t node_size;
 };
 
 #pragma pack(pop)

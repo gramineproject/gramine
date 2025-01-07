@@ -372,3 +372,6 @@ random bits, to obtain an attestation report and quote, etc.
 
 .. doxygenfunction:: PalFreeThenLazyReallocCommittedPages
    :project: pal
+
+.. doxygenfunction:: PalRecoverEncryptedFile
+   :project: pal
