@@ -119,6 +119,11 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
     if (ret < 0)
         goto out;
 
+    if (strendswith(uri, RECOVERY_FILE_URI_SUFFIX)) {
+        ret = -ENOENT;
+        goto out;
+    }
+
     PAL_STREAM_ATTR pal_attr;
     ret = PalStreamAttributesQuery(uri, &pal_attr);
     if (ret < 0) {
@@ -154,7 +159,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         file_off_t size;
 
         struct libos_encrypted_files_key* key = dent->mount->data;
-        ret = encrypted_file_open(uri, key, &enc);
+        ret = encrypted_file_open(uri, key, dent->mount->enable_recovery, &enc);
         if (ret < 0) {
             if (ret == -EACCES) {
                 /* allow the inode to be created even if the underlying encrypted file is corrupted;
@@ -220,12 +225,19 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
     assert(!dent->inode);
     __UNUSED(flags);
 
-    char* uri;
+    char* uri = NULL;
+    struct libos_inode* inode =  NULL;
+
     int ret = dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         return ret;
 
-    struct libos_inode* inode = get_new_inode(dent->mount, S_IFREG, HOST_PERM(perm));
+    if (strendswith(uri, RECOVERY_FILE_URI_SUFFIX)) {
+        ret = -ENOENT;
+        goto out;
+    }
+
+    inode = get_new_inode(dent->mount, S_IFREG, HOST_PERM(perm));
     if (!inode) {
         ret = -ENOMEM;
         goto out;
@@ -233,7 +245,7 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
 
     struct libos_encrypted_files_key* key = dent->mount->data;
     struct libos_encrypted_file* enc;
-    ret = encrypted_file_create(uri, HOST_PERM(perm), key, &enc);
+    ret = encrypted_file_create(uri, HOST_PERM(perm), key, dent->mount->enable_recovery, &enc);
     if (ret < 0)
         goto out;
 
