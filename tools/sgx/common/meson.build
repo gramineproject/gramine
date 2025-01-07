@@ -6,7 +6,6 @@ sgx_util = static_library('sgx_util',
 
     dependencies: [
         tools_util_dep,
-        common_utils_dep,
     ],
 
     install: true,

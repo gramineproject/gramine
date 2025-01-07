@@ -1,15 +1,13 @@
-pf_util_inc = include_directories('.')
-
-pf_util = static_library('pf_util',
-    'pf_util.c',
-    'pf_util.h',
-
-    c_args: [
-        '-DIN_TOOLS',
+pf_util_dep = declare_dependency(
+    sources: [
+        'pf_util.c',
+        'pf_util.h',
     ],
 
     include_directories: [
-        common_inc,
+        include_directories('.'),
+        tools_common_inc,
+        protected_files_inc,
     ],
 
     dependencies: [
@@ -19,15 +17,7 @@ pf_util = static_library('pf_util',
         protected_files_dep,
     ],
 
-    install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
-)
-
-pf_util_dep = declare_dependency(
-    link_with: pf_util,
-    include_directories: [
-        pf_util_inc,
-        tools_common_inc,
-        protected_files_inc,
+    compile_args: [
+        '-DIN_TOOLS',
     ],
 )
