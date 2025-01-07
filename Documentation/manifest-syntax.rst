@@ -1088,7 +1088,7 @@ Encrypted files
 ::
 
     fs.mounts = [
-      { type = "encrypted", path = "[PATH]", uri = "[URI]", key_name = "[KEY_NAME]" },
+      { type = "encrypted", path = "[PATH]", uri = "[URI]", key_name = "[KEY_NAME]", enable_recovery = [true|false] },
     ]
 
     fs.insecure__keys.[KEY_NAME] = "[32-character hex value]"
@@ -1153,6 +1153,12 @@ Gramine:
    and using the same key obtained via ``/dev/attestation/keys/_sgx_mrenclave``
    in the application is insecure. If you need to derive encryption keys from
    such a "doubly-used" key, you must apply a KDF.
+
+The ``enable_recovery`` mount parameter determines whether file recovery is
+enabled for the mount. If omitted, it defaults to ``false``. This feature allows
+selective enabling or disabling of recovery for different mounted files or
+directories. Note that enabling this feature can negatively impact performance,
+as it writes to a second shadow file for later recovery purposes on each flush.
 
 .. _untrusted-shared-memory:
 

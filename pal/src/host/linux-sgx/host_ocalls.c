@@ -737,6 +737,11 @@ static long sgx_ocall_edmm_restrict_pages_perm(void* _args) {
     return edmm_restrict_pages_perm(args->addr, args->count, args->prot);
 }
 
+static long sgx_ocall_encrypted_file_recovery(void* _args) {
+    struct ocall_encrypted_file_recovery* args = _args;
+    return encrypted_file_recovery(args->fd, args->recovery_fd, args->pos_size, args->node_size);
+}
+
 sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EXIT]                     = sgx_ocall_exit,
     [OCALL_MMAP_UNTRUSTED]           = sgx_ocall_mmap_untrusted,
@@ -788,6 +793,7 @@ sgx_ocall_fn_t ocall_table[OCALL_NR] = {
     [OCALL_EDMM_MODIFY_PAGES_TYPE]   = sgx_ocall_edmm_modify_pages_type,
     [OCALL_EDMM_REMOVE_PAGES]        = sgx_ocall_edmm_remove_pages,
     [OCALL_EDMM_RESTRICT_PAGES_PERM] = sgx_ocall_edmm_restrict_pages_perm,
+    [OCALL_ENCRYPTED_FILE_RECOVERY]  = sgx_ocall_encrypted_file_recovery,
 };
 
 static int rpc_thread_loop(void* arg) {

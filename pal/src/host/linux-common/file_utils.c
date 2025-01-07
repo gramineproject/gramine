@@ -168,3 +168,68 @@ out:;
 
     return ret;
 }
+
+int encrypted_file_recovery(int file_fd, int recovery_file_fd, size_t pos_size, size_t node_size) {
+    long ret;
+    size_t recovery_node_size = pos_size + node_size;
+    char* recovery_node = NULL;
+
+    ret = DO_SYSCALL(lseek, recovery_file_fd, 0, SEEK_END);
+    if (ret < 0) {
+        log_error("lseek failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    if (ret == 0 || ret % recovery_node_size != 0) {
+        log_error("recovery file size is not right [%lu]", ret);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    size_t nodes_count = ret / recovery_node_size;
+
+    ret = DO_SYSCALL(lseek, recovery_file_fd, 0, SEEK_SET);
+    if (ret < 0) {
+        log_error("lseek failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    recovery_node = malloc(recovery_node_size);
+    if (!recovery_node) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    for (size_t i = 0; i < nodes_count; i++) {
+        ret = read_all(recovery_file_fd, recovery_node, recovery_node_size);
+        if (ret < 0) {
+            log_error("read_all failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        size_t pos = 0;
+        memcpy(&pos, recovery_node, pos_size);
+        ret = DO_SYSCALL(lseek, file_fd, pos * node_size, SEEK_SET);
+        if (ret < 0) {
+            log_error("lseek failed: %s", unix_strerror(ret));
+            goto out;
+        }
+
+        ret = write_all(file_fd, recovery_node + pos_size, node_size);
+        if (ret < 0) {
+            log_error("write_all failed: %s", unix_strerror(ret));
+            goto out;
+        }
+    }
+
+    ret = DO_SYSCALL(fsync, file_fd);
+    if (ret < 0) {
+        log_error("fsync failed: %s", unix_strerror(ret));
+        goto out;
+    }
+
+    ret = 0;
+out:
+    free(recovery_node);
+    return (int)ret;
+}

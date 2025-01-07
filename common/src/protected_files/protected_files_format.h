@@ -56,6 +56,7 @@ typedef struct {
     uint8_t    minor_version;
     pf_nonce_t metadata_key_nonce;
     pf_mac_t   metadata_mac; /* GCM mac */
+    uint8_t    update_flag; /* for file recovery */
 } metadata_plaintext_t;
 
 typedef struct {
@@ -94,6 +95,11 @@ typedef struct {
     uint8_t bytes[PF_NODE_SIZE];
 } encrypted_node_t;
 static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");
+
+typedef struct {
+    uint64_t physical_node_number;
+    uint8_t bytes[PF_NODE_SIZE];
+} recovery_node_t;
 
 static_assert(sizeof(mht_node_t) == sizeof(data_node_t), "sizes of MHT and data nodes differ");
 

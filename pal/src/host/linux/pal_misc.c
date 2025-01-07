@@ -101,3 +101,13 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, size_t size) {
     int ret = DO_SYSCALL(madvise, addr, size, MADV_DONTNEED);
     return ret < 0 ? unix_to_pal_error(ret) : 0;
 }
+
+int _PalEncryptedFileRecovery(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
+                              size_t pos_size, size_t node_size) {
+    int ret = encrypted_file_recovery(file_handle->file.fd, recovery_file_handle->file.fd, pos_size,
+                                      node_size);
+    if (ret < 0)
+        return unix_to_pal_error(ret);
+
+    return 0;
+}

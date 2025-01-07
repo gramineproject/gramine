@@ -154,7 +154,7 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
         file_off_t size;
 
         struct libos_encrypted_files_key* key = dent->mount->data;
-        ret = encrypted_file_open(uri, key, &enc);
+        ret = encrypted_file_open(uri, key, dent->mount->enable_recovery, &enc);
         if (ret < 0) {
             if (ret == -EACCES) {
                 /* allow the inode to be created even if the underlying encrypted file is corrupted;
@@ -233,7 +233,7 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
 
     struct libos_encrypted_files_key* key = dent->mount->data;
     struct libos_encrypted_file* enc;
-    ret = encrypted_file_create(uri, HOST_PERM(perm), key, &enc);
+    ret = encrypted_file_create(uri, HOST_PERM(perm), key, dent->mount->enable_recovery, &enc);
     if (ret < 0)
         goto out;
 
