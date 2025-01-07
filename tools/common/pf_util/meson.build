@@ -6,7 +6,6 @@ pf_util_dep = declare_dependency(
 
     include_directories: [
         include_directories('.'),
-        tools_common_inc,
         protected_files_inc,
     ],
 
