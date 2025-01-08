@@ -9,20 +9,20 @@ Encrypted Files in Gramine
 
 With Gramine's :ref:`encrypted-files` feature, Gramine transparently encrypts
 and decrypts files when the application writes and reads the files,
-respectively. To use the encrypted files feature, the user must place integrity-
-and confidentiality-sensitive files (or whole directories) under the
-``encrypted`` FS mount in the Gramine manifest. New files created in the
-``encrypted`` FS mount are automatically treated as encrypted. The format used
-for encrypted and integrity-protected files is borrowed from the "protected
-files" feature of Intel SGX SDK (see the corresponding section in `Intel SGX
-Developer Reference manual
+respectively. By placing files (or whole directories) under the ``encrypted`` FS
+mount in the Gramine manifest, users can protect data with integrity and
+confidentiality guarantees. New files created in the ``encrypted`` FS mount are
+automatically treated as encrypted. The format used for encrypted and
+integrity-protected files is borrowed from the "protected files" feature of
+Intel SGX SDK (see the corresponding section in `Intel SGX Developer Reference
+manual
 <https://download.01.org/intel-sgx/sgx-linux/2.23/docs/Intel_SGX_Developer_Reference_Linux_2.23_Open_Source.pdf>`__).
 
 Each encrypted file is encrypted separately, i.e., Gramine employs file-level
-encryption and not block-level encryption. Each ``encrypted`` FS mount has a
-separate encryption key (more precisely, this is the key-derivation key or KDK).
-More information on the usage of encrypted files can be found in the
-:ref:`encrypted-files` manifest syntax.
+encryption rather than full disk/filesystem encryption. Each ``encrypted`` FS
+mount can have a separate encryption key (more precisely, this is the
+key-derivation key or KDK). More information on the usage of encrypted files can
+be found in the :ref:`encrypted-files` manifest syntax.
 
 The feature was previously called "protected files" or "protected FS", same as
 in Intel SGX SDK. These legacy names may still be found in Gramine codebase.
@@ -45,25 +45,26 @@ security properties:
 - **Integrity of user data**: all user data is read from disk and decrypted,
   with the Message Authentication Code (MAC) verified to detect any data
   tampering.
-- **Matching of file name**: when opening an existing file, the metadata of the
-  to-be-opened file is checked to ensure that the name of the file when created
-  is the same as the name given to the open operation.
+- **Matching of file path**: when opening an existing file, the metadata of the
+  to-be-opened file is checked to ensure that the path of the file when created
+  is the same as the path given to the open operation (to prevent swapping
+  encrypted content between files).
 
-The current implementation does *not* protect against the following attacks:
+The current implementation does *not* protect against the following:
 
 - **Rollback/replay attacks after file close**. The user cannot detect whether
   they have opened an old (but authenticated) version of a file. In other words,
   Gramine does not guarantee the freshness of user data in the file after this
-  file was closed. Note that while the file is opened, the rollback/replay
-  attack is prevented (by always keeping the root hash of a Merkle tree over the
-  file in trusted enclave memory and checking the consistency during accesses,
-  see more details below).
-- **Side-channel attacks**. Some file metadata is not confidentiality-protected,
+  file was closed. Note that while the file is open, the rollback/replay attack
+  is prevented (by always keeping the root hash of a Merkle tree over the file
+  in trusted enclave memory and checking the consistency during accesses, see
+  more details below).
+- **Metadata leaks**. Some file metadata is not confidentiality-protected,
   such as file name, file size, access time, access patterns (e.g., which blocks
   are read/written). This lack of confidentiality protection of metadata could
   be used by attackers to gain sensitive information. See also
-  https://gramine.readthedocs.io/en/stable/devel/features.html#file-systems for
-  additional discussions on file metadata.
+  :doc:`Gramine file systems features <features#file-systems>` for additional
+  discussions on file metadata.
 
 .. note ::
    There is an effort to add rollback/replay attack protection in Gramine. See
@@ -79,7 +80,7 @@ based on:
 - A set of public functions like ``pf_open()``, ``pf_read()``, etc.
 - A set of callbacks like ``cb_read_f()``, ``cb_write_f()``, etc.
 
-There is a glue code that serves as a bridge between the Gramine-agnostic
+There is glue code that serves as a bridge between the Gramine-agnostic
 Encrypted Files subsystem and the rest of Gramine. This glue code calls public
 functions for high-level operations on encrypted files and registers callbacks
 for low-level interactions with the host. E.g., the glue code calls
@@ -114,7 +115,7 @@ Note that before working with a particular encrypted file, the encryption key of
 its corresponding FS mount must be already provisioned.
 
 If Gramine detects tampering or integrity inconsistencies on an encrypted file,
-Grmaine marks the file as corrupted and refuses any operations on this file. In
+Gramine marks the file as corrupted and refuses any operations on this file. In
 particular, the application's operations on the file will return ``-EACCES``.
 
 .. image:: ../img/encfiles/01_encfiles_datastructs.svg
@@ -141,6 +142,9 @@ Crypto used for encrypted files
 - The current implementation of encrypted files uses AES-GCM with 128-bit key
   size for encryption and MAC generation. Thus, all encryption keys are 16B in
   size and all MACs are 16B in size.
+- The current implementation of encrypted files uses AES-GCM for encryption and
+  MAC generation. In AES-GCM, the MAC size is always 16B due to the fixed AES
+  block size. With a 128-bit key size, all encryption keys are 16B.
 
 - Sub-keys are derived from the user-supplied KDK using the `NIST SP800-108
   <https://csrc.nist.gov/pubs/sp/800/108/r1/upd1/final>`__ construction, with
@@ -167,9 +171,9 @@ usages. In the following, we distinguish between the representation of encrypted
 files on host storage (untrusted) and the representation inside the SGX enclave
 (trusted).
 
-An encrypted file is stored on the untrusted host storage in a file with the
-same pathname, but augmented with additional metadata and split into 4KB chunks
-(pages). Each chunk is also referred to as a "node".
+An encrypted file is stored on the untrusted host storage, augmented with
+additional metadata and split into 4KB chunks (pages). Each chunk is also
+referred to as a "node".
 
 .. image:: ../img/encfiles/02_encfiles_representation.svg
    :target: ../img/encfiles/02_encfiles_representation.svg
@@ -277,7 +281,7 @@ Here is a C code snippet of how the calculation is done::
                                 + 1 // MHT root node
                                 + logical_mht_node_number; // MHT nodes in-between
 
-    physical_mht_node_number  = _physical_data_node_number
+    physical_mht_node_number  = physical_data_node_number
                                 - logical_data_node_number % ATTACHED_DATA_NODES_COUNT
                                 - 1;
 
@@ -416,10 +420,10 @@ root MHT node must also be encrypted and flushed.
 
 The root MHT node is already updated with the data node's key and MAC (more
 specifically, only slot 1 of the MHT node's ``decrypted`` array was updated, the
-rest slots contain all-zeros). So it's only a matter of encrypting the root MHT
-node. For this, a new random key is generated (step 5). This key is stored in
-the ``root_mht_node_key`` field of the metadata node's header. Since the header
-will be encrypted, the key will not be leaked.
+rest of the slots contain all-zeros). So it's only a matter of encrypting the
+root MHT node. For this, a new random key is generated (step 5). This key is
+stored in the ``root_mht_node_key`` field of the metadata node's header. Since
+the header will be encrypted, the key will not be leaked.
 
 Now that a key for the root MHT node was generated, the root MHT node can be
 encrypted. Step 6 shows that the AES-GCM encryption happens in the ``encrypted``
@@ -466,7 +470,7 @@ activates the root MHT node representation in enclave memory. The file data will
 be decrypted and then copied into the ``decrypted`` buffer. The root MHT node
 will have the key and MAC for the data-node decryption.
 
-First the steps 1-4 are performed, which correspond to same steps 1-4 in the
+First, the steps 1-4 are performed, which correspond to same steps 1-4 in the
 read flow of the <3KB file. Then in step 5, the root MHT node is copied into the
 enclave memory. The AES-GCM decryption of the root MHT node is performed using
 the ``root_mht_node_key`` key and the comparison against ``root_mht_node_mac``
@@ -495,12 +499,12 @@ Additional details
 ------------------
 
 - Performance optimization: there is a separate LRU cache of nodes for each
-  opened encrypted file. This LRU cache can host up to 48 data or MHT nodes.
-  Note that the metadata node and the root MHT node are *not* hosted in the LRU
-  cache because they are never evicted (i.e., they stay in enclave memory for
-  the whole encrypted-file lifetime). Also note that if a data node is brought
-  into the cache, the whole chain of corresponding MHT nodes is also brought
-  into the cache.
+  open encrypted file. This LRU cache can host up to 48 data or MHT nodes. Note
+  that the metadata node and the root MHT node are *not* kept in the LRU cache
+  because they are never evicted (i.e., they stay in enclave memory for the
+  whole encrypted-file lifetime). Also note that if a data node is brought into
+  the cache, the whole chain of corresponding MHT nodes is also brought into the
+  cache.
 
 - There is *limited* multiprocess support for encrypted files. This means that
   if the same file is accessed concurrently by two Gramine processes (and at
@@ -508,9 +512,9 @@ Additional details
   inaccessible to one of the processes.
 
 - There is no support for file recovery, if the file was only partially written
-  to storage. Gramine will treat this file as corrupted and will return an
-  ``-EACCES`` error. (This is in contrast to Intel SGX SDK which supports file
-  recovery.)
+  to storage when the app abruptly terminated. Gramine will treat this file as
+  corrupted and will return an ``-EACCES`` error. (This is in contrast to Intel
+  SGX SDK which supports file recovery.)
 
 - There is no key rotation scheme. The application must perform key rotation of
   the KDK by itself (by overwriting the ``/dev/attestation/keys/``
