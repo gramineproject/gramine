@@ -70,7 +70,8 @@ build time.
 
 # Quick Start
 
-> **Note:** To obtain the values for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID`, and
+> [!NOTE]
+> To obtain the values for `MRENCLAVE`, `MRSIGNER`, `ISV_PROD_ID`, and
 > `ISV_SVN`, you can run `gramine-sgx-sigstruct-view client.sig`.
 
 For testing purposes, you can set these values to `any` to skip verifying a
