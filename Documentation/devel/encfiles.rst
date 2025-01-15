@@ -508,8 +508,8 @@ Additional details
   least one process writes to the file), the file may become corrupted or
   inaccessible to one of the processes.
 
-- There is no support for file recovery, if the file was only partially written
-  to storage when the app abruptly terminated. Gramine will treat this file as
+- There is no support for file recovery. If the file was only partially written
+  to storage when the app abruptly terminated, Gramine will treat this file as
   corrupted and will return an ``-EACCES`` error. (This is in contrast to Intel
   SGX SDK which supports file recovery.)
 
