@@ -6,5 +6,4 @@ executable('gramine-sgx-quote-view',
     ],
 
     install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
 )
