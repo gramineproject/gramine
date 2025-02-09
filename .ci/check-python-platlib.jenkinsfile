@@ -11,7 +11,7 @@ node() {
     ].each { distro ->
         docker.build(
             "local:${env.BUILD_TAG}", "-f .ci/check-python-platlib-${distro}.dockerfile ."
-        ).inside() {
+        ).inside("--security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json") {
             sh '''
                 python3 -c "import sys; sys.exit('$(python3 ./scripts/get-python-platlib.py /usr/local)' not in sys.path)"
             '''
