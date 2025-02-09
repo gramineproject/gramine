@@ -92,7 +92,7 @@ typedef struct pal_host_tcb {
     sgx_arch_tcs_t* tcs;           /* TCS page of SGX corresponding to thread, for EENTER */
     void* stack;                   /* bottom of stack, for later freeing when thread exits */
     void* alt_stack;               /* bottom of alt stack, for child thread to init alt stack */
-    uint8_t is_in_aex_profiling;   /* non-zero if thread is currently doing AEX profiling */
+    uint8_t is_in_aex;             /* non-zero if thread is currently running AEX code */
     atomic_ulong eenter_cnt;       /* # of EENTERs, corresponds to # of ECALLs */
     atomic_ulong eexit_cnt;        /* # of EEXITs, corresponds to # of OCALLs */
     atomic_ulong aex_cnt;          /* # of AEXs, corresponds to # of interrupts/signals */
@@ -121,5 +121,7 @@ void collect_and_print_sgx_stats(void);
 #ifdef DEBUG
 void maybe_dump_and_reset_stats(void);
 #endif /* DEBUG */
+
+void maybe_raise_pending_signal(void);
 
 #endif /* IN_ENCLAVE */
