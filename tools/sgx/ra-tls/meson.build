@@ -27,7 +27,6 @@ libra_tls_attest = shared_library('ra_tls_attest',
         mbedtls_static_dep,
     ],
     install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 if get_option('libc') == 'glibc' and host_has_glibc
     meson.add_install_script('/bin/sh', '-c',
@@ -46,7 +45,6 @@ libra_tls_verify = static_library('ra_tls_verify',
         sgx_util_dep,
     ],
     install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 if get_option('libc') == 'glibc' and host_has_glibc
     meson.add_install_script('/bin/sh', '-c',
@@ -73,7 +71,6 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
         sgx_util_dep,
     ],
     install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
 )
 if get_option('libc') == 'glibc' and host_has_glibc
     meson.add_install_script('/bin/sh', '-c',
@@ -93,7 +90,6 @@ libsecret_prov_verify = static_library('secret_prov_verify',
         sgx_util_dep,
     ],
     install: true,
-    install_rpath: join_paths(get_option('prefix'), get_option('libdir')),
 )
 if get_option('libc') == 'glibc' and host_has_glibc
     meson.add_install_script('/bin/sh', '-c',
@@ -120,7 +116,6 @@ if sgx_dcap_quoteverify_dep.found()
             sgx_util_dep,
         ],
         install: true,
-        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     if get_option('libc') == 'glibc' and host_has_glibc
         meson.add_install_script('/bin/sh', '-c',
@@ -142,7 +137,6 @@ if sgx_dcap_quoteverify_dep.found()
             sgx_util_dep,
         ],
         install: true,
-        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     if get_option('libc') == 'glibc' and host_has_glibc
         meson.add_install_script('/bin/sh', '-c',
@@ -165,7 +159,6 @@ if sgx_dcap_quoteverify_dep.found()
             threads_dep,
         ],
         install: true,
-        install_rpath: get_option('prefix') / get_option('libdir'),
     )
     if get_option('libc') == 'glibc' and host_has_glibc
         meson.add_install_script('/bin/sh', '-c',
@@ -182,7 +175,6 @@ pkgconfig.generate(
     subdirs: 'gramine',
     libraries: [
         '-L${libdir}',
-        '-Wl,-rpath,${libdir}',
         # RA-TLS consists of multiple independent libs, let user decide which to link
     ],
 )
@@ -194,7 +186,6 @@ pkgconfig.generate(
     subdirs: 'gramine',
     libraries: [
         '-L${libdir}',
-        '-Wl,-rpath,${libdir}',
         # Secret Prov consists of multiple independent libs, let user decide which to link
     ],
 )

@@ -6,5 +6,4 @@ executable('is-sgx-available',
     ],
 
     install: true,
-    install_rpath: get_option('prefix') / get_option('libdir'),
 )

@@ -49,7 +49,6 @@ pkgconfig.generate(
     subdirs: 'gramine',
     libraries: [
         '-L${libdir}',
-        '-Wl,-rpath,${libdir}',
         '-Wl,--start-group',
         '-lmbedcrypto_gramine',
         '-lmbedtls_gramine',
