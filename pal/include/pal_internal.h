@@ -318,6 +318,3 @@ extern int (*g_mem_bkeep_get_vma_info_upcall)(uintptr_t addr, pal_prot_flags_t* 
 
 void _PalGetLazyCommitPages(uintptr_t addr, size_t size, uint8_t* bitvector);
 int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size);
-
-int _PalRecoverEncryptedFile(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
-                             size_t node_size);

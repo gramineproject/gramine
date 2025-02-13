@@ -330,7 +330,8 @@ int pf_encrypt_file(const char* input_path, const char* output_path, const pf_ke
 
     pf_handle_t handle = (pf_handle_t)&output;
     pf_status_t pfs = pf_open(handle, norm_output_path, /*size=*/0, PF_FILE_MODE_WRITE,
-                              /*create=*/true, wrap_key, /*recovery_file_handle=*/NULL, &pf);
+                              /*create=*/true, wrap_key, /*recovery_file_handle=*/NULL,
+                              /*recovery_file_size=*/0, /*try_recover=*/false, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Failed to open output PF: %s\n", pf_strerror(pfs));
         goto out;
@@ -438,7 +439,8 @@ int pf_decrypt_file(const char* input_path, const char* output_path, bool verify
     }
 
     pf_status_t pfs = pf_open((pf_handle_t)&input, norm_input_path, input_size, PF_FILE_MODE_READ,
-                              /*create=*/false, wrap_key, /*recovery_file_handle=*/NULL, &pf);
+                              /*create=*/false, wrap_key, /*recovery_file_handle=*/NULL,
+                              /*recovery_file_size=*/0, /*try_recover=*/false, &pf);
     if (PF_FAILURE(pfs)) {
         ERROR("Opening protected input file failed: %s\n", pf_strerror(pfs));
         goto out;

@@ -2426,33 +2426,3 @@ out:
     sgx_reset_ustack(old_ustack);
     return ret;
 }
-
-int ocall_recover_encrypted_file(int fd, int recovery_fd, size_t node_size) {
-    int retval = 0;
-    struct ocall_recover_encrypted_file* ocall_recover_encrypted_file_args;
-
-    void* old_ustack = sgx_prepare_ustack();
-    ocall_recover_encrypted_file_args = sgx_alloc_on_ustack_aligned(
-        sizeof(*ocall_recover_encrypted_file_args), alignof(*ocall_recover_encrypted_file_args));
-    if (!ocall_recover_encrypted_file_args) {
-        sgx_reset_ustack(old_ustack);
-        return -EPERM;
-    }
-
-    COPY_VALUE_TO_UNTRUSTED(&ocall_recover_encrypted_file_args->fd, fd);
-    COPY_VALUE_TO_UNTRUSTED(&ocall_recover_encrypted_file_args->recovery_fd, recovery_fd);
-    COPY_VALUE_TO_UNTRUSTED(&ocall_recover_encrypted_file_args->node_size, node_size);
-
-    do {
-        retval = sgx_exitless_ocall(OCALL_RECOVER_ENCRYPTED_FILE,
-                                    ocall_recover_encrypted_file_args);
-    } while (retval == -EINTR);
-
-    if (retval < 0 && retval != -EAGAIN && retval != -EWOULDBLOCK && retval != -EBADF &&
-            retval != -EINTR && retval != -EINVAL && retval != -EIO && retval != -EISDIR) {
-        retval = -EPERM;
-    }
-
-    sgx_reset_ustack(old_ustack);
-    return retval;
-}

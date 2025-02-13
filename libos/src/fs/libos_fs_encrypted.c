@@ -166,7 +166,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     int ret;
     char* normpath = NULL;
     PAL_HANDLE recovery_file_pal_handle = NULL;
-    bool maybe_recovery_needed = !create && !pal_handle;
+    size_t recovery_file_size = 0;
+    bool try_recover = !create && !pal_handle;
 
     if (!pal_handle) {
         enum pal_create_mode create_mode = create ? PAL_CREATE_ALWAYS : PAL_CREATE_NEVER;
@@ -199,6 +200,15 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
                 ret = pal_to_unix_errno(ret);
                 goto out;
             }
+
+            PAL_STREAM_ATTR pal_attr;
+            ret = PalStreamAttributesQueryByHandle(recovery_file_pal_handle, &pal_attr);
+            if (ret < 0) {
+                log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+                ret = pal_to_unix_errno(ret);
+                goto out;
+            }
+            recovery_file_size = pal_attr.pending_size;
         }
     }
     assert(enc->enable_recovery == (recovery_file_pal_handle != NULL));
@@ -236,56 +246,13 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         goto out;
     }
     pf_status_t pfs = pf_open(pal_handle, normpath, size, PF_FILE_MODE_READ | PF_FILE_MODE_WRITE,
-                              create, &enc->key->pf_key, recovery_file_pal_handle, &pf);
+                              create, &enc->key->pf_key, recovery_file_pal_handle,
+                              recovery_file_size, try_recover, &pf);
     unlock(&g_keys_lock);
     if (PF_FAILURE(pfs)) {
         log_warning("pf_open failed: %s", pf_strerror(pfs));
         ret = -EACCES;
         goto out;
-    }
-
-    if (maybe_recovery_needed) {
-        bool recovery_needed;
-        size_t node_size;
-        pfs = pf_get_recovery_info(pf, &recovery_needed, &node_size);
-        if (PF_FAILURE(pfs)) {
-            log_warning("get file recovery info failed: %s", pf_strerror(pfs));
-            ret = -EACCES;
-            goto out;
-        }
-
-        if (recovery_needed) {
-            if (!enc->enable_recovery) {
-                log_warning("%s: file recovery needed but feature disabled; please consider "
-                            "setting 'enable_recovery = true' for the mount", normpath);
-                ret = -EACCES;
-                goto out;
-            }
-
-            log_debug("%s: starting file recovery", normpath);
-
-            ret = PalRecoverEncryptedFile(pal_handle, recovery_file_pal_handle, node_size);
-            if (ret < 0) {
-                log_warning("PalRecoverEncryptedFile failed: %s", pal_strerror(ret));
-                ret = pal_to_unix_errno(ret);
-                goto out;
-            }
-
-            pfs = pf_get_recovery_info(pf, &recovery_needed, /*out_node_size=*/NULL);
-            if (PF_FAILURE(pfs)) {
-                log_warning("get file recovery info: %s", pf_strerror(pfs));
-                ret = -EACCES;
-                goto out;
-            }
-
-            if (recovery_needed) {
-                log_warning("%s: file recovery attempted but failed", normpath);
-                ret = -EACCES;
-                goto out;
-            }
-
-            log_debug("%s: file recovery completed", normpath);
-        }
     }
 
     enc->pf = pf;

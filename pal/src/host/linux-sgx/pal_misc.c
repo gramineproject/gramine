@@ -897,13 +897,3 @@ int _PalFreeThenLazyReallocCommittedPages(void* addr, uint64_t size) {
 
     return 0;
 }
-
-int _PalRecoverEncryptedFile(PAL_HANDLE file_handle, PAL_HANDLE recovery_file_handle,
-                             size_t node_size) {
-    int ret = ocall_recover_encrypted_file(file_handle->file.fd, recovery_file_handle->file.fd,
-                                           node_size);
-    if (ret < 0)
-        return unix_to_pal_error(ret);
-
-    return 0;
-}

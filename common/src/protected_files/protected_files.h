@@ -210,7 +210,7 @@ void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
 const char* pf_strerror(int err);
 
 /*!
- * \brief Open a protected file.
+ * \brief Open a protected file, with optional recovery check and process.
  *
  * \param      handle                Open underlying file handle.
  * \param      path                  Path to the file. If NULL and \p create is false, don't check path
@@ -220,13 +220,16 @@ const char* pf_strerror(int err);
  * \param      create                Overwrite file contents if true.
  * \param      key                   Wrap key.
  * \param      recovery_file_handle  (optional) Underlying recovery file handle.
+ * \param      recovery_file_size    Recovery file size.
+ * \param      try_recover           Whether to check for and perform file recovery if needed.
  * \param[out] context               PF context for later calls.
  *
  * \returns PF status.
  */
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
                     pf_file_mode_t mode, bool create, const pf_key_t* key,
-                    pf_handle_t recovery_file_handle, pf_context_t** context);
+                    pf_handle_t recovery_file_handle, uint64_t recovery_file_size,
+                    bool try_cover, pf_context_t** context);
 
 /*!
  * \brief Close a protected file and commit all changes to disk.
@@ -304,15 +307,3 @@ pf_status_t pf_rename(pf_context_t* pf, const char* new_path);
  * \returns PF status.
  */
 pf_status_t pf_flush(pf_context_t* pf);
-
-/*!
- * \brief Get the recovery info of a PF.
- *
- * \param      pf                   PF context.
- * \param[out] out_recovery_needed  (optional) Whether recovery is needed for \p pf.
- * \param[out] out_node_size        (optional) Size of the \p pf node.
- *
- * \returns PF status.
- */
-pf_status_t pf_get_recovery_info(pf_context_t* pf, bool* out_recovery_needed,
-                                 size_t* out_node_size);
