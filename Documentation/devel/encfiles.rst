@@ -508,10 +508,19 @@ Additional details
   least one process writes to the file), the file may become corrupted or
   inaccessible to one of the processes.
 
-- There is no support for file recovery. If the file was only partially written
-  to storage when the app abruptly terminated, Gramine will treat this file as
-  corrupted and will return an ``-EACCES`` error. (This is in contrast to Intel
-  SGX SDK which supports file recovery.)
+- File recovery: Gramine supports recovery for encrypted files, which can be
+  enabled via the ``enable_recovery`` mount parameter in the Gramine manifest.
+  This allows a file to be recovered from a corrupted state (caused by e.g.,
+  incorrect GMACs and/or encryption keys) when it was only partially written to
+  storage due to a fatal error (e.g., abrupt app termination). Similar to Intel
+  SGX SDK’s recovery mechanism, Gramine uses a "shadow" recovery file and a
+  ``has_pending_write`` flag in the metadata node to manage write transactions.
+  During file flush, cached blocks about to change are saved to the recovery
+  file. If an encrypted file is opened with the flag set, a recovery process
+  reverts partial changes using the recovery file, restoring the last known good
+  state. The "shadow" recovery file is cleaned up on file close. Note that
+  enabling this feature can impact performance due to additional writes to the
+  shadow file on each flush.
 
 - There is no key rotation scheme. The application must perform key rotation of
   the KDK by itself (by overwriting the ``/dev/attestation/keys/``

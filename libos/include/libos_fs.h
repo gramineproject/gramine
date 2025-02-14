@@ -62,6 +62,10 @@ struct libos_mount_params {
 
     /* Key name (used by `chroot_encrypted` filesystem), or NULL if not applicable */
     const char* key_name;
+
+    /* Whether to enable file recovery (used by `chroot_encrypted` filesystem), false if not
+     * applicable */
+    bool enable_recovery;
 };
 
 struct libos_fs_ops {
@@ -531,6 +535,8 @@ struct libos_mount {
     struct libos_dentry* root;
 
     void* data;
+
+    bool enable_recovery;
 
     void* cpdata;
     size_t cpsize;

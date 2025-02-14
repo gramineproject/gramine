@@ -17,6 +17,9 @@ struct pf_context {
     pf_file_mode_t mode;           // read-only, write-only or read-write
     bool need_writing;             // whether file was modified and thus needs writing to storage
 
+    pf_handle_t host_recovery_file_handle;  // opaque recovery file handle (e.g. PAL handle) used by
+                                            // callbacks
+
     pf_status_t file_status;       // PF_STATUS_SUCCESS, PF_STATUS_CRYPTO_ERROR, etc.
     pf_status_t last_error;        // FIXME: unclear why this is needed
 
