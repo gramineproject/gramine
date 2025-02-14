@@ -220,7 +220,8 @@ const char* pf_strerror(int err);
  * \param      create                Overwrite file contents if true.
  * \param      key                   Wrap key.
  * \param      recovery_file_handle  (optional) Underlying recovery file handle.
- * \param      recovery_file_size    Recovery file size.
+ * \param      recovery_file_size    (optional) Recovery file size. Must be 0 if
+ *                                   \p recovery_file_handle is not set.
  * \param      try_recover           Whether to check for and perform file recovery if needed.
  * \param[out] context               PF context for later calls.
  *
@@ -229,7 +230,7 @@ const char* pf_strerror(int err);
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
                     pf_file_mode_t mode, bool create, const pf_key_t* key,
                     pf_handle_t recovery_file_handle, uint64_t recovery_file_size,
-                    bool try_cover, pf_context_t** context);
+                    bool try_recover, pf_context_t** context);
 
 /*!
  * \brief Close a protected file and commit all changes to disk.

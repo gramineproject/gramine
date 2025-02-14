@@ -179,18 +179,11 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         }
 
         if (enc->enable_recovery) {
-            const char* recovery_file_suffix = "_gramine_recovery";
-            size_t uri_len = strlen(enc->uri);
-            size_t suffix_len = strlen(recovery_file_suffix);
-            size_t recovery_file_uri_len = uri_len + suffix_len + 1;
-            char* recovery_file_uri = malloc(recovery_file_uri_len);
+            char* recovery_file_uri = alloc_concat(enc->uri, -1, ".gramine_recovery", -1);
             if (!recovery_file_uri) {
                 ret = -ENOMEM;
                 goto out;
             }
-            memcpy(recovery_file_uri, enc->uri, uri_len);
-            memcpy(recovery_file_uri + uri_len, recovery_file_suffix, suffix_len);
-            recovery_file_uri[uri_len + suffix_len] = '\0';
 
             ret = PalStreamOpen(recovery_file_uri, PAL_ACCESS_RDWR, RECOVERY_FILE_PERM_RW,
                                 PAL_CREATE_TRY, /*options=*/0, &recovery_file_pal_handle);
@@ -308,7 +301,6 @@ out:
     if (enc->recovery_file_pal_handle)
         PalObjectDestroy(enc->recovery_file_pal_handle);
     enc->recovery_file_pal_handle = NULL;
-    return;
 }
 
 static int parse_and_update_key(const char* key_name, const char* key_str) {

@@ -446,7 +446,7 @@ static bool ipf_write_recovery_node(pf_context_t* pf, uint64_t physical_node_num
     return true;
 }
 
-static bool ipf_write_recovery_file(pf_context_t* pf) {
+static bool ipf_dump_dirty_cache_to_recovery_file(pf_context_t* pf) {
     assert(pf->host_recovery_file_handle);
 
     pf_status_t status = g_cb_truncate(pf->host_recovery_file_handle, 0);
@@ -485,7 +485,7 @@ static bool ipf_set_pending_write(pf_context_t* pf) {
     pf->metadata_node.plaintext_part.has_pending_write = 1;
     bool ret = ipf_write_node(pf, /*physical_node_number=*/0, &pf->metadata_node);
 
-    /* Unset the `has_pending_write` in memory, which will be cleared on disk at the end of the
+    /* Unset the `has_pending_write` flag in memory, which will be cleared on disk at the end of the
      * flush when we write the metadata to disk. */
     pf->metadata_node.plaintext_part.has_pending_write = 0;
 
@@ -515,7 +515,7 @@ static bool ipf_internal_flush(pf_context_t* pf) {
 
     if (pf->metadata_decrypted.file_size > MD_USER_DATA_SIZE && pf->root_mht_node.need_writing) {
         if (pf->host_recovery_file_handle) {
-            if (!ipf_write_recovery_file(pf)) {
+            if (!ipf_dump_dirty_cache_to_recovery_file(pf)) {
                 pf->file_status = PF_STATUS_FLUSH_ERROR;
                 DEBUG_PF("failed to write changes to the recovery file");
                 goto recoverable_error;
@@ -858,7 +858,67 @@ static bool ipf_init_fields(pf_context_t* pf) {
     return true;
 }
 
-static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
+/* Reads each recovery node from the recovery file and apply the embedded pf node
+ * (recovery_node.bytes) to the corresponding offset (recovery_node.physical_node_number) in the
+ * main file. After applying all nodes, re-checks the metadata node to ensure no pending writes. */
+static bool ipf_recover(pf_context_t* pf, uint64_t recovery_file_size) {
+    pf_status_t status;
+
+    if (!pf->host_recovery_file_handle) {
+        DEBUG_PF("file recovery needed but recovery file handle not set; please consider setting "
+                 "'enable_recovery = true' for the mount");
+        pf->last_error = PF_STATUS_RECOVERY_NEEDED;
+        return false;
+    }
+
+    if (recovery_file_size == 0 || recovery_file_size % sizeof(recovery_node_t) != 0) {
+        DEBUG_PF("recovery file size is not right [%lu]", recovery_file_size);
+        pf->last_error = PF_STATUS_RECOVERY_NEEDED;
+        return false;
+    }
+
+    uint64_t recovery_nodes_count = recovery_file_size / sizeof(recovery_node_t);
+
+    for (uint64_t i = 0; i < recovery_nodes_count; i++) {
+        recovery_node_t recovery_node;
+
+        status = g_cb_read(pf->host_recovery_file_handle, &recovery_node,
+                           i * sizeof(recovery_node_t), sizeof(recovery_node_t));
+        if (PF_FAILURE(status)) {
+            pf->last_error = status;
+            return false;
+        }
+
+        uint64_t untrusted_offset = recovery_node.physical_node_number;
+        status = g_cb_write(pf->host_file_handle, recovery_node.bytes,
+                            untrusted_offset * sizeof(recovery_node.bytes),
+                            sizeof(recovery_node.bytes));
+        if (PF_FAILURE(status)) {
+            pf->last_error = status;
+            return false;
+        }
+    }
+
+    status = g_cb_fsync(pf->host_file_handle);
+    if (PF_FAILURE(status)) {
+        pf->last_error = status;
+        return false;
+    }
+
+    /* re-check after recovery */
+    if (!ipf_read_node(pf, /*physical_node_number=*/0, (uint8_t*)&pf->metadata_node))
+        return false;
+
+    if (pf->metadata_node.plaintext_part.has_pending_write == 1) {
+        pf->last_error = PF_STATUS_RECOVERY_NEEDED;
+        return false;
+    }
+
+    return true;
+}
+
+static bool ipf_init_existing_file(pf_context_t* pf, const char* path, uint64_t recovery_file_size,
+                                   bool try_recover) {
     pf_status_t status;
 
     // read metadata node
@@ -876,6 +936,20 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path) {
         pf->last_error = PF_STATUS_INVALID_VERSION;
         return false;
     }
+
+    if (try_recover && pf->metadata_node.plaintext_part.has_pending_write == 1) {
+        DEBUG_PF("%s: starting file recovery", path);
+
+        if (!ipf_recover(pf, recovery_file_size)) {
+            DEBUG_PF("%s: file recovery attempted but failed", path);
+            return false;
+        }
+
+        DEBUG_PF("%s: file recovery completed", path);
+    }
+
+    /* Ensure the `has_pending_write` flag is cleared in the in-memory copy. */
+    pf->metadata_node.plaintext_part.has_pending_write = 0;
 
     pf_key_t key;
     if (!ipf_recreate_metadata_key(pf, &key))
@@ -950,63 +1024,6 @@ static void ipf_try_clear_error(pf_context_t* pf) {
     }
 }
 
-static bool ipf_check_recovery_needed(pf_context_t* pf) {
-    // read metadata node
-    if (!ipf_read_node(pf, /*physical_node_number=*/0, (uint8_t*)&pf->metadata_node))
-        return pf->last_error;
-
-    return pf->metadata_node.plaintext_part.has_pending_write == 1;
-}
-
-/* Reads each recovery node from the recovery file and apply the embedded pf node
- * (recovery_node.bytes) to the corresponding offset (recovery_node.physical_node_number) in the
- * main file. */
-static bool ipf_recover(pf_context_t* pf, uint64_t recovery_file_size) {
-    pf_status_t status;
-
-    if (!pf->host_recovery_file_handle) {
-        DEBUG_PF("file recovery needed but recovery file handle not set; please consider setting "
-                 "'enable_recovery = true' for the mount");
-        pf->last_error = PF_STATUS_RECOVERY_NEEDED;
-        return false;
-    }
-
-    if (recovery_file_size == 0 || recovery_file_size % sizeof(recovery_node_t) != 0) {
-        DEBUG_PF("recovery file size is not right [%lu]", recovery_file_size);
-        pf->last_error = PF_STATUS_RECOVERY_NEEDED;
-        return false;
-    }
-
-    size_t recovery_nodes_count = recovery_file_size / sizeof(recovery_node_t);
-
-    for (size_t i = 0; i < recovery_nodes_count; i++) {
-        recovery_node_t recovery_node;
-
-        status = g_cb_read(pf->host_recovery_file_handle, &recovery_node,
-                           i * sizeof(recovery_node_t), sizeof(recovery_node_t));
-        if (PF_FAILURE(status)) {
-            pf->last_error = status;
-            return false;
-        }
-
-        size_t offset = recovery_node.physical_node_number;
-        status = g_cb_write(pf->host_file_handle, recovery_node.bytes,
-                            offset * sizeof(recovery_node.bytes), sizeof(recovery_node.bytes));
-        if (PF_FAILURE(status)) {
-            pf->last_error = status;
-            return false;
-        }
-    }
-
-    status = g_cb_fsync(pf->host_file_handle);
-    if (PF_FAILURE(status)) {
-        pf->last_error = status;
-        return false;
-    }
-
-    return true;
-}
-
 static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create, pf_handle_t file,
                               uint64_t real_size, const pf_key_t* kdk_key,
                               pf_handle_t recovery_file_handle, uint64_t recovery_file_size,
@@ -1053,23 +1070,8 @@ static pf_context_t* ipf_open(const char* path, pf_file_mode_t mode, bool create
     pf->host_recovery_file_handle = recovery_file_handle;
 
     if (!create) {
-        if (!ipf_init_existing_file(pf, path))
+        if (!ipf_init_existing_file(pf, path, recovery_file_size, try_recover))
             goto out;
-
-        if (try_recover && ipf_check_recovery_needed(pf)) {
-            DEBUG_PF("%s: starting file recovery", path);
-
-            if (!ipf_recover(pf, recovery_file_size))
-                goto out;
-
-            if (ipf_check_recovery_needed(pf)) {
-                DEBUG_PF("%s: file recovery attempted but failed", path);
-                pf->last_error = PF_STATUS_RECOVERY_NEEDED;
-                goto out;
-            }
-
-            DEBUG_PF("%s: file recovery completed", path);
-        }
     } else {
         if (!ipf_init_new_file(pf, path))
             goto out;
@@ -1303,6 +1305,8 @@ pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_si
                     pf_file_mode_t mode, bool create, const pf_key_t* key,
                     pf_handle_t recovery_file_handle, uint64_t recovery_file_size,
                     bool try_recover, pf_context_t** context) {
+    assert((recovery_file_handle != NULL) || (recovery_file_size == 0));
+
     if (!g_initialized)
         return PF_STATUS_UNINITIALIZED;
 
