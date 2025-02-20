@@ -29,6 +29,7 @@
 #include "toml.h"
 #include "toml_utils.h"
 #include "topo_info.h"
+#include "api.h"
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
@@ -199,7 +200,8 @@ out:
     return ret;
 }
 
-static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure) {
+static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure,
+                            uint8_t *config_id, uint16_t config_svn) {
     int ret = 0;
     int enclave_image = -1;
     sgx_sigstruct_t enclave_sigstruct;
@@ -286,6 +288,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
     enclave_secs.size = enclave->size;
+
+    /* set received config_id/svn to SECS */
+    memcpy(enclave_secs.config_id.data, config_id, SGX_CONFIGID_SIZE);
+    enclave_secs.config_svn = config_svn;
+
     ret = create_enclave(&enclave_secs, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Creating enclave failed: %s", unix_strerror(ret));
@@ -634,6 +641,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+    ret = toml_bool_in(manifest_root, "sgx.kss", /*defaultval=*/false,
+                       &enclave_info->kss_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.kss'");
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
         log_error("Enclave size not a power of two (an SGX-imposed requirement)");
         ret = -EINVAL;
@@ -892,7 +907,8 @@ out:
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd,
-                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
+                        uint8_t* config_id, uint16_t config_svn) {
     int ret;
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
@@ -972,7 +988,16 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         }
     }
 
-    ret = initialize_enclave(enclave, enclave->raw_manifest_data);
+    if (enclave->kss_enabled) {
+        uint32_t cpuid_values[4];
+        cpuid(INTEL_SGX_LEAF, 1, cpuid_values);
+        if (!(cpuid_values[0] & (1u << 7))) {
+            log_error("KSS feature was requested in manifest, but the platform doesn't support it");
+            return -EPERM;
+        }
+    }
+
+    ret = initialize_enclave(enclave, enclave->raw_manifest_data, config_id, config_svn);
     if (ret < 0)
         return ret;
 
@@ -1102,6 +1127,40 @@ static int verify_hw_requirements(char* envp[]) {
     return 0;
 }
 
+// initialize config_id with zeros
+static void initialize_config_id(uint8_t* config_id) {
+    memset(config_id, 0, 64);
+}
+
+// convert hexstring to byte array
+static int parse_hex_string_to_bytes(const char* hex_str, uint8_t* buffer, size_t buffer_size) {
+    if (strlen(hex_str) != buffer_size * 2) {
+        return 0;
+    }
+    for (size_t i = 0; i < buffer_size; i++) {
+        if (!isxdigit(hex_str[i * 2]) || !isxdigit(hex_str[i * 2 + 1])) {
+            return 0;
+        }
+        char byte_str[3] = { hex_str[i * 2], hex_str[i * 2 + 1], '\0' };
+        buffer[i] = (uint8_t)strtol(byte_str, NULL, 16);
+    }
+    return 1;
+}
+
+// convert hexstring to uint16_t
+static int parse_hex_string_to_uint16(const char* hex_str, uint16_t* value) {
+    if (strlen(hex_str) > 4 || strlen(hex_str) == 0) {
+        return 0;
+    }
+    for (size_t i = 0; i < strlen(hex_str); i++) {
+        if (!isxdigit(hex_str[i])) {
+            return 0;
+        }
+    }
+    *value = (uint16_t)strtol(hex_str, NULL, 16);
+    return 1;
+}
+
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
@@ -1209,8 +1268,42 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
+    /* config ID/SVN implementation part */
+    uint8_t config_id[SGX_CONFIGID_SIZE];
+    uint16_t config_svn = 0;
+
+    for (size_t i = 0; envp[i] != NULL; i++) {
+        // parse env
+        char* key_value = envp[i];
+        char* delimiter = strchr(key_value, '=');
+        if (delimiter == NULL) {
+            continue;
+        }
+
+        size_t key_len = delimiter - key_value;
+        char key[256];
+        memcpy(key, key_value, key_len);
+        key[key_len] = '\0';
+
+        const char* value = delimiter + 1;
+
+        // parse SGX_CONFIG_ID env to config_id 
+        if (strcmp(key, "SGX_CONFIG_ID") == 0) {
+            if (!parse_hex_string_to_bytes(value, config_id, SGX_CONFIGID_SIZE)) {
+                initialize_config_id(config_id);
+            }
+        }
+        // parse SGX_CONFIG_SVN env to config_svn
+        else if (strcmp(key, "SGX_CONFIG_SVN") == 0) {
+            if (!parse_hex_string_to_uint16(value, &config_svn)) {
+                config_svn = 0;
+            }
+        }
+    }
+
     ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd,
-                       reserved_mem_ranges, reserved_mem_ranges_size);
+                       reserved_mem_ranges, reserved_mem_ranges_size,
+                       config_id, config_svn);
     if (ret < 0) {
         log_error("load_enclave() failed with error: %s", unix_strerror(ret));
         return ret;
