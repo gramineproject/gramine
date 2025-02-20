@@ -16,7 +16,7 @@ loader.env.OMP_NUM_THREADS = "4"
 
 loader.insecure__use_cmdline_argv = true
 
-sys.enable_sigterm_injection = true
+sys.enable_sigterm_injection = false
 
 fs.mounts = [
   { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
@@ -34,10 +34,14 @@ fs.mounts = [
 sys.stack.size = "2M"
 sys.enable_extra_runtime_domain_names_conf = true
 
-sgx.debug = true
+sgx.debug = false
 sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enclave_size = "1G"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '32' }}
+
+sgx.kss = true
+sgx.isvfamilyid = "0x00112233445566778899aabbccddeeff"
+sgx.isvextprodid = "0xcafef00dcafef00df00dcafef00dcafe"
 
 sgx.remote_attestation = "{{ ra_type }}"
 

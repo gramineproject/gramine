@@ -95,6 +95,7 @@ def collect_cpu_feature_bits(manifest_cpu_features, options_dict, val, mask, sec
 def get_enclave_attributes(manifest_sgx):
     flags_dict = {
         'debug': offs.SGX_FLAGS_DEBUG,
+        'kss': offs.SGX_FLAGS_KSS,
     }
     flags = collect_bits(manifest_sgx, flags_dict)
     if ARCHITECTURE == 'amd64':
@@ -545,6 +546,10 @@ def get_tbssigstruct(manifest_path, date, libpal=SGX_LIBPAL, verbose=False):
     sig['misc_select'] = misc_select
     sig['attribute_xfrms'] = attribute_xfrms
     sig['attribute_xfrm_mask'] = xfrms_mask
+
+    if attribute_flags & offs.SGX_FLAGS_KSS:
+        sig['isv_ext_prod_id'] = int(manifest_sgx['isvextprodid'], 16).to_bytes(16, 'big')
+        sig['isv_family_id'] = int(manifest_sgx['isvfamilyid'], 16).to_bytes(16, 'big')
 
     return sig
 
