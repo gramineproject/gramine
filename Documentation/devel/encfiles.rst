@@ -522,6 +522,10 @@ Additional details
   enabling this feature can impact performance due to additional writes to the
   shadow file on each flush.
 
+  .. note ::
+     This feature is not tested in CI due to the difficulty of reliably
+     simulating crashes in the middle of file flush.
+
 - There is no key rotation scheme. The application must perform key rotation of
   the KDK by itself (by overwriting the ``/dev/attestation/keys/``
   pseudo-files). Some support for key rotation may appear in future releases of

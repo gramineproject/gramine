@@ -179,7 +179,7 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
         }
 
         if (enc->enable_recovery) {
-            char* recovery_file_uri = alloc_concat(enc->uri, -1, ".gramine_recovery", -1);
+            char* recovery_file_uri = alloc_concat(enc->uri, -1, RECOVERY_FILE_URI_SUFFIX, -1);
             if (!recovery_file_uri) {
                 ret = -ENOMEM;
                 goto out;

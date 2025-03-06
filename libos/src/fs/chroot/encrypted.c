@@ -119,6 +119,11 @@ static int chroot_encrypted_lookup(struct libos_dentry* dent) {
     if (ret < 0)
         goto out;
 
+    if (strendswith(uri, RECOVERY_FILE_URI_SUFFIX)) {
+        ret = -ENOENT;
+        goto out;
+    }
+
     PAL_STREAM_ATTR pal_attr;
     ret = PalStreamAttributesQuery(uri, &pal_attr);
     if (ret < 0) {

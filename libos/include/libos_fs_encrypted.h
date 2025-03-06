@@ -22,6 +22,8 @@
 
 #define RECOVERY_FILE_PERM_RW PERM_rw_rw_rw_
 
+#define RECOVERY_FILE_URI_SUFFIX ".gramine.recovery"
+
 /*
  * Represents a named key for opening files. The key might not be set yet: value of a key can be
  * specified in the manifest, or set using `update_encrypted_files_key`. Before the key is set,
