@@ -225,12 +225,19 @@ static int chroot_encrypted_creat(struct libos_handle* hdl, struct libos_dentry*
     assert(!dent->inode);
     __UNUSED(flags);
 
-    char* uri;
+    char* uri = NULL;
+    struct libos_inode* inode =  NULL;
+
     int ret = dentry_uri(dent, S_IFREG, &uri);
     if (ret < 0)
         return ret;
 
-    struct libos_inode* inode = get_new_inode(dent->mount, S_IFREG, HOST_PERM(perm));
+    if (strendswith(uri, RECOVERY_FILE_URI_SUFFIX)) {
+        ret = -ENOENT;
+        goto out;
+    }
+
+    inode = get_new_inode(dent->mount, S_IFREG, HOST_PERM(perm));
     if (!inode) {
         ret = -ENOMEM;
         goto out;
