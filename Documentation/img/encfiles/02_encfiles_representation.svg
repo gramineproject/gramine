@@ -25,7 +25,7 @@
      inkscape:cx="2165.6741"
      inkscape:cy="673.65099"
      inkscape:window-width="3840"
-     inkscape:window-height="2054"
+     inkscape:window-height="1514"
      inkscape:window-x="2869"
      inkscape:window-y="-11"
      inkscape:window-maximized="1"
@@ -913,7 +913,7 @@
            font-size="55px"
            id="text22-9"
            x="3422.804"
-           y="736.30658">pending_write</text><text
+           y="736.30658">feature_flags</text><text
            fill="#7f7f7f"
            font-family="Arial, Arial_MSFontService, sans-serif"
            font-weight="700"

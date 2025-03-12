@@ -482,18 +482,18 @@ static bool ipf_dump_dirty_cache_to_recovery_file(pf_context_t* pf) {
 }
 
 static bool ipf_set_pending_write(pf_context_t* pf) {
-    pf->metadata_node.plaintext_part.has_pending_write = 1;
+    pf->metadata_node.plaintext_part.feature_flags |= HAS_PENDING_WRITE_FLAG;
     bool ret = ipf_write_node(pf, /*physical_node_number=*/0, &pf->metadata_node);
 
-    /* Unset the `has_pending_write` flag in memory, which will be cleared on disk at the end of the
+    /* Unset the "has-pending-write" flag in memory, which will be cleared on disk at the end of the
      * flush when we write the metadata to disk. */
-    pf->metadata_node.plaintext_part.has_pending_write = 0;
+    pf->metadata_node.plaintext_part.feature_flags &= ~HAS_PENDING_WRITE_FLAG;
 
     return ret;
 }
 
 static bool ipf_clear_pending_write(pf_context_t* pf) {
-    assert(pf->metadata_node.plaintext_part.has_pending_write == 0);
+    assert(!(pf->metadata_node.plaintext_part.feature_flags & HAS_PENDING_WRITE_FLAG));
 
     if (!ipf_write_node(pf, /*physical_node_number=*/0, &pf->metadata_node))
         return false;
@@ -909,7 +909,7 @@ static bool ipf_recover(pf_context_t* pf, uint64_t recovery_file_size) {
     if (!ipf_read_node(pf, /*physical_node_number=*/0, (uint8_t*)&pf->metadata_node))
         return false;
 
-    if (pf->metadata_node.plaintext_part.has_pending_write == 1) {
+    if (pf->metadata_node.plaintext_part.feature_flags & HAS_PENDING_WRITE_FLAG) {
         pf->last_error = PF_STATUS_RECOVERY_NEEDED;
         return false;
     }
@@ -932,12 +932,18 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path, uint64_t 
         return false;
     }
 
-    if (pf->metadata_node.plaintext_part.major_version != PF_MAJOR_VERSION) {
+    if (pf->metadata_node.plaintext_part.major_version < PF_MAJOR_VERSION) {
+        memmove(pf->metadata_node.encrypted_part, &pf->metadata_node.plaintext_part.feature_flags,
+                sizeof(pf->metadata_node.encrypted_part));
+        pf->metadata_node.plaintext_part.feature_flags = 0;
+
+        pf->metadata_node.plaintext_part.major_version = PF_MAJOR_VERSION;
+    } else if (pf->metadata_node.plaintext_part.major_version > PF_MAJOR_VERSION) {
         pf->last_error = PF_STATUS_INVALID_VERSION;
         return false;
     }
 
-    if (try_recover && pf->metadata_node.plaintext_part.has_pending_write == 1) {
+    if (try_recover && pf->metadata_node.plaintext_part.feature_flags & HAS_PENDING_WRITE_FLAG) {
         DEBUG_PF("%s: starting file recovery", path);
 
         if (!ipf_recover(pf, recovery_file_size)) {
@@ -948,8 +954,8 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path, uint64_t 
         DEBUG_PF("%s: file recovery completed", path);
     }
 
-    /* Ensure the `has_pending_write` flag is cleared in the in-memory copy. */
-    pf->metadata_node.plaintext_part.has_pending_write = 0;
+    /* Ensure the "has-pending-write" flag is cleared in the in-memory copy. */
+    pf->metadata_node.plaintext_part.feature_flags &= ~HAS_PENDING_WRITE_FLAG;
 
     pf_key_t key;
     if (!ipf_recreate_metadata_key(pf, &key))

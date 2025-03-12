@@ -24,12 +24,12 @@
      inkscape:zoom="0.33197223"
      inkscape:cx="2108.6101"
      inkscape:cy="1224.5"
-     inkscape:window-width="1920"
-     inkscape:window-height="1094"
-     inkscape:window-x="-11"
+     inkscape:window-width="3840"
+     inkscape:window-height="1514"
+     inkscape:window-x="2869"
      inkscape:window-y="-11"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g116" /><g
+     inkscape:current-layer="g99" /><g
      transform="translate(3 -16)"
      id="g132"><rect
        x="104.5"
@@ -1150,7 +1150,7 @@
            font-size="55px"
            id="text22-9"
            x="3422.804"
-           y="736.30658">pending_write</text><text
+           y="736.30658">feature_flags</text><text
            fill="#7f7f7f"
            font-family="Arial, Arial_MSFontService, sans-serif"
            font-weight="700"

@@ -514,13 +514,16 @@ Additional details
   incorrect GMACs and/or encryption keys) when it was only partially written to
   storage due to a fatal error (e.g., abrupt app termination). Similar to Intel
   SGX SDK’s recovery mechanism, Gramine uses a "shadow" recovery file and a
-  ``has_pending_write`` flag in the metadata node to manage write transactions.
-  During file flush, cached blocks about to change are saved to the recovery
-  file. If an encrypted file is opened with the flag set, a recovery process
-  reverts partial changes using the recovery file, restoring the last known good
-  state. The "shadow" recovery file is cleaned up on file close. Note that
-  enabling this feature can impact performance due to additional writes to the
-  shadow file on each flush.
+  "has-pending-write" flag in the metadata node's ``feature_flags`` field to
+  manage write transactions. During file flush, cached blocks about to change
+  are saved to the recovery file. If an encrypted file is opened with the flag
+  set, a recovery process reverts partial changes using the recovery file,
+  restoring the last known good state. The "shadow" recovery file is cleaned up
+  on file close. Note that enabling this feature can impact performance due to
+  additional writes to the shadow file on each flush. For backward
+  compatibility, when an older encrypted file (without ``feature_flags`` in its
+  metadata) is opened, its in-memory metadata structure is automatically updated
+  to the new format for accessibility and saved in the new format upon a write.
 
   .. note ::
      This feature is not tested in CI due to the difficulty of reliably
