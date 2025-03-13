@@ -198,16 +198,17 @@ Encrypted files on host storage are represented as a string of 4KB chunks. Each
 encrypted file starts with a *metadata node*, that has the following three
 parts:
 
-1. The plaintext header, occupying bytes 0-57. The header contains a magic
+1. The plaintext header, occupying bytes 0-58. The header contains a magic
    string, a major version of the encrypted-files protocol, a minor version, a
-   nonce for KDF (Key Derivation Function, explained in the next section) and a
-   MAC (cryptographic hash over the encrypted header).
-2. The encrypted header, occupying bytes 58-3941. This header has two parts: the
+   nonce for KDF (Key Derivation Function, explained in the next section), a MAC
+   (cryptographic hash over the encrypted header) and a feature flags field
+   (including a "has-pending-write" flag for file recovery).
+2. The encrypted header, occupying bytes 59-3942. This header has two parts: the
    encrypted metadata fields and the first 3KB of actual file contents. The
    metadata fields contain a file path (to prevent rename attacks), the file
    size (to hide the exact file size from attackers) and the encryption key and
    MAC of the root MHT node (explained later).
-3. The constant padding, occupying bytes 3942-4095. This padding is added purely
+3. The constant padding, occupying bytes 3943-4095. This padding is added purely
    to align the metadata node on the 4KB boundary and contains zeros.
 
 Note that if the original file is less than 3KB in size, then this file's
@@ -320,8 +321,8 @@ AES-GCM encryption happens in the ``metadata_node`` bounce buffer, on the
 plaintext data struct ``metadata_decrypted`` and with the newly derived key.
 
 Finally in step 5, the resulting ciphertext is copied out from the bounce buffer
-to the host storage. An additional plaintext header in bytes 0-57 is prepended
-to the ciphertext, and the padding in bytes 3942-4095 aligns the resulting
+to the host storage. An additional plaintext header in bytes 0-58 is prepended
+to the ciphertext, and the padding in bytes 3943-4095 aligns the resulting
 metadata node to 4KB. Note that the plaintext header contains the KDF nonce
 generated in step 2 and the MAC generated as a by-product of AES-GCM encryption
 in step 4. The nonce and the MAC can be stored in plaintext, and they will be
