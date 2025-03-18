@@ -17,6 +17,8 @@
 
 long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
     size_t arr_size;
+    if ((int)fd < 0)
+        return -EBADF;
     if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size))
         return -EINVAL;
     if (!is_user_memory_readable(vec, arr_size))

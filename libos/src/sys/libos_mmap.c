@@ -117,7 +117,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
                 /* fall through */
             case MAP_PRIVATE:
                 if (fd < 0) {
-                    return (void*)-EINVAL;
+                    return (void*)-EBADF;
                 }
 
                 hdl = get_fd_handle(fd, NULL, NULL);
