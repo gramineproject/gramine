@@ -522,9 +522,10 @@ Additional details
   restoring the last known good state. The "shadow" recovery file is cleaned up
   on file close. Note that enabling this feature can impact performance due to
   additional writes to the shadow file on each flush. For backward
-  compatibility, when an older encrypted file (without ``feature_flags`` in its
-  metadata) is opened, its in-memory metadata structure is automatically updated
-  to the new format for accessibility and saved in the new format upon a write.
+  compatibility, when an older encrypted file (version 1.0, without
+  ``feature_flags`` in its metadata) is opened, its in-memory metadata structure
+  is automatically updated to the new format for accessibility and saved in the
+  new format upon a write.
 
   .. note ::
      This feature is not tested in CI due to the difficulty of reliably

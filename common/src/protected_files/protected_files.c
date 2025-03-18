@@ -932,13 +932,14 @@ static bool ipf_init_existing_file(pf_context_t* pf, const char* path, uint64_t 
         return false;
     }
 
-    if (pf->metadata_node.plaintext_part.major_version < PF_MAJOR_VERSION) {
+    if (pf->metadata_node.plaintext_part.major_version == 0x01) {
+        /* Migrate from version 1 to the current version by shifting the data in the header. */
         memmove(pf->metadata_node.encrypted_part, &pf->metadata_node.plaintext_part.feature_flags,
                 sizeof(pf->metadata_node.encrypted_part));
         pf->metadata_node.plaintext_part.feature_flags = 0;
 
         pf->metadata_node.plaintext_part.major_version = PF_MAJOR_VERSION;
-    } else if (pf->metadata_node.plaintext_part.major_version > PF_MAJOR_VERSION) {
+    } else if (pf->metadata_node.plaintext_part.major_version != PF_MAJOR_VERSION) {
         pf->last_error = PF_STATUS_INVALID_VERSION;
         return false;
     }
