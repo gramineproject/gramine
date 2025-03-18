@@ -16,28 +16,36 @@
  * notably affects pipes. */
 
 long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
-    size_t arr_size;
-    if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size))
-        return -EINVAL;
-    if (!is_user_memory_readable(vec, arr_size))
-        return -EINVAL;
-
-    for (size_t i = 0; i < vlen; i++) {
-        if (vec[i].iov_base) {
-            if (!access_ok(vec[i].iov_base, vec[i].iov_len))
-                return -EINVAL;
-            if (!is_user_memory_writable(vec[i].iov_base, vec[i].iov_len))
-                return -EFAULT;
-        }
-    }
+    int ret = 0;
 
     struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
     if (!hdl)
         return -EBADF;
 
-    maybe_lock_pos_handle(hdl);
+    size_t arr_size;
+    if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size)) {
+        ret = -EINVAL;
+        goto out_no_unlock;
+    }
+    if (!is_user_memory_readable(vec, arr_size)) {
+        ret = -EINVAL;
+        goto out_no_unlock;
+    }
 
-    int ret = 0;
+    for (size_t i = 0; i < vlen; i++) {
+        if (vec[i].iov_base) {
+            if (!access_ok(vec[i].iov_base, vec[i].iov_len)) {
+                ret = -EINVAL;
+                goto out_no_unlock;
+            }
+            if (!is_user_memory_writable(vec[i].iov_base, vec[i].iov_len)) {
+                ret = -EFAULT;
+                goto out_no_unlock;
+            }
+        }
+    }
+
+    maybe_lock_pos_handle(hdl);
 
     if (hdl->is_dir) {
         ret = -EISDIR;
@@ -76,6 +84,7 @@ long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen
     ret = bytes;
 out:
     maybe_unlock_pos_handle(hdl);
+out_no_unlock:
     put_handle(hdl);
     if (ret == -EINTR) {
         ret = -ERESTARTSYS;
