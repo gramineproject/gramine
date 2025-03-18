@@ -16,6 +16,10 @@
  * notably affects pipes. */
 
 long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen) {
+    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
+    if (!hdl)
+        return -EBADF;
+
     size_t arr_size;
     if (__builtin_mul_overflow(sizeof(*vec), vlen, &arr_size))
         return -EINVAL;
@@ -30,10 +34,6 @@ long libos_syscall_readv(unsigned long fd, struct iovec* vec, unsigned long vlen
                 return -EFAULT;
         }
     }
-
-    struct libos_handle* hdl = get_fd_handle(fd, NULL, NULL);
-    if (!hdl)
-        return -EBADF;
 
     maybe_lock_pos_handle(hdl);
 
