@@ -419,12 +419,6 @@ environment variables if available:
   is set. The library puts the provisioned key into
   ``/dev/attestation/keys/<key_name>`` so that Gramine recognizes it.
 
-.. note::
-   Previously, ``SECRET_PROVISION_SET_PF_KEY = 1/true/TRUE`` was used for
-   setting the ``default`` encryption key, and Gramine still supports that
-   environment variable for backward compatibility. It is deprecated and will be
-   removed in the next releases of Gramine.
-
 - ``SECRET_PROVISION_SERVERS`` (optional) -- a comma, semicolon or space
   separated list of server names with ports to connect to for secret
   provisioning. Example: ``localhost:4433;trusted-server:443``. If not set,

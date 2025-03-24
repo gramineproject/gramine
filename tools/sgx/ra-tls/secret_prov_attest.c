@@ -409,16 +409,6 @@ __attribute__((constructor)) static void secret_provision_constructor(void) {
         }
         /* successfully retrieved the secret: is it a key for encrypted files? */
         const char* key_name = getenv(SECRET_PROVISION_SET_KEY);
-        if (!key_name) {
-            /* no key name specified - check old PF env var for compatibility */
-            const char* pf_key = getenv(SECRET_PROVISION_SET_PF_KEY);
-            if (pf_key && truthy(pf_key)) {
-                INFO(SECRET_PROVISION_SET_PF_KEY " is deprecated, consider setting "
-                     SECRET_PROVISION_SET_KEY "=default instead.\n");
-                key_name = "default";
-            }
-        }
-
         if (key_name) {
             if (secret_size != 16) {
                 ERROR("Provisioned secret is not 16 bytes long, cannot use it as encrypted files "
