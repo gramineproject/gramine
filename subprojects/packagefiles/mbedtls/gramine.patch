@@ -2,10 +2,10 @@
 # progress via issue https://github.com/ARMmbed/mbedtls/issues/3141.
 
 diff --git a/library/ssl_tls.c b/library/ssl_tls.c
-index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b9326ce81 100644
+index 3633cd40f9e4dbd56b74777d328b56259d2ede14..7e5b6bbe139af51d9ac1938e0e4aaad44c34a996 100644
 --- a/library/ssl_tls.c
 +++ b/library/ssl_tls.c
-@@ -5072,11 +5072,13 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
+@@ -5132,11 +5132,13 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
          MBEDTLS_SSL_DEBUG_MSG(1, ("There is pending outgoing data"));
          return MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
      }
@@ -19,7 +19,7 @@ index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b
      /* Version must be 1.2 */
      if (ssl->tls_version != MBEDTLS_SSL_VERSION_TLS1_2) {
          MBEDTLS_SSL_DEBUG_MSG(1, ("Only version 1.2 supported"));
-@@ -5210,6 +5212,14 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
+@@ -5270,6 +5272,14 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
      }
  #endif /* MBEDTLS_SSL_ALPN */
  
@@ -34,7 +34,7 @@ index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b
      /*
       * Done
       */
-@@ -5221,7 +5231,19 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
+@@ -5281,7 +5291,19 @@ int mbedtls_ssl_context_save(mbedtls_ssl_context *ssl,
  
      MBEDTLS_SSL_DEBUG_BUF(4, "saved context", buf, used);
  
@@ -54,7 +54,7 @@ index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b
  }
  
  /*
-@@ -5262,7 +5284,9 @@ static int ssl_context_load(mbedtls_ssl_context *ssl,
+@@ -5322,7 +5344,9 @@ static int ssl_context_load(mbedtls_ssl_context *ssl,
  #if defined(MBEDTLS_SSL_RENEGOTIATION)
          ssl->conf->disable_renegotiation != MBEDTLS_SSL_RENEGOTIATION_DISABLED ||
  #endif
@@ -64,7 +64,7 @@ index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b
          ssl->conf->max_tls_version < MBEDTLS_SSL_VERSION_TLS1_2 ||
          ssl->conf->min_tls_version > MBEDTLS_SSL_VERSION_TLS1_2
          ) {
-@@ -5472,6 +5496,14 @@ static int ssl_context_load(mbedtls_ssl_context *ssl,
+@@ -5532,6 +5556,14 @@ static int ssl_context_load(mbedtls_ssl_context *ssl,
      ssl->in_epoch = 1;
  #endif
  
@@ -80,7 +80,7 @@ index c773365bf61a2b7d79c02bef45de02f15cb636ca..ae5655d99a7005b9aedee99fce00a37b
       * which we don't want - otherwise we'd end up freeing the wrong transform
       * by calling mbedtls_ssl_handshake_wrapup_free_hs_transform()
 diff --git a/library/Makefile b/library/Makefile
-index a5e023e1782c164a6ba7a05efd184ab7c8b100ec..5e481a056abf1f80b6bedd9137370e1b71e0b24c 100644
+index c1ec9c6a05355b04dc10f48a0b1d3cdf51bff04e..c12eba6ac8b58a8993905bc4e9183baf37329b4e 100644
 --- a/library/Makefile
 +++ b/library/Makefile
 @@ -78,6 +78,8 @@ SOEXT_TLS?=so.21
