@@ -310,6 +310,10 @@ static void print_report(sgx_report_t* r) {
     log_debug("  attr.xfrm:   %016lx", r->body.attributes.xfrm);
     log_debug("  isv_prod_id: %02x",   r->body.isv_prod_id);
     log_debug("  isv_svn:     %02x",   r->body.isv_svn);
+    log_debug("  isv_ext_prod_id: %s", BYTES2HEX(r->body.isv_ext_prod_id));
+    log_debug("  isv_family_id: %s",   BYTES2HEX(r->body.isv_family_id));
+    log_debug("  config_id :  %s",     BYTES2HEX(r->body.config_id));
+    log_debug("  config_svn:  %02x",   r->body.config_svn);
     log_debug("  report_data: %s",     BYTES2HEX(r->body.report_data.d));
     log_debug("  key_id:      %s",     BYTES2HEX(r->key_id.id));
     log_debug("  mac:         %s",     BYTES2HEX(r->mac));
