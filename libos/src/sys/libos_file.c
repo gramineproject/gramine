@@ -187,6 +187,12 @@ long libos_syscall_fchmodat(int dfd, const char* filename, mode_t mode) {
     struct libos_dentry* dent = NULL;
     int ret = 0;
 
+    if (strnlen(filename, PATH_MAX + 1) == PATH_MAX + 1)
+        return -ENAMETOOLONG;
+
+    if (strlen(filename) == 0)
+        return -ENOENT;
+
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
 

@@ -45,8 +45,8 @@ Tips for debugging
 ------------------
 
 To enable debugging output, edit a manifest for a test case (``*.manifest``) to
-set ``loader.log_level = "trace"``. When running under SGX, you will need to
-re-sign the manifest using ``gramine-test build``.
+set ``log_level = "trace"`` under ``[loader]`` section. When running under SGX,
+you will need to re-sign the manifest using ``SGX=1 gramine-test build``.
 
 (NOTE: the manifests are all built from a single template,
 ``manifest.template``, but you can edit the generated manifests anyway. If

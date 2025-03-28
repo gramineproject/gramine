@@ -166,7 +166,7 @@ libc.
 Then, build and install Gramine by running the following::
 
    meson compile -C build/
-   sudo meson compile -C build/ install
+   sudo meson install -C build
 
 Installation prefix
 ^^^^^^^^^^^^^^^^^^^
