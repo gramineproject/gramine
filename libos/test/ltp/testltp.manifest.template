@@ -1,0 +1,68 @@
+# Copyright (C) 2023 Gramine contributors
+# SPDX-License-Identifier: BSD-3-Clause
+
+libos.entrypoint = "/testltp"
+
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/lib64"
+loader.env.PATH = "/bin:/usr/bin:."
+loader.env.LD_PRELOAD = "{{ coreutils_libdir }}/libstdbuf.so"
+loader.env._STDBUF_O = "L"
+loader.insecure__use_cmdline_argv = true
+
+fs.root.uri = "file:{{ binary_dir }}"
+
+fs.mounts = [
+  { path = "/testltp", uri = "file:testltp" },
+  { path = "/etc", uri = "file:/etc" },
+  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "{{ arch_libdir }}", uri = "file:{{ arch_libdir }}" },
+  { path = "/usr", uri = "file:/usr" },
+  { path = "/tmp", uri = "file:/tmp" },
+
+  # many LTP multi-process tests rely on shared-memory IPC via `mmap(MAP_SHARED, </dev/shm fd>)`
+  { type = "untrusted_shm", path = "/dev/shm", uri = "dev:/dev/shm" },
+]
+
+# for flock tests
+sys.experimental__enable_flock = true
+
+sys.brk.max_size = "32M"
+sys.stack.size = "4M"
+sgx.debug = true
+sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
+
+# for tests that require SIGSEGV handling (e.g., setrlimit01, mmap03)
+sgx.use_exinfo = true
+
+sgx.allowed_files = [
+  "file:/etc",
+  "file:/tmp",
+  "file:/usr",
+
+  "dev:/dev/shm/", # for tests that rely on shared-memory IPC, see note above
+
+  "file:install/testcases/bin/execl01_child",   # for execl01 test
+  "file:install/testcases/bin/execlp01_child",  # for execlp01 test
+  "file:install/testcases/bin/execv01_child",   # for execv01 test
+  "file:install/testcases/bin/execvp01_child",  # for execvp01 test
+]
+
+sgx.trusted_files = [
+  "file:testltp",
+  "file:{{ gramine.runtimedir() }}/",
+  "file:{{ coreutils_libdir }}/libstdbuf.so",
+  "file:{{ binary_dir }}/",
+]
+
+# below IOCTL is for socket ioctl tests (e.g. `sockioctl01`); note that there is no additional
+# sanitization of these IOCTLs but this is only for testing anyway
+sys.ioctl_structs.ifconf = [
+  # When ifc_req is NULL, direction of ifc_len is out. Otherwise, direction is in.
+  { size = 4, direction = "inout", name = "ifc_len" },  # ifc_len
+  { size = 4, direction = "none" },                     # padding
+  { ptr = [ { size = "ifc_len", direction = "in" } ] }, # ifc_req
+]
+
+sys.allowed_ioctls = [
+  { request_code = 0x8912, struct = "ifconf" }, # SIOCGIFCONF
+]
