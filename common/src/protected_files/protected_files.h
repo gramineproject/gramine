@@ -210,21 +210,27 @@ void pf_set_callbacks(pf_read_f read_f, pf_write_f write_f, pf_fsync_f fsync_f,
 const char* pf_strerror(int err);
 
 /*!
- * \brief Open a protected file.
+ * \brief Open a protected file, with optional recovery check and process.
  *
- * \param      handle           Open underlying file handle.
- * \param      path             Path to the file. If NULL and \p create is false, don't check path
- *                              for validity.
- * \param      underlying_size  Underlying file size.
- * \param      mode             Access mode.
- * \param      create           Overwrite file contents if true.
- * \param      key              Wrap key.
- * \param[out] context          PF context for later calls.
+ * \param      handle                Open underlying file handle.
+ * \param      path                  Path to the file. If NULL and \p create is false, don't check path
+ *                                   for validity.
+ * \param      underlying_size       Underlying file size.
+ * \param      mode                  Access mode.
+ * \param      create                Overwrite file contents if true.
+ * \param      key                   Wrap key.
+ * \param      recovery_file_handle  (optional) Underlying recovery file handle.
+ * \param      recovery_file_size    (optional) Recovery file size. Must be 0 if
+ *                                   \p recovery_file_handle is not set.
+ * \param      try_recover           Whether to check for and perform file recovery if needed.
+ * \param[out] context               PF context for later calls.
  *
  * \returns PF status.
  */
 pf_status_t pf_open(pf_handle_t handle, const char* path, uint64_t underlying_size,
-                    pf_file_mode_t mode, bool create, const pf_key_t* key, pf_context_t** context);
+                    pf_file_mode_t mode, bool create, const pf_key_t* key,
+                    pf_handle_t recovery_file_handle, uint64_t recovery_file_size,
+                    bool try_recover, pf_context_t** context);
 
 /*!
  * \brief Close a protected file and commit all changes to disk.
