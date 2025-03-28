@@ -1080,6 +1080,41 @@ Marking files as trusted is especially useful for shared libraries: a |~|
 trusted library cannot be silently replaced by a malicious host because the hash
 verification will fail.
 
+.. _trusted-files-cache-size:
+
+Trusted files cache size
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+::
+
+    sgx.trusted_files_cache_size = [NUM]
+    (Default: 0)
+
+This syntax specifies the size of the cache allocated for trusted files. By
+default, this optimization is turned off because the optimal cache size can
+differ based on the specific requirements of the application. Units like
+``K`` |~| (KiB), ``M`` |~| (MiB), and ``G`` |~| (GiB) can be appended to the
+values for convenience. For example, ``sgx.trusted_files_cache_size = "16K"``
+indicates a 16 |~| KiB trusted files cache size.
+
+When enabled, the cache is designed to store files that are accessed
+frequently. Specifically, only files that are opened more than 10 times will
+be cached. This approach ensures that files with higher access frequencies
+benefit from being stored in memory, thereby improving performance.
+
+The cache utilizes a Least Recently Used (LRU) eviction policy. Under this
+policy, when the cache reaches its capacity, the file chunks that have been
+accessed the least recently are removed to make space for new file chunks.
+This method helps maintain the most frequently accessed file chunks in the
+cache while discarding those that have not been used recently.
+
+This optimization is particularly advantageous for applications dealing with
+opening files that are accessed repeatedly. By enabling the cache,
+the overhead of repeatedly opening and reading these files is reduced,
+as the files are kept in memory for quicker access. However, if files are
+infrequently used, enabling this cache might not provide significant
+performance benefits and could consume unnecessary memory resources.
+
 .. _encrypted-files:
 
 Encrypted files
