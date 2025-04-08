@@ -256,8 +256,6 @@ long libos_syscall_chown(const char* path, uid_t uid, gid_t gid) {
 }
 
 long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid, int flags) {
-    __UNUSED(flags);
-
     if (!is_user_string_readable(filename))
         return -EFAULT;
 
@@ -267,6 +265,9 @@ long libos_syscall_fchownat(int dfd, const char* filename, uid_t uid, gid_t gid,
 
     if (*filename != '/' && (ret = get_dirfd_dentry(dfd, &dir)) < 0)
         return ret;
+
+    if (flags != 0 && flags != AT_SYMLINK_NOFOLLOW)
+        return -EINVAL;
 
     lock(&g_dcache_lock);
     ret = path_lookupat(dir, filename, LOOKUP_FOLLOW, &dent);
@@ -587,5 +588,120 @@ long libos_syscall_chroot(const char* filename) {
     g_process.root = dent;
     unlock(&g_process.fs_lock);
 out:
+    return ret;
+}
+
+long libos_syscall_utime(const char* filename, const struct utimbuf* times) {
+    struct timespec *times_ns = NULL;
+    struct timespec times_ns_buf[2];
+
+    if (times) {
+        times_ns_buf[0].tv_sec  = times->actime;
+        times_ns_buf[0].tv_nsec = 0;
+        times_ns_buf[1].tv_sec  = times->modtime;
+        times_ns_buf[1].tv_nsec = 0;
+        times_ns = times_ns_buf;
+    }
+    return libos_syscall_utimensat(AT_FDCWD, filename, times_ns, 0);
+}
+
+long libos_syscall_utimes(const char* filename, const struct timeval times[2]) {
+    struct timespec *times_ns = NULL;
+    struct timespec times_ns_buf[2];
+
+    if (times)
+    {
+        times_ns[0].tv_sec  = times[0].tv_sec;
+        times_ns[0].tv_nsec = times[0].tv_usec * 1000;
+        times_ns[1].tv_sec  = times[1].tv_sec;
+        times_ns[1].tv_nsec = times[1].tv_usec * 1000;
+        times_ns = times_ns_buf;
+    }
+    return libos_syscall_utimensat(AT_FDCWD, filename, times_ns, 0);
+}
+
+#ifndef UTIME_NOW
+#define UTIME_NOW ((1l << 30) - 1l)
+#endif
+
+#ifndef UTIME_OMIT
+#define UTIME_OMIT ((1l << 30) - 2l)
+#endif
+
+static bool nsec_valid(long nsec)
+{
+    if (nsec == UTIME_OMIT || nsec == UTIME_NOW)
+        return true;
+
+    return nsec >= 0 && nsec <= 999999999;
+}
+
+long libos_syscall_utimensat(int dirfd, const char* pathname, const struct timespec times[2], int flags) {
+    if (!is_user_string_readable(pathname))
+        return -EFAULT;
+
+    if (strnlen(pathname, PATH_MAX + 1) == PATH_MAX + 1)
+        return -ENAMETOOLONG;
+
+    if (strlen(pathname) == 0)
+        return -ENOENT;
+
+    if (flags & ~(AT_SYMLINK_NOFOLLOW | AT_EMPTY_PATH))
+        return -EINVAL;
+    else if (flags != 0)
+        return -ENOSYS;
+
+    int ret = 0;
+    uint64_t time_us;
+    ret = PalSystemTimeQuery(&time_us);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+
+    struct libos_dentry* dir = NULL;
+    struct libos_dentry* dent = NULL;
+
+    if (*pathname != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
+        return ret;
+
+    lock(&g_dcache_lock);
+    ret = path_lookupat(dir, pathname, LOOKUP_FOLLOW, &dent);
+    if (ret < 0)
+        goto out;
+
+    time_t atime = 0, mtime = 0;
+    if (times) {
+        if (!nsec_valid(times[0].tv_nsec) || !nsec_valid(times[1].tv_nsec))
+        {
+            ret = -EINVAL;
+            goto out_dent;
+        }
+
+        if (times[0].tv_nsec != UTIME_NOW && times[0].tv_nsec != UTIME_OMIT) {
+            atime = times[0].tv_sec + times[0].tv_nsec / 1000000000;
+        }
+        if (times[1].tv_nsec != UTIME_NOW && times[1].tv_nsec != UTIME_OMIT) {
+            mtime = times[1].tv_sec + times[1].tv_nsec / 1000000000;
+        }
+        if (times[0].tv_nsec == UTIME_NOW) atime = time_us / 1000000;
+        if (times[1].tv_nsec == UTIME_NOW) mtime = time_us / 1000000;
+	}
+    else {
+        atime = time_us / 1000000;
+        mtime = time_us / 1000000;
+    }
+
+    lock(&dent->inode->lock);
+    dent->inode->ctime = time_us / 1000000;
+    if (atime) dent->inode->atime = atime;
+    if (mtime) dent->inode->mtime = mtime;
+    unlock(&dent->inode->lock);
+
+out_dent:
+    put_dentry(dent);
+out:
+    unlock(&g_dcache_lock);
+    if (dir)
+        put_dentry(dir);
     return ret;
 }
