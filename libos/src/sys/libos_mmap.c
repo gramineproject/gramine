@@ -62,14 +62,14 @@ static int check_prot(int prot) {
     return 0;
 }
 
-void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
-                         unsigned long offset) {
+long libos_syscall_mmap(unsigned long addr, unsigned long length, unsigned long prot,
+                        unsigned long flags, unsigned long fd, unsigned long offset) {
     struct libos_handle* hdl = NULL;
     long ret = 0;
 
     ret = check_prot(prot);
     if (ret < 0)
-        return (void*)ret;
+        return ret;
 
     if (!(flags & MAP_FIXED) && addr)
         addr = ALLOC_ALIGN_DOWN_PTR(addr);
@@ -79,20 +79,20 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
      * but not the length. mmap() will automatically round up the length.
      */
     if (addr && !IS_ALLOC_ALIGNED_PTR(addr))
-        return (void*)-EINVAL;
+        return -EINVAL;
 
-    if (fd >= 0 && !IS_ALLOC_ALIGNED(offset))
-        return (void*)-EINVAL;
+    if (!IS_ALLOC_ALIGNED(offset))
+        return -EINVAL;
 
     if (!IS_ALLOC_ALIGNED(length))
         length = ALLOC_ALIGN_UP(length);
 
-    if (!length || !access_ok(addr, length))
-        return (void*)-EINVAL;
+    if (!length || !access_ok((void*)addr, length))
+        return -EINVAL;
 
     /* This check is Gramine specific. */
     if (flags & (VMA_UNMAPPED | VMA_TAINTED | VMA_INTERNAL)) {
-        return (void*)-EINVAL;
+        return -EINVAL;
     }
 
     if (flags & MAP_ANONYMOUS) {
@@ -101,7 +101,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             case MAP_PRIVATE:
                 break;
             default:
-                return (void*)-EINVAL;
+                return -EINVAL;
         }
     } else {
         /* MAP_FILE is the opposite of MAP_ANONYMOUS and is implicit */
@@ -112,13 +112,13 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
             case MAP_SHARED_VALIDATE:
                 /* Currently we do not support additional flags like MAP_SYNC */
                 if (flags & ~LEGACY_MAP_MASK) {
-                    return (void*)-EOPNOTSUPP;
+                    return -EOPNOTSUPP;
                 }
                 /* fall through */
             case MAP_PRIVATE:
                 hdl = get_fd_handle(fd, NULL, NULL);
                 if (!hdl) {
-                    return (void*)-EBADF;
+                    return -EBADF;
                 }
 
                 if (!hdl->fs || !hdl->fs->fs_ops || !hdl->fs->fs_ops->mmap) {
@@ -138,7 +138,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
                 break;
             default:
-                return (void*)-EINVAL;
+                return -EINVAL;
         }
 
         /* ignore MAP_NORESERVE for file-backed mappings as we consider this rare and not worth
@@ -166,27 +166,27 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     }
     if (flags & (MAP_FIXED | MAP_FIXED_NOREPLACE)) {
         /* We know that `addr + length` does not overflow (`access_ok` above). */
-        if (addr < memory_range_start || (uintptr_t)memory_range_end < (uintptr_t)addr + length) {
+        if (addr < (uintptr_t)memory_range_start || (uintptr_t)memory_range_end < addr + length) {
             ret = -EINVAL;
             goto out_handle;
         }
         if (!(flags & MAP_FIXED_NOREPLACE)) {
             /* Flush any file mappings we're about to replace */
-            ret = msync_range((uintptr_t)addr, (uintptr_t)addr + length);
+            ret = msync_range(addr, addr + length);
             if (ret < 0) {
                 goto out_handle;
             }
 
             struct libos_vma_info* vmas;
             size_t vmas_length;
-            ret = dump_vmas_in_range((uintptr_t)addr, (uintptr_t)addr + length,
+            ret = dump_vmas_in_range(addr, addr + length,
                                      /*include_unmapped=*/false, &vmas, &vmas_length);
             if (ret < 0) {
                 goto out_handle;
             }
 
             void* tmp_vma = NULL;
-            ret = bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma);
+            ret = bkeep_munmap((void*)addr, length, /*is_internal=*/false, &tmp_vma);
             if (ret < 0) {
                 free_vma_info_array(vmas, vmas_length);
                 goto out_handle;
@@ -207,12 +207,12 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
             bkeep_convert_tmp_vma_to_user(tmp_vma);
 
-            ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+            ret = bkeep_mmap_fixed((void*)addr, length, prot, flags, hdl, offset, NULL);
             if (ret < 0) {
                 BUG();
             }
         } else {
-            ret = bkeep_mmap_fixed(addr, length, prot, flags, hdl, offset, NULL);
+            ret = bkeep_mmap_fixed((void*)addr, length, prot, flags, hdl, offset, NULL);
             if (ret < 0) {
                 goto out_handle;
             }
@@ -221,8 +221,8 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         /* We know that `addr + length` does not overflow (`access_ok` above). */
         if (addr && (uintptr_t)memory_range_start <= (uintptr_t)addr
                 && (uintptr_t)addr + length <= (uintptr_t)memory_range_end) {
-            ret = bkeep_mmap_any_in_range(memory_range_start, (char*)addr + length, length, prot,
-                                          flags, hdl, offset, NULL, &addr);
+            ret = bkeep_mmap_any_in_range(memory_range_start, (void*)addr + length, length, prot,
+                                          flags, hdl, offset, NULL, (void**)&addr);
         } else {
             /* Hacky way to mark we had no hit and need to search below. */
             ret = -1;
@@ -230,11 +230,11 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         if (ret < 0) {
             /* We either had no hinted address or could not allocate memory at it. */
             if (memory_range_start == g_pal_public_state->memory_address_start) {
-                ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, &addr);
+                ret = bkeep_mmap_any_aslr(length, prot, flags, hdl, offset, NULL, (void**)&addr);
             } else {
                 /* Shared memory range does not have ASLR. */
                 ret = bkeep_mmap_any_in_range(memory_range_start, memory_range_end, length, prot,
-                                              flags, hdl, offset, NULL, &addr);
+                                              flags, hdl, offset, NULL, (void**)&addr);
             }
         }
         if (ret < 0) {
@@ -246,7 +246,7 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
     /* From now on `addr` contains the actual address we want to map (and already bookkeeped). */
 
     if (!hdl) {
-        ret = PalVirtualMemoryAlloc(addr, length, LINUX_PROT_TO_PAL(prot, flags));
+        ret = PalVirtualMemoryAlloc((void*)addr, length, LINUX_PROT_TO_PAL(prot, flags));
         if (ret < 0) {
             if (ret == PAL_ERROR_DENIED) {
                 ret = -EPERM;
@@ -256,12 +256,12 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
         }
     } else {
         size_t valid_length;
-        ret = hdl->fs->fs_ops->mmap(hdl, addr, length, prot, flags, offset, &valid_length);
+        ret = hdl->fs->fs_ops->mmap(hdl, (void*)addr, length, prot, flags, offset, &valid_length);
         if (ret == 0) {
-            int update_valid_length_ret = bkeep_vma_update_valid_length(addr, valid_length);
+            int update_valid_length_ret = bkeep_vma_update_valid_length((void*)addr, valid_length);
             if (update_valid_length_ret < 0) {
-                log_error("[mmap] Failed to update valid length to %lu of bookkeeped memory %p-%p!",
-                          valid_length, addr, (char*)addr + length);
+                log_error("[mmap] Failed to update valid length to %lu of bookkeeped memory %lu-%lu!",
+                          valid_length, addr, addr + length);
                 BUG();
             }
         }
@@ -269,9 +269,9 @@ void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
 
     if (ret < 0) {
         void* tmp_vma = NULL;
-        if (bkeep_munmap(addr, length, /*is_internal=*/false, &tmp_vma) < 0) {
-            log_error("[mmap] Failed to remove bookkeeped memory that was not allocated at %p-%p!",
-                      addr, (char*)addr + length);
+        if (bkeep_munmap((void*)addr, length, /*is_internal=*/false, &tmp_vma) < 0) {
+            log_error("[mmap] Failed to remove bookkeeped memory that was not allocated at %lu-%lu!",
+                      addr, addr + length);
             BUG();
         }
         bkeep_remove_tmp_vma(tmp_vma);
@@ -283,7 +283,7 @@ out_handle:
     }
 
     if (ret < 0) {
-        return (void*)ret;
+        return ret;
     }
     return addr;
 }
