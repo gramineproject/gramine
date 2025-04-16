@@ -32,8 +32,8 @@ long libos_syscall_statfs(const char* path, struct statfs* buf);
 long libos_syscall_fstatfs(int fd, struct statfs* buf);
 long libos_syscall_poll(struct pollfd* fds, unsigned int nfds, int timeout);
 long libos_syscall_lseek(int fd, off_t offset, int origin);
-void* libos_syscall_mmap(void* addr, size_t length, int prot, int flags, int fd,
-                         unsigned long offset);
+long libos_syscall_mmap(unsigned long addr, unsigned long length, unsigned long prot,
+                        unsigned long flags, unsigned long fd, unsigned long offset);
 long libos_syscall_mprotect(void* addr, size_t len, int prot);
 long libos_syscall_munmap(void* addr, size_t len);
 void* libos_syscall_brk(void* brk);
