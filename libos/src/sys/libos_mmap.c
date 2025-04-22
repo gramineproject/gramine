@@ -260,7 +260,7 @@ long libos_syscall_mmap(unsigned long addr, unsigned long length, unsigned long 
         if (ret == 0) {
             int update_valid_length_ret = bkeep_vma_update_valid_length((void*)addr, valid_length);
             if (update_valid_length_ret < 0) {
-                log_error("[mmap] Failed to update valid length to %lu of bookkeeped memory %lu-%lu!",
+                log_error("[mmap] Failed to update valid length to %lu of bookkeeped memory %#lx-%#lx!",
                           valid_length, addr, addr + length);
                 BUG();
             }
@@ -270,7 +270,7 @@ long libos_syscall_mmap(unsigned long addr, unsigned long length, unsigned long 
     if (ret < 0) {
         void* tmp_vma = NULL;
         if (bkeep_munmap((void*)addr, length, /*is_internal=*/false, &tmp_vma) < 0) {
-            log_error("[mmap] Failed to remove bookkeeped memory that was not allocated at %lu-%lu!",
+            log_error("[mmap] Failed to remove bookkeeped memory that was not allocated at %#lx-%#lx!",
                       addr, addr + length);
             BUG();
         }
