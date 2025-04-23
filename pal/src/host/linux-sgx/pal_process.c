@@ -132,8 +132,17 @@ int _PalProcessCreate(const char** args, uintptr_t (*reserved_mem_ranges)[2],
      * host OS. It serves merely as a hint to the initial memory allocator in PAL, so any malicious
      * host OS modifications are irrelevant (will be detected, if anything overlaps).
      */
+    sgx_config_id_t config_id;
+    sgx_config_svn_t config_svn;
+
+    memcpy(config_id.data,
+           g_pal_linuxsgx_state.enclave_info.config_id.data,
+           sizeof(config_id.data));
+    
+    config_svn = g_pal_linuxsgx_state.enclave_info.config_svn;
+
     int ret = ocall_create_process(nargs, args, reserved_mem_ranges, reserved_mem_ranges_len,
-                                   &stream_fd);
+                                config_id, config_svn, &stream_fd);
     if (ret < 0)
         return unix_to_pal_error(ret);
 

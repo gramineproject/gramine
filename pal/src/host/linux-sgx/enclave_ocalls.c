@@ -1011,7 +1011,8 @@ int ocall_clone_thread(void* dynamic_tcs) {
 }
 
 int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
-                         size_t reserved_mem_ranges_len, int* out_stream_fd) {
+                         size_t reserved_mem_ranges_len, sgx_config_id_t config_id,
+                         sgx_config_svn_t config_svn, int* out_stream_fd) {
     int ret;
     void* urts_reserved_mem_ranges = NULL;
     size_t reserved_mem_ranges_size = reserved_mem_ranges_len * sizeof(*reserved_mem_ranges);
@@ -1053,6 +1054,9 @@ int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_m
     }
     COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->reserved_mem_ranges, urts_reserved_mem_ranges);
     COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->reserved_mem_ranges_size, reserved_mem_ranges_size);
+
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->config_id, config_id);
+    COPY_VALUE_TO_UNTRUSTED(&ocall_cp_args->config_svn, config_svn);
 
     do {
         /* FIXME: if there was an EINTR, there may be an untrusted process left over */

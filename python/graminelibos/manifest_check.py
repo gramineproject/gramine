@@ -102,10 +102,10 @@ GramineManifestSchema = Schema({
             'xfrm_mask': _mask64,
             'misc_mask': _mask32,
         },
-        # TODO: validator for sha256
         'kss': bool,
         'isvfamilyid': str,
         'isvextprodid': str,
+        # TODO: validator for sha256
         'trusted_files': [Any(str, {'uri': _uri, 'sha256': str})],
         'use_exinfo': bool,
         'vtune_profile': bool,

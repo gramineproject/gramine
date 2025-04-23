@@ -30,6 +30,7 @@
 #include "toml_utils.h"
 #include "topo_info.h"
 #include "api.h"
+#include "hex.h"
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
@@ -201,7 +202,7 @@ out:
 }
 
 static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure,
-                            uint8_t *config_id, uint16_t config_svn) {
+                            sgx_config_id_t config_id, sgx_config_svn_t config_svn) {
     int ret = 0;
     int enclave_image = -1;
     sgx_sigstruct_t enclave_sigstruct;
@@ -290,7 +291,7 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     enclave_secs.size = enclave->size;
 
     /* set received config_id/svn to SECS */
-    memcpy(enclave_secs.config_id.data, config_id, SGX_CONFIGID_SIZE);
+    memcpy(enclave_secs.config_id.data, config_id.data, SGX_CONFIGID_SIZE);
     enclave_secs.config_svn = config_svn;
 
     ret = create_enclave(&enclave_secs, &enclave_sigstruct);
@@ -908,7 +909,7 @@ out:
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd,
                         void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
-                        uint8_t* config_id, uint16_t config_svn) {
+                        sgx_config_id_t config_id, sgx_config_svn_t config_svn) {
     int ret;
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
@@ -995,9 +996,14 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
             log_error("KSS feature was requested in manifest, but the platform doesn't support it");
             return -EPERM;
         }
+    } else {
+        /* when sgx.kss is false, config ID and SVN must be 0-cleared */
+        memset(config_id.data, 0, SGX_CONFIGID_SIZE);
+        config_svn = 0;
     }
 
-    ret = initialize_enclave(enclave, enclave->raw_manifest_data, config_id, config_svn);
+    ret = initialize_enclave(enclave, enclave->raw_manifest_data, 
+                             config_id, config_svn);
     if (ret < 0)
         return ret;
 
@@ -1054,7 +1060,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
-               "\tFirst process: %s <path to libpal.so> init <application> args...\n"
+               "\tFirst process: %s <path to libpal.so> init <KSS config ID> <KSS Config SVN> <application> args...\n"
                "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
     log_always("This is an internal interface. Use gramine-sgx wrapper to launch applications in "
@@ -1127,40 +1133,6 @@ static int verify_hw_requirements(char* envp[]) {
     return 0;
 }
 
-// initialize config_id with zeros
-static void initialize_config_id(uint8_t* config_id) {
-    memset(config_id, 0, 64);
-}
-
-// convert hexstring to byte array
-static int parse_hex_string_to_bytes(const char* hex_str, uint8_t* buffer, size_t buffer_size) {
-    if (strlen(hex_str) != buffer_size * 2) {
-        return 0;
-    }
-    for (size_t i = 0; i < buffer_size; i++) {
-        if (!isxdigit(hex_str[i * 2]) || !isxdigit(hex_str[i * 2 + 1])) {
-            return 0;
-        }
-        char byte_str[3] = { hex_str[i * 2], hex_str[i * 2 + 1], '\0' };
-        buffer[i] = (uint8_t)strtol(byte_str, NULL, 16);
-    }
-    return 1;
-}
-
-// convert hexstring to uint16_t
-static int parse_hex_string_to_uint16(const char* hex_str, uint16_t* value) {
-    if (strlen(hex_str) > 4 || strlen(hex_str) == 0) {
-        return 0;
-    }
-    for (size_t i = 0; i < strlen(hex_str); i++) {
-        if (!isxdigit(hex_str[i])) {
-            return 0;
-        }
-    }
-    *value = (uint16_t)strtol(hex_str, NULL, 16);
-    return 1;
-}
-
 __attribute_no_sanitize_address
 int main(int argc, char* argv[], char* envp[]) {
     char* manifest_path = NULL;
@@ -1184,8 +1156,12 @@ int main(int argc, char* argv[], char* envp[]) {
     static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
     probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
 
-    if (argc < 4)
+    if (argc < 6 && strcmp(argv[2], "init") == 0) {
         print_usage_and_exit(argv[0]);
+    }
+    if (argc < 4 && strcmp(argv[2], "child") == 0) {
+        print_usage_and_exit(argv[0]);
+    }
 
     g_host_pid = DO_SYSCALL(getpid);
 
@@ -1210,6 +1186,8 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     int parent_stream_fd = -1;
+    sgx_config_id_t final_config_id = {0};
+    sgx_config_svn_t final_config_svn = 0;
 
     if (first_process) {
         g_pal_enclave.is_first_process = true;
@@ -1240,7 +1218,8 @@ int main(int argc, char* argv[], char* envp[]) {
         }
 
         ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest,
-                                     &reserved_mem_ranges, &reserved_mem_ranges_size);
+                                     &reserved_mem_ranges, &reserved_mem_ranges_size,
+                                     &final_config_id, &final_config_svn);
         if (ret < 0)
             return ret;
     }
@@ -1251,14 +1230,37 @@ int main(int argc, char* argv[], char* envp[]) {
      * continuous we know that we are running on Linux, which does this. This
      * saves us creating a copy of all argv and envp strings.
      */
-    char* args;
-    size_t args_size;
+    char* args = NULL;
+    size_t args_size = 0;
+    
     if (first_process) {
-        args = argv[3];
-        args_size = argc > 3 ? (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1 : 0;
+        size_t total_size = strlen(argv[3]) + 1;
+
+        for (int i = 6; i < argc; i++) {
+            total_size += strlen(argv[i]) + 1;
+        }
+
+        args = malloc(total_size);
+        if (!args)
+            return -ENOMEM;
+
+        char* p = args;
+        size_t len = strlen(argv[3]) + 1;
+        memcpy(p, argv[3], len);
+        p += len;
+
+        for (int i = 6; i < argc; i++) {
+            len = strlen(argv[i]) + 1;
+            memcpy(p, argv[i], len);
+            p += len;
+        }
+
+        args_size = total_size;
     } else {
-        args = argv[4];
-        args_size = argc > 4 ? (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1 : 0;
+        if (argc > 4) {
+            args = argv[4];
+            args_size = (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1;
+        }
     }
 
     size_t envc = 0;
@@ -1268,42 +1270,27 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
-    /* config ID/SVN implementation part */
-    uint8_t config_id[SGX_CONFIGID_SIZE];
-    uint16_t config_svn = 0;
-
-    for (size_t i = 0; envp[i] != NULL; i++) {
-        // parse env
-        char* key_value = envp[i];
-        char* delimiter = strchr(key_value, '=');
-        if (delimiter == NULL) {
-            continue;
+    /* If we're first process, parse config ID/SVN from command line args */
+    if (first_process && argc >= 6) {
+        if (!hex2bytes(argv[4], strlen(argv[4]), final_config_id.data, SGX_CONFIGID_SIZE)) {
+            log_error("Parsing Config ID from argv failed");
+            return -EINVAL;
         }
 
-        size_t key_len = delimiter - key_value;
-        char key[256];
-        memcpy(key, key_value, key_len);
-        key[key_len] = '\0';
-
-        const char* value = delimiter + 1;
-
-        // parse SGX_CONFIG_ID env to config_id 
-        if (strcmp(key, "SGX_CONFIG_ID") == 0) {
-            if (!parse_hex_string_to_bytes(value, config_id, SGX_CONFIGID_SIZE)) {
-                initialize_config_id(config_id);
-            }
-        }
-        // parse SGX_CONFIG_SVN env to config_svn
-        else if (strcmp(key, "SGX_CONFIG_SVN") == 0) {
-            if (!parse_hex_string_to_uint16(value, &config_svn)) {
-                config_svn = 0;
-            }
+        unsigned long parsed_value;
+        const char* endptr;
+        if (str_to_ulong(argv[5], 10, &parsed_value, &endptr) == 0 &&
+            *endptr == '\0' && parsed_value <= UINT16_MAX) {
+            final_config_svn = (uint16_t)parsed_value;
+        } else {
+            log_error("Parsing Config SVN from argv failed");
+            return -EINVAL;
         }
     }
 
     ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd,
                        reserved_mem_ranges, reserved_mem_ranges_size,
-                       config_id, config_svn);
+                       final_config_id, final_config_svn);
     if (ret < 0) {
         log_error("load_enclave() failed with error: %s", unix_strerror(ret));
         return ret;
