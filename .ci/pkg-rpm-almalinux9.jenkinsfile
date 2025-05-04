@@ -7,6 +7,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename '.ci/almalinux9.dockerfile'
+                    args "--security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json"
                     reuseNode true
                 }
             }
@@ -22,7 +23,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename '.ci/almalinux9.dockerfile'
-                    args '--network=none'
+                    args "--security-opt seccomp=${env.WORKSPACE}/scripts/docker_seccomp.json --network=none"
                     reuseNode true
                 }
             }
