@@ -80,7 +80,6 @@ extern char __text_start, __text_end, __data_start, __data_end;
 extern const uint32_t g_cpu_extension_sizes[];
 extern const uint32_t g_cpu_extension_offsets[];
 
-extern int g_xsave_enabled;
 extern uint64_t g_xsave_features;
 extern uint32_t g_xsave_size;
 #define XSAVE_RESET_STATE_SIZE (512 + 64)  // 512 for legacy regs, 64 for xsave header

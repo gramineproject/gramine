@@ -1099,6 +1099,13 @@ static int verify_hw_requirements(char* envp[]) {
                   "Please upgrade your hardware.", missing);
         return -EINVAL;
     }
+
+    if (!(values[CPUID_WORD_ECX] & (1 << 27))) {
+        log_error("Gramine with Linux-SGX backend requires XSAVE support in OS (OSXSAVE). "
+                  "Please use an OS with XSAVE support.");
+        return -EINVAL;
+    }
+
     return 0;
 }
 

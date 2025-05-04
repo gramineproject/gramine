@@ -105,13 +105,8 @@ static void save_pal_context(PAL_CONTEXT* ctx, sgx_cpu_context_t* uc,
     fpx_sw->extended_size = g_xsave_size;
     fpx_sw->xfeatures     = g_xsave_features;
     memset(fpx_sw->padding, 0, sizeof(fpx_sw->padding));
-    if (g_xsave_enabled) {
-        fpx_sw->xstate_size = g_xsave_size + PAL_FP_XSTATE_MAGIC2_SIZE;
-        *(__typeof__(PAL_FP_XSTATE_MAGIC2)*)((void*)xregs_state + g_xsave_size) =
-            PAL_FP_XSTATE_MAGIC2;
-    } else {
-        fpx_sw->xstate_size = g_xsave_size;
-    }
+    fpx_sw->xstate_size = g_xsave_size + PAL_FP_XSTATE_MAGIC2_SIZE;
+    *(__typeof__(PAL_FP_XSTATE_MAGIC2)*)((void*)xregs_state + g_xsave_size) = PAL_FP_XSTATE_MAGIC2;
 }
 
 static void emulate_rdtsc_and_print_warning(sgx_cpu_context_t* uc) {
