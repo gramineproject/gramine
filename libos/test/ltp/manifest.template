@@ -1,6 +1,6 @@
 libos.entrypoint = "{{ entrypoint }}"
 
-loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/lib64"
+loader.env.LD_LIBRARY_PATH = "/lib:{{ arch_libdir }}:/usr/lib:/usr/lib64:/usr/{{ arch_libdir }}"
 loader.env.PATH = "/bin:/usr/bin:."
 loader.env.LD_PRELOAD = "{{ coreutils_libdir }}/libstdbuf.so"
 loader.env._STDBUF_O = "L"
