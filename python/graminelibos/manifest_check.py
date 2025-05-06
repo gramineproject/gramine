@@ -30,6 +30,7 @@ _fs_base = (
         Required('type'): 'encrypted',
         Required('uri'): _uri,
         'key_name': str,
+        'enable_recovery': bool,
     },
     {
         Required('type'): 'tmpfs',

@@ -121,6 +121,7 @@ static int mount_root(void) {
     char* fs_root_type     = NULL;
     char* fs_root_uri      = NULL;
     char* fs_root_key_name = NULL;
+    bool fs_root_enable_recovery;
 
     assert(g_manifest_root);
 
@@ -145,9 +146,18 @@ static int mount_root(void) {
         goto out;
     }
 
+    ret = toml_bool_in(g_manifest_root, "fs.root.enable_recovery", /*defaultval=*/false,
+                       &fs_root_enable_recovery);
+    if (ret < 0) {
+        log_error("Cannot parse 'fs.root.enable_recovery'");
+        ret = -EINVAL;
+        goto out;
+    }
+
     struct libos_mount_params params = {
         .path = "/",
         .key_name = fs_root_key_name,
+        .enable_recovery = fs_root_enable_recovery,
     };
 
     if (!fs_root_type && !fs_root_uri) {
@@ -212,6 +222,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     char* mount_path     = NULL;
     char* mount_uri      = NULL;
     char* mount_key_name = NULL;
+    bool mount_enable_recovery;
 
     ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
@@ -237,6 +248,13 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     ret = toml_string_in(mount, "key_name", &mount_key_name);
     if (ret < 0) {
         log_error("Cannot parse '%s.key_name'", prefix);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_bool_in(mount, "enable_recovery", /*defaultval=*/false, &mount_enable_recovery);
+    if (ret < 0) {
+        log_error("Cannot parse '%s.enable_recovery'", prefix);
         ret = -EINVAL;
         goto out;
     }
@@ -286,6 +304,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         .path = mount_path,
         .uri = mount_uri,
         .key_name = mount_key_name,
+        .enable_recovery = mount_enable_recovery,
     };
     ret = mount_fs(&params);
 
@@ -458,6 +477,8 @@ static int mount_fs_at_dentry(struct libos_mount_params* params, struct libos_de
     }
     mount->fs = fs;
     mount->data = mount_data;
+
+    mount->enable_recovery = params->enable_recovery;
 
     /* Attach mount to mountpoint, and the other way around */
 
@@ -706,9 +727,10 @@ BEGIN_CP_FUNC(mount) {
             new_mount->cpdata = (char*)base + cp_off;
         }
 
-        new_mount->data        = NULL;
-        new_mount->mount_point = NULL;
-        new_mount->root        = NULL;
+        new_mount->data            = NULL;
+        new_mount->mount_point     = NULL;
+        new_mount->root            = NULL;
+        new_mount->enable_recovery = mount->enable_recovery;
         INIT_LIST_HEAD(new_mount, list);
         refcount_set(&new_mount->ref_count, 0);
 
