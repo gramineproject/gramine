@@ -39,15 +39,15 @@ static int do_hstat(struct libos_handle* hdl, struct stat* stat) {
     if (!fs || !fs->fs_ops || !fs->fs_ops->hstat)
         return -EACCES;
 
+    lock(&hdl->lock);
     int ret = fs->fs_ops->hstat(hdl, stat);
-    if (ret < 0)
-        return ret;
-
-    /* Update `st_ino` from dentry */
-    if (hdl->dentry)
+    if (ret >= 0 && hdl->dentry) {
+        /* Update `st_ino` from dentry */
         stat->st_ino = dentry_ino(hdl->dentry);
+    }
+    unlock(&hdl->lock);
 
-    return 0;
+    return ret;
 }
 
 long libos_syscall_stat(const char* file, struct stat* stat) {
@@ -210,7 +210,9 @@ long libos_syscall_fstatfs(int fd, struct statfs* buf) {
     if (!hdl)
         return -EBADF;
 
+    lock(&hdl->lock);
     struct libos_mount* mount = hdl->dentry ? hdl->dentry->mount : NULL;
+    unlock(&hdl->lock);
     put_handle(hdl);
     return __do_statfs(mount, buf);
 }

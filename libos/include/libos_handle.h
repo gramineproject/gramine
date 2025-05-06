@@ -165,6 +165,7 @@ struct libos_handle {
     refcount_t ref_count;
 
     struct libos_fs* fs;
+    /* dentry can change due to rename, so to derefence or update requires holding `lock`. */
     struct libos_dentry* dentry;
 
     /*
