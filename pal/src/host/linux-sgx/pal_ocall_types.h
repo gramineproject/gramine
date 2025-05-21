@@ -182,6 +182,8 @@ struct ocall_create_process {
     void* reserved_mem_ranges;
     size_t reserved_mem_ranges_size;
     size_t nargs;
+    sgx_config_id_t config_id;
+    sgx_config_svn_t config_svn;
     const char* args[];
 };
 
