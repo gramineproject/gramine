@@ -198,16 +198,17 @@ Encrypted files on host storage are represented as a string of 4KB chunks. Each
 encrypted file starts with a *metadata node*, that has the following three
 parts:
 
-1. The plaintext header, occupying bytes 0-57. The header contains a magic
+1. The plaintext header, occupying bytes 0-58. The header contains a magic
    string, a major version of the encrypted-files protocol, a minor version, a
-   nonce for KDF (Key Derivation Function, explained in the next section) and a
-   MAC (cryptographic hash over the encrypted header).
-2. The encrypted header, occupying bytes 58-3941. This header has two parts: the
+   nonce for KDF (Key Derivation Function, explained in the next section), a MAC
+   (cryptographic hash over the encrypted header) and a feature flags field
+   (including a "has-pending-write" flag for file recovery).
+2. The encrypted header, occupying bytes 59-3942. This header has two parts: the
    encrypted metadata fields and the first 3KB of actual file contents. The
    metadata fields contain a file path (to prevent rename attacks), the file
    size (to hide the exact file size from attackers) and the encryption key and
    MAC of the root MHT node (explained later).
-3. The constant padding, occupying bytes 3942-4095. This padding is added purely
+3. The constant padding, occupying bytes 3943-4095. This padding is added purely
    to align the metadata node on the 4KB boundary and contains zeros.
 
 Note that if the original file is less than 3KB in size, then this file's
@@ -320,8 +321,8 @@ AES-GCM encryption happens in the ``metadata_node`` bounce buffer, on the
 plaintext data struct ``metadata_decrypted`` and with the newly derived key.
 
 Finally in step 5, the resulting ciphertext is copied out from the bounce buffer
-to the host storage. An additional plaintext header in bytes 0-57 is prepended
-to the ciphertext, and the padding in bytes 3942-4095 aligns the resulting
+to the host storage. An additional plaintext header in bytes 0-58 is prepended
+to the ciphertext, and the padding in bytes 3943-4095 aligns the resulting
 metadata node to 4KB. Note that the plaintext header contains the KDF nonce
 generated in step 2 and the MAC generated as a by-product of AES-GCM encryption
 in step 4. The nonce and the MAC can be stored in plaintext, and they will be
@@ -508,10 +509,27 @@ Additional details
   least one process writes to the file), the file may become corrupted or
   inaccessible to one of the processes.
 
-- There is no support for file recovery. If the file was only partially written
-  to storage when the app abruptly terminated, Gramine will treat this file as
-  corrupted and will return an ``-EACCES`` error. (This is in contrast to Intel
-  SGX SDK which supports file recovery.)
+- File recovery: Gramine supports recovery for encrypted files, which can be
+  enabled via the ``enable_recovery`` mount parameter in the Gramine manifest.
+  This allows a file to be recovered from a corrupted state (caused by e.g.,
+  incorrect GMACs and/or encryption keys) when it was only partially written to
+  storage due to a fatal error (e.g., abrupt app termination). Similar to Intel
+  SGX SDK’s recovery mechanism, Gramine uses a "shadow" recovery file and a
+  "has-pending-write" flag in the metadata node's ``feature_flags`` field to
+  manage write transactions. During file flush, cached blocks about to change
+  are saved to the recovery file. If an encrypted file is opened with the flag
+  set, a recovery process reverts partial changes using the recovery file,
+  restoring the last known good state. The "shadow" recovery file is cleaned up
+  on file close. Note that enabling this feature can impact performance due to
+  additional writes to the shadow file on each flush. For backward
+  compatibility, when an older encrypted file (version 1.0, without
+  ``feature_flags`` in its metadata) is opened, its in-memory metadata structure
+  is automatically updated to the new format for accessibility and saved in the
+  new format upon a write.
+
+  .. note ::
+     This feature is not tested in CI due to the difficulty of reliably
+     simulating crashes in the middle of file flush.
 
 - There is no key rotation scheme. The application must perform key rotation of
   the KDK by itself (by overwriting the ``/dev/attestation/keys/``

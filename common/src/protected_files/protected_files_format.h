@@ -19,7 +19,7 @@
 #include "protected_files.h"
 
 #define PF_FILE_ID       0x46505f5346415247 /* GRAFS_PF */
-#define PF_MAJOR_VERSION 0x01
+#define PF_MAJOR_VERSION 0x02
 #define PF_MINOR_VERSION 0x00
 
 #define METADATA_KEY_NAME "SGX-PROTECTED-FS-METADATA-KEY"
@@ -43,6 +43,8 @@ typedef struct {
     pf_mac_t mac;
 } gcm_crypto_data_t;
 
+#define HAS_PENDING_WRITE_FLAG 0x01 /* for file recovery */
+
 // for PF_NODE_SIZE == 4096, we have 96 attached data nodes and 32 mht child nodes
 // 3/4 of the node is dedicated to data nodes, 1/4 to MHT nodes
 #define ATTACHED_DATA_NODES_COUNT ((PF_NODE_SIZE / sizeof(gcm_crypto_data_t)) * 3 / 4)
@@ -56,6 +58,7 @@ typedef struct {
     uint8_t    minor_version;
     pf_nonce_t metadata_key_nonce;
     pf_mac_t   metadata_mac; /* GCM mac */
+    uint8_t    feature_flags;
 } metadata_plaintext_t;
 
 typedef struct {
@@ -94,6 +97,11 @@ typedef struct {
     uint8_t bytes[PF_NODE_SIZE];
 } encrypted_node_t;
 static_assert(sizeof(encrypted_node_t) == PF_NODE_SIZE, "sizeof(encrypted_node_t)");
+
+typedef struct {
+    uint64_t physical_node_number;
+    uint8_t bytes[PF_NODE_SIZE];
+} recovery_node_t;
 
 static_assert(sizeof(mht_node_t) == sizeof(data_node_t), "sizes of MHT and data nodes differ");
 
