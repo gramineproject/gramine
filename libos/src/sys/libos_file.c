@@ -636,7 +636,13 @@ static bool nsec_valid(long nsec)
     return nsec >= 0 && nsec <= 999999999;
 }
 
+/*
+ * XXX: The utimesat syscall currently only implements a subset
+ * of the utimesat functionality, equivalent to utimes.
+ */
 long libos_syscall_utimensat(int dirfd, const char* pathname, const struct timespec times[2], int flags) {
+    int ret = 0;
+
     if (!is_user_string_readable(pathname))
         return -EFAULT;
 
@@ -651,23 +657,26 @@ long libos_syscall_utimensat(int dirfd, const char* pathname, const struct times
     else if (flags != 0)
         return -ENOSYS;
 
-    int ret = 0;
-    uint64_t time_us;
-    ret = PalSystemTimeQuery(&time_us);
-    if (ret < 0) {
-        return pal_to_unix_errno(ret);
-    }
-
     struct libos_dentry* dir = NULL;
     struct libos_dentry* dent = NULL;
 
     if (*pathname != '/' && (ret = get_dirfd_dentry(dirfd, &dir)) < 0)
         return ret;
 
+    uint64_t time_us;
+    ret = PalSystemTimeQuery(&time_us);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+
     lock(&g_dcache_lock);
     ret = path_lookupat(dir, pathname, LOOKUP_FOLLOW, &dent);
     if (ret < 0)
         goto out;
+
+    ret = check_permissions(dent, W_OK);
+    if (ret < 0)
+        goto out_dent;
 
     time_t atime = 0, mtime = 0;
     if (times) {
