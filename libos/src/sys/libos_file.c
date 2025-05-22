@@ -611,10 +611,10 @@ long libos_syscall_utimes(const char* filename, const struct timeval times[2]) {
 
     if (times)
     {
-        times_ns[0].tv_sec  = times[0].tv_sec;
-        times_ns[0].tv_nsec = times[0].tv_usec * 1000;
-        times_ns[1].tv_sec  = times[1].tv_sec;
-        times_ns[1].tv_nsec = times[1].tv_usec * 1000;
+        times_ns_buf[0].tv_sec  = times[0].tv_sec;
+        times_ns_buf[0].tv_nsec = times[0].tv_usec * 1000;
+        times_ns_buf[1].tv_sec  = times[1].tv_sec;
+        times_ns_buf[1].tv_nsec = times[1].tv_usec * 1000;
         times_ns = times_ns_buf;
     }
     return libos_syscall_utimensat(AT_FDCWD, filename, times_ns, 0);
