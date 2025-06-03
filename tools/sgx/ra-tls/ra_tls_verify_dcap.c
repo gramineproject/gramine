@@ -32,6 +32,7 @@
 #include "ra_tls_common.h"
 
 extern verify_measurements_cb_t g_verify_measurements_cb;
+extern verify_measurements_with_kss_cb_t g_verify_measurements_including_kss_cb;
 
 /* we cannot include libsgx_dcap_verify headers because they conflict with Gramine SGX headers,
  * so we declare the used types and functions below */
@@ -244,12 +245,25 @@ int ra_tls_verify_callback(void* data, mbedtls_x509_crt* crt, int depth, uint32_
         results->err_loc = AT_VERIFY_ENCLAVE_MEASUREMENTS;
 
     /* verify other relevant enclave information from the SGX quote */
-    if (g_verify_measurements_cb) {
+    if (g_verify_measurements_cb != NULL && g_verify_measurements_including_kss_cb != NULL) {
+        ERROR("Only a single callback can be set.\n");
+        ret = -1;
+    } else if (g_verify_measurements_cb) {
         /* use user-supplied callback to verify measurements */
         ret = g_verify_measurements_cb((const char*)&quote_body->report_body.mr_enclave,
                                        (const char*)&quote_body->report_body.mr_signer,
                                        (const char*)&quote_body->report_body.isv_prod_id,
                                        (const char*)&quote_body->report_body.isv_svn);
+    } else if (g_verify_measurements_including_kss_cb) {
+        /* use user-supplied callback to verify measurements */
+        ret = g_verify_measurements_including_kss_cb((const char*)&quote_body->report_body.mr_enclave,
+                                                     (const char*)&quote_body->report_body.mr_signer,
+                                                     (const char*)&quote_body->report_body.isv_prod_id,
+                                                     (const char*)&quote_body->report_body.isv_svn,
+                                                     (const char*)&quote_body->report_body.isv_ext_prod_id,
+                                                     (const char*)&quote_body->report_body.isv_family_id,
+                                                     (const char*)&quote_body->report_body.config_id,
+                                                     (const char*)&quote_body->report_body.config_svn);
     } else {
         /* use default logic to verify measurements */
         ret = verify_quote_body_against_envvar_measurements(quote_body);

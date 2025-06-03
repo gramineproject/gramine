@@ -28,6 +28,7 @@
 #include "ra_tls_common.h"
 
 verify_measurements_cb_t g_verify_measurements_cb = NULL;
+verify_measurements_with_kss_cb_t g_verify_measurements_including_kss_cb = NULL;
 
 static bool getenv_critical(const char* name, const char** out_value) {
     const char* value = getenv(name);
@@ -44,19 +45,45 @@ static bool getenv_critical(const char* name, const char** out_value) {
     return true;
 }
 
+static bool getenv_optional(const char* name, const char** out_value) {
+    const char* value = getenv(name);
+    if (!value) {
+        return false;
+    }
+
+    if (strcmp(value, "any") == 0) {
+        value = NULL;
+    }
+
+    *out_value = value;
+    return true;
+}
+
 static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* validate_mrsigner,
                                        sgx_measurement_t* mrenclave, bool* validate_mrenclave,
                                        sgx_prod_id_t* isv_prod_id, bool* validate_isv_prod_id,
-                                       sgx_isv_svn_t* isv_svn, bool* validate_isv_svn) {
+                                       sgx_isv_svn_t* isv_svn, bool* validate_isv_svn,
+                                       sgx_isvext_prod_id_t* isv_ext_prod_id, bool* validate_isv_ext_prod_id,
+                                       sgx_isvfamily_id_t* isv_family_id, bool* validate_isv_family_id,
+                                       sgx_config_id_t* config_id, bool* validate_config_id,
+                                       sgx_config_svn_t* config_svn, bool* validate_config_svn) {
     *validate_mrsigner    = false;
     *validate_mrenclave   = false;
     *validate_isv_prod_id = false;
     *validate_isv_svn     = false;
+    *validate_isv_ext_prod_id = false;
+    *validate_isv_family_id = false;
+    *validate_config_id = false;
+    *validate_config_svn = false;
 
     const char* mrsigner_hex;
     const char* mrenclave_hex;
     const char* isv_prod_id_dec;
     const char* isv_svn_dec;
+    const char* isv_ext_prod_id_hex;
+    const char* isv_family_id_hex;
+    const char* config_id_hex;
+    const char* config_svn_dec;
 
     /* any of the below variables may be NULL (and then not used in validation) */
     if (!getenv_critical(RA_TLS_MRSIGNER, &mrsigner_hex))
@@ -93,6 +120,40 @@ static int getenv_enclave_measurements(sgx_measurement_t* mrsigner, bool* valida
         if (errno)
             return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
         *validate_isv_svn = true;
+    }
+
+    if (!getenv_optional(RA_TLS_ISV_EXT_PROD_ID, &isv_ext_prod_id_hex))
+        *validate_isv_ext_prod_id = false;
+    else if (isv_ext_prod_id_hex) {
+        if (parse_hex(isv_ext_prod_id_hex, isv_ext_prod_id, sizeof(*isv_ext_prod_id), NULL) != 0)
+            return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        *validate_isv_ext_prod_id = true;
+    }
+
+    if (!getenv_optional(RA_TLS_ISV_FAMILY_ID, &isv_family_id_hex))
+        *validate_isv_family_id = false;
+    else if (isv_family_id_hex) {
+        if (parse_hex(isv_family_id_hex, isv_family_id, sizeof(*isv_family_id), NULL) != 0)
+            return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        *validate_isv_family_id = true;
+    }
+
+    if (!getenv_optional(RA_TLS_CONFIG_ID, &config_id_hex))
+        *validate_config_id = false;
+    else if (config_id_hex) {
+        if (parse_hex(config_id_hex, config_id, sizeof(*config_id), NULL) != 0)
+            return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        *validate_config_id = true;
+    }
+
+    if (!getenv_optional(RA_TLS_CONFIG_SVN, &config_svn_dec))
+        *validate_config_svn = false;
+    else if (config_svn_dec) {
+        errno = 0;
+        *config_svn = strtoul(config_svn_dec, NULL, 10);
+        if (errno)
+            return MBEDTLS_ERR_X509_BAD_INPUT_DATA;
+        *validate_config_svn = true;
     }
 
     if (!*validate_mrsigner && !*validate_mrenclave) {
@@ -553,6 +614,13 @@ void ra_tls_set_measurement_callback(int (*f_cb)(const char* mrenclave, const ch
     g_verify_measurements_cb = f_cb;
 }
 
+void ra_tls_set_measurement_including_kss_callback(int (*f_cb)(const char* mrenclave, const char* mrsigner,
+                                                   const char* isv_prod_id, const char* isv_svn,
+                                                   const char* isv_ext_prod_id, const char* isv_family_id,
+                                                   const char* config_id, const char* config_svn)) {
+    g_verify_measurements_including_kss_cb = f_cb;
+}
+
 int ra_tls_verify_callback_der(uint8_t* der_crt, size_t der_crt_size) {
     INFO("WARNING: The ra_tls_verify_callback_der() API is deprecated in favor of the "
          "ra_tls_verify_callback_extended_der() version of API.\n");
@@ -591,16 +659,28 @@ int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_
     sgx_measurement_t expected_mrenclave;
     sgx_prod_id_t expected_isv_prod_id;
     sgx_isv_svn_t expected_isv_svn;
+    sgx_isvext_prod_id_t expected_isv_ext_prod_id;
+    sgx_isvfamily_id_t expected_isv_family_id;
+    sgx_config_id_t expected_config_id;
+    sgx_config_svn_t expected_config_svn;
 
-    bool validate_mrsigner    = false;
-    bool validate_mrenclave   = false;
-    bool validate_isv_prod_id = false;
-    bool validate_isv_svn     = false;
+    bool validate_mrsigner          = false;
+    bool validate_mrenclave         = false;
+    bool validate_isv_prod_id       = false;
+    bool validate_isv_svn           = false;
+    bool validate_isv_ext_prod_id   = false;
+    bool validate_isv_family_id     = false;
+    bool validate_config_id         = false;
+    bool validate_config_svn        = false;
 
     ret = getenv_enclave_measurements(&expected_mrsigner, &validate_mrsigner,
                                       &expected_mrenclave, &validate_mrenclave,
                                       &expected_isv_prod_id, &validate_isv_prod_id,
-                                      &expected_isv_svn, &validate_isv_svn);
+                                      &expected_isv_svn, &validate_isv_svn,
+                                      &expected_isv_ext_prod_id, &validate_isv_ext_prod_id,
+                                      &expected_isv_family_id, &validate_isv_family_id,
+                                      &expected_config_id, &validate_config_id,
+                                      &expected_config_svn, &validate_config_svn);
     if (ret < 0)
         return ret;
 
@@ -608,6 +688,10 @@ int verify_quote_body_against_envvar_measurements(const sgx_quote_body_t* quote_
                             validate_mrenclave ? (char*)&expected_mrenclave : NULL,
                             validate_isv_prod_id ? (char*)&expected_isv_prod_id : NULL,
                             validate_isv_svn ? (char*)&expected_isv_svn : NULL,
+                            validate_isv_ext_prod_id ? (char*)&expected_isv_ext_prod_id : NULL,
+                            validate_isv_family_id ? (char*)&expected_isv_family_id : NULL,
+                            validate_config_id ? (char*)&expected_config_id : NULL,
+                            validate_config_svn ? (char*)&expected_config_svn : NULL,
                             /*report_data=*/NULL, /*expected_as_str=*/false);
     if (ret < 0)
         return MBEDTLS_ERR_X509_CERT_VERIFY_FAILED;

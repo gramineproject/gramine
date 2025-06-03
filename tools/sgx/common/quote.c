@@ -105,6 +105,8 @@ void display_quote(const void* quote_data, size_t quote_size) {
 
 int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
                       const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* isv_ext_prod_id, const char* isv_family_id,
+                      const char* config_id, const char* config_svn,
                       const char* report_data, bool expected_as_str) {
     int ret = -1;
 
@@ -196,6 +198,95 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
         DBG("Quote: isv_svn OK\n");
     }
 
+    if (isv_ext_prod_id) {
+        sgx_isvext_prod_id_t expected_isv_ext_prod_id;
+
+        if (expected_as_str) {
+            if (parse_hex(isv_ext_prod_id, &expected_isv_ext_prod_id, sizeof(expected_isv_ext_prod_id), NULL) != 0)
+                goto out;
+        } else {
+            memcpy(&expected_isv_ext_prod_id, isv_ext_prod_id, sizeof(expected_isv_ext_prod_id));
+        }
+
+        if (memcmp(&report_body->isv_ext_prod_id, &expected_isv_ext_prod_id, sizeof(expected_isv_ext_prod_id)) != 0) {
+            ERROR("Quote: isv_ext_prod_id doesn't match the expected value\n");
+            if (get_verbose()) {
+                ERROR("Quote isv_ext_prod_id:\n");
+                HEXDUMP(report_body->isv_ext_prod_id);
+                ERROR("Expected isv_ext_prod_id:\n");
+                HEXDUMP(expected_isv_ext_prod_id);
+            }
+            goto out;
+        }
+
+        DBG("Quote: isv_ext_prod_id OK\n");
+    }
+
+    if (isv_family_id) {
+        sgx_isvfamily_id_t expected_isv_family_id;
+
+        if (expected_as_str) {
+            if (parse_hex(isv_family_id, &expected_isv_family_id, sizeof(expected_isv_family_id), NULL) != 0)
+                goto out;
+        } else {
+            memcpy(&expected_isv_family_id, isv_family_id, sizeof(expected_isv_family_id));
+        }
+
+        if (memcmp(&report_body->isv_family_id, &expected_isv_family_id, sizeof(expected_isv_family_id)) != 0) {
+            ERROR("Quote: isv_family_id doesn't match the expected value\n");
+            if (get_verbose()) {
+                ERROR("Quote isv_family_id:\n");
+                HEXDUMP(report_body->isv_family_id);
+                ERROR("Expected isv_family_id:\n");
+                HEXDUMP(expected_isv_family_id);
+            }
+            goto out;
+        }
+
+        DBG("Quote: isv_family_id OK\n");
+    }
+
+    if (config_id) {
+        sgx_config_id_t expected_config_id;
+
+        if (expected_as_str) {
+            if (parse_hex(config_id, &expected_config_id, sizeof(expected_config_id), NULL) != 0)
+                goto out;
+        } else {
+            memcpy(&expected_config_id, config_id, sizeof(expected_config_id));
+        }
+
+        if (memcmp(&report_body->config_id, &expected_config_id, sizeof(expected_config_id)) != 0) {
+            ERROR("Quote: config_id doesn't match the expected value\n");
+            if (get_verbose()) {
+                ERROR("Quote config_id:\n");
+                HEXDUMP(report_body->config_id);
+                ERROR("Expected config_id:\n");
+                HEXDUMP(expected_config_id);
+            }
+            goto out;
+        }
+
+        DBG("Quote: config_id OK\n");
+    }
+
+    if (config_svn) {
+        sgx_config_svn_t expected_config_svn;
+
+        if (expected_as_str) {
+            expected_config_svn = strtoul(config_svn, NULL, 10);
+        } else {
+            memcpy(&expected_config_svn, config_svn, sizeof(expected_config_svn));
+        }
+
+        if (report_body->config_svn < expected_config_svn) {
+            ERROR("Quote: invalid config_svn (%u < expected %u)\n", report_body->config_svn, expected_config_svn);
+            goto out;
+        }
+
+        DBG("Quote: config_svn OK\n");
+    }
+
     if (report_data) {
         sgx_report_data_t rd;
 
@@ -221,7 +312,6 @@ int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
     }
 
     ret = 0;
-    // TODO: KSS support (isv_ext_prod_id, config_id, config_svn, isv_family_id)
 out:
     return ret;
 }

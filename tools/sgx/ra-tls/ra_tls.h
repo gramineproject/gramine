@@ -26,10 +26,14 @@
 #define RA_TLS_ALLOW_SW_HARDENING_NEEDED    "RA_TLS_ALLOW_SW_HARDENING_NEEDED"
 #define RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE "RA_TLS_ALLOW_DEBUG_ENCLAVE_INSECURE"
 
-#define RA_TLS_MRSIGNER    "RA_TLS_MRSIGNER"
-#define RA_TLS_MRENCLAVE   "RA_TLS_MRENCLAVE"
-#define RA_TLS_ISV_PROD_ID "RA_TLS_ISV_PROD_ID"
-#define RA_TLS_ISV_SVN     "RA_TLS_ISV_SVN"
+#define RA_TLS_MRSIGNER         "RA_TLS_MRSIGNER"
+#define RA_TLS_MRENCLAVE        "RA_TLS_MRENCLAVE"
+#define RA_TLS_ISV_PROD_ID      "RA_TLS_ISV_PROD_ID"
+#define RA_TLS_ISV_SVN          "RA_TLS_ISV_SVN"
+#define RA_TLS_ISV_EXT_PROD_ID  "RA_TLS_ISV_EXT_PROD_ID"
+#define RA_TLS_ISV_FAMILY_ID    "RA_TLS_ISV_FAMILY_ID"
+#define RA_TLS_CONFIG_ID        "RA_TLS_CONFIG_ID"
+#define RA_TLS_CONFIG_SVN       "RA_TLS_CONFIG_SVN"
 
 #define RA_TLS_CERT_TIMESTAMP_NOT_BEFORE "RA_TLS_CERT_TIMESTAMP_NOT_BEFORE"
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
@@ -86,6 +90,30 @@ typedef int (*verify_measurements_cb_t)(const char* mrenclave, const char* mrsig
  * measurements against `RA_TLS_*` environment variables (if any).
  */
 void ra_tls_set_measurement_callback(verify_measurements_cb_t f_cb);
+
+typedef int (*verify_measurements_with_kss_cb_t)(const char* mrenclave, const char* mrsigner,
+                                                 const char* isv_prod_id, const char* isv_svn,
+                                                 const char* isv_ext_prod_id, const char* isv_family_id,
+                                                 const char* config_id, const char* config_svn);
+
+/*!
+ * \brief Callback for user-specific verification of measurements including KSS values in SGX quote.
+ *
+ * \param f_cb  Callback for user-specific verification; RA-TLS passes pointers to MRENCLAVE, MRSIGNER, 
+ *              ISV_PROD_ID, ISV_SVN, ISV_EXT_PROD_ID, ISV_FAMILY_ID, CONFIG_ID, CONFIG_SVN measurements in SGX quote. 
+ *              Use NULL to revert to default behavior of RA-TLS.
+ *
+ * \returns 0 on success, specific error code (negative int) otherwise.
+ *
+ * If this callback is registered before RA-TLS session, then RA-TLS verification will invoke this
+ * callback to allow for user-specific checks on SGX measurements reported in the SGX quote. If no
+ * callback is registered (or registered as NULL), then RA-TLS defaults to verifying SGX
+ * measurements against `RA_TLS_*` environment variables (if any).
+ */
+void ra_tls_set_measurement_including_kss_callback(int (*f_cb)(const char* mrenclave, const char* mrsigner,
+                                                   const char* isv_prod_id, const char* isv_svn,
+                                                   const char* isv_ext_prod_id, const char* isv_family_id,
+                                                   const char* config_id, const char* config_svn));
 
 /*!
  * \brief Generic verification callback for ECDSA-based (DCAP) quote
