@@ -9,7 +9,7 @@ loader.log_level = "{{ log_level }}"
 loader.env.LD_LIBRARY_PATH = "/lib"
 
 fs.mounts = [
-  { path = "/lib", uri = "file:{{ gramine.runtimedir() }}" },
+  { path = "/mylib", uri = "file:{{ gramine.runtimedir() }}" },
   { path = "/helloworld", uri = "file:helloworld" },
 ]
 
