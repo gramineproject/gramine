@@ -6,10 +6,12 @@
 #pragma once
 
 #include <stddef.h>
+#include "sgx_arch.h"
 
 int sgx_create_process(size_t nargs, const char** args, const char* manifest,
                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
-                       int* out_stream_fd);
+                       sgx_config_id_t config_id, sgx_config_svn_t config_svn, int* out_stream_fd);
 
 int sgx_init_child_process(int parent_stream_fd, char** out_application_path, char** out_manifest,
-                           void** out_reserved_mem_ranges, size_t* out_reserved_mem_ranges_size);
+                           void** out_reserved_mem_ranges, size_t* out_reserved_mem_ranges_size,
+                           sgx_config_id_t* out_config_id, sgx_config_svn_t* out_config_svn);
