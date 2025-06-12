@@ -1,8 +1,16 @@
-gramine (1.8post~UNRELEASED) UNRELEASED; urgency=medium
+gramine (1.9) bookworm bullseye noble jammy; urgency=medium
 
-  *
+  * version 1.9
+  * added O_APPEND emulation for single process
+  * added file recovery support for encrypted files
+  * dropped support for OOT driver and EPID attestation
+    (dropped gramine-ratls-epid package and dependency in main package)
+  * updated mbedtls (3.6.0 -> 3.6.3)
+  * dropped deprecated syntax for libos.entrypoint
+  * bumped python3-cryptography to >= 3.1 (dropping backend=)
+  * and misc bugs and fixes
 
- -- Wojtek Porczyk <woju@invisiblethingslab.com>  Mon, 21 Oct 2024 15:32:15 +0200
+ -- Wojtek Porczyk <woju@invisiblethingslab.com>  Wed, 18 Jun 2025 16:34:47 +0200
 
 gramine (1.8) bookworm bullseye noble noble jammy focal; urgency=medium
 
