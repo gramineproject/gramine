@@ -24,7 +24,7 @@ makedepends="
     jq
     libunwind
     linux-headers
-    meson
+    meson>=0.58
     musl-dev
     nasm
     openssl1.1-compat-dev

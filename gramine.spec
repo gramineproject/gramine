@@ -20,7 +20,7 @@ BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: jq
 BuildRequires: make
-BuildRequires: meson >= 0.56
+BuildRequires: meson >= 0.58
 BuildRequires: ninja-build >= 1.8
 BuildRequires: nasm
 BuildRequires: patch
