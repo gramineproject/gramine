@@ -4,7 +4,7 @@
 %global has_supported_sphinx 0%{?rhel} >= 9
 
 Name: gramine
-Version: 1.8post~UNRELEASED
+Version: 1.9post~UNRELEASED
 Release: 1%{?dist}
 Group: Development Tools
 Summary: A lightweight usermode guest OS designed to run a single Linux application
@@ -20,7 +20,7 @@ BuildRequires: gcc
 BuildRequires: gcc-c++
 BuildRequires: jq
 BuildRequires: make
-BuildRequires: meson >= 0.56
+BuildRequires: meson >= 0.58
 BuildRequires: ninja-build >= 1.8
 BuildRequires: nasm
 BuildRequires: patch

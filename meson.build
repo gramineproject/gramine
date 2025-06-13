@@ -5,10 +5,10 @@
 project(
     'gramine',
     'c', 'cpp',
-    version: '1.8post~UNRELEASED',
+    version: '1.9post~UNRELEASED',
     license: 'LGPLv3+',
 
-    meson_version: '>=0.56',
+    meson_version: '>=0.58',
 
     default_options: [
         'c_std=c11',
