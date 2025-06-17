@@ -1798,18 +1798,18 @@ Gramine implements most of the Linux IPC mechanisms. In particular:
 - ▣ Semaphores (untrusted, POSIX only)
 - ☒ Message queues
 
-Gramine implements pipes, FIFOs and UNIX domain sockets (UDSes) via host-OS pipes. In case of SGX
+Gramine implements pipes, FIFOs and UNIX domain sockets (UDSes) via host-OS UDSes. In case of SGX
 backend, all pipe, FIFO and UDS communication is transparently encrypted.
 
 For all other IPC mechanisms -- currently these are signals, process state changes, file locks --
 Gramine emulates them via internal message passing (in case of SGX, all messages are encrypted).
 
-Thus, Gramine implements all IPC primitives using a single host-OS primitive: pipes. This design
+Thus, Gramine implements all IPC primitives using a single host-OS primitive: UDSes. This design
 choice means that Gramine is a *distributed* Library OS, in contrast to the Linux kernel which is
 monolithic. Each Gramine process knows only about its own state and must query peer Gramine
 processes to learn their state; compare it to the Linux kernel which keeps a single state for all
 processes running on top of it. Thus, all IPC in Gramine is performed using message passing over
-host-OS pipes. To govern this message passing, the first Gramine process is designated a *leader*
+host-OS UDSes. To govern this message passing, the first Gramine process is designated a *leader*
 which controls all message requests/responses among processes in one Gramine instance. For example,
 if one Gramine process spawns a new child, it requests the leader to assign a PID for this child. As
 another example, all POSIX-locking operations are synchronized using a special messaging protocol
@@ -2068,7 +2068,8 @@ they were not moved or renamed on the host (this is for protection against file 
 
 Gramine supports creating files and directories (via `creat()`, `mkdir()`, `mkdirat()` system
 calls), reading directories (via `getdents()`), deleting files and directories (via `unlink()`,
-`unlinkat()`, `rmdir()`), renaming files and directories (via `rename()` and `renameat()`).
+`unlinkat()`, `rmdir()`), renaming files (via `rename()` and `renameat()`). Note that renaming
+directories is currently not supported.
 
 Gramine supports read and write operations on files. Appending to files is currently unsupported.
 Writing to trusted files is prohibited.
@@ -2152,8 +2153,8 @@ Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`,
 - ☑ `unlink()`
 - ☑ `unlinkat()`
 - ☑ `rmdir()`
-- ▣ `rename()`: cannot rename across mounts
-- ▣ `renameat()`: cannot rename across mounts
+- ▣ `rename()`: cannot rename directories or across mounts
+- ▣ `renameat()`: cannot rename directories or across mounts
 
 - ☑ `read()`
 - ☑ `pread64()`
@@ -2357,10 +2358,11 @@ identifiers" section](#process-and-thread-identifiers).
 
 ### Pipes and FIFOs (named pipes)
 
-Pipes and FIFOs are emulated in Gramine directly as host-level pipes (to be more specific, as
-socketpairs for Linux hosts). In case of SGX backend, pipes and FIFOs are transparently encrypted.
-For additional information on general properties of IPC in Gramine, see the ["Overview of
-Inter-Process Communication (IPC)" section](#overview-of-inter-process-communication-ipc).
+Pipes and FIFOs are emulated in Gramine directly as host-level UNIX domain sockets (UDSes), to be
+more specific, using a client-server model. In case of SGX backend, pipes and FIFOs are
+transparently encrypted. For additional information on general properties of IPC in Gramine, see the
+["Overview of Inter-Process Communication (IPC)"
+section](#overview-of-inter-process-communication-ipc).
 
 Gramine does *not* allow pipe/FIFO communication between Gramine processes and the host. Gramine
 also does *not* allow communication between Gramine processes from two different Gramine instances.
@@ -2556,10 +2558,11 @@ TCP sockets additionally support the following socket options: `TCP_CORK`, `TCP_
 
 #### UNIX domain sockets
 
-UNIX domain sockets (UDSes) are emulated in Gramine directly as host-level pipes (to be more
-specific, as socketpairs for Linux hosts). In case of SGX backend, UDSes are transparently
-encrypted. For additional information on general properties of IPC in Gramine, see the ["Overview of
-Inter-Process Communication (IPC)" section](#overview-of-inter-process-communication-ipc).
+UNIX domain sockets (UDSes) are emulated in Gramine directly as host-level UNIX domain sockets
+(UDSes), to be more specific, using a client-server model. In case of SGX backend, UDSes are
+transparently encrypted. For additional information on general properties of IPC in Gramine, see the
+["Overview of Inter-Process Communication (IPC)"
+section](#overview-of-inter-process-communication-ipc).
 
 Gramine does *not* allow UDS communication between Gramine processes and the host. Gramine also does
 *not* allow communication between Gramine processes from two different Gramine instances.
@@ -2803,8 +2806,11 @@ Gramine does *not* implement System V shared memory.
 Please note that in case of the SGX backend, implementation of shared memory is *insecure*, as
 shared memory by design is allocated in untrusted non-enclave memory, and there is no way for
 Gramine to intercept memory accesses to shared memory regions (to provide some security guarantees).
-It is the responsibility of the app developer to correctly use shared memory, with security
-implications in mind.
+This untrusted shared memory is implemented to support very specific use cases (mainly for storing
+application-specific objects to be shared between processes), and is not intended for general use
+(e.g., creating futexes for synchronization). In particular, it cannot be passed to arbitrary system
+calls, as this can trigger security checks in Gramine. It is the responsibility of the app developer
+to correctly use shared memory, with security implications in mind.
 
 For more information, please refer to the {ref}`corresponding manifest
 syntax <untrusted-shared-memory>`. Also see [this

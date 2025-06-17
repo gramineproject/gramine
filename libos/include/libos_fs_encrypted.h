@@ -17,7 +17,12 @@
 #include "libos_types.h"
 #include "list.h"
 #include "pal.h"
+#include "perm.h"
 #include "protected_files.h"
+
+#define RECOVERY_FILE_PERM_RW PERM_rw_rw_rw_
+
+#define RECOVERY_FILE_URI_SUFFIX ".gramine.recovery"
 
 /*
  * Represents a named key for opening files. The key might not be set yet: value of a key can be
@@ -49,6 +54,11 @@ struct libos_encrypted_file {
     /* `pf` and `pal_handle` are non-null as long as `use_count` is greater than 0 */
     pf_context_t* pf;
     PAL_HANDLE pal_handle;
+
+    /* `recovery_file_pal_handle` is non-null as long as `enable_recovery` is true and `use_count`
+     * is greater than 0 */
+    bool enable_recovery;
+    PAL_HANDLE recovery_file_pal_handle;
 };
 
 /*
@@ -109,31 +119,33 @@ void update_encrypted_files_key(struct libos_encrypted_files_key* key, const pf_
 /*
  * \brief Open an existing encrypted file.
  *
- * \param      uri      PAL URI to open, has to begin with "file:".
- * \param      key      Key, has to be already set.
- * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
+ * \param      uri              PAL URI to open, has to begin with "file:".
+ * \param      key              Key, has to be already set.
+ * \param      enable_recovery  Whether to enable file recovery.
+ * \param[out] out_enc          On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` has to correspond to an existing file that can be decrypted with `key`.
  *
  * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
 int encrypted_file_open(const char* uri, struct libos_encrypted_files_key* key,
-                        struct libos_encrypted_file** out_enc);
+                        bool enable_recovery, struct libos_encrypted_file** out_enc);
 
 /*
  * \brief Create a new encrypted file.
  *
- * \param      uri      PAL URI to open, has to begin with "file:".
- * \param      perm     Permissions for the new file.
- * \param      key      Key, has to be already set.
- * \param[out] out_enc  On success, set to a newly created `libos_encrypted_file` object.
+ * \param      uri              PAL URI to open, has to begin with "file:".
+ * \param      perm             Permissions for the new file.
+ * \param      key              Key, has to be already set.
+ * \param      enable_recovery  Whether to enable file recovery.
+ * \param[out] out_enc          On success, set to a newly created `libos_encrypted_file` object.
  *
  * `uri` must not correspond to an existing file.
  *
  * The newly created `libos_encrypted_file` object will have `use_count` set to 1.
  */
 int encrypted_file_create(const char* uri, mode_t perm, struct libos_encrypted_files_key* key,
-                          struct libos_encrypted_file** out_enc);
+                          bool enable_recovery, struct libos_encrypted_file** out_enc);
 
 /*
  * \brief Deallocate an encrypted file.
