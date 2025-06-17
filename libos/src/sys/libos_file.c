@@ -674,10 +674,6 @@ long libos_syscall_utimensat(int dirfd, const char* pathname, const struct times
     if (ret < 0)
         goto out;
 
-    ret = check_permissions(dent, W_OK);
-    if (ret < 0)
-        goto out_dent;
-
     time_t atime = 0, mtime = 0;
     if (times) {
         if (!nsec_valid(times[0].tv_nsec) || !nsec_valid(times[1].tv_nsec))
