@@ -188,7 +188,8 @@ def test_ltp(cmd, section):
 
     loader = 'gramine-sgx' if HAS_SGX else 'gramine-direct'
     timeout = int(section.getfloat('timeout') * LTP_TIMEOUT_FACTOR)
-    full_cmd = [loader, *cmd]
+    env = os.getenv("LTP_ENV", None)
+    full_cmd = list(filter(None, [loader, env, *cmd]))
 
     logging.info('command: %s', full_cmd)
     logging.info('must_pass: %s', list(must_pass) if must_pass else 'all')
@@ -238,6 +239,7 @@ def pytest_generate_tests(metafunc):
 
 def main():
     if sys.argv[1:] == ['--list']:
+        print("testltp") # let 'gramine-test build' generate testltp.manifest
         seen = set()
         for _tag, cmd, section in list_tests():
             executable = cmd[0]
