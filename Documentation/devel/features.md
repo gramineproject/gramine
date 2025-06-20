@@ -558,7 +558,7 @@ The below list is generated from the [syscall table of Linux
 - ☑ `sigaltstack()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
-- ☒ `utime()`
+- ☑ `utime()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `mknod()`
@@ -876,7 +876,7 @@ The below list is generated from the [syscall table of Linux
 - ☑ `tgkill()`
   <sup>[7](#signals-and-process-state-changes)</sup>
 
-- ☒ `utimes()`
+- ▣ `utimes()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ☒ `vserver()`
@@ -1022,7 +1022,7 @@ The below list is generated from the [syscall table of Linux
 - ☒ `move_pages()`
   <sup>[6](#memory-management)</sup>
 
-- ☒ `utimensat()`
+- ▣ `utimensat()`
   <sup>[9a](#file-system-operations)</sup>
 
 - ▣ `epoll_pwait()`
@@ -2129,8 +2129,8 @@ Gramine has dummy support for getting filesystem statistics via `statfs()` and `
 fields populated in the output buffer are `f_bsize`, `f_blocks`, `f_bfree` and `f_bavail`, and they
 all have hard-coded values.
 
-Gramine currently does *not* support changing file access/modification times, via `utime()`,
-`utimes()`, `futimesat()`, `utimensat()` system calls.
+Gramine currently supports changing file access/modification times with a resolution of 1 second via
+`utime()`. `utimes()` and `utimensat()` are stubbed and behave identically to `utime()`.
 
 Mounting files and directories with extended attributes (xattr) or setting them
 via `setxattr()`, `lsetxattr()`, `fsetxattr()`, `removexattr()`, `lremovexattr()`, `fremovexattr()`
@@ -2229,10 +2229,11 @@ Reading is supported (`getxattr()`, `lgetxattr()`, `fgetxattr()`, `listxattr()`,
 - ☒ `umount2()`: very rarely used by applications
 - ☒ `mount_setattr()`: very rarely used by applications
 - ☒ `pivot_root()`: very rarely used by applications
-- ☒ `utime()`: may be implemented in the future
-- ☒ `utimes()`: may be implemented in the future
-- ☒ `futimesat()`: may be implemented in the future
-- ☒ `utimensat()`: may be implemented in the future
+
+- ☑ `utime()`
+- ▣ `utimes()`: stubbed, behaves like `utime()`, with a time resolution of 1 second
+- ▣ `utimensat()`: stubbed, behaves like `utime()`, with a time resolution of 1 second
+- ☒ `futimesat()`: not supported
 
 - ☑ `getxattr()`
 - ☑ `lgetxattr()`
