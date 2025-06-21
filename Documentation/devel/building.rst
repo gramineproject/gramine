@@ -167,6 +167,7 @@ Then, build and install Gramine by running the following::
 
    meson compile -C build/
    sudo meson install -C build
+   sudo ldconfig
 
 Installation prefix
 ^^^^^^^^^^^^^^^^^^^
@@ -338,6 +339,7 @@ Proceed with compiling and installing as usual.
         -Ddirect=enabled -Dsgx=enabled
     meson compile -C build/
     meson install -C build/
+    ldconfig
 
 .. _legacy-kernel-and-hardware:
 
