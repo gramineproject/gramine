@@ -14,7 +14,10 @@ EXTRA_CFLAGS = -Wno-implicit-function-declaration
 clean-extra += clean-build
 
 .PHONY: all
-all: $(INSTALLDIR)/INSTALL_SUCCESS manifests etc/nsswitch.conf etc/passwd
+all: $(INSTALLDIR)/INSTALL_SUCCESS testltp manifests etc/nsswitch.conf etc/passwd
+
+testltp: testltp.o
+testltp.o: testltp.c
 
 $(SRCDIR)/Makefile:
 	$(error "$(SRCDIR) is empty. Please run `git submodule update --init $(SRCDIR)` or download the LTP source code (https://github.com/linux-test-project/ltp) into $(SRCDIR).")
@@ -68,6 +71,7 @@ clean:
 	$(RM) -r \
 		$(BUILDDIR) \
 		$(INSTALLDIR) \
+		testltp testltp.o \
 		ltp*.xml \
 		etc/ \
 		.pytest_cache \
