@@ -245,7 +245,8 @@ static long sgx_ocall_create_process(void* args) {
 
     return sgx_create_process(ocall_cp_args->nargs, ocall_cp_args->args,
                               g_pal_enclave.raw_manifest_data, ocall_cp_args->reserved_mem_ranges,
-                              ocall_cp_args->reserved_mem_ranges_size, &ocall_cp_args->stream_fd);
+                              ocall_cp_args->reserved_mem_ranges_size, ocall_cp_args->config_id,
+                              ocall_cp_args->config_svn, &ocall_cp_args->stream_fd);
 }
 
 static long sgx_ocall_futex(void* args) {

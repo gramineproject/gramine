@@ -29,6 +29,8 @@
 #include "toml.h"
 #include "toml_utils.h"
 #include "topo_info.h"
+#include "api.h"
+#include "hex.h"
 
 const size_t g_page_size = PRESET_PAGESIZE;
 
@@ -199,7 +201,8 @@ out:
     return ret;
 }
 
-static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure) {
+static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_to_measure,
+                            sgx_config_id_t config_id, sgx_config_svn_t config_svn) {
     int ret = 0;
     int enclave_image = -1;
     sgx_sigstruct_t enclave_sigstruct;
@@ -286,6 +289,11 @@ static int initialize_enclave(struct pal_enclave* enclave, const char* manifest_
     memset(&enclave_secs, 0, sizeof(enclave_secs));
     enclave_secs.base = enclave->baseaddr;
     enclave_secs.size = enclave->size;
+
+    /* set received config_id/svn to SECS */
+    memcpy(enclave_secs.config_id.data, config_id.data, SGX_CONFIGID_SIZE);
+    enclave_secs.config_svn = config_svn;
+
     ret = create_enclave(&enclave_secs, &enclave_sigstruct);
     if (ret < 0) {
         log_error("Creating enclave failed: %s", unix_strerror(ret));
@@ -634,6 +642,14 @@ static int parse_loader_config(char* manifest, struct pal_enclave* enclave_info,
         goto out;
     }
 
+    ret = toml_bool_in(manifest_root, "sgx.kss", /*defaultval=*/false,
+                       &enclave_info->kss_enabled);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.kss'");
+        ret = -EINVAL;
+        goto out;
+    }
+
     if (!enclave_info->size || !IS_POWER_OF_2(enclave_info->size)) {
         log_error("Enclave size not a power of two (an SGX-imposed requirement)");
         ret = -EINVAL;
@@ -892,7 +908,8 @@ out:
  * exits after this function's failure. */
 static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_size, char* env,
                         size_t env_size, int parent_stream_fd,
-                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size) {
+                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
+                        sgx_config_id_t config_id, sgx_config_svn_t config_svn) {
     int ret;
     struct timeval tv;
     struct pal_topo_info topo_info = {0};
@@ -972,7 +989,21 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
         }
     }
 
-    ret = initialize_enclave(enclave, enclave->raw_manifest_data);
+    if (enclave->kss_enabled) {
+        uint32_t cpuid_values[4];
+        cpuid(INTEL_SGX_LEAF, 1, cpuid_values);
+        if (!(cpuid_values[0] & (1u << 7))) {
+            log_error("KSS feature was requested in manifest, but the platform doesn't support it");
+            return -EPERM;
+        }
+    } else {
+        /* when sgx.kss is false, config ID and SVN must be 0-cleared */
+        memset(config_id.data, 0, SGX_CONFIGID_SIZE);
+        config_svn = 0;
+    }
+
+    ret = initialize_enclave(enclave, enclave->raw_manifest_data, 
+                             config_id, config_svn);
     if (ret < 0)
         return ret;
 
@@ -1029,7 +1060,7 @@ static int load_enclave(struct pal_enclave* enclave, char* args, size_t args_siz
 noreturn static void print_usage_and_exit(const char* argv_0) {
     const char* self = argv_0 ?: "<this program>";
     log_always("USAGE:\n"
-               "\tFirst process: %s <path to libpal.so> init <application> args...\n"
+               "\tFirst process: %s <path to libpal.so> init <KSS config ID> <KSS Config SVN> <application> args...\n"
                "\tChildren:      %s <path to libpal.so> child <parent_stream_fd> args...",
                self, self);
     log_always("This is an internal interface. Use gramine-sgx wrapper to launch applications in "
@@ -1125,8 +1156,12 @@ int main(int argc, char* argv[], char* envp[]) {
     static_assert(THREAD_STACK_SIZE % PAGE_SIZE == 0, "");
     probe_stack(THREAD_STACK_SIZE / PAGE_SIZE);
 
-    if (argc < 4)
+    if (argc < 6 && strcmp(argv[2], "init") == 0) {
         print_usage_and_exit(argv[0]);
+    }
+    if (argc < 4 && strcmp(argv[2], "child") == 0) {
+        print_usage_and_exit(argv[0]);
+    }
 
     g_host_pid = DO_SYSCALL(getpid);
 
@@ -1151,6 +1186,8 @@ int main(int argc, char* argv[], char* envp[]) {
     }
 
     int parent_stream_fd = -1;
+    sgx_config_id_t final_config_id = {0};
+    sgx_config_svn_t final_config_svn = 0;
 
     if (first_process) {
         g_pal_enclave.is_first_process = true;
@@ -1181,7 +1218,8 @@ int main(int argc, char* argv[], char* envp[]) {
         }
 
         ret = sgx_init_child_process(parent_stream_fd, &g_pal_enclave.application_path, &manifest,
-                                     &reserved_mem_ranges, &reserved_mem_ranges_size);
+                                     &reserved_mem_ranges, &reserved_mem_ranges_size,
+                                     &final_config_id, &final_config_svn);
         if (ret < 0)
             return ret;
     }
@@ -1192,14 +1230,37 @@ int main(int argc, char* argv[], char* envp[]) {
      * continuous we know that we are running on Linux, which does this. This
      * saves us creating a copy of all argv and envp strings.
      */
-    char* args;
-    size_t args_size;
+    char* args = NULL;
+    size_t args_size = 0;
+    
     if (first_process) {
-        args = argv[3];
-        args_size = argc > 3 ? (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1 : 0;
+        size_t total_size = strlen(argv[3]) + 1;
+
+        for (int i = 6; i < argc; i++) {
+            total_size += strlen(argv[i]) + 1;
+        }
+
+        args = malloc(total_size);
+        if (!args)
+            return -ENOMEM;
+
+        char* p = args;
+        size_t len = strlen(argv[3]) + 1;
+        memcpy(p, argv[3], len);
+        p += len;
+
+        for (int i = 6; i < argc; i++) {
+            len = strlen(argv[i]) + 1;
+            memcpy(p, argv[i], len);
+            p += len;
+        }
+
+        args_size = total_size;
     } else {
-        args = argv[4];
-        args_size = argc > 4 ? (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1 : 0;
+        if (argc > 4) {
+            args = argv[4];
+            args_size = (argv[argc - 1] - args) + strlen(argv[argc - 1]) + 1;
+        }
     }
 
     size_t envc = 0;
@@ -1209,8 +1270,27 @@ int main(int argc, char* argv[], char* envp[]) {
     char* env = envp[0];
     size_t env_size = envc > 0 ? (envp[envc - 1] - envp[0]) + strlen(envp[envc - 1]) + 1 : 0;
 
+    /* If we're first process, parse config ID/SVN from command line args */
+    if (first_process && argc >= 6) {
+        if (!hex2bytes(argv[4], strlen(argv[4]), final_config_id.data, SGX_CONFIGID_SIZE)) {
+            log_error("Parsing Config ID from argv failed");
+            return -EINVAL;
+        }
+
+        unsigned long parsed_value;
+        const char* endptr;
+        if (str_to_ulong(argv[5], 10, &parsed_value, &endptr) == 0 &&
+            *endptr == '\0' && parsed_value <= UINT16_MAX) {
+            final_config_svn = (uint16_t)parsed_value;
+        } else {
+            log_error("Parsing Config SVN from argv failed");
+            return -EINVAL;
+        }
+    }
+
     ret = load_enclave(&g_pal_enclave, args, args_size, env, env_size, parent_stream_fd,
-                       reserved_mem_ranges, reserved_mem_ranges_size);
+                       reserved_mem_ranges, reserved_mem_ranges_size,
+                       final_config_id, final_config_svn);
     if (ret < 0) {
         log_error("load_enclave() failed with error: %s", unix_strerror(ret));
         return ret;

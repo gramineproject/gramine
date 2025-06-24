@@ -35,6 +35,8 @@ class Sigstruct:
         'attribute_xfrm_mask': (offs.SGX_ARCH_SIGSTRUCT_ATTRIBUTE_MASK + 8, '<Q'),
         'enclave_hash': (offs.SGX_ARCH_SIGSTRUCT_ENCLAVE_HASH, '32s'),
         'isv_prod_id': (offs.SGX_ARCH_SIGSTRUCT_ISV_PROD_ID, '<H'),
+        'isv_ext_prod_id': (offs.SGX_ARCH_SIGSTRUCT_ISVEXT_PROD_ID, '<16s'),
+        'isv_family_id': (offs.SGX_ARCH_SIGSTRUCT_ISV_FAMILY_ID, '<16s'),
         'isv_svn': (offs.SGX_ARCH_SIGSTRUCT_ISV_SVN, '<H'),
         'q1': (offs.SGX_ARCH_SIGSTRUCT_Q1, '384s'),
         'q2': (offs.SGX_ARCH_SIGSTRUCT_Q2, '384s'),
@@ -49,6 +51,8 @@ class Sigstruct:
         'misc_mask': offs.SGX_MISCSELECT_MASK_CONST,
         'attribute_flags_mask': offs.SGX_FLAGS_MASK_CONST,
         'attribute_xfrm_mask': offs.SGX_XFRM_MASK_CONST,
+        'isv_ext_prod_id': b'\x00' * 16,
+        'isv_family_id': b'\x00' * 16,
     }
 
 

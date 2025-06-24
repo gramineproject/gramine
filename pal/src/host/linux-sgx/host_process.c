@@ -27,6 +27,8 @@ struct proc_args {
     size_t manifest_size; // manifest will follow application path on the pipe.
     int reserved_mem_ranges_fd;
     size_t reserved_mem_ranges_size;
+    sgx_config_id_t config_id;
+    sgx_config_svn_t config_svn;
 };
 
 static int vfork_exec(const char** argv) {
@@ -42,7 +44,7 @@ static int vfork_exec(const char** argv) {
 
 int sgx_create_process(size_t nargs, const char** args, const char* manifest,
                        void* reserved_mem_ranges, size_t reserved_mem_ranges_size,
-                       int* out_stream_fd) {
+                       sgx_config_id_t config_id, sgx_config_svn_t config_svn, int* out_stream_fd) {
     int ret, rete;
     int reserved_mem_ranges_fd = -1;
     int fds[2] = {-1, -1};
@@ -100,7 +102,10 @@ int sgx_create_process(size_t nargs, const char** args, const char* manifest,
         .manifest_size = strlen(manifest),
         .reserved_mem_ranges_fd = reserved_mem_ranges_fd,
         .reserved_mem_ranges_size = reserved_mem_ranges_size,
+        .config_svn = config_svn
     };
+
+    memcpy(proc_args.config_id.data, config_id.data, sizeof(proc_args.config_id.data));
 
     ret = write_all(fds[1], &proc_args, sizeof(proc_args));
     if (ret < 0) {
@@ -145,7 +150,8 @@ out:
 }
 
 int sgx_init_child_process(int parent_stream_fd, char** out_application_path, char** out_manifest,
-                           void** out_reserved_mem_ranges, size_t* out_reserved_mem_ranges_size) {
+                           void** out_reserved_mem_ranges, size_t* out_reserved_mem_ranges_size,
+                           sgx_config_id_t* out_config_id, sgx_config_svn_t* out_config_svn) {
     int ret;
     struct proc_args proc_args;
     char* manifest = NULL;
@@ -166,6 +172,14 @@ int sgx_init_child_process(int parent_stream_fd, char** out_application_path, ch
     if (!manifest) {
         ret = -ENOMEM;
         goto out;
+    }
+
+    if (out_config_id) {
+        *out_config_id = proc_args.config_id;
+    }
+    
+    if (out_config_svn) {
+        *out_config_svn = proc_args.config_svn;
     }
 
     ret = read_all(parent_stream_fd, application_path, proc_args.application_path_size);

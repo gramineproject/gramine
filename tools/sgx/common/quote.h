@@ -27,18 +27,24 @@ void display_quote(const void* quote_data, size_t quote_size);
  * \param mr_enclave       (Optional) Expected mr_enclave quote field.
  * \param isv_prod_id      (Optional) Expected isv_prod_id quote field.
  * \param isv_svn          (Optional) Expected isv_svn quote field.
+ * \param isv_ext_prod_id  (Optional) Expected isv_ext_prod_id quote field.
+ * \param isv_family_id    (Optional) Expected isv_family_id quote field.
+ * \param config_id        (Optional) Expected config_id quote field.
+ * \param config_svn       (Optional) Expected config_svn quote field.
  * \param report_data      (Optional) Expected report_data quote field.
  * \param expected_as_str  If true, then all expected SGX fields are treated as hex and decimal
  *                         strings. Otherwise, they are treated as raw bytes.
  *
  * \returns 0 on successful verification, negative value on error.
  *
- * If \p expected_as_str is true, then \p mr_signer, \p mr_enclave and \p report_data are treated
- * as hex strings, and \p isv_prod_id and a isv_svn are treated as decimal strings. This is
- * convenient for command-line utilities.
+ * If \p expected_as_str is true, then \p mr_signer, \p mr_enclave, \p isv_ext_prod_id, \p isv_family_id,
+ * \p config_id and \p report_data are treated as hex strings, and \p isv_prod_id, a isv_svn and a config_svn
+ * are treated as decimal strings. This is convenient for command-line utilities.
  */
 int verify_quote_body(const sgx_quote_body_t* quote_body, const char* mr_signer,
                       const char* mr_enclave, const char* isv_prod_id, const char* isv_svn,
+                      const char* isv_ext_prod_id, const char* isv_family_id,
+                      const char* config_id, const char* config_svn,
                       const char* report_data, bool expected_as_str);
 
 /*!
