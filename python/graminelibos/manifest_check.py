@@ -107,6 +107,7 @@ GramineManifestSchema = Schema({
         'trusted_files': [Any(str, {'uri': _uri, 'sha256': str})],
         'use_exinfo': bool,
         'vtune_profile': bool,
+        'trusted_files_cache_size': _size,
     },
 
     'sys': {
