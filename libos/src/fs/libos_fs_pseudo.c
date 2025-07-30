@@ -266,6 +266,9 @@ static int pseudo_stat(struct libos_dentry* dent, struct stat* buf) {
 }
 
 static int pseudo_hstat(struct libos_handle* handle, struct stat* buf) {
+    /* Note: derefence handle->dentry in general has to be protected by handle->lock as it could
+     * change due to rename.  However, as pseudo-fs does not support rename we can safely omit it
+     * here (or push it on the numerous callers of fs_op->hstat). */
     return pseudo_istat(handle->dentry, handle->inode, buf);
 }
 

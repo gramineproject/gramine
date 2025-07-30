@@ -101,8 +101,11 @@ int ipc_pid_getmeta_callback(IDTYPE src, void* msg_data, uint64_t seq) {
             struct libos_dentry* dent = NULL;
             switch (msgin->code) {
                case PID_META_EXEC:
-                   if (g_process.exec)
+                   if (g_process.exec) {
+                       lock(&g_process.exec->lock);
                        dent = g_process.exec->dentry;
+                       unlock(&g_process.exec->lock);
+                   }
                    break;
                case PID_META_CWD:
                    dent = g_process.cwd;

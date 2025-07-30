@@ -597,10 +597,12 @@ static int load_and_check_shebang(struct libos_handle* file, const char* pathnam
     ret = read_partial_fragment(file, shebang, sizeof(shebang), /*offset=*/0, &shebang_len);
     if (ret < 0 || shebang_len < 2 || shebang[0] != '#' || shebang[1] != '!') {
         char* path = NULL;
+        lock(&file->lock);
         if (file->dentry) {
             /* this may fail, but we are already inside a more serious error handler */
             dentry_abs_path(file->dentry, &path, /*size=*/NULL);
         }
+        unlock(&file->lock);
         log_debug("Failed to read shebang line from %s", path ? path : "(unknown)");
         free(path);
         return -ENOEXEC;

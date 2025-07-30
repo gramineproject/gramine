@@ -367,7 +367,7 @@ static void assoc_handle_with_dentry(struct libos_handle* hdl, struct libos_dent
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
 
-    hdl->dentry = dent;
+    hdl->dentry = dent; /* not-yet-shared handle, so no look needed. */
     get_dentry(dent);
 
     hdl->inode = dent->inode;
@@ -381,7 +381,7 @@ static void assoc_handle_with_dentry(struct libos_handle* hdl, struct libos_dent
 int dentry_open(struct libos_handle* hdl, struct libos_dentry* dent, int flags) {
     assert(locked(&g_dcache_lock));
     assert(dent->inode);
-    assert(!hdl->dentry);
+    assert(!hdl->dentry); /* not-yet-shared handle, so no look needed. */
 
     int ret;
     struct libos_fs* fs = dent->inode->fs;
@@ -431,7 +431,7 @@ int open_namei(struct libos_handle* hdl, struct libos_dentry* start, const char*
         assert(hdl);
 
     if (hdl)
-        assert(!hdl->dentry);
+        assert(!hdl->dentry); /* not-yet-shared handle, so no look needed. */
 
     lock(&g_dcache_lock);
 
@@ -741,8 +741,10 @@ int get_dirfd_dentry(int dirfd, struct libos_dentry** dir) {
         return -ENOTDIR;
     }
 
+    lock(&hdl->lock); /* while hdl->is_dir is immutable, hdl->dentry can change due to rename */
     get_dentry(hdl->dentry);
     *dir = hdl->dentry;
+    unlock(&hdl->lock);
     put_handle(hdl);
     return 0;
 }

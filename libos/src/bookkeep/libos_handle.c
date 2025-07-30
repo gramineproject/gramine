@@ -324,25 +324,28 @@ static struct libos_handle* __detach_fd_handle(struct libos_fd_handle* fd, int* 
 }
 
 static int clear_posix_locks(struct libos_handle* handle) {
-    if (handle && handle->dentry) {
-        /* Clear file (POSIX) locks for a file. We are required to do that every time a FD is
-         * closed, even if the process holds other handles for that file, or duplicated FDs for the
-         * same handle. */
-        struct libos_file_lock file_lock = {
-            .family = FILE_LOCK_POSIX,
-            .type = F_UNLCK,
-            .start = 0,
-            .end = FS_LOCK_EOF,
-            .pid = g_process.pid,
-        };
-        int ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
-        if (ret < 0) {
-            log_warning("error releasing locks: %s", unix_strerror(ret));
-            return ret;
+    int ret = 0;
+    if (handle) {
+        lock(&handle->lock);
+        if (handle->dentry) {
+            /* Clear file (POSIX) locks for a file. We are required to do that every time a FD is
+             * closed, even if the process holds other handles for that file, or duplicated FDs for
+             * the same handle. */
+            struct libos_file_lock file_lock = {
+                .family = FILE_LOCK_POSIX,
+                .type   = F_UNLCK,
+                .start  = 0,
+                .end    = FS_LOCK_EOF,
+                .pid    = g_process.pid,
+            };
+            ret = file_lock_set(handle->dentry, &file_lock, /*block=*/false);
+            if (ret < 0) {
+                log_warning("error releasing locks: %s", unix_strerror(ret));
+            }
         }
+        unlock(&handle->lock);
     }
-
-    return 0;
+    return ret;
 }
 
 struct libos_handle* detach_fd_handle(uint32_t fd, int* flags,
@@ -512,20 +515,24 @@ static void destroy_handle(struct libos_handle* hdl) {
 
 static int clear_flock_locks(struct libos_handle* hdl) {
     /* Clear flock (BSD) locks for a file. We are required to do that when the handle is closed. */
-    if (hdl && hdl->dentry && hdl->created_by_process) {
-        assert(hdl->ref_count == 0);
-        struct libos_file_lock file_lock = {
-            .family = FILE_LOCK_FLOCK,
-            .type = F_UNLCK,
-            .handle_id = hdl->id,
-        };
-        int ret = file_lock_set(hdl->dentry, &file_lock, /*block=*/false);
-        if (ret < 0) {
-            log_warning("error releasing locks: %s", unix_strerror(ret));
-            return ret;
+    int ret = 0;
+    if (hdl) {
+        lock(&hdl->lock);
+        if (hdl->dentry && hdl->created_by_process) {
+            assert(hdl->ref_count == 0);
+            struct libos_file_lock file_lock = {
+                .family    = FILE_LOCK_FLOCK,
+                .type      = F_UNLCK,
+                .handle_id = hdl->id,
+            };
+            int ret = file_lock_set(hdl->dentry, &file_lock, /*block=*/false);
+            if (ret < 0) {
+                log_warning("error releasing locks: %s", unix_strerror(ret));
+            }
         }
+        unlock(&hdl->lock);
     }
-    return 0;
+    return ret;
 }
 
 void put_handle(struct libos_handle* hdl) {
@@ -549,7 +556,7 @@ void put_handle(struct libos_handle* hdl) {
             hdl->pal_handle = NULL;
         }
 
-        if (hdl->dentry) {
+        if (hdl->dentry) { /* no locking needed as no other reference exists */
             (void)clear_flock_locks(hdl);
             put_dentry(hdl->dentry);
         }
