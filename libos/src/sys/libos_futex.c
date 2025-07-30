@@ -985,3 +985,11 @@ void release_clear_child_tid(int* clear_child_tid) {
     __atomic_store_n(clear_child_tid, 0, __ATOMIC_RELEASE);
     futex_wake((uint32_t*)clear_child_tid, 1, FUTEX_BITSET_MATCH_ANY);
 }
+
+void wait_clear_child_tid(int* clear_child_tid, int child_tid) {
+    while (__atomic_load_n(clear_child_tid, __ATOMIC_ACQUIRE) != 0) {
+        /* Sleep until the async‑worker (release_clear_child_tid)
+         * writes 0 and issues FUTEX_WAKE on the same word. */
+        futex_wait((uint32_t*)clear_child_tid, child_tid, NULL, FUTEX_BITSET_MATCH_ANY);
+    }
+}
