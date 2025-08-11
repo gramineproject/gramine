@@ -550,6 +550,12 @@ static size_t dump_all_threads_with_buf(struct libos_thread** threads, size_t ma
 int dump_all_threads(struct libos_thread*** out_threads, size_t* out_cnt) {
     size_t count = 1;
 
+    /* We take a snapshot of g_thread_list while holding g_thread_list_lock.
+     * If our buffer is too small, dump_all_threads_with_buf() returns the
+     * total number of threads ("needed_count"). We then retry with that exact
+     * size. Because "count" monotonically increases to "needed_count" for a
+     * given snapshot, the loop terminates as long as new threads aren't being
+     * created at this point. */
     while (true) {
         struct libos_thread** threads = calloc(count, sizeof(*threads));
         if (!threads) {
@@ -562,6 +568,9 @@ int dump_all_threads(struct libos_thread*** out_threads, size_t* out_cnt) {
             *out_cnt = needed_count;
             return 0;
         }
+
+        /* Need more space - retry with the actual count needed */
+        assert(needed_count > count);
 
         free_threads_array(threads, count);
         count = needed_count;
