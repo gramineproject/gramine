@@ -65,11 +65,17 @@ static ipc_callback ipc_callbacks[] = {
     [IPC_MSG_FILE_LOCK_CLEAR_PID] = ipc_file_lock_clear_pid_callback,
 };
 
+static PAL_HANDLE g_leader_notifier;
+
 static void ipc_leader_died_callback(void) {
     /* This might happen legitimately e.g. if IPC leader is also our parent and does `wait` + `exit`
      * If this is an erroneous disconnect it will be noticed when trying to communicate with
      * the leader. */
     log_debug("IPC leader disconnected");
+}
+
+static inline bool is_ipc_leader(void) {
+    return g_process_ipc_ids.self_vmid == STARTING_VMID;
 }
 
 static void disconnect_callbacks(struct libos_ipc_connection* conn) {
@@ -113,6 +119,10 @@ static void del_ipc_connection(struct libos_ipc_connection* conn) {
     PalObjectDestroy(conn->handle);
 
     free(conn);
+
+    if (is_ipc_leader() && g_ipc_connections_cnt == 0) {
+        PalEventSet(g_leader_notifier);
+    }
 }
 
 /*
@@ -386,6 +396,15 @@ static int create_ipc_worker(void) {
         return ret;
     }
 
+    /* IPC leader gets a notifier used in terminate_ipc_leader */
+    if (is_ipc_leader()) {
+        ret = PalEventCreate(&g_leader_notifier, /*init_signaled=*/false, /*auto_clear=*/false);
+        if (ret < 0) {
+            log_error("IPC leader: PalEventCreate() failed");
+            return pal_to_unix_errno(ret);
+        }
+    }
+
     g_worker_thread = get_new_internal_thread();
     if (!g_worker_thread) {
         return -ENOMEM;
@@ -408,7 +427,17 @@ int init_ipc_worker(void) {
     return create_ipc_worker();
 }
 
-void terminate_ipc_worker(void) {
+/* Terminate the IPC worker. If 'force' is set, the IPC leader will not wait until it has 0
+ * connections but terminate immediately, otherwise it will wait until all child processes have
+ * died and there are 0 connections. 'force' will for example be set when the user sends a SIGTERM
+ * signal to the Gramine process.
+ */
+void terminate_ipc_worker(bool force) {
+    if (is_ipc_leader() && !force) {
+        PalEventClear(g_leader_notifier);
+        while (__atomic_load_n(&g_ipc_connections_cnt, __ATOMIC_ACQUIRE) > 0 &&
+               PalEventWait(g_leader_notifier, NULL) < 0);
+    }
     set_pollable_event(&g_worker_thread->pollable_event);
 
     while (__atomic_load_n(&g_clear_on_worker_exit, __ATOMIC_ACQUIRE)) {
@@ -419,4 +448,6 @@ void terminate_ipc_worker(void) {
     g_worker_thread = NULL;
     PalObjectDestroy(g_self_ipc_handle);
     g_self_ipc_handle = NULL;
+    if (g_leader_notifier)
+        PalObjectDestroy(g_leader_notifier);
 }
