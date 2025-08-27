@@ -10,7 +10,9 @@
  */
 
 #include <limits.h>
+#include <stddef.h>
 
+#include "libos_context.h"
 #include "libos_internal.h"
 #include "libos_ipc.h"
 #include "libos_lock.h"
@@ -21,7 +23,14 @@
 #include "libos_utils.h"
 #include "linux_abi/errors.h"
 #include "linux_abi/signals.h"
+#include "log.h"
 #include "pal.h"
+#include "ucontext.h"
+
+struct sigframe {
+    ucontext_t uc;
+    siginfo_t siginfo;
+};
 
 long libos_syscall_rt_sigaction(int signum, const struct __kernel_sigaction* act,
                                 struct __kernel_sigaction* oldact, size_t sigsetsize) {
@@ -169,7 +178,16 @@ long libos_syscall_sigaltstack(const stack_t* ss, stack_t* oss) {
             memset(cur_ss, 0, sizeof(*cur_ss));
             cur_ss->ss_flags = SS_DISABLE;
         } else {
-            if (ss->ss_size < MINSIGSTKSZ) {
+            size_t reserved_ss_size =
+                libos_xstate_size() + sizeof(struct sigframe) + 8 /* restorer address */;
+            if (ss->ss_size < (reserved_ss_size + MINSIGSTKSZ)) {
+                log_error(
+                    "The alternative stack size should be at least %ld + %ld. The first part is "
+                    "reserved for the xstate, sigframe, and the restore's address (may be larger "
+                    "due to alignment), which is special in Gramine. The second part is "
+                    "MINSIGSTKSZ, which is reserved for application use. Application developers "
+                    "should increase the size of the alternative stack.",
+                    reserved_ss_size, MINSIGSTKSZ);
                 return -ENOMEM;
             }
 
