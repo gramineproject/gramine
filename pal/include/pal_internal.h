@@ -244,6 +244,10 @@ int _PalAttestationReport(const void* user_report_data, size_t* user_report_data
 int _PalAttestationQuote(const void* user_report_data, size_t user_report_data_size, void* quote,
                          size_t* quote_size);
 int _PalGetSpecialKey(const char* name, void* key, size_t* key_size);
+int _PalGetSpecialKeyForSVN(const void* cpu_svn, size_t cpu_svn_size, const char* name, void* key,
+                            size_t* key_size);
+int _PalGetCPUSVN(void* cpu_svn, size_t* cpu_svn_size);
+int _PalSetCPUSVN(const void* cpu_svn, size_t cpu_svn_size);
 
 #define INIT_FAIL(msg, ...)                                                              \
     do {                                                                                 \

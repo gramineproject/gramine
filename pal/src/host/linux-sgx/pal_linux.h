@@ -149,6 +149,22 @@ int sgx_get_report(const sgx_target_info_t* target_info, const sgx_report_data_t
 int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* seal_key);
 
 /*!
+ * \brief Obtain an enclave/signer-bound key via EGETKEY(SGX_SEAL_KEY) for secret migration/sealing
+ *        of files.
+ *
+ * \param      key_policy  Must be SGX_KEYPOLICY_MRENCLAVE or SGX_KEYPOLICY_MRSIGNER. Binds the
+ *                         sealing key to MRENCLAVE (only the same enclave can unseal secrets) or
+ *                         to MRSIGNER (all enclaves from the same signer can unseal secrets).
+ * \param      cpu_svn     CPU SVN to use for deriving the key; must be exactly 16 bytes.
+ * \param      cpu_svn_size Size in bytes of `cpu_svn`; must be exactly 16 bytes.
+ * \param[out] seal_key    Output buffer to store the sealing key.
+ *
+ * \returns 0 on success, negative error code otherwise.
+ */
+
+int sgx_get_seal_key_with_svn(uint16_t key_policy, const void* cpu_svn, size_t cpu_svn_size,
+                              sgx_key_128bit_t* seal_key);
+/*!
  * \brief Verify the peer enclave during SGX local attestation.
  *
  * \param peer_enclave_info  SGX information of the peer enclave.
