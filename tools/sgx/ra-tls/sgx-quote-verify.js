@@ -1568,12 +1568,14 @@ async function verifyIntelSignedJson(jsonObj, rawText, dataFieldName, issuerChai
     
     const dataToVerify = rawText.substring(dataStart, dataEnd).trim();
     
+    const hashAlg = coordSize === 32 ? 'SHA-256' : coordSize === 48 ? 'SHA-384' : 'SHA-512';
+    
     let dataHash;
     if (isBrowser) {
-        dataHash = await window.crypto.subtle.digest('SHA-256', ByteUtils.toBytes(dataToVerify));
+        dataHash = await window.crypto.subtle.digest(hashAlg, ByteUtils.toBytes(dataToVerify));
     } else {
         const cryptoModule = require('crypto');
-        dataHash = await cryptoModule.webcrypto.subtle.digest('SHA-256', ByteUtils.toBytes(dataToVerify));
+        dataHash = await cryptoModule.webcrypto.subtle.digest(hashAlg, ByteUtils.toBytes(dataToVerify));
     }
     const dataHashArray = Array.from(new Uint8Array(dataHash));
     
@@ -3875,11 +3877,13 @@ async function verifyQeReportSignature(quoteData, sigData, collateral) {
     
     const cryptoModule = isBrowser ? null : require('crypto');
     
+    const hashAlg = coordSize === 32 ? 'SHA-256' : coordSize === 48 ? 'SHA-384' : 'SHA-512';
+    
     const computeHash = async (data) => {
         if (isBrowser) {
-            return new Uint8Array(await window.crypto.subtle.digest('SHA-256', data));
+            return new Uint8Array(await window.crypto.subtle.digest(hashAlg, data));
         } else {
-            return new Uint8Array(await cryptoModule.webcrypto.subtle.digest('SHA-256', data));
+            return new Uint8Array(await cryptoModule.webcrypto.subtle.digest(hashAlg, data));
         }
     };
     
@@ -4012,12 +4016,14 @@ async function verifyQeReportSignature(quoteData, sigData, collateral) {
         }, 'hex');
 
         // 计算QE Report的哈希
+        const hashAlg = pckCoordSize === 32 ? 'SHA-256' : pckCoordSize === 48 ? 'SHA-384' : 'SHA-512';
+        
         let qeReportHash;
         if (isBrowser) {
-            qeReportHash = await window.crypto.subtle.digest('SHA-256', qeReport);
+            qeReportHash = await window.crypto.subtle.digest(hashAlg, qeReport);
         } else {
             const cryptoModule = require('crypto');
-            qeReportHash = await cryptoModule.webcrypto.subtle.digest('SHA-256', qeReport);
+            qeReportHash = await cryptoModule.webcrypto.subtle.digest(hashAlg, qeReport);
         }
         const qeReportHashArray = Array.from(new Uint8Array(qeReportHash));
 
