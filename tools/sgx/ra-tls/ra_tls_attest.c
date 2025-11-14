@@ -653,29 +653,40 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    /* Get algorithm configuration from environment variable or use default */
-    const algorithm_config_t* algo_config = get_algorithm_config();
-
-    ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(algo_config->pk_type));
-    if (ret < 0)
-        goto out;
-
-    /* Generate key based on algorithm type */
-    if (algo_config->pk_type == MBEDTLS_PK_ECKEY) {
-        /* Generate EC key */
-        ret = mbedtls_ecp_gen_key(algo_config->params.ecp_group_id, mbedtls_pk_ec(*key),
-                                  mbedtls_ctr_drbg_random, &ctr_drbg);
-        if (ret < 0)
+    /* Check if user specified a private key file */
+    const char* key_file = getenv(RA_TLS_CERT_KEY_FILE);
+    if (key_file) {
+        /* Load private key from PEM file */
+        ret = mbedtls_pk_parse_keyfile(key, key_file, /*password=*/NULL,
+                                       mbedtls_ctr_drbg_random, &ctr_drbg);
+        if (ret < 0) {
             goto out;
-    } else if (algo_config->pk_type == MBEDTLS_PK_RSA) {
-        /* Generate RSA key */
-        ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
-                                  algo_config->params.rsa_key_size, 65537);
-        if (ret < 0)
-            goto out;
+        }
     } else {
-        ret = MBEDTLS_ERR_PK_BAD_INPUT_DATA;
-        goto out;
+        /* Generate new key based on algorithm configuration */
+        const algorithm_config_t* algo_config = get_algorithm_config();
+
+        ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(algo_config->pk_type));
+        if (ret < 0)
+            goto out;
+
+        /* Generate key based on algorithm type */
+        if (algo_config->pk_type == MBEDTLS_PK_ECKEY) {
+            /* Generate EC key */
+            ret = mbedtls_ecp_gen_key(algo_config->params.ecp_group_id, mbedtls_pk_ec(*key),
+                                      mbedtls_ctr_drbg_random, &ctr_drbg);
+            if (ret < 0)
+                goto out;
+        } else if (algo_config->pk_type == MBEDTLS_PK_RSA) {
+            /* Generate RSA key */
+            ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
+                                      algo_config->params.rsa_key_size, 65537);
+            if (ret < 0)
+                goto out;
+        } else {
+            ret = MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+            goto out;
+        }
     }
 
     ret = create_x509(key, &writecrt);
