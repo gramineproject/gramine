@@ -24,13 +24,18 @@
 
 #include <cbor.h>
 
+#include <mbedtls/base64.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/ecp.h>
 #include <mbedtls/entropy.h>
+#include <mbedtls/pem.h>
 #include <mbedtls/pk.h>
 #include <mbedtls/rsa.h>
 #include <mbedtls/sha256.h>
 #include <mbedtls/x509_crt.h>
+
+#define JSMN_STATIC
+#include "third_party/jsmn/jsmn.h"
 
 #include "ra_tls.h"
 #include "ra_tls_common.h"
@@ -108,30 +113,6 @@ static ssize_t write_file(const char* path, uint8_t* buf, size_t len) {
     return rw_file(path, buf, len, /*do_write=*/true);
 }
 
-/*! get algorithm configuration from environment variable or use default */
-static const algorithm_config_t* get_algorithm_config(void) {
-    const char* algo_name = getenv(RA_TLS_CERT_ALGORITHM);
-    if (!algo_name) {
-        algo_name = DEFAULT_ALGORITHM_NAME;
-    }
-
-    for (size_t i = 0; i < NUM_SUPPORTED_ALGORITHMS; i++) {
-        if (strcasecmp(g_supported_algorithms[i].name, algo_name) == 0) {
-            return &g_supported_algorithms[i];
-        }
-    }
-
-    /* If algorithm not found, use default */
-    for (size_t i = 0; i < NUM_SUPPORTED_ALGORITHMS; i++) {
-        if (strcasecmp(g_supported_algorithms[i].name, DEFAULT_ALGORITHM_NAME) == 0) {
-            return &g_supported_algorithms[i];
-        }
-    }
-
-    /* Should never reach here */
-    return &g_supported_algorithms[0];
-}
-
 int ra_tls_get_supported_algorithms(const char*** algorithms, size_t* algorithms_count) {
     if (!algorithms || !algorithms_count) {
         return -EINVAL;
@@ -147,11 +128,301 @@ int ra_tls_get_supported_algorithms(const char*** algorithms, size_t* algorithms
     return 0;
 }
 
+/* Certificate configuration from JSON */
+typedef struct {
+    char* key_file;
+    char* key_format;  /* "pem" or "der" */
+    char* algorithm;
+    char* subject;
+    char* not_before;
+    char* not_after;
+    char* signature_md;
+    /* CA certificate fields */
+    char* ca_key_file;
+    char* ca_key_format;  /* "pem" or "der" */
+    char* ca_subject;
+    char* ca_algorithm;
+    char* ca_not_before;
+    char* ca_not_after;
+    char* ca_signature_md;
+} cert_config_t;
+
+/* Helper function to find JSON string value by key */
+static int json_get_string(const char* json, jsmntok_t* tokens, int num_tokens,
+                           const char* key, char** out_value) {
+    for (int i = 0; i < num_tokens - 1; i++) {
+        if (tokens[i].type == JSMN_STRING) {
+            int key_len = tokens[i].end - tokens[i].start;
+            if (strncmp(json + tokens[i].start, key, key_len) == 0 &&
+                strlen(key) == (size_t)key_len) {
+                /* Found the key, next token is the value */
+                i++;
+                if (tokens[i].type == JSMN_STRING) {
+                    int val_len = tokens[i].end - tokens[i].start;
+                    *out_value = strndup(json + tokens[i].start, val_len);
+                    return *out_value ? 0 : -ENOMEM;
+                }
+            }
+        }
+    }
+    return -ENOENT;
+}
+
+/* Parse base64-encoded JSON configuration */
+static int parse_json_config(const char* b64_json, cert_config_t* config) {
+    int ret;
+    unsigned char* json_buf = NULL;
+    size_t json_len = 0;
+    jsmn_parser parser;
+    jsmntok_t tokens[128];
+    int num_tokens;
+
+    memset(config, 0, sizeof(*config));
+
+    /* Decode base64 */
+    ret = mbedtls_base64_decode(NULL, 0, &json_len, (const unsigned char*)b64_json,
+                                strlen(b64_json));
+    if (ret != MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL) {
+        return -EINVAL;
+    }
+
+    json_buf = malloc(json_len + 1);
+    if (!json_buf) {
+        return -ENOMEM;
+    }
+
+    ret = mbedtls_base64_decode(json_buf, json_len, &json_len, (const unsigned char*)b64_json,
+                                strlen(b64_json));
+    if (ret < 0) {
+        free(json_buf);
+        return -EINVAL;
+    }
+    json_buf[json_len] = '\0';
+
+    /* Parse JSON */
+    jsmn_init(&parser);
+    num_tokens = jsmn_parse(&parser, (const char*)json_buf, json_len, tokens,
+                           sizeof(tokens) / sizeof(tokens[0]));
+    if (num_tokens < 0) {
+        free(json_buf);
+        return -EINVAL;
+    }
+
+    /* Extract fields (all optional) */
+    json_get_string((const char*)json_buf, tokens, num_tokens, "key_file", &config->key_file);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "key_format", &config->key_format);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "algorithm", &config->algorithm);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "subject", &config->subject);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "not_before", &config->not_before);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "not_after", &config->not_after);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "signature_md", &config->signature_md);
+    /* CA fields */
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_key_file", &config->ca_key_file);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_key_format", &config->ca_key_format);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_subject", &config->ca_subject);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_algorithm", &config->ca_algorithm);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_not_before", &config->ca_not_before);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_not_after", &config->ca_not_after);
+    json_get_string((const char*)json_buf, tokens, num_tokens, "ca_signature_md", &config->ca_signature_md);
+
+    free(json_buf);
+    return 0;
+}
+
+/* Free cert_config_t structure */
+static void free_cert_config(cert_config_t* config) {
+    free(config->key_file);
+    free(config->key_format);
+    free(config->algorithm);
+    free(config->subject);
+    free(config->not_before);
+    free(config->not_after);
+    free(config->signature_md);
+    free(config->ca_key_file);
+    free(config->ca_key_format);
+    free(config->ca_subject);
+    free(config->ca_algorithm);
+    free(config->ca_not_before);
+    free(config->ca_not_after);
+    free(config->ca_signature_md);
+}
+
+/* Generate CA certificate path from key file path */
+static char* get_ca_cert_path(const char* key_file) {
+    if (!key_file)
+        return NULL;
+    
+    /* Find the last '/' to get directory */
+    const char* last_slash = strrchr(key_file, '/');
+    if (!last_slash) {
+        /* No directory, use current directory */
+        return strdup("ca.crt");
+    }
+    
+    size_t dir_len = last_slash - key_file + 1;
+    char* ca_path = malloc(dir_len + strlen("ca.crt") + 1);
+    if (!ca_path)
+        return NULL;
+    
+    memcpy(ca_path, key_file, dir_len);
+    strcpy(ca_path + dir_len, "ca.crt");
+    return ca_path;
+}
+
+/* Generate or load CA key and create CA certificate */
+static int generate_ca_cert(mbedtls_pk_context* ca_key, mbedtls_x509_crt* ca_crt,
+                            const cert_config_t* config, mbedtls_ctr_drbg_context* ctr_drbg) {
+    int ret;
+    mbedtls_x509write_cert ca_writecrt;
+    mbedtls_mpi serial;
+    
+    mbedtls_x509write_crt_init(&ca_writecrt);
+    mbedtls_mpi_init(&serial);
+    
+    /* Load or generate CA key */
+    if (config->ca_key_file) {
+        /* Load CA key from file */
+        bool is_pem = !config->ca_key_format || strcasecmp(config->ca_key_format, "pem") == 0;
+        if (is_pem) {
+            ret = mbedtls_pk_parse_keyfile(ca_key, config->ca_key_file, /*password=*/NULL,
+                                           mbedtls_ctr_drbg_random, ctr_drbg);
+        } else {
+            uint8_t key_buf[8192];
+            ssize_t key_len = read_file(config->ca_key_file, key_buf, sizeof(key_buf));
+            if (key_len < 0) {
+                ret = MBEDTLS_ERR_PK_FILE_IO_ERROR;
+                goto out;
+            }
+            ret = mbedtls_pk_parse_key(ca_key, key_buf, key_len, /*password=*/NULL, 0,
+                                       mbedtls_ctr_drbg_random, ctr_drbg);
+        }
+        if (ret < 0)
+            goto out;
+    } else {
+        /* Generate new CA key */
+        const char* ca_algo = config->ca_algorithm ? config->ca_algorithm : DEFAULT_ALGORITHM_NAME;
+        const algorithm_config_t* algo_config = NULL;
+        
+        for (size_t i = 0; i < NUM_SUPPORTED_ALGORITHMS; i++) {
+            if (strcasecmp(g_supported_algorithms[i].name, ca_algo) == 0) {
+                algo_config = &g_supported_algorithms[i];
+                break;
+            }
+        }
+        if (!algo_config) {
+            algo_config = &g_supported_algorithms[0];
+        }
+        
+        ret = mbedtls_pk_setup(ca_key, mbedtls_pk_info_from_type(algo_config->pk_type));
+        if (ret < 0)
+            goto out;
+        
+        if (algo_config->pk_type == MBEDTLS_PK_ECKEY) {
+            ret = mbedtls_ecp_gen_key(algo_config->params.ecp_group_id, mbedtls_pk_ec(*ca_key),
+                                      mbedtls_ctr_drbg_random, ctr_drbg);
+        } else if (algo_config->pk_type == MBEDTLS_PK_RSA) {
+            ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*ca_key), mbedtls_ctr_drbg_random, ctr_drbg,
+                                      algo_config->params.rsa_key_size, 65537);
+        } else {
+            ret = MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+        }
+        if (ret < 0)
+            goto out;
+    }
+    
+    /* Create CA certificate (self-signed) */
+    mbedtls_x509write_crt_set_md_alg(&ca_writecrt, MBEDTLS_MD_SHA256);
+    mbedtls_x509write_crt_set_subject_key(&ca_writecrt, ca_key);
+    mbedtls_x509write_crt_set_issuer_key(&ca_writecrt, ca_key);
+    
+    const char* ca_subject = config->ca_subject ? config->ca_subject : "CN=RATLS-CA,O=GramineDevelopers,C=US";
+    ret = mbedtls_x509write_crt_set_subject_name(&ca_writecrt, ca_subject);
+    if (ret < 0)
+        goto out;
+    
+    ret = mbedtls_x509write_crt_set_issuer_name(&ca_writecrt, ca_subject);
+    if (ret < 0)
+        goto out;
+    
+    ret = mbedtls_mpi_read_string(&serial, 10, "1");
+    if (ret < 0)
+        goto out;
+    
+    ret = mbedtls_x509write_crt_set_serial(&ca_writecrt, &serial);
+    if (ret < 0)
+        goto out;
+    
+    const char* ca_not_before = config->ca_not_before ? config->ca_not_before : CERT_TIMESTAMP_NOT_BEFORE_DEFAULT;
+    const char* ca_not_after = config->ca_not_after ? config->ca_not_after : CERT_TIMESTAMP_NOT_AFTER_DEFAULT;
+    ret = mbedtls_x509write_crt_set_validity(&ca_writecrt, ca_not_before, ca_not_after);
+    if (ret < 0)
+        goto out;
+    
+    /* Set CA:TRUE */
+    ret = mbedtls_x509write_crt_set_basic_constraints(&ca_writecrt, /*is_ca=*/1, /*max_pathlen=*/-1);
+    if (ret < 0)
+        goto out;
+    
+    ret = mbedtls_x509write_crt_set_subject_key_identifier(&ca_writecrt);
+    if (ret < 0)
+        goto out;
+    
+    ret = mbedtls_x509write_crt_set_authority_key_identifier(&ca_writecrt);
+    if (ret < 0)
+        goto out;
+    
+    /* Write CA certificate to DER and parse it */
+    uint8_t ca_der_buf[4096];
+    int ca_der_size = mbedtls_x509write_crt_der(&ca_writecrt, ca_der_buf, sizeof(ca_der_buf),
+                                                 mbedtls_ctr_drbg_random, ctr_drbg);
+    if (ca_der_size < 0) {
+        ret = ca_der_size;
+        goto out;
+    }
+    
+    ret = mbedtls_x509_crt_parse_der(ca_crt, ca_der_buf + sizeof(ca_der_buf) - ca_der_size, ca_der_size);
+    if (ret < 0)
+        goto out;
+    
+    /* Write CA certificate to file */
+    char* ca_cert_path = get_ca_cert_path(config->key_file);
+    if (ca_cert_path) {
+        /* Convert DER to PEM */
+        size_t pem_len = 0;
+        ret = mbedtls_pem_write_buffer("-----BEGIN CERTIFICATE-----\n",
+                                       "-----END CERTIFICATE-----\n",
+                                       ca_der_buf + sizeof(ca_der_buf) - ca_der_size,
+                                       ca_der_size, NULL, 0, &pem_len);
+        if (ret == MBEDTLS_ERR_BASE64_BUFFER_TOO_SMALL) {
+            uint8_t* pem_buf = malloc(pem_len);
+            if (pem_buf) {
+                ret = mbedtls_pem_write_buffer("-----BEGIN CERTIFICATE-----\n",
+                                               "-----END CERTIFICATE-----\n",
+                                               ca_der_buf + sizeof(ca_der_buf) - ca_der_size,
+                                               ca_der_size, pem_buf, pem_len, &pem_len);
+                if (ret == 0) {
+                    write_file(ca_cert_path, pem_buf, pem_len - 1); /* -1 to exclude null terminator */
+                }
+                free(pem_buf);
+            }
+        }
+        free(ca_cert_path);
+    }
+    
+    ret = 0;
+out:
+    mbedtls_mpi_free(&serial);
+    mbedtls_x509write_crt_free(&ca_writecrt);
+    return ret;
+}
+
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt with \p quote (legacy format)
  *  and \p evidence (new standard format) embedded */
 static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t quote_size,
                          const uint8_t* evidence, size_t evidence_size,
-                         mbedtls_x509write_cert* writecrt) {
+                         mbedtls_x509write_cert* writecrt,
+                         mbedtls_pk_context* ca_key, const char* ca_subject_name,
+                         const char* subject_name, const char* not_before, const char* not_after) {
     int ret;
     char* cert_timestamp_not_before = NULL;
     char* cert_timestamp_not_after  = NULL;
@@ -162,16 +433,25 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
     mbedtls_x509write_crt_init(writecrt);
     mbedtls_x509write_crt_set_md_alg(writecrt, MBEDTLS_MD_SHA256);
 
-    /* generated certificate is self-signed, so declares itself both a subject and an issuer */
+    /* Set subject key (always the RA-TLS key) */
     mbedtls_x509write_crt_set_subject_key(writecrt, pk);
-    mbedtls_x509write_crt_set_issuer_key(writecrt, pk);
+    
+    /* Set issuer key: CA key if provided, otherwise self-signed */
+    if (ca_key) {
+        mbedtls_x509write_crt_set_issuer_key(writecrt, ca_key);
+    } else {
+        mbedtls_x509write_crt_set_issuer_key(writecrt, pk);
+    }
 
-    /* set (dummy) subject names for both subject and issuer */
-    ret = mbedtls_x509write_crt_set_subject_name(writecrt, CERT_SUBJECT_NAME_VALUES);
+    /* Set subject name */
+    const char* subject = subject_name ? subject_name : CERT_SUBJECT_NAME_VALUES;
+    ret = mbedtls_x509write_crt_set_subject_name(writecrt, subject);
     if (ret < 0)
         goto out;
 
-    ret = mbedtls_x509write_crt_set_issuer_name(writecrt, CERT_SUBJECT_NAME_VALUES);
+    /* Set issuer name: CA subject if provided, otherwise same as subject (self-signed) */
+    const char* issuer = ca_subject_name ? ca_subject_name : subject;
+    ret = mbedtls_x509write_crt_set_issuer_name(writecrt, issuer);
     if (ret < 0)
         goto out;
 
@@ -184,15 +464,24 @@ static int generate_x509(mbedtls_pk_context* pk, const uint8_t* quote, size_t qu
     if (ret < 0)
         goto out;
 
-    cert_timestamp_not_before = strdup(getenv(RA_TLS_CERT_TIMESTAMP_NOT_BEFORE) ? :
-                                       CERT_TIMESTAMP_NOT_BEFORE_DEFAULT);
+    /* Set validity period */
+    if (not_before) {
+        cert_timestamp_not_before = strdup(not_before);
+    } else {
+        cert_timestamp_not_before = strdup(getenv(RA_TLS_CERT_TIMESTAMP_NOT_BEFORE) ? :
+                                           CERT_TIMESTAMP_NOT_BEFORE_DEFAULT);
+    }
     if (!cert_timestamp_not_before) {
         ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
         goto out;
     }
 
-    cert_timestamp_not_after = strdup(getenv(RA_TLS_CERT_TIMESTAMP_NOT_AFTER) ? :
-                                      CERT_TIMESTAMP_NOT_AFTER_DEFAULT);
+    if (not_after) {
+        cert_timestamp_not_after = strdup(not_after);
+    } else {
+        cert_timestamp_not_after = strdup(getenv(RA_TLS_CERT_TIMESTAMP_NOT_AFTER) ? :
+                                          CERT_TIMESTAMP_NOT_AFTER_DEFAULT);
+    }
     if (!cert_timestamp_not_after) {
         ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
         goto out;
@@ -587,7 +876,9 @@ out:
 }
 
 /*! given public key \p pk, generate an RA-TLS certificate \p writecrt */
-static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt) {
+static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt,
+                       mbedtls_pk_context* ca_key, const char* ca_subject,
+                       const char* subject, const char* not_before, const char* not_after) {
     int ret;
 
     /*
@@ -612,7 +903,8 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt)
     /* TODO: currently, the Endorsement extension is not implemented (contains TCB info, CRL, etc.);
      *       should be added in the future */
 
-    ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt);
+    ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt,
+                       ca_key, ca_subject, subject, not_before, not_after);
 out:
     free(quote);
     free(evidence);
@@ -653,58 +945,136 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (ret < 0)
         goto out;
 
-    /* Check if user specified a private key file */
-    const char* key_file = getenv(RA_TLS_CERT_KEY_FILE);
-    if (key_file) {
-        /* Load private key from PEM file */
-        ret = mbedtls_pk_parse_keyfile(key, key_file, /*password=*/NULL,
-                                       mbedtls_ctr_drbg_random, &ctr_drbg);
-        if (ret < 0) {
-            goto out;
-        }
-    } else {
-        /* Generate new key based on algorithm configuration */
-        const algorithm_config_t* algo_config = get_algorithm_config();
+    /* Configuration precedence: RA_TLS_CERT_ALGORITHM > RA_TLS_CERT_CONFIG_B64 > defaults */
+    const char* algo_env = getenv(RA_TLS_CERT_ALGORITHM);
+    const char* config_b64 = getenv(RA_TLS_CERT_CONFIG_B64);
+    cert_config_t json_config = {0};
+    bool use_json = false;
 
-        ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(algo_config->pk_type));
-        if (ret < 0)
-            goto out;
-
-        /* Generate key based on algorithm type */
-        if (algo_config->pk_type == MBEDTLS_PK_ECKEY) {
-            /* Generate EC key */
-            ret = mbedtls_ecp_gen_key(algo_config->params.ecp_group_id, mbedtls_pk_ec(*key),
-                                      mbedtls_ctr_drbg_random, &ctr_drbg);
-            if (ret < 0)
-                goto out;
-        } else if (algo_config->pk_type == MBEDTLS_PK_RSA) {
-            /* Generate RSA key */
-            ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
-                                      algo_config->params.rsa_key_size, 65537);
-            if (ret < 0)
-                goto out;
-        } else {
-            ret = MBEDTLS_ERR_PK_BAD_INPUT_DATA;
-            goto out;
+    if (!algo_env && config_b64) {
+        /* Parse JSON configuration if algorithm not specified */
+        ret = parse_json_config(config_b64, &json_config);
+        if (ret == 0) {
+            use_json = true;
         }
     }
 
-    ret = create_x509(key, &writecrt);
+    /* Load or generate key */
+    if (use_json && json_config.key_file) {
+        /* Load private key from file specified in JSON */
+        bool is_pem = !json_config.key_format || strcasecmp(json_config.key_format, "pem") == 0;
+        
+        if (is_pem) {
+            ret = mbedtls_pk_parse_keyfile(key, json_config.key_file, /*password=*/NULL,
+                                           mbedtls_ctr_drbg_random, &ctr_drbg);
+        } else {
+            /* DER format - read file and parse */
+            uint8_t key_buf[8192];
+            ssize_t key_len = read_file(json_config.key_file, key_buf, sizeof(key_buf));
+            if (key_len < 0) {
+                ret = MBEDTLS_ERR_PK_FILE_IO_ERROR;
+                goto out_json;
+            }
+            ret = mbedtls_pk_parse_key(key, key_buf, key_len, /*password=*/NULL, 0,
+                                       mbedtls_ctr_drbg_random, &ctr_drbg);
+        }
+        if (ret < 0)
+            goto out_json;
+    } else {
+        /* Generate new key based on algorithm */
+        const char* algo_name = algo_env;
+        if (!algo_name && use_json && json_config.algorithm) {
+            algo_name = json_config.algorithm;
+        }
+        if (!algo_name) {
+            algo_name = DEFAULT_ALGORITHM_NAME;
+        }
+
+        /* Find algorithm configuration */
+        const algorithm_config_t* algo_config = NULL;
+        for (size_t i = 0; i < NUM_SUPPORTED_ALGORITHMS; i++) {
+            if (strcasecmp(g_supported_algorithms[i].name, algo_name) == 0) {
+                algo_config = &g_supported_algorithms[i];
+                break;
+            }
+        }
+        if (!algo_config) {
+            /* Algorithm not found, use default */
+            algo_config = &g_supported_algorithms[0];
+        }
+
+        ret = mbedtls_pk_setup(key, mbedtls_pk_info_from_type(algo_config->pk_type));
+        if (ret < 0)
+            goto out_json;
+
+        /* Generate key based on algorithm type */
+        if (algo_config->pk_type == MBEDTLS_PK_ECKEY) {
+            ret = mbedtls_ecp_gen_key(algo_config->params.ecp_group_id, mbedtls_pk_ec(*key),
+                                      mbedtls_ctr_drbg_random, &ctr_drbg);
+            if (ret < 0)
+                goto out_json;
+        } else if (algo_config->pk_type == MBEDTLS_PK_RSA) {
+            ret = mbedtls_rsa_gen_key(mbedtls_pk_rsa(*key), mbedtls_ctr_drbg_random, &ctr_drbg,
+                                      algo_config->params.rsa_key_size, 65537);
+            if (ret < 0)
+                goto out_json;
+        } else {
+            ret = MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+            goto out_json;
+        }
+    }
+
+    /* Generate CA certificate if JSON config has key_file */
+    mbedtls_pk_context ca_key_ctx;
+    mbedtls_x509_crt ca_crt_ctx;
+    mbedtls_pk_context* ca_key_ptr = NULL;
+    const char* ca_subject_ptr = NULL;
+    
+    if (use_json && json_config.key_file) {
+        /* Initialize CA structures */
+        mbedtls_pk_init(&ca_key_ctx);
+        mbedtls_x509_crt_init(&ca_crt_ctx);
+        
+        /* Generate or load CA certificate */
+        ret = generate_ca_cert(&ca_key_ctx, &ca_crt_ctx, &json_config, &ctr_drbg);
+        if (ret < 0) {
+            mbedtls_pk_free(&ca_key_ctx);
+            mbedtls_x509_crt_free(&ca_crt_ctx);
+            goto out_json;
+        }
+        
+        ca_key_ptr = &ca_key_ctx;
+        ca_subject_ptr = json_config.ca_subject ? json_config.ca_subject : "CN=RATLS-CA,O=GramineDevelopers,C=US";
+    }
+    
+    /* Create RA-TLS certificate (self-signed or CA-signed) */
+    const char* subject = (use_json && json_config.subject) ? json_config.subject : NULL;
+    const char* not_before = (use_json && json_config.not_before) ? json_config.not_before : NULL;
+    const char* not_after = (use_json && json_config.not_after) ? json_config.not_after : NULL;
+    
+    ret = create_x509(key, &writecrt, ca_key_ptr, ca_subject_ptr, subject, not_before, not_after);
+    
+    /* Clean up CA structures if used */
+    if (ca_key_ptr) {
+        mbedtls_pk_free(&ca_key_ctx);
+        mbedtls_x509_crt_free(&ca_crt_ctx);
+    }
+    
     if (ret < 0)
-        goto out;
+        goto out_json;
 
     int size = mbedtls_x509write_crt_der(&writecrt, output_buf, output_buf_size,
                                          mbedtls_ctr_drbg_random, &ctr_drbg);
     if (size < 0) {
         ret = size;
-        goto out;
+        goto out_json;
     }
 
     if (crt_der && crt_der_size) {
         crt_der_buf = malloc(size);
         if (!crt_der_buf) {
             ret = MBEDTLS_ERR_X509_ALLOC_FAILED;
-            goto out;
+            goto out_json;
         }
 
         /* note that mbedtls_x509write_crt_der() wrote data at the end of the output_buf */
@@ -716,10 +1086,14 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
     if (crt) {
         ret = mbedtls_x509_crt_parse_der(crt, output_buf + output_buf_size - size, size);
         if (ret < 0)
-            goto out;
+            goto out_json;
     }
 
     ret = 0;
+out_json:
+    if (use_json) {
+        free_cert_config(&json_config);
+    }
 out:
     if (ret < 0) {
         free(crt_der_buf);

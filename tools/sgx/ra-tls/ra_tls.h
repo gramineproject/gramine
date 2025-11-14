@@ -35,7 +35,7 @@
 #define RA_TLS_CERT_TIMESTAMP_NOT_AFTER  "RA_TLS_CERT_TIMESTAMP_NOT_AFTER"
 
 #define RA_TLS_CERT_ALGORITHM "RA_TLS_CERT_ALGORITHM"
-#define RA_TLS_CERT_KEY_FILE  "RA_TLS_CERT_KEY_FILE"
+#define RA_TLS_CERT_CONFIG_B64 "RA_TLS_CERT_CONFIG_B64"
 
 typedef enum {
     RA_TLS_ATTESTATION_SCHEME_UNKNOWN = 0,
@@ -136,15 +136,25 @@ int ra_tls_verify_callback_extended_der(uint8_t* der_crt, size_t der_crt_size,
  *
  * \returns 0 on success, specific mbedTLS error code (negative int) otherwise.
  *
- * The function first generates or loads a keypair. By default, it generates a random ECDSA keypair
- * with NIST P-384 (SECP384R1) elliptic curve. The algorithm can be configured via the
- * RA_TLS_CERT_ALGORITHM environment variable (e.g., "secp256k1", "secp256r1", "secp384r1",
- * "rsa2048", "rsa3072", "rsa4096"). Alternatively, a private key can be loaded from a PEM file
- * specified via the RA_TLS_CERT_KEY_FILE environment variable. Then it calculates the SHA256 hash
- * over the public key and retrieves an SGX quote with report_data equal to the calculated hash
- * (this ties the certificate key to the SGX quote). Finally, it generates the X.509 self-signed
- * certificate with this key and the SGX quote embedded. The function allocates memory for key and
- * certificate; user is expected to free them after use.
+ * The function first generates or loads a keypair. Configuration priority:
+ * 1. RA_TLS_CERT_ALGORITHM environment variable (highest priority)
+ * 2. RA_TLS_CERT_CONFIG_B64 environment variable (base64-encoded JSON configuration)
+ * 3. Default: ECDSA with NIST P-384 (SECP384R1) elliptic curve
+ *
+ * The JSON configuration (RA_TLS_CERT_CONFIG_B64) supports:
+ * - "key_file": path to private key file (PEM or DER format)
+ * - "key_format": "pem" or "der"
+ * - "algorithm": algorithm name (e.g., "secp256k1", "rsa3072")
+ * - "subject": certificate subject DN
+ * - "not_before": certificate validity start (YYYYMMDDhhmmss)
+ * - "not_after": certificate validity end (YYYYMMDDhhmmss)
+ * - "signature_md": signature hash algorithm ("sha256", "sha384", "sha512")
+ *
+ * The function calculates the SHA256 hash over the public key and retrieves an SGX quote with
+ * report_data equal to the calculated hash (this ties the certificate key to the SGX quote).
+ * Finally, it generates the X.509 self-signed certificate with this key and the SGX quote
+ * embedded. The function allocates memory for key and certificate; user is expected to free them
+ * after use.
  */
 int ra_tls_create_key_and_crt_der(uint8_t** der_key, size_t* der_key_size, uint8_t** der_crt,
                                   size_t* der_crt_size);

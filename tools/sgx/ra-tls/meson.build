@@ -21,7 +21,7 @@ secret_prov_link_args = [
 libra_tls_attest = shared_library('ra_tls_attest',
     'ra_tls_attest.c',
     link_args: ra_tls_link_args,
-    include_directories: pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
+    include_directories: [pal_sgx_inc, include_directories('.')], # this is only for `sgx_arch.h` and `sgx_attest.h`, and jsmn
     dependencies: [
         libcbor_dep,
         mbedtls_static_dep,
@@ -64,7 +64,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
     'ra_tls_attest.c',
 
     link_args: secret_prov_link_args,
-    include_directories: pal_sgx_inc,
+    include_directories: [pal_sgx_inc, include_directories('.')],
     dependencies: [
         libcbor_dep,
         mbedtls_static_dep,
