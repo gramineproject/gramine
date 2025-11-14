@@ -2934,12 +2934,24 @@ async function verifyCertChain(certChain, collateral, trustedRootCAs = null) {
                     throw new Error(`Failed to parse certificate signature: ${parseError.message}`);
                 }
                 
+                // Extract curve info from parent certificate
+                const parentCertDer = ByteUtils.fromBase64(
+                    parentCertPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                              .replace(/-----END CERTIFICATE-----/, '')
+                              .replace(/\s/g, '')
+                );
+                const parentSpki = extractSpkiFromCertDer(parentCertDer);
+                const curveInfo = extractEcCurveFromSpki(parentSpki);
+                
+                const childTbsAndSig = extractTbsAndSigFromCertDer(childCertDer);
+                const hashAlg = sigAlgOidToHash(childTbsAndSig.sigAlgOid);
+                
                 let tbsCertHash;
                 if (isBrowser) {
-                    tbsCertHash = await window.crypto.subtle.digest('SHA-256', tbsCert);
+                    tbsCertHash = await window.crypto.subtle.digest(hashAlg, tbsCert);
                 } else {
                     const cryptoModule = require('crypto');
-                    tbsCertHash = await cryptoModule.webcrypto.subtle.digest('SHA-256', tbsCert);
+                    tbsCertHash = await cryptoModule.webcrypto.subtle.digest(hashAlg, tbsCert);
                 }
                 const tbsCertHashArray = Array.from(new Uint8Array(tbsCertHash));
                 
@@ -2949,13 +2961,13 @@ async function verifyCertChain(certChain, collateral, trustedRootCAs = null) {
                 }
                 
                 const coordStart = uncompressedMarker + 1;
-                const coordSize = 32;
+                const coordSize = curveInfo.coordSize;
                 
                 const pubKeyX = ByteUtils.slice(parentPubKeyBytes, coordStart, coordStart + coordSize);
                 const pubKeyY = ByteUtils.slice(parentPubKeyBytes, coordStart + coordSize, coordStart + coordSize * 2);
                 
                 const EC = elliptic.ec;
-                const ec = new EC('p256');
+                const ec = new EC(curveInfo.ellipticName);
                 
                 const key = ec.keyFromPublic({
                     x: ByteUtils.toHex(pubKeyX),
@@ -3005,19 +3017,27 @@ async function verifyCertChain(certChain, collateral, trustedRootCAs = null) {
                     try {
                         const rootPubKeyBytes = extractEcdsaPublicKeyFromPem(rootPem);
                         
+                        const rootCertDer = ByteUtils.fromBase64(
+                            rootPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                                  .replace(/-----END CERTIFICATE-----/, '')
+                                  .replace(/\s/g, '')
+                        );
+                        const rootSpki = extractSpkiFromCertDer(rootCertDer);
+                        const curveInfo = extractEcCurveFromSpki(rootSpki);
+                        
                         const uncompressedMarker = rootPubKeyBytes.indexOf(0x04);
                         if (uncompressedMarker === -1) {
                             continue;
                         }
                         
                         const coordStart = uncompressedMarker + 1;
-                        const coordSize = 32;
+                        const coordSize = curveInfo.coordSize;
                         
                         const pubKeyX = ByteUtils.slice(rootPubKeyBytes, coordStart, coordStart + coordSize);
                         const pubKeyY = ByteUtils.slice(rootPubKeyBytes, coordStart + coordSize, coordStart + coordSize * 2);
                         
                         const EC = elliptic.ec;
-                        const ec = new EC('p256');
+                        const ec = new EC(curveInfo.ellipticName);
                         
                         const key = ec.keyFromPublic({
                             x: ByteUtils.toHex(pubKeyX),
@@ -3091,12 +3111,14 @@ async function verifyCertChain(certChain, collateral, trustedRootCAs = null) {
                             continue;
                         }
                         
+                        const hashAlg = coordSize === 32 ? 'SHA-256' : coordSize === 48 ? 'SHA-384' : 'SHA-512';
+                        
                         let tbsCertListHash;
                         if (isBrowser) {
-                            tbsCertListHash = await window.crypto.subtle.digest('SHA-256', tbsCertList);
+                            tbsCertListHash = await window.crypto.subtle.digest(hashAlg, tbsCertList);
                         } else {
                             const cryptoModule = require('crypto');
-                            tbsCertListHash = await cryptoModule.webcrypto.subtle.digest('SHA-256', tbsCertList);
+                            tbsCertListHash = await cryptoModule.webcrypto.subtle.digest(hashAlg, tbsCertList);
                         }
                         const tbsCertListHashArray = Array.from(new Uint8Array(tbsCertListHash));
                         
@@ -3319,23 +3341,33 @@ async function verifyCertChain(certChain, collateral, trustedRootCAs = null) {
                         throw new Error(`Failed to parse ${matchedType} CRL`);
                     }
 
+                    const issuerCertDer = ByteUtils.fromBase64(
+                        issuerCertPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                                  .replace(/-----END CERTIFICATE-----/, '')
+                                  .replace(/\s/g, '')
+                    );
+                    const issuerSpki = extractSpkiFromCertDer(issuerCertDer);
+                    const curveInfo = extractEcCurveFromSpki(issuerSpki);
+                    
                     const issuerPubKeyBytes = extractEcdsaPublicKeyFromPem(issuerCertPem);
                     let issuerPubKeyHex = ByteUtils.toHex(issuerPubKeyBytes);
                     if (!issuerPubKeyHex.startsWith('04')) {
                         issuerPubKeyHex = '04' + issuerPubKeyHex;
                     }
                     const EC = isBrowser?elliptic.ec:require('elliptic').ec;
-                    const ec = new EC('p256');
+                    const ec = new EC(curveInfo.ellipticName);
                     const issuerKey = ec.keyFromPublic(issuerPubKeyHex, 'hex');
 
                     const derSig = parseDerEcdsaSignature(parsed.signature);
 
+                    const hashAlg = curveInfo.coordSize === 32 ? 'SHA-256' : curveInfo.coordSize === 48 ? 'SHA-384' : 'SHA-512';
+                    
                     let tbsCertListHash;
                     if (isBrowser) {
-                        tbsCertListHash = await window.crypto.subtle.digest('SHA-256', parsed.tbsCertList);
+                        tbsCertListHash = await window.crypto.subtle.digest(hashAlg, parsed.tbsCertList);
                     } else {
                         const cryptoModule = require('crypto');
-                        tbsCertListHash = await cryptoModule.webcrypto.subtle.digest('SHA-256', parsed.tbsCertList);
+                        tbsCertListHash = await cryptoModule.webcrypto.subtle.digest(hashAlg, parsed.tbsCertList);
                     }
                     const tbsCertListHashArray = Array.from(new Uint8Array(tbsCertListHash));
 
@@ -3946,13 +3978,21 @@ async function verifyQeReportSignature(quoteData, sigData, collateral) {
         }
     }
 
+    const pckCertDer = ByteUtils.fromBase64(
+        pckCertPem.replace(/-----BEGIN CERTIFICATE-----/, '')
+                  .replace(/-----END CERTIFICATE-----/, '')
+                  .replace(/\s/g, '')
+    );
+    const pckSpki = extractSpkiFromCertDer(pckCertDer);
+    const curveInfo = extractEcCurveFromSpki(pckSpki);
+    
     const uncompressedMarker = pubKeyBytes.indexOf(0x04);
     
     if (uncompressedMarker === -1) {
         throw new Error('Cannot find uncompressed point marker in PCK public key');
     }
 
-    const pckCoordSize = 32;
+    const pckCoordSize = curveInfo.coordSize;
     const coordStart = uncompressedMarker + 1;
 
     if (pubKeyBytes.length < coordStart + pckCoordSize * 2) {
@@ -3962,9 +4002,8 @@ async function verifyQeReportSignature(quoteData, sigData, collateral) {
     const pckPubKeyX = ByteUtils.slice(pubKeyBytes, coordStart, coordStart + pckCoordSize);
     const pckPubKeyY = ByteUtils.slice(pubKeyBytes, coordStart + pckCoordSize, coordStart + pckCoordSize * 2);
 
-    // 使用elliptic库验证QE Report签名
     const EC = elliptic.ec;
-    const ec = new EC('p256');
+    const ec = new EC(curveInfo.ellipticName);
 
     try {
         const key = ec.keyFromPublic({
@@ -3983,8 +4022,8 @@ async function verifyQeReportSignature(quoteData, sigData, collateral) {
         const qeReportHashArray = Array.from(new Uint8Array(qeReportHash));
 
         // 提取签名的r和s分量
-        const r = ByteUtils.toHex(ByteUtils.slice(qeReportSignature, 0, coordSize));
-        const s = ByteUtils.toHex(ByteUtils.slice(qeReportSignature, coordSize, coordSize * 2));
+        const r = ByteUtils.toHex(ByteUtils.slice(qeReportSignature, 0, pckCoordSize));
+        const s = ByteUtils.toHex(ByteUtils.slice(qeReportSignature, pckCoordSize, pckCoordSize * 2));
 
         // 验证签名
         const verified = key.verify(qeReportHashArray, { r, s });
