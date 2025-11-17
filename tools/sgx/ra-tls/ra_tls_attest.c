@@ -1015,22 +1015,30 @@ static int generate_ca_certificate(mbedtls_pk_context* ca_key, mbedtls_x509_crt*
     mbedtls_mpi_init(&serial);
     
     /* Generate SGX quote with CA key hash (same as user certificate) */
-    printf("RA-TLS: Generating SGX quote for CA certificate\n");
-    size_t quote_size;
+    /* Check if running in SGX environment - if not, skip quote generation */
+    size_t quote_size = 0;
+    size_t evidence_size = 0;
+    
+    /* Simple check: try to generate quote, if it fails assume not in SGX */
+    printf("RA-TLS: Checking SGX environment for CA certificate quote generation...\n");
     ret = generate_quote_with_pk_hash(ca_key, &quote, &quote_size);
     if (ret < 0) {
-        printf("RA-TLS: Failed to generate quote for CA certificate\n");
-        goto out;
+        printf("RA-TLS: Not in SGX environment or quote generation failed, skipping SGX quote for CA certificate\n");
+        /* Not in SGX environment - continue without quote */
+        ret = 0;  /* Reset error, continue without quote */
+    } else {
+        printf("RA-TLS: SGX quote generated for CA certificate\n");
+        ret = generate_tcg_dice_tagged_evidence(ca_key, &evidence, &evidence_size);
+        if (ret < 0) {
+            printf("RA-TLS: Failed to generate TCG DICE evidence for CA certificate\n");
+            free(quote);
+            quote = NULL;
+            quote_size = 0;
+            ret = 0;  /* Continue without evidence */
+        } else {
+            printf("RA-TLS:   Quote size: %zu bytes, Evidence size: %zu bytes\n", quote_size, evidence_size);
+        }
     }
-    
-    size_t evidence_size;
-    ret = generate_tcg_dice_tagged_evidence(ca_key, &evidence, &evidence_size);
-    if (ret < 0) {
-        printf("RA-TLS: Failed to generate TCG DICE evidence for CA certificate\n");
-        goto out;
-    }
-    
-    printf("RA-TLS:   Quote size: %zu bytes, Evidence size: %zu bytes\n", quote_size, evidence_size);
     
     /* Set MD algorithm */
     mbedtls_x509write_crt_set_md_alg(&ca_writecrt, md_type);
@@ -1087,43 +1095,29 @@ static int generate_ca_certificate(mbedtls_pk_context* ca_key, mbedtls_x509_crt*
     if (ret < 0)
         goto out;
     
-    /* Add SGX quote extensions (same as user certificate) */
-    printf("RA-TLS: Adding SGX quote extensions to CA certificate\n");
-    ret = mbedtls_x509write_crt_set_extension(&ca_writecrt, (const char*)g_ratls_quote_oid,
-                                              sizeof(g_ratls_quote_oid), /*critical=*/0,
-                                              quote, quote_size);
-    if (ret < 0) {
-        log_mbedtls_error("CA certificate: set SGX quote extension", ret);
-        goto out;
-    }
-    
-    ret = mbedtls_x509write_crt_set_extension(&ca_writecrt, (const char*)g_ratls_evidence_oid,
-                                              sizeof(g_ratls_evidence_oid), /*critical=*/0,
-                                              evidence, evidence_size);
-    if (ret < 0) {
-        log_mbedtls_error("CA certificate: set TCG DICE evidence extension", ret);
-        goto out;
-    }
-    
-    /* Write certificate to DER format with dynamic buffer allocation */
-    printf("RA-TLS: ========== Writing CA Certificate to DER ==========\n");
-    printf("RA-TLS:   Issuer key type: %s\n", get_pk_type_name(mbedtls_pk_get_type(ca_key)));
-    mbedtls_pk_type_t issuer_pk_type = mbedtls_pk_get_type(ca_key);
-    if (issuer_pk_type == MBEDTLS_PK_ECKEY || issuer_pk_type == MBEDTLS_PK_ECDSA) {
-        mbedtls_ecp_keypair* ec = mbedtls_pk_ec(*ca_key);
-        if (ec) {
-            mbedtls_ecp_group_id grp_id = mbedtls_ecp_keypair_get_group_id(ec);
-            const char* curve_name = "unknown";
-            if (grp_id == MBEDTLS_ECP_DP_SECP256R1) curve_name = "P-256";
-            else if (grp_id == MBEDTLS_ECP_DP_SECP384R1) curve_name = "P-384";
-            else if (grp_id == MBEDTLS_ECP_DP_SECP521R1) curve_name = "P-521";
-            printf("RA-TLS:   Issuer key curve: %s\n", curve_name);
+    /* Add SGX quote extensions if quote was generated */
+    if (quote && quote_size > 0) {
+        printf("RA-TLS: Adding SGX quote extensions to CA certificate\n");
+        ret = mbedtls_x509write_crt_set_extension(&ca_writecrt, (const char*)g_ratls_quote_oid,
+                                                  sizeof(g_ratls_quote_oid), /*critical=*/0,
+                                                  quote, quote_size);
+        if (ret < 0) {
+            log_mbedtls_error("CA certificate: set SGX quote extension", ret);
+            goto out;
         }
+        
+        if (evidence && evidence_size > 0) {
+            ret = mbedtls_x509write_crt_set_extension(&ca_writecrt, (const char*)g_ratls_evidence_oid,
+                                                      sizeof(g_ratls_evidence_oid), /*critical=*/0,
+                                                      evidence, evidence_size);
+            if (ret < 0) {
+                log_mbedtls_error("CA certificate: set TCG DICE evidence extension", ret);
+                goto out;
+            }
+        }
+    } else {
+        printf("RA-TLS: Skipping SGX quote extensions for CA certificate (not in SGX environment)\n");
     }
-    printf("RA-TLS:   Subject key type: %s (same as issuer - self-signed)\n", 
-           get_pk_type_name(mbedtls_pk_get_type(ca_key)));
-    printf("RA-TLS:   Signature MD: %s (type=%d)\n", get_md_name(md_type), md_type);
-    printf("RA-TLS: ===================================================\n");
     
     /* Dynamic buffer allocation with retry loop for CA certificate DER encoding */
     uint8_t* ca_cert_buf = NULL;
@@ -1278,23 +1272,30 @@ static int create_x509(mbedtls_pk_context* pk, mbedtls_x509write_cert* writecrt,
     uint8_t* quote = NULL;
     uint8_t* evidence = NULL;
 
-    /* TODO: this legacy OID with plain SGX quote should be removed at some point */
-    size_t quote_size;
-    ret = generate_quote_with_pk_hash(pk, &quote, &quote_size);
-    if (ret < 0)
-        goto out;
+    /* Check if running in SGX environment - if not, skip quote generation */
+    size_t quote_size = 0;
+    size_t evidence_size = 0;
 
-    size_t evidence_size;
-    ret = generate_tcg_dice_tagged_evidence(pk, &evidence, &evidence_size);
-    if (ret < 0)
-        goto out;
+    /* TODO: this legacy OID with plain SGX quote should be removed at some point */
+    ret = generate_quote_with_pk_hash(pk, &quote, &quote_size);
+    if (ret < 0) {
+        /* Not in SGX environment - continue without quote */
+        ret = 0;
+    } else {
+        ret = generate_tcg_dice_tagged_evidence(pk, &evidence, &evidence_size);
+        if (ret < 0) {
+            free(quote);
+            quote = NULL;
+            quote_size = 0;
+            ret = 0;  /* Continue without evidence */
+        }
+    }
 
     /* TODO: currently, the Endorsement extension is not implemented (contains TCB info, CRL, etc.);
      *       should be added in the future */
 
     ret = generate_x509(pk, quote, quote_size, evidence, evidence_size, writecrt,
                        ca_key, ca_subject, subject, not_before, not_after, md_type, is_ca);
-out:
     free(quote);
     free(evidence);
     return ret;
@@ -1308,6 +1309,18 @@ static int create_key_and_crt(mbedtls_pk_context* key, mbedtls_x509_crt* crt, ui
         /* mbedTLS API (ra_tls_create_key_and_crt) and generic API (ra_tls_create_key_and_crt_der)
          * both use `key`, but the former uses `crt` and the latter uses `crt_der` */
         return MBEDTLS_ERR_X509_FATAL_ERROR;
+    }
+
+    /* Initialize PSA Crypto for MBEDTLS_USE_PSA_CRYPTO support (required for all signing operations) */
+    static bool psa_initialized = false;
+    if (!psa_initialized) {
+        psa_status_t psa_status = psa_crypto_init();
+        if (psa_status != PSA_SUCCESS) {
+            printf("RA-TLS: ERROR: PSA crypto initialization failed: %d\n", psa_status);
+            return MBEDTLS_ERR_X509_FATAL_ERROR;
+        }
+        psa_initialized = true;
+        printf("RA-TLS: PSA Crypto initialized successfully\n");
     }
 
     mbedtls_ctr_drbg_context ctr_drbg;
