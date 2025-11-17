@@ -21,7 +21,7 @@ secret_prov_link_args = [
 libra_tls_attest = shared_library('ra_tls_attest',
     'ra_tls_attest.c',
     link_args: ra_tls_link_args,
-    include_directories: pal_sgx_inc, # this is only for `sgx_arch.h` and `sgx_attest.h`
+    include_directories: [pal_sgx_inc, include_directories('.')], # this is only for `sgx_arch.h` and `sgx_attest.h`, and jsmn
     dependencies: [
         libcbor_dep,
         mbedtls_static_dep,
@@ -64,7 +64,7 @@ libsecret_prov_attest = shared_library('secret_prov_attest',
     'ra_tls_attest.c',
 
     link_args: secret_prov_link_args,
-    include_directories: pal_sgx_inc,
+    include_directories: [pal_sgx_inc, include_directories('.')],
     dependencies: [
         libcbor_dep,
         mbedtls_static_dep,
@@ -166,6 +166,32 @@ if sgx_dcap_quoteverify_dep.found()
             '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
                 get_option('libdir'), get_option('libc')))
     endif
+
+    libratls_quote_verify = shared_library('ratls-quote-verify',
+        'libratls-quote-verify.c',
+
+        link_args: ['-ldl'],
+        link_with: [libra_tls_attest, libra_tls_verify_dcap_gramine],
+        include_directories: [pal_sgx_inc, include_directories('.')],
+        dependencies: [
+            mbedtls_static_dep,
+            sgx_dcap_quoteverify_dep,
+            sgx_util_dep,
+            threads_dep,
+        ],
+        install: true,
+    )
+    if get_option('libc') == 'glibc' and host_has_glibc
+        meson.add_install_script('/bin/sh', '-c',
+            'ln -sf ../../../libratls-quote-verify.so ' +
+            '"$MESON_INSTALL_DESTDIR_PREFIX"/@0@/gramine/runtime/@1@/'.format(
+                get_option('libdir'), get_option('libc')))
+    endif
+
+    # Copy compiled library to prebuilt directory
+    meson.add_install_script('/bin/sh', '-c',
+        'cp "$MESON_BUILD_ROOT"/tools/sgx/ra-tls/libratls-quote-verify.so ' +
+        '"$MESON_SOURCE_ROOT"/tools/sgx/ra-tls/prebuilt/')
 endif
 
 pkgconfig.generate(

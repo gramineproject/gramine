@@ -22,7 +22,7 @@
 #define SHA384_DIGEST_SIZE       48
 #define SHA512_DIGEST_SIZE       64
 
-#define PUB_KEY_SIZE_MAX         128 /* enough for the only currently supported algo (ECDSA-384) */
+#define PUB_KEY_SIZE_MAX         1024 /* enough for RSA-4096 and all EC curves */
 #define IAS_REQUEST_NONCE_LEN    32
 
 static const uint8_t g_ratls_quote_oid[] = NON_STANDARD_INTEL_SGX_QUOTE_OID;

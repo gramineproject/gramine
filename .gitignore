@@ -47,3 +47,4 @@ TAGS
 cscope.*
 ncscope.*
 *cscope*
+tools/sgx/.DS_Store

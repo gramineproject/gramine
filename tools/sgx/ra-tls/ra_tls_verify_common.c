@@ -191,13 +191,18 @@ int find_oid_in_cert_extensions(const uint8_t* exts, size_t exts_size, const uin
 
 /*! fill buffer \p pk_der with DER-formatted public key from \p crt */
 static int fill_crt_pk_der(mbedtls_x509_crt* crt, uint8_t* pk_der, size_t* inout_pk_der_size) {
-    if (mbedtls_pk_get_type(&crt->pk) != MBEDTLS_PK_ECKEY)
-        return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
-
-    mbedtls_ecp_keypair* key = mbedtls_pk_ec(crt->pk);
-    if (key == NULL ||
-            (key->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP384R1
-                && key->MBEDTLS_PRIVATE(grp).id != MBEDTLS_ECP_DP_SECP256R1)) {
+    mbedtls_pk_type_t pk_type = mbedtls_pk_get_type(&crt->pk);
+    
+    /* Support both EC and RSA keys */
+    if (pk_type == MBEDTLS_PK_ECKEY) {
+        mbedtls_ecp_keypair* key = mbedtls_pk_ec(crt->pk);
+        if (key == NULL) {
+            return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
+        }
+        /* Accept all EC curves - no need to restrict to specific curves */
+    } else if (pk_type == MBEDTLS_PK_RSA) {
+        /* RSA keys are supported */
+    } else {
         return MBEDTLS_ERR_PK_BAD_INPUT_DATA;
     }
 

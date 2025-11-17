@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RA-TLS Certificate Verification Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #007acc;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            border-color: #007acc;
+            outline: none;
+        }
+        
+        textarea {
+            height: 300px;
+            resize: vertical;
+        }
+        
+        .button-group {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        button {
+            background: #007acc;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background: #005a9e;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 4px;
+            display: none;
+        }
+        
+        .results.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .results.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .results.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .verification-details {
+            margin-top: 15px;
+        }
+        
+        .verification-item {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .verification-item.passed {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .verification-item.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .verification-item.skipped {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        
+        .measurements {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .measurements h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .note {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        
+        .note strong {
+            color: #b8860b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>RA-TLS Certificate Verification Test</h1>
+        
+        <div class="note">
+            <strong>说明：</strong>此页面用于测试RA-TLS证书验证功能。请输入您的Intel SGX API Key和证书PEM内容进行验证。
+        </div>
+        
+        <form id="verificationForm">
+            <div class="form-group">
+                <label for="apiKey">Intel SGX API Key:</label>
+                <input type="text" id="apiKey" name="apiKey" placeholder="请输入您的Intel SGX API Key" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="certificate">Certificate PEM Content:</label>
+                <textarea id="certificate" name="certificate" placeholder="请粘贴证书PEM内容，支持证书链..." required>-----BEGIN CERTIFICATE-----
+MIInTDCCJtKgAwIBAgIBATAKBggqhkjOPQQDAjA5MQ4wDAYDVQQDDAVSQVRMUzEa
+MBgGA1UECgwRR3JhbWluZURldmVsb3BlcnMxCzAJBgNVBAYTAlVTMB4XDTAxMDEw
+MTAwMDAwMFoXDTMwMTIzMTIzNTk1OVowOTEOMAwGA1UEAwwFUkFUTFMxGjAYBgNV
+BAoMEUdyYW1pbmVEZXZlbG9wZXJzMQswCQYDVQQGEwJVUzB2MBAGByqGSM49AgEG
+BSuBBAAiA2IABNJFMFCQEn3HqrU8DGpTM9xilSU8yOU8fgASbf7Mdy3KMKx4K/Y0
+khAXL3gemzeVvF91a/ckcc3io0wKNGQ35DYrv+edN03P/tNEqzrXWRVYtJlD8G3X
+psEfJ2klzKn1V6OCJawwgiWoMAkGA1UdEwQCMAAwHQYDVR0OBBYEFJeOR+wN4gpc
+vW2SmOaA62ML7iaSMB8GA1UdIwQYMBaAFJeOR+wN4gpcvW2SmOaA62ML7iaSMIIS
+jwYLBgkqhkiG+E2KOQYEghJ+AwACAAAAAAALABAAk5pyM/ecTKmUCg2zlX8GBzHY
+ZnPjRzAOKJvKSOrkw1wAAAAACwsQD///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAABwAAAAAAAADnAAAAAAAAAGNkycSG6+bTs+xuIuwL
+TuTOxChFCgVcTr7jbW6bhmCoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AADVBFQ7w3F+2H05gvu3sX87B/Erpmtp91wCU2Yg810NWwAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AABE9Nz5d/SZDk6Uwp6FkHJ7dUpEd/AknTaFiHz/fyukhAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAyhAAAJaU2mFhwpJal8cW4YbEDKkhNS3u57yTRYoB
+gGguh3EW2Ko1jgngQNXYpdjaLKydPI8hawoPMslphEnFmxTMnBiJj/gYqDrGfn61
+EyElu/Mq1tZuH2WlnYIdvSD+XqmRzC6oOOcBq/47gsJ3Hb9ST0uU3FG1mMBw2RIg
+4QnitXwOCwsQD///AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAFQAAAAAAAADnAAAAAAAAAHj+jP0BCVoPEIr/XEBiS5NhLWwotz4ajSgX
+nJ3fDgaGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACMT1d115ZQPpYT
+f3fGioKaAFasje1wFAsIGwlEkMV7/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEACwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOgvjSEDK2t+Mr
+8VLFHtrgoZ9Fx1yn6L6bX9W+5aJZvgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAB5bE2MeP5Cx0Lx3Qf2Pxgisju8TTwKLd+46cjn6cRFPOTMK5Nnla6YQL
+p4WWWfJMVeeS5Mctx+0xKlh4I9+IHyAAAAECAwQFBgcICQoLDA0ODxAREhMUFRYX
+GBkaGxwdHh8FAGIOAAAtLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJRThq
+Q0NCSmlnQXdJQkFnSVVNc1RGd3dOZjZkVXRBeEcwZ0l2L2tzS2tVK0l3Q2dZSUtv
+Wkl6ajBFQXdJdwpjREVpTUNBR0ExVUVBd3daU1c1MFpXd2dVMGRZSUZCRFN5QlFi
+R0YwWm05eWJTQkRRVEVhTUJnR0ExVUVDZ3dSClNXNTBaV3dnUTI5eWNHOXlZWFJw
+YjI0eEZEQVNCZ05WQkFjTUMxTmhiblJoSUVOc1lYSmhNUXN3Q1FZRFZRUUkKREFK
+RFFURUxNQWtHQTFVRUJoTUNWVk13SGhjTk1qVXhNVEE0TURJeU5qUXpXaGNOTXpJ
+eE1UQTRNREl5TmpRegpXakJ3TVNJd0lBWURWUVFEREJsSmJuUmxiQ0JUUjFnZ1VF
+TkxJRU5sY25ScFptbGpZWFJsTVJvd0dBWURWUVFLCkRCRkpiblJsYkNCRGIzSndi
+M0poZEdsdmJqRVVNQklHQTFVRUJ3d0xVMkZ1ZEdFZ1EyeGhjbUV4Q3pBSkJnTlYK
+QkFnTUFrTkJNUXN3Q1FZRFZRUUdFd0pWVXpCWk1CTUdCeXFHU000OUFnRUdDQ3FH
+U000OUF3RUhBMElBQlBiMwphZDU4NmI0ZCtQR0duL2NQRnUxREg2L21QYnhDTXIw
+T1pzNmliWVRNZWJVQUc2SGJaNnBVZXljRk83TlFsMGljCjJNeWFjUEZCUU5NY09n
+UHNYUkdqZ2dNT01JSURDakFmQmdOVkhTTUVHREFXZ0JTVmIxM052UnZoNlVCSnlk
+VDAKTTg0QlZ3dmVWREJyQmdOVkhSOEVaREJpTUdDZ1hxQmNobHBvZEhSd2N6b3ZM
+MkZ3YVM1MGNuVnpkR1ZrYzJWeQpkbWxqWlhNdWFXNTBaV3d1WTI5dEwzTm5lQzlq
+WlhKMGFXWnBZMkYwYVc5dUwzWTBMM0JqYTJOeWJEOWpZVDF3CmJHRjBabTl5YlNa
+bGJtTnZaR2x1Wnoxa1pYSXdIUVlEVlIwT0JCWUVGUEhqQ2JPSStJTG5ybWlLdTlv
+eHJXTmgKWnByR01BNEdBMVVkRHdFQi93UUVBd0lHd0RBTUJnTlZIUk1CQWY4RUFq
+QUFNSUlDT3dZSktvWklodmhOQVEwQgpCSUlDTERDQ0FpZ3dIZ1lLS29aSWh2aE5B
+UTBCQVFRUWRmbklCSURkOHhITG1RU1FFWFNoV3pDQ0FXVUdDaXFHClNJYjRUUUVO
+QVFJd2dnRlZNQkFHQ3lxR1NJYjRUUUVOQVFJQkFnRUxNQkFHQ3lxR1NJYjRUUUVO
+QVFJQ0FnRUwKTUJBR0N5cUdTSWI0VFFFTkFRSURBZ0VETUJBR0N5cUdTSWI0VFFF
+TkFRSUVBZ0VETUJFR0N5cUdTSWI0VFFFTgpBUUlGQWdJQS96QVJCZ3NxaGtpRytF
+MEJEUUVDQmdJQ0FQOHdFQVlMS29aSWh2aE5BUTBCQWdjQ0FRQXdFQVlMCktvWklo
+dmhOQVEwQkFnZ0NBUUF3RUFZTEtvWklodmhOQVEwQkFna0NBUUF3RUFZTEtvWklo
+dmhOQVEwQkFnb0MKQVFBd0VBWUxLb1pJaHZoTkFRMEJBZ3NDQVFBd0VBWUxLb1pJ
+aHZoTkFRMEJBZ3dDQVFBd0VBWUxLb1pJaHZoTgpBUTBCQWcwQ0FRQXdFQVlMS29a
+SWh2aE5BUTBCQWc0Q0FRQXdFQVlMS29aSWh2aE5BUTBCQWc4Q0FRQXdFQVlMCktv
+WklodmhOQVEwQkFoQUNBUUF3RUFZTEtvWklodmhOQVEwQkFoRUNBUTB3SHdZTEtv
+WklodmhOQVEwQkFoSUUKRUFzTEF3UC8vd0FBQUFBQUFBQUFBQUF3RUFZS0tvWklo
+dmhOQVEwQkF3UUNBQUF3RkFZS0tvWklodmhOQVEwQgpCQVFHQUdCcUFBQUFNQThH
+Q2lxR1NJYjRUUUVOQVFVS0FRRXdIZ1lLS29aSWh2aE5BUTBCQmdRUUJEdkhGM3J2
+CkYrdEZqNXA1WHEyWDNEQkVCZ29xaGtpRytFMEJEUUVITURZd0VBWUxLb1pJaHZo
+TkFRMEJCd0VCQWY4d0VBWUwKS29aSWh2aE5BUTBCQndJQkFmOHdFQVlMS29aSWh2
+aE5BUTBCQndNQkFmOHdDZ1lJS29aSXpqMEVBd0lEU0FBdwpSUUloQU9ScU0va1Fr
+S0g4MTRuSW53SXBPUTRYN2tFdDgzKzU3SnhxSThkc1B4ZWZBaUJJY1RzdXU1c1Uv
+ak1HCmNadklvRGkzZlV5ZEkweTVtTk03UGVzRFNpd1BQUT09Ci0tLS0tRU5EIENF
+UlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNs
+akNDQWoyZ0F3SUJBZ0lWQUpWdlhjMjlHK0hwUUVuSjFQUXp6Z0ZYQzk1VU1Bb0dD
+Q3FHU000OUJBTUMKTUdneEdqQVlCZ05WQkFNTUVVbHVkR1ZzSUZOSFdDQlNiMjkw
+SUVOQk1Sb3dHQVlEVlFRS0RCRkpiblJsYkNCRApiM0p3YjNKaGRHbHZiakVVTUJJ
+R0ExVUVCd3dMVTJGdWRHRWdRMnhoY21FeEN6QUpCZ05WQkFnTUFrTkJNUXN3CkNR
+WURWUVFHRXdKVlV6QWVGdzB4T0RBMU1qRXhNRFV3TVRCYUZ3MHpNekExTWpFeE1E
+VXdNVEJhTUhBeElqQWcKQmdOVkJBTU1HVWx1ZEdWc0lGTkhXQ0JRUTBzZ1VHeGhk
+R1p2Y20wZ1EwRXhHakFZQmdOVkJBb01FVWx1ZEdWcwpJRU52Y25CdmNtRjBhVzl1
+TVJRd0VnWURWUVFIREF0VFlXNTBZU0JEYkdGeVlURUxNQWtHQTFVRUNBd0NRMEV4
+CkN6QUpCZ05WQkFZVEFsVlRNRmt3RXdZSEtvWkl6ajBDQVFZSUtvWkl6ajBEQVFj
+RFFnQUVOU0IvN3QyMWxYU08KMkN1enB4dzc0ZUpCNzJFeURHZ1c1clhDdHgydFZU
+THE2aEtrNnorVWlSWkNucVI3cHNPdmdxRmVTeGxtVGxKbAplVG1pMldZejNxT0J1
+ekNCdURBZkJnTlZIU01FR0RBV2dCUWlaUXpXV3AwMGlmT0R0SlZTdjFBYk9TY0dy
+REJTCkJnTlZIUjhFU3pCSk1FZWdSYUJEaGtGb2RIUndjem92TDJObGNuUnBabWxq
+WVhSbGN5NTBjblZ6ZEdWa2MyVnkKZG1salpYTXVhVzUwWld3dVkyOXRMMGx1ZEdW
+c1UwZFlVbTl2ZEVOQkxtUmxjakFkQmdOVkhRNEVGZ1FVbFc5ZAp6YjBiNGVsQVNj
+blU5RFBPQVZjTDNsUXdEZ1lEVlIwUEFRSC9CQVFEQWdFR01CSUdBMVVkRXdFQi93
+UUlNQVlCCkFmOENBUUF3Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnWHNWa2kwdytp
+NlZZR1czVUYvMjJ1YVhlMFlKRGoxVWUKbkErVGpEMWFpNWNDSUNZYjFTQW1ENXhr
+ZlRWcHZvNFVveWlTWXhyRFdMbVVSNENJOU5LeWZQTisKLS0tLS1FTkQgQ0VSVElG
+SUNBVEUtLS0tLQotLS0tLUJFR0lOIENFUlRJRklDQVRFLS0tLS0KTUlJQ2p6Q0NB
+alNnQXdJQkFnSVVJbVVNMWxxZE5JbnpnN1NWVXI5UUd6a25CcXd3Q2dZSUtvWkl6
+ajBFQXdJdwphREVhTUJnR0ExVUVBd3dSU1c1MFpXd2dVMGRZSUZKdmIzUWdRMEV4
+R2pBWUJnTlZCQW9NRVVsdWRHVnNJRU52CmNuQnZjbUYwYVc5dU1SUXdFZ1lEVlFR
+SERBdFRZVzUwWVNCRGJHRnlZVEVMTUFrR0ExVUVDQXdDUTBFeEN6QUoKQmdOVkJB
+WVRBbFZUTUI0WERURTRNRFV5TVRFd05EVXhNRm9YRFRRNU1USXpNVEl6TlRrMU9W
+b3dhREVhTUJnRwpBMVVFQXd3UlNXNTBaV3dnVTBkWUlGSnZiM1FnUTBFeEdqQVlC
+Z05WQkFvTUVVbHVkR1ZzSUVOdmNuQnZjbUYwCmFXOXVNUlF3RWdZRFZRUUhEQXRU
+WVc1MFlTQkRiR0Z5WVRFTE1Ba0dBMVVFQ0F3Q1EwRXhDekFKQmdOVkJBWVQKQWxW
+VE1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRUM2bkV3TURJWVpP
+ai9pUFdzQ3phRUtpNwoxT2lPU0xSRmhXR2pibkJWSmZWbmtZNHUzSWprRFlZTDBN
+eE80bXFzeVlqbEJhbFRWWXhGUDJzSkJLNXpsS09CCnV6Q0J1REFmQmdOVkhTTUVH
+REFXZ0JRaVpReldXcDAwaWZPRHRKVlN2MUFiT1NjR3JEQlNCZ05WSFI4RVN6QkoK
+TUVlZ1JhQkRoa0ZvZEhSd2N6b3ZMMk5sY25ScFptbGpZWFJsY3k1MGNuVnpkR1Zr
+YzJWeWRtbGpaWE11YVc1MApaV3d1WTI5dEwwbHVkR1ZzVTBkWVVtOXZkRU5CTG1S
+bGNqQWRCZ05WSFE0RUZnUVVJbVVNMWxxZE5JbnpnN1NWClVyOVFHemtuQnF3d0Rn
+WURWUjBQQVFIL0JBUURBZ0VHTUJJR0ExVWRFd0VCL3dRSU1BWUJBZjhDQVFFd0Nn
+WUkKS29aSXpqMEVBd0lEU1FBd1JnSWhBT1cvNVFrUitTOUNpU0RjTm9vd0x1UFJM
+c1dHZi9ZaTdHU1g5NEJnd1R3ZwpBaUVBNEowbHJIb01zK1hvNW8vc1g2TzlRV3hI
+UkF2WlVHT2RSUTdjdnFSWGFxST0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQoA
+WDOhcHVia2V5LWhhc2hYJIIBWCBE9Nz5d/SZDk6Uwp6FkHJ7dUpEd/AknTaFiHz/
+fyukhDAKBggqhkjOPQQDAgNoADBlAjAfwQkph6ZuqI0iNkBUQiS+u2DpCVHy7ky+
+ja0jq/3FZWqZrJQMU6wfQG7fvy8Koy8CMQCTb+syU0svPNwwoKYCLErVa4AO2irL
+j0a+5wgfZXmxk4ZE5zjPjWCT6ZzygZrqNyQ=
+-----END CERTIFICATE-----</textarea>
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" id="verifyBtn">开始验证</button>
+                <button type="button" id="clearBtn">清空结果</button>
+            </div>
+        </form>
+        
+        <div id="results" class="results">
+            <div id="resultContent"></div>
+        </div>
+    </div>
+
+    <!-- Dependencies -->
+    <script src="dependencies.js"></script>
+    <script src="sgx-quote-verify.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.getElementById('verificationForm');
+            const verifyBtn = document.getElementById('verifyBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const results = document.getElementById('results');
+            const resultContent = document.getElementById('resultContent');
+            
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const apiKey = document.getElementById('apiKey').value.trim();
+                const certificate = document.getElementById('certificate').value.trim();
+                
+                if (!apiKey || !certificate) {
+                    showResult('error', '请填写API Key和证书内容');
+                    return;
+                }
+                
+                verifyBtn.disabled = true;
+                verifyBtn.textContent = '验证中...';
+                
+                showResult('info', '<div class="loading">正在验证证书，请稍候...</div>');
+                
+                try {
+                    const options = {
+                        apiKey: apiKey,
+                        pccsUrl: 'https://api.trustedservices.intel.com/sgx/certification/v4',
+                        cacheRead: async (key) => localStorage.getItem(key),
+                        cacheWrite: async (key, data) => localStorage.setItem(key, typeof data === 'string' ? data : JSON.stringify(data)),
+                        allowDebugEnclave: true,
+                        allowOutdatedTcb: true,
+                        allowHwConfigNeeded: true,
+                        allowSwHardeningNeeded: true
+                    };
+                    
+                    const result = await verifyQuote(certificate, options);
+                    
+                    if (result.verified) {
+                        showVerificationSuccess(result);
+                    } else {
+                        showVerificationError(result);
+                    }
+                    
+                } catch (error) {
+                    showResult('error', `验证过程中发生错误：${error.message}`);
+                    console.error('Verification error:', error);
+                } finally {
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = '开始验证';
+                }
+            });
+            
+            clearBtn.addEventListener('click', function() {
+                results.style.display = 'none';
+                results.className = 'results';
+                resultContent.innerHTML = '';
+            });
+            
+            function showResult(type, content) {
+                results.className = `results ${type}`;
+                results.style.display = 'block';
+                resultContent.innerHTML = content;
+            }
+            
+            function showVerificationSuccess(result) {
+                let html = '<h3>✓ 证书验证成功</h3>';
+                
+                html += `<p><strong>验证结果：</strong>${result.verificationResult}</p>`;
+                html += `<p><strong>TCB状态：</strong>${result.tcbStatus}</p>`;
+                html += `<p><strong>Quote版本：</strong>${result.quoteVersion}</p>`;
+                html += `<p><strong>认证密钥类型：</strong>${result.attestationKeyType}</p>`;
+                
+                if (result.measurements) {
+                    html += '<div class="measurements">';
+                    html += '<h4>测量值 (Measurements):</h4>';
+                    html += `<div><strong>MRENCLAVE:</strong> ${result.measurements.mrenclave}</div>`;
+                    html += `<div><strong>MRSIGNER:</strong> ${result.measurements.mrsigner}</div>`;
+                    html += `<div><strong>ISV_PROD_ID:</strong> ${result.measurements.isvProdId}</div>`;
+                    html += `<div><strong>ISV_SVN:</strong> ${result.measurements.isvSvn}</div>`;
+                    html += `<div><strong>Attributes:</strong> ${result.measurements.attributes}</div>`;
+                    html += `<div><strong>Report Data:</strong> ${result.measurements.reportData}</div>`;
+                    html += '</div>';
+                }
+                
+                if (result.verificationDetails) {
+                    html += '<div class="verification-details">';
+                    html += '<h4>验证详情:</h4>';
+                    for (const [key, value] of Object.entries(result.verificationDetails)) {
+                        const status = value.verified ? 'passed' : (value.skipped ? 'skipped' : 'failed');
+                        const statusText = value.verified ? 'PASSED' : (value.skipped ? 'SKIPPED' : `FAILED - ${value.error || 'Unknown error'}`);
+                        const statusIcon = value.verified ? '✓' : (value.skipped ? '⊘' : '✗');
+                        html += `<div class="verification-item ${status}">${statusIcon} ${key}: ${statusText}</div>`;
+                    }
+                    html += '</div>';
+                }
+                
+                showResult('success', html);
+            }
+            
+            function showVerificationError(result) {
+                let html = '<h3>✗ 证书验证失败</h3>';
+                html += `<p><strong>错误信息：</strong>${result.error}</p>`;
+                
+                if (result.verificationDetails) {
+                    html += '<div class="verification-details">';
+                    html += '<h4>验证详情:</h4>';
+                    for (const [key, value] of Object.entries(result.verificationDetails)) {
+                        const status = value.verified ? 'passed' : (value.skipped ? 'skipped' : 'failed');
+                        const statusText = value.verified ? 'PASSED' : (value.skipped ? 'SKIPPED' : `FAILED - ${value.error || 'Unknown error'}`);
+                        const statusIcon = value.verified ? '✓' : (value.skipped ? '⊘' : '✗');
+                        html += `<div class="verification-item ${status}">${statusIcon} ${key}: ${statusText}</div>`;
+                    }
+                    html += '</div>';
+                }
+                
+                showResult('error', html);
+            }
+        });
+    </script>
+</body>
+</html>
