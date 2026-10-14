@@ -301,6 +301,27 @@ index 6cbb4d867b4f92a7af3d69c41264683911aefe1b..bf861504960263ac6eaa48b003588a4f
  
  #define	r0		%rax	/* Normal return-value register.  */
  #define	r1		%rbx	/* Secondary return-value register.  */
+diff --git a/sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S b/sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S
+--- a/sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S
++++ b/sysdeps/unix/sysv/linux/x86_64/syscall_cancel.S
+@@ -52,1 +52,1 @@
+-	syscall
++	GRAMINE_SYSCALL
+
+diff --git a/sysdeps/unix/sysv/linux/x86_64/dl-cet.h b/sysdeps/unix/sysv/linux/x86_64/dl-cet.h
+--- a/sysdeps/unix/sysv/linux/x86_64/dl-cet.h
++++ b/sysdeps/unix/sysv/linux/x86_64/dl-cet.h
+@@ -90,1 +90,1 @@
+-	syscall\n\
++	GRAMINE_SYSCALL\n\
+
+diff --git a/sysdeps/unix/sysv/linux/x86_64/x32/prctl.S b/sysdeps/unix/sysv/linux/x86_64/x32/prctl.S
+--- a/sysdeps/unix/sysv/linux/x86_64/x32/prctl.S
++++ b/sysdeps/unix/sysv/linux/x86_64/x32/prctl.S
+@@ -30,1 +30,1 @@
+-  syscall;
++  GRAMINE_SYSCALL;
+
 diff --git a/sysdeps/x86_64/nptl/tls.h b/sysdeps/x86_64/nptl/tls.h
 index 876889bed4bf2bc97779f1ab0593403d33648aeb..25f5aa07ab24bc22aab66d1065d1027537c9d3a7 100644
 --- a/sysdeps/x86_64/nptl/tls.h
