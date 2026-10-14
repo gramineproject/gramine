@@ -116,6 +116,19 @@ RUN git clone https://github.com/giltene/wrk2.git \
     && cd .. \
     && rm -rf wrk2
 
+# glibc 2.44 requires binutils >= 2.39; Ubuntu 22.04 provides 2.38.
+# MAKEINFO=true skips regenerating Info documentation to avoid an extra texinfo dependency.
+RUN BUILD_DIR="$(mktemp -d)" \
+    && cd "$BUILD_DIR" \
+    && curl -fsSLo binutils-2.40.tar.xz https://ftp.gnu.org/gnu/binutils/binutils-2.40.tar.xz \
+    && echo '0f8a4c272d7f17f369ded10a4aca28b8e304828e95526da482b0ccc4dfc9d8e1  binutils-2.40.tar.xz' | sha256sum -c - \
+    && tar -xf binutils-2.40.tar.xz \
+    && mkdir build && cd build \
+    && ../binutils-2.40/configure --prefix=/usr --program-prefix="$(gcc -dumpmachine)-" \
+    && make -j"$(nproc)" MAKEINFO=true \
+    && make MAKEINFO=true install \
+    && cd / && rm -rf "$BUILD_DIR"
+
 ENV REQUESTS=10000
 
 COPY .ci/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
