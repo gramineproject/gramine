@@ -1,0 +1,7 @@
+[wrap-file]
+directory = curl-8.23.0
+source_url = https://curl.se/download/curl-8.23.0.tar.gz
+source_fallback_url = https://packages.gramineproject.io/distfiles/curl-8.23.0.tar.gz
+source_filename = curl-8.23.0.tar.gz
+source_hash = e3de77cfa6367083c776a26647fc9f633b538c06c3baa73d931a252ac8f72b49
+patch_directory = curl-8.23.0
