@@ -36,7 +36,6 @@ RUN apt-get update && apt-get satisfy -y \
 
 # dependencies for various tests, CI-Examples, etc.
 # busybox: CI-Examples/busybox
-# cargo: CI-Examples/rust
 # clang: asan and ubsan builds
 # cpio dwarves kmod qemu-kvm: for building kernel modules and running VMs
 # curl: CI-Examples/ra-tls-secret-prov
@@ -62,7 +61,6 @@ RUN apt-get update && apt-get satisfy -y \
 # zlib1g-dev: CI-Examples/lighttpd
 RUN apt-get update && apt-get install -y \
     busybox \
-    cargo \
     clang \
     cmake \
     cpio \
@@ -93,6 +91,17 @@ RUN apt-get update && apt-get install -y \
     wget \
     wrk \
     zlib1g-dev
+
+# Use rustup because CI-Examples/rust dependencies may require a newer toolchain than apt provides.
+ENV RUSTUP_HOME=/opt/rustup \
+    CARGO_HOME=/opt/cargo
+ENV PATH="/opt/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs -o /tmp/rustup-init.sh \
+    && sh /tmp/rustup-init.sh -y --no-modify-path \
+        --profile minimal --default-toolchain stable \
+    && rm /tmp/rustup-init.sh \
+    && rustc --version \
+    && cargo --version
 
 COPY .ci/sgx_default_qcnl.conf /etc/sgx_default_qcnl.conf
 

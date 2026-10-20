@@ -44,10 +44,11 @@ Run the following command on Ubuntu LTS to install dependencies::
 .. TODO after deprecating Debian 11 (bullseye): remove the following paragraph
 
 On Debian 11, ``python3-tomli`` and ``python3-tomli-w`` come from
-``bullseye-backports`` repository, so you need to enable this repo and add
-``-t bullseye-backports`` to ``apt-get install`` invocation above. Please refer
-to `Debian's documentation <https://backports.debian.org/Instructions/>`__ for
-detailed instructions.
+the ``bullseye-backports`` repository, so you need to use its archived source
+at ``https://archive.debian.org/debian`` and add ``-t bullseye-backports`` to
+the ``apt-get install`` invocation above. Please refer to `Debian's
+documentation <https://backports.debian.org/Instructions/>`__ for detailed
+instructions.
 
 For GDB support and to run all tests locally you also need to install::
 
