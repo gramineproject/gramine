@@ -2,6 +2,10 @@ FROM debian:bullseye-backports
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Bullseye backports has moved from active mirrors to the Debian archive.
+RUN find /etc/apt -type f \( -name '*.list' -o -name '*.sources' \) \
+    -exec sed -i '/bullseye-backports/s|deb.debian.org/debian|archive.debian.org/debian|g' {} +
+
 # ca-certificates needed for update over https
 # devscripts is `debuild`
 # git, jq are needed for `meson dist` and the script
