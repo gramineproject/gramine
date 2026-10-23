@@ -41,14 +41,6 @@ Run the following command on Ubuntu LTS to install dependencies::
         python3-jinja2 python3-pyelftools python3-tomli python3-tomli-w \
         python3-voluptuous wget
 
-.. TODO after deprecating Debian 11 (bullseye): remove the following paragraph
-
-On Debian 11, ``python3-tomli`` and ``python3-tomli-w`` come from
-``bullseye-backports`` repository, so you need to enable this repo and add
-``-t bullseye-backports`` to ``apt-get install`` invocation above. Please refer
-to `Debian's documentation <https://backports.debian.org/Instructions/>`__ for
-detailed instructions.
-
 For GDB support and to run all tests locally you also need to install::
 
     sudo apt-get install -y libunwind8 musl-tools python3-pytest

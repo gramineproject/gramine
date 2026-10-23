@@ -44,26 +44,6 @@ Debian 12
    sudo apt-get update
    sudo apt-get install gramine
 
-Debian 11
-^^^^^^^^^
-
-::
-
-   # if you don't already have backports repo enabled:
-   echo "deb http://deb.debian.org/debian $(lsb_release -sc)-backports main" \
-   | sudo tee /etc/apt/sources.list.d/backports.list
-
-   sudo curl -fsSLo /usr/share/keyrings/gramine-keyring-$(lsb_release -sc).gpg https://packages.gramineproject.io/gramine-keyring-$(lsb_release -sc).gpg
-   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gramine-keyring-$(lsb_release -sc).gpg] https://packages.gramineproject.io/ $(lsb_release -sc) main" \
-   | sudo tee /etc/apt/sources.list.d/gramine.list
-
-   sudo curl -fsSLo /usr/share/keyrings/intel-sgx-deb.asc https://download.01.org/intel-sgx/sgx_repo/ubuntu/intel-sgx-deb.key
-   echo "deb [arch=amd64 signed-by=/usr/share/keyrings/intel-sgx-deb.asc] https://download.01.org/intel-sgx/sgx_repo/ubuntu focal main" \
-   | sudo tee /etc/apt/sources.list.d/intel-sgx.list
-
-   sudo apt-get update
-   sudo apt-get install gramine
-
 Ubuntu 24.04 LTS or 22.04 LTS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
