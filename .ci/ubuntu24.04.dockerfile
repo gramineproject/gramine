@@ -24,8 +24,7 @@ RUN rm -rf /debian
 RUN apt-get update && apt-get satisfy -y \
     'libcurl4 (>= 7.58)' \
     'libprotobuf-c1' \
-    'python3' \
-    'python3 (>= 3.10) | python3-pkg-resources' \
+    'python3 (>= 3.10)' \
     'python3-click (>= 6.7)' \
     'python3-cryptography' \
     'python3-jinja2' \
