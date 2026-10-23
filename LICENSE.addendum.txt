@@ -4,8 +4,6 @@ Examples (the `CI-Examples` subdirectory) are licensed under BSD-3-Clause,
 except for several C files. See each file for its license.
 
 Gramine also includes the following third party sources (and licenses):
-* cJSON - MIT
-* curl/libcurl - MIT derivative
 * GCC/libgomp (built only optionally and not included by default) - GPL v3.0
 * Mbed TLS - Apache 2.0
 * Ninja (python/graminelibos/ninja_syntax.py) - Apache 2.0
