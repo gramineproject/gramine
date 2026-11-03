@@ -12,9 +12,16 @@ COPY packaging/alpine/APKBUILD /APKBUILD
 # When Jenkins runs a pipeline, it uses UID 1000 and GID 1001.
 RUN adduser -u 1000 --disabled-password abuilder && \
     echo "permit nopass 1000 as root" >> /etc/doas.d/doas.conf
-# But sometimes it also uses UID 1001.
+# But sometimes it also uses UID 1001..1004
 RUN adduser -u 1001 --disabled-password abuilder1 && \
     echo "permit nopass 1001 as root" >> /etc/doas.d/doas.conf
+RUN adduser -u 1002 --disabled-password abuilder2 && \
+    echo "permit nopass 1002 as root" >> /etc/doas.d/doas.conf
+RUN adduser -u 1003 --disabled-password abuilder3 && \
+    echo "permit nopass 1003 as root" >> /etc/doas.d/doas.conf
+RUN adduser -u 1004 --disabled-password abuilder4 && \
+    echo "permit nopass 1004 as root" >> /etc/doas.d/doas.conf
+# Surely we won't be back to add 1005, lulz    
 
 RUN abuild -F -r builddeps
 RUN rm -f /APKBUILD
