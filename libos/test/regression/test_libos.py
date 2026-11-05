@@ -693,6 +693,15 @@ class TC_30_Syscall(RegressionTestCase):
         stdout, _ = self.run_binary(['host_root_fs'])
         self.assertIn('Test was successful', stdout)
 
+    def test_025_lseek_stdin_pipe(self):
+        read_fd, write_fd = os.pipe()
+        os.close(write_fd)
+        try:
+            stdout, _ = self.run_binary(['lseek_stdin'], stdin=read_fd)
+        finally:
+            os.close(read_fd)
+        self.assertIn('TEST OK', stdout)
+
     def test_030_fopen(self):
         if os.path.exists("tmp/filecreatedbygramine"):
             os.remove("tmp/filecreatedbygramine")
