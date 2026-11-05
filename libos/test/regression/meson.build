@@ -68,6 +68,7 @@ tests = {
     'large_dir_read': {},
     'large_file': {},
     'large_mmap': {},
+    'lseek_stdin': {},
     'madvise': {},
     'mkfifo': {},
     'mmap_file_backed': {},
