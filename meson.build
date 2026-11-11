@@ -192,7 +192,7 @@ mbedtls_proj = subproject('mbedtls-3.6.3')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
-curl_proj = subproject('curl-8.8.0')
+curl_proj = subproject('curl-8.23.0')
 cjson_proj = subproject('cJSON-1.7.12')
 libcbor_proj = subproject('libcbor-0.11.0')
 

@@ -27,13 +27,16 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
 
     log "running configure..."
     # The list of configure options is selected based on:
-    # https://github.com/curl/curl/blob/curl-8_8_0/docs/INSTALL.md#reducing-size
+    # https://github.com/curl/curl/blob/curl-8_23_0/docs/INSTALL.md#reducing-size
     ./configure                                     \
         --enable-proxy                              \
+        --disable-aws                               \
         --disable-alt-svc                           \
         --disable-ares                              \
+        --disable-basic-auth                        \
+        --disable-bearer-auth                       \
         --disable-cookies                           \
-        --disable-crypto-auth                       \
+        --disable-digest-auth                       \
         --disable-dateparse                         \
         --disable-dict                              \
         --disable-dnsshuffle                        \
@@ -47,6 +50,7 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-hsts                              \
         --disable-http-auth                         \
         --disable-imap                              \
+        --disable-kerberos-auth                     \
         --disable-ldap                              \
         --disable-ldaps                             \
         --disable-libcurl-option                    \
@@ -54,20 +58,17 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --disable-mime                              \
         --disable-mqtt                              \
         --disable-netrc                             \
+        --disable-negotiate-auth                    \
         --disable-ntlm                              \
-        --disable-ntlm-wb                           \
         --disable-pop3                              \
         --disable-progress-meter                    \
-        --disable-pthreads                          \
         --disable-rtsp                              \
         --disable-shared                            \
-        --disable-smb                               \
         --disable-smtp                              \
         --disable-socketpair                        \
         --disable-telnet                            \
         --disable-tftp                              \
         --disable-threaded-resolver                 \
-        --disable-tls-srp                           \
         --disable-unix-sockets                      \
         --disable-verbose                           \
         --disable-versioned-symbols                 \
@@ -75,7 +76,6 @@ cp -ar "$CURRENT_SOURCE_DIR" "$PRIVATE_DIR"
         --without-brotli                            \
         --without-libidn2                           \
         --without-libpsl                            \
-        --without-librtmp                           \
         --without-nghttp2                           \
         --without-ngtcp2                            \
         --without-zlib                              \
