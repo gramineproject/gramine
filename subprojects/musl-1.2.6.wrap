@@ -1,0 +1,7 @@
+[wrap-file]
+directory = musl-1.2.6
+source_url = https://musl.libc.org/releases/musl-1.2.6.tar.gz
+source_fallback_url = https://packages.gramineproject.io/distfiles/musl-1.2.6.tar.gz
+source_filename = musl-1.2.6.tar.gz
+source_hash = d585fd3b613c66151fc3249e8ed44f77020cb5e6c1e635a616d3f9f82460512a
+patch_directory = musl-1.2.6
