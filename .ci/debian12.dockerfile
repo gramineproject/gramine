@@ -5,7 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # ca-certificates needed for update over https
 # devscripts is `debuild`
 # git, jq are needed for `meson dist` and the script
-RUN apt-get update && apt-get install -y \
+RUN apt-get clean && apt-get update && apt-get install -y \
     ca-certificates \
     devscripts \
     git \
@@ -22,9 +22,9 @@ RUN echo deb [arch=amd64 signed-by=/etc/apt/keyrings/intel-sgx-deb.asc] https://
 # in dockerfile.
 RUN mkdir /debian
 COPY debian/control /debian
-RUN apt-get update && apt-get -y build-dep --no-install-recommends --no-install-suggests /
+RUN apt-get clean && apt-get update && apt-get build-dep -y --no-install-recommends --no-install-suggests /
 
 # for HTML docs build, which is not done in packages, so it's not in Build-Depends:
-RUN apt-get update && apt-get -y install python3-myst-parser
+RUN apt-get clean && apt-get update && apt-get -y install python3-myst-parser
 
 CMD ["bash"]
