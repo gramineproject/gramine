@@ -192,8 +192,6 @@ mbedtls_proj = subproject('mbedtls-3.6.3')
 mbedtls_static_dep = mbedtls_proj.get_variable('mbedtls_static_dep')
 mbedtls_pal_dep = mbedtls_proj.get_variable('mbedtls_pal_dep')
 
-curl_proj = subproject('curl-8.8.0')
-cjson_proj = subproject('cJSON-1.7.12')
 libcbor_proj = subproject('libcbor-0.11.0')
 
 if sgx
@@ -206,10 +204,6 @@ if sgx
     protoc_c_prog = find_program('protoc-c')
 
     threads_dep = dependency('threads')
-
-    libcurl_dep = curl_proj.get_variable('curl_minimal_dep')
-
-    cjson_dep = cjson_proj.get_variable('cjson_dep')
 
     protobuf_dep = dependency('libprotobuf-c')
 

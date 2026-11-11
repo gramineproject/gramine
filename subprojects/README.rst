@@ -1,9 +1,5 @@
 Gramine uses the following third-party components:
 
-- cJSON: used in RA-TLS/SecretProv libraries to parse JSON objects embedded in
-  HTTPS requests (e.g. when communicating with Intel Attestation Service).
-- curl: used in RA-TLS/SecretProv libraries to send/receive HTTPS
-  requests/responses (e.g. when communicating with Intel Attestation Service).
 - GCC: only the libgomp (OpenMP) library is used (unfortunately this library
   cannot be built separately from the whole GCC build); libgomp is patched to
   use Glibc wrapper ``futex()`` instead of the raw syscall. Purely for better
@@ -24,5 +20,5 @@ Gramine uses the following third-party components:
   Least Recently Used (LRU) cache of blocks of encrypted files, as a performance
   optimization.
 
-For security reasons, we strive to update glibc, musl, curl and mbedTLS as soon
-as they release new versions that fix security vulnerabilities.
+For security reasons, we strive to update glibc, musl and mbedTLS as soon as
+they release new versions that fix security vulnerabilities.
