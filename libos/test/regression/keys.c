@@ -29,6 +29,10 @@ typedef uint8_t pf_key_t[KEY_SIZE];
 /* Special keys (SGX sealing keys), always existing under SGX and read-only */
 #define MRENCLAVE_KEY_PATH "/dev/attestation/keys/_sgx_mrenclave"
 #define MRSIGNER_KEY_PATH "/dev/attestation/keys/_sgx_mrsigner"
+#define MRENCLAVE_SVN_KEY_PATH "/dev/attestation/keys/svn/_sgx_mrenclave"
+#define MRENCLAVE_SVN_KEY_PATH_LEN (sizeof(MRENCLAVE_SVN_KEY_PATH) - 1)
+#define CPU_SVN_PATH "/dev/attestation/cpu_svn"
+#define SVN_SIZE 16
 
 static const pf_key_t default_key = {
     0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00};
@@ -95,6 +99,18 @@ static void fail_write_key(const char* desc, const char* path) {
         errx(1, "%s: writing to %s unexpectedly succeeded", desc, path);
 }
 
+static int read_file_binary(const char* path, unsigned char* buffer, size_t size) {
+    printf("Reading from file: %s\n", path);
+    FILE* f = fopen(path, "rb");
+    if (!f) {
+        perror("read_file_binary fopen");
+        return -1;
+    }
+    size_t n = fread(buffer, 1, size, f);
+    fclose(f);
+    return (int)n;
+}
+
 int main(int argc, char** argv) {
     if (argc > 2 || (argc == 2 && strcmp(argv[1], "sgx") != 0))
         errx(1, "test expects either no arguments, or one argument `sgx`");
@@ -104,6 +120,22 @@ int main(int argc, char** argv) {
         verify_key_exists("SGX sealing keys", MRSIGNER_KEY_PATH);
         fail_write_key("SGX sealing keys", MRENCLAVE_KEY_PATH);
         fail_write_key("SGX sealing keys", MRSIGNER_KEY_PATH);
+        unsigned char cpu_svn[SVN_SIZE];
+        if (read_file_binary(CPU_SVN_PATH, cpu_svn, SVN_SIZE) != SVN_SIZE) {
+            err(1, "error reading CPU SVN");
+        }
+        char cpu_svn_str[MRENCLAVE_SVN_KEY_PATH_LEN + SVN_SIZE * 2 + 1] = {0};
+        sprintf(cpu_svn_str, "%s/", MRENCLAVE_SVN_KEY_PATH);
+        for (size_t i = 0; i < SVN_SIZE; i++) {
+            sprintf(cpu_svn_str + MRENCLAVE_SVN_KEY_PATH_LEN + 1 + i * 2, "%02x", cpu_svn[i]);
+        }
+        verify_key_exists("SGX mrenclave keys SVN", cpu_svn_str);
+        fail_write_key("SGX mrenclave keys SVN", cpu_svn_str);
+        for (size_t i = 0; i < SVN_SIZE; i++) {
+            sprintf(cpu_svn_str + MRENCLAVE_SVN_KEY_PATH_LEN + 1 + i * 2, "%02X", cpu_svn[i]);
+        }
+        verify_key_exists("SGX mrenclave keys SVN", cpu_svn_str);
+        fail_write_key("SGX mrenclave keys SVN", cpu_svn_str);
     }
 
     expect_key("before writing key", DEFAULT_KEY_PATH, &default_key);

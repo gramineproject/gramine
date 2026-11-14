@@ -24,6 +24,16 @@
 
 #define RECOVERY_FILE_URI_SUFFIX ".gramine.recovery"
 
+#define TCB_INFO_PERM_RW PERM_rw_rw_r__
+
+#define TCB_INFO_FILE_NAME "gramine.tcb_info"
+
+#define CPU_SVN_SIZE 16
+
+#define OLD_TCB_FILE_URI_SUFFIX ".old_tcb"
+
+typedef uint8_t cpu_svn_t[CPU_SVN_SIZE];
+
 /*
  * Represents a named key for opening files. The key might not be set yet: value of a key can be
  * specified in the manifest, or set using `update_encrypted_files_key`. Before the key is set,
@@ -69,6 +79,13 @@ struct libos_encrypted_file {
 int init_encrypted_files(void);
 
 /*
+ * \brief sets the default CPU SVN used for encrypted file keys.
+ *
+ * This is only used for testing.
+ */
+int set_cpu_svn(const cpu_svn_t* cpu_svn);
+
+/*
  * \brief Retrieve a key.
  *
  * Returns a key with a given name, or NULL if it has not been created yet. Note that even if the
@@ -94,6 +111,15 @@ int list_encrypted_files_keys(int (*callback)(struct libos_encrypted_files_key* 
  * Similar to `get_encrypted_files_key`, this does not pass ownership of `*out_key`.
  */
 int get_or_create_encrypted_files_key(const char* name, struct libos_encrypted_files_key** out_key);
+
+/*
+ * \brief Retrieve a key with a CPU SVN.
+ *
+ * Sets `*out_key` to a key with given name and CPU SVN. Creates a new key.
+ *
+ */
+int create_encrypted_files_key_for_svn(const char* name, cpu_svn_t* cpu_svn,
+                                       struct libos_encrypted_files_key** out_key);
 
 /*
  * \brief Read value of given key.
@@ -183,3 +209,5 @@ int encrypted_file_get_size(struct libos_encrypted_file* enc, file_off_t* out_si
 int encrypted_file_set_size(struct libos_encrypted_file* enc, file_off_t size);
 
 int parse_pf_key(const char* key_str, pf_key_t* pf_key);
+
+int handle_tcb_migration(const char* uri, const char* key_name);

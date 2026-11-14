@@ -1314,6 +1314,8 @@ grows with time, as Gramine adds functionality required by real-world workloads.
       - ☑ `/dev/attestation/keys/<key_name>` <sup>[25](#attestation)</sup>
       - ☑ `/dev/attestation/keys/_sgx_mrenclave` <sup>[25](#attestation)</sup>
       - ☑ `/dev/attestation/keys/_sgx_mrsigner` <sup>[25](#attestation)</sup>
+      - ☑ `/dev/attestation/keys/svn/_sgx_mrenclave/<cpu_svn>` <sup>[25](#attestation)</sup>
+  - ☑ `/dev/attestation/cpu_svn` <sup>[25](#attestation)</sup>
   - ☑ `/dev/null` <sup>[23](#misc)</sup>
   - ☑ `/dev/zero` <sup>[23](#misc)</sup>
   - ☑ `/dev/random` <sup>[21](#randomness)</sup>
@@ -3245,6 +3247,10 @@ Gramine <low-level-dev-attestation-interface>`.
     - ☑ `/dev/attestation/keys/<key_name>`
     - ☑ `/dev/attestation/keys/_sgx_mrenclave` (only for SGX)
     - ☑ `/dev/attestation/keys/_sgx_mrsigner` (only for SGX)
+    - ☑ `/dev/attestation/keys/svn/_sgx_mrenclave/<cpu_svn>` (only for SGX)
+
+  - ☑ `/dev/attestation/cpu_svn` (only for SGX)
+
 
 </details><br />
 

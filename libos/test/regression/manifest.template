@@ -18,6 +18,8 @@ fs.mounts = [
   { type = "encrypted", path = "/tmp_enc", uri = "file:tmp_enc", key_name = "my_custom_key" },
   { type = "encrypted", path = "/tmp_enc/mrenclaves", uri = "file:tmp_enc/mrenclaves", key_name = "_sgx_mrenclave" },
   { type = "encrypted", path = "/tmp_enc/mrsigners", uri = "file:tmp_enc/mrsigners", key_name = "_sgx_mrsigner" },
+  { type = "encrypted", path = "/tmp_tcb/data", uri = "file:tmp_tcb/data", key_name = "_sgx_mrenclave", allow_tcb_migration = true },
+  { path = "/tmp_tcb/info", uri = "file:tmp_tcb/info" },
 ]
 
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '16' }}
@@ -30,6 +32,7 @@ sgx.allowed_files = [
   "file:root",     # for getdents test
   "file:testfile", # for large_mmap test
   "file:scripts/", # for exec_script test
+  "file:tmp_tcb/info",
 ]
 
 sgx.trusted_files = [

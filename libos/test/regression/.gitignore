@@ -6,3 +6,7 @@
 !/tmp/.gitkeep
 /tmp_enc/*
 !/tmp_enc/.gitkeep
+/tmp_tcb/*
+!/tmp_tcb/.gitkeep
+!/tmp_tcb/data/.gitkeep
+!/tmp_tcb/info/.gitkeep

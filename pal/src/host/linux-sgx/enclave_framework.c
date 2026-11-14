@@ -396,6 +396,42 @@ int sgx_get_seal_key(uint16_t key_policy, sgx_key_128bit_t* out_seal_key) {
     return 0;
 }
 
+int sgx_get_seal_key_with_svn(uint16_t key_policy, const void* cpu_svn, size_t cpu_svn_size,
+                              sgx_key_128bit_t* out_seal_key) {
+    if (cpu_svn_size != sizeof(sgx_cpu_svn_t)) {
+        log_error("Invalid cpu_svn_size");
+        return PAL_ERROR_INVAL;
+    }
+    assert(key_policy == SGX_KEYPOLICY_MRENCLAVE || key_policy == SGX_KEYPOLICY_MRSIGNER);
+
+    /* The keyrequest struct dictates the key derivation material used to generate the sealing key.
+     * It includes MRENCLAVE/MRSIGNER key policy (to allow secret migration/sealing between
+     * instances of the same enclave or between different enclaves of the same author/signer),
+     * CPU/ISV/CONFIG SVNs (to prevent secret migration to older vulnerable versions of the
+     * enclave), ATTRIBUTES and MISCSELECT masks (to prevent secret migration from e.g. production
+     * enclave to debug enclave). Note that KEYID is zero, to generate the same sealing key in
+     * different instances of the same enclave/same signer. */
+    __sgx_mem_aligned sgx_key_request_t key_request = {0};
+    key_request.key_name   = SGX_SEAL_KEY;
+    key_request.key_policy = key_policy;
+
+    memcpy(&key_request.cpu_svn, cpu_svn, sizeof(sgx_cpu_svn_t));
+    memcpy(&key_request.isv_svn, &g_pal_linuxsgx_state.enclave_info.isv_svn, sizeof(sgx_isv_svn_t));
+    memcpy(&key_request.config_svn, &g_pal_linuxsgx_state.enclave_info.config_svn,
+           sizeof(sgx_config_svn_t));
+
+    key_request.attribute_mask.flags = g_seal_key_flags_mask;
+    key_request.attribute_mask.xfrm  = g_seal_key_xfrm_mask;
+    key_request.misc_mask            = g_seal_key_misc_mask;
+
+    int ret = sgx_getkey(&key_request, out_seal_key);
+    if (ret) {
+        log_error("Failed to generate sealing key using SGX EGETKEY");
+        return PAL_ERROR_DENIED;
+    }
+    return 0;    
+}
+
 static int update_seal_key_mask(const char* mask_name, uint8_t* mask_ptr, size_t mask_size) {
     int ret;
 

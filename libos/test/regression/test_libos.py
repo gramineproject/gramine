@@ -1389,6 +1389,32 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['sealed_file_mod', pf_path, 'unlink'])
         self.assertIn('UNLINK OK', stdout)
 
+
+    @unittest.skipUnless(HAS_SGX, 'Sealed (protected) files are only available with SGX')
+    def test_054_sealed_file_tcb_migration(self):
+        pf_path = 'tmp_tcb/data/'
+        info_path = 'tmp_tcb/info/'
+        if os.path.exists(info_path):
+            for root, dirs, files in os.walk(info_path):
+                for f in files:
+                    os.unlink(os.path.join(root, f))
+                for d in dirs:
+                    shutil.rmtree(os.path.join(root, d))
+        if os.path.exists(pf_path):
+            for root, dirs, files in os.walk(pf_path):
+                for f in files:
+                    os.unlink(os.path.join(root, f))
+                for d in dirs:
+                    shutil.rmtree(os.path.join(root, d))
+
+        stdout, _ = self.run_binary(['sealed_file_tcb_migration'])
+        self.assertIn('TEST READY', stdout)
+        assert(os.path.exists(os.path.join(info_path, 'old_cpu_svn')))
+        shutil.copy(os.path.join(info_path, 'old_cpu_svn'), os.path.join(pf_path, 'gramine.tcb_info'))
+        assert(os.path.exists(os.path.join(pf_path, 'gramine.tcb_info')))
+        stdout, _ = self.run_binary(['sealed_file_tcb_migration'])
+        self.assertIn('TEST OK', stdout)
+
     def test_060_synthetic(self):
         stdout, _ = self.run_binary(['synthetic'])
         self.assertIn("TEST OK", stdout)
