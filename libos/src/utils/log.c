@@ -34,12 +34,14 @@ void log_setprefix(libos_tcb_t* tcb) {
 
     const char* exec_name;
     if (g_process.exec) {
+        lock(&g_process.exec->lock);
         if (g_process.exec->dentry) {
             exec_name = g_process.exec->dentry->name;
         } else {
             /* Unknown executable name */
             exec_name = "?";
         }
+        unlock(&g_process.exec->lock);
     } else {
         /* `g_process.exec` not available yet, happens on process init */
         exec_name = "";
