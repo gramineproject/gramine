@@ -26,17 +26,25 @@
 #include "hex.h"
 #include "libos_fs.h"
 #include "list.h"
+#include "lru_composite_key_cache.h"
 #include "path_utils.h"
 #include "toml.h"
+#include "toml_utils.h"
 
 /* FIXME: current size is 16KB, but maybe there's a better size for perf/mem trade-off? */
 #define TRUSTED_CHUNK_SIZE (PAGE_SIZE * 4UL)
+
+struct tf_chunk {
+    struct lruc_composite_key key;
+    uint8_t data[TRUSTED_CHUNK_SIZE];
+};
 
 /* FIXME: use hash table instead of list */
 DEFINE_LIST(trusted_file);
 struct trusted_file {
     LIST_TYPE(trusted_file) list;
     struct trusted_file_hash file_hash;      /* hash over file, retrieved from the manifest */
+    uint64_t usage_count;
     size_t path_len;
     char path[]; /* must be NULL-terminated */
 };
@@ -44,6 +52,25 @@ struct trusted_file {
 /* initialized once at startup and read-only afterwards, so doesn't require locking */
 DEFINE_LISTP(trusted_file);
 static LISTP_TYPE(trusted_file) g_trusted_file_list = LISTP_INIT;
+
+static spinlock_t g_trusted_file_lock = INIT_SPINLOCK_UNLOCKED;
+static struct lruc_composite_key_context* g_lru_composite_key_cache = NULL;
+static uint64_t g_tf_chunks_in_cache = 0;
+
+static const char* strip_prefix(const char* uri) {
+    const char* s = strchr(uri, ':');
+    assert(s);
+    return s + 1;
+}
+
+static int populate_lru_composite_key_cache(void) {
+    if (g_tf_chunks_in_cache > 0 && !g_lru_composite_key_cache) {
+        if (!(g_lru_composite_key_cache = lruc_composite_key_create())) {
+            return -ENOMEM;
+        }
+    }
+    return 0;
+}
 
 static int read_file_exact(PAL_HANDLE handle, void* buffer, uint64_t offset, size_t size) {
     size_t buffer_offset = 0;
@@ -205,8 +232,57 @@ out:
     return ret;
 }
 
-int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t count, uint8_t* buf,
-                                 size_t file_size, struct trusted_chunk_hash* chunk_hashes) {
+static int tf_append_chunk(struct libos_handle* hdl, uint8_t* chunk,
+                           uint64_t chunk_size, struct lruc_composite_key* key) {
+    if (g_tf_chunks_in_cache == 0)
+        return 0;
+
+    struct trusted_file* tf = get_trusted_file(strip_prefix(hdl->uri));
+
+    // Counts the number of times a file is open and reused
+    if (key->chunk_number == 0 && tf && tf->usage_count <= 10) {
+        spinlock_lock(&g_trusted_file_lock);
+        tf->usage_count++;
+        spinlock_unlock(&g_trusted_file_lock);
+    }
+
+    // Add file chunks to cache only if the file is reused for 10 times or more
+    if (tf && tf->usage_count > 10) {
+        struct tf_chunk* new_chunk = (struct tf_chunk*)malloc(sizeof(struct tf_chunk));
+        if (!new_chunk)
+            return -ENOMEM;
+
+        memcpy(&new_chunk->key, key, sizeof(struct lruc_composite_key));
+        memcpy(new_chunk->data, chunk, chunk_size);
+
+        spinlock_lock(&g_trusted_file_lock);
+        if (!lruc_composite_key_add(g_lru_composite_key_cache, key, new_chunk)) {
+            free(new_chunk);
+            spinlock_unlock(&g_trusted_file_lock);
+            return -ENOMEM;
+        }
+
+        if (lruc_composite_key_size(g_lru_composite_key_cache) > g_tf_chunks_in_cache) {
+            free(lruc_composite_key_get_last(g_lru_composite_key_cache));
+            lruc_composite_key_remove_last(g_lru_composite_key_cache);
+#ifdef DEBUG
+            static uint64_t tf_cache_log_throttler = 0;
+            if (++tf_cache_log_throttler == 100) {
+                log_always("High frequency of this log indicates trusted files cache size exceed"
+                          " the `sgx.trusted_files_cache_size` limit. Please increase it in the"
+                          " manifest file to get the best performance.");
+                tf_cache_log_throttler = 0;
+            }
+#endif /* DEBUG */
+        }
+        spinlock_unlock(&g_trusted_file_lock);
+    }
+    return 0;
+}
+
+int read_and_verify_trusted_file(struct libos_handle* hdl, uint64_t offset, size_t count,
+                                 uint8_t* buf, size_t file_size,
+                                 struct trusted_chunk_hash* chunk_hashes) {
     int ret;
 
     if (offset >= file_size)
@@ -220,6 +296,13 @@ int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
     if (!tmp_chunk)
         return -ENOMEM;
 
+    struct lruc_composite_key* key =
+        (struct lruc_composite_key*)malloc(sizeof(struct lruc_composite_key));
+    if (!key) {
+        free(tmp_chunk);
+        return -ENOMEM;
+    }
+
     uint8_t* buf_pos = buf;
     uint64_t chunk_offset = aligned_offset;
     struct trusted_chunk_hash* chunk_hashes_item = chunk_hashes +
@@ -228,6 +311,40 @@ int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
         size_t chunk_size  = MIN(file_size - chunk_offset, TRUSTED_CHUNK_SIZE);
         uint64_t chunk_end = chunk_offset + chunk_size;
 
+        key->chunk_number = chunk_offset / TRUSTED_CHUNK_SIZE;
+        key->id = hdl->id;
+
+        struct tf_chunk *chunk = NULL;
+
+        if (g_tf_chunks_in_cache > 0) {
+            spinlock_lock(&g_trusted_file_lock);
+            ret = populate_lru_composite_key_cache();
+            if (ret < 0) {
+                spinlock_unlock(&g_trusted_file_lock);
+                goto out;
+            }
+            chunk = (struct tf_chunk*)lruc_composite_key_get(g_lru_composite_key_cache, key);
+            spinlock_unlock(&g_trusted_file_lock);
+        }
+
+        if (chunk != NULL) {
+            if (chunk_offset >= offset && chunk_end <= end) {
+                memcpy(buf_pos, chunk->data, chunk_size);
+
+                buf_pos += chunk_size;
+            } else {
+                off_t copy_start = MAX(chunk_offset, offset);
+                off_t copy_end = MIN(chunk_offset + (off_t)chunk_size, end);
+                assert(copy_end > copy_start);
+
+                memcpy(buf_pos, chunk->data + copy_start - chunk_offset, copy_end - copy_start);
+                buf_pos += copy_end - copy_start;
+            }
+            continue;
+        }
+
+        /* we didn't find the chunk in the trusted file cache, must copy into enclave and add to*/
+        /* the trusted file cache */
         LIB_SHA256_CONTEXT chunk_sha;
         ret = lib_SHA256Init(&chunk_sha);
         if (ret < 0) {
@@ -238,7 +355,10 @@ int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
         if (chunk_offset >= offset && chunk_end <= end) {
             /* if current chunk-to-verify completely resides in the requested region-to-copy,
              * directly copy into buf (without a scratch buffer) and hash in-place */
-            ret = read_file_exact(handle, buf_pos, chunk_offset, chunk_size);
+            ret = read_file_exact(hdl->pal_handle, buf_pos, chunk_offset, chunk_size);
+            if (ret < 0)
+                goto out;
+            ret = tf_append_chunk(hdl, buf_pos, chunk_size, key);
             if (ret < 0)
                 goto out;
             ret = lib_SHA256Update(&chunk_sha, buf_pos, chunk_size);
@@ -251,7 +371,10 @@ int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
             /* if current chunk-to-verify only partially overlaps with the requested region-to-copy,
              * read the file contents into a scratch buffer, verify hash and then copy only the part
              * needed by the caller */
-            ret = read_file_exact(handle, tmp_chunk, chunk_offset, chunk_size);
+            ret = read_file_exact(hdl->pal_handle, tmp_chunk, chunk_offset, chunk_size);
+            if (ret < 0)
+                goto out;
+            ret = tf_append_chunk(hdl, tmp_chunk, chunk_size, key);
             if (ret < 0)
                 goto out;
             ret = lib_SHA256Update(&chunk_sha, tmp_chunk, chunk_size);
@@ -288,6 +411,7 @@ int read_and_verify_trusted_file(PAL_HANDLE handle, uint64_t offset, size_t coun
     ret = 0;
 out:
     free(tmp_chunk);
+    free(key);
     return ret;
 }
 
@@ -425,6 +549,16 @@ int init_trusted_files(void) {
         if (ret < 0)
             return ret;
     }
+
+    uint64_t tf_cache_size = 0;
+    ret = toml_sizestring_in(g_manifest_root, "sgx.trusted_files_cache_size", 0,
+                             &tf_cache_size);
+    if (ret < 0) {
+        log_error("Cannot parse 'sgx.trusted_files_cache_size'");
+        return -EINVAL;
+    }
+
+    g_tf_chunks_in_cache = tf_cache_size / TRUSTED_CHUNK_SIZE;
 
     return 0;
 }

@@ -51,3 +51,7 @@ sgx.trusted_files = [
 sgx.allowed_files = [
   "file:{{ install_dir }}/logs",
 ]
+
+# Trusted files cache of 16k size is enough to cover common Nginx static HTTP file of 10k size
+# which will be cached by Gramine.
+sgx.trusted_files_cache_size = "16K"

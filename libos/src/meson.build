@@ -20,6 +20,7 @@ libos_sources = files(
     'fs/chroot/file_check_policy.c',
     'fs/chroot/fs.c',
     'fs/chroot/trusted.c',
+    'fs/chroot/lru_composite_key_cache.c',
     'fs/dev/attestation.c',
     'fs/dev/fs.c',
     'fs/etc/fs.c',
