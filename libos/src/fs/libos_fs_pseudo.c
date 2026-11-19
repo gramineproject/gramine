@@ -419,7 +419,7 @@ static file_off_t pseudo_seek(struct libos_handle* hdl, file_off_t offset, int w
 
         case PSEUDO_DEV:
             if (!node->dev.dev_ops.seek)
-                return -EACCES;
+                return -ESPIPE;
             return node->dev.dev_ops.seek(hdl, offset, whence);
 
         default:
