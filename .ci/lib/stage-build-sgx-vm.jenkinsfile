@@ -4,7 +4,7 @@ stage('build') {
         export PATH="/sbin:$PATH"
 
         git clone https://github.com/gramineproject/device-testing-tools.git
-        cd device-testing-tools
+        cd device-testing-tools && git checkout -b don/gcc origin/don/gcc
 
         cd initramfs_builder
         {
