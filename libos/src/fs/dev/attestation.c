@@ -16,6 +16,7 @@
  */
 
 #include "api.h"
+#include "hex.h"
 #include "libos_fs_encrypted.h"
 #include "libos_fs_pseudo.h"
 #include "pal.h"
@@ -83,6 +84,21 @@ static int user_report_data_save(struct libos_dentry* dent, const char* data, si
     update_buffer(g_user_report_data, g_user_report_data_size, data, size);
     return 0;
 }
+
+#ifdef DEBUG
+static int cpu_svn_save(struct libos_dentry* dent, const char* data, size_t size) {
+    log_debug("cpu_svn_save: saving %zu bytes", size);
+    __UNUSED(dent);
+    cpu_svn_t cpu_svn;
+    if (size != sizeof(cpu_svn)) {
+        log_warning("CPU SVN must be exactly %zu bytes, got %zu", sizeof(cpu_svn), size);
+        return -EINVAL;
+    }
+    memcpy(&cpu_svn, data, sizeof(cpu_svn));
+
+    return set_cpu_svn(&cpu_svn);
+}
+#endif /* DEBUG */
 
 /*!
  * \brief Modify target info used in `report` pseudo-file.
@@ -240,6 +256,32 @@ static int quote_load(struct libos_dentry* dent, char** out_data, size_t* out_si
 }
 
 /*!
+ * \brief Get CPU SVN of the platform.
+ */
+static int cpu_svn_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    cpu_svn_t cpu_svn;
+    size_t cpu_svn_size = sizeof(cpu_svn);
+    int ret = PalGetCPUSVN(&cpu_svn, &cpu_svn_size);
+    if (ret < 0) {
+        log_warning("PalGetCPUSVN failed: %s", pal_strerror(ret));
+        return pal_to_unix_errno(ret);
+    }
+
+    char* str = calloc(1, cpu_svn_size);
+
+    if (!str)
+        return -ENOMEM;
+
+    memcpy(str, &cpu_svn, sizeof(cpu_svn));
+
+    *out_data = str;
+    *out_size = cpu_svn_size;
+    return 0;
+}
+
+/*!
  * \brief Get remote attestation type used.
  *
  * In case of SGX, same as `sgx.remote_attestation` manifest option.
@@ -264,6 +306,22 @@ static bool key_name_exists(struct libos_dentry* parent, const char* name) {
     return key != NULL;
 }
 
+static bool key_name_exists_svn(struct libos_dentry* parent, const char* name) {
+    __UNUSED(parent);
+    if (strlen(name) != 2 * sizeof(cpu_svn_t)) {
+        log_warning("key_name_exists_svn: invalid key name length %zu of %s, expected %zu",
+                    strlen(name), name, 2 * sizeof(cpu_svn_t));
+        return false;
+    }
+    cpu_svn_t cpu_svn;
+    if (!hex2bytes((char*)name, strlen(name), &cpu_svn, sizeof(cpu_svn_t))) {
+        log_warning("key_name_exists_svn: invalid key name format");
+        return false;
+    }
+
+    return true;
+}
+
 struct key_list_names_data {
     readdir_callback_t callback;
     void* arg;
@@ -282,6 +340,13 @@ static int key_list_names(struct libos_dentry* parent, readdir_callback_t callba
         .arg = arg,
     };
     return list_encrypted_files_keys(&key_list_names_callback, &data);
+}
+
+static int key_list_names_svn(struct libos_dentry* parent, readdir_callback_t callback, void* arg) {
+    __UNUSED(parent);
+    __UNUSED(callback);
+    __UNUSED(arg);
+    return 0;
 }
 
 static int key_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
@@ -305,6 +370,58 @@ static int key_load(struct libos_dentry* dent, char** out_data, size_t* out_size
         *out_size = 0;
     }
     return 0;
+}
+
+static int key_load_svn(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    if (strlen(dent->name) != 2 * sizeof(cpu_svn_t)) {
+        log_warning("key_name_exists_svn: invalid key name length");
+        return false;
+    }
+    cpu_svn_t cpu_svn;
+
+    if (!hex2bytes((char*)dent->name, strlen(dent->name), &cpu_svn, sizeof(cpu_svn_t))) {
+        log_warning("key_name_exists_svn: invalid key name format");
+        return false;
+    }
+
+    int ret;
+
+    char * key_name = dent->parent->name;
+    struct libos_encrypted_files_key* key = NULL;
+    key = calloc(1, sizeof(*key));
+    if (!key) {
+        log_error("Cannot allocate memory for key");
+        ret = -ENOMEM;
+        goto out;
+    }
+    ret = create_encrypted_files_key_for_svn(key_name, &cpu_svn, &key);
+    if (ret < 0) {
+        log_error("Cannot create or get key for SVN");
+        goto out;
+    }
+    pf_key_t pf_key;
+    bool is_set = read_encrypted_files_key(key, &pf_key);
+
+    if (is_set) {
+        char* buf = malloc(sizeof(pf_key));
+        if (!buf)
+            return -ENOMEM;
+        memcpy(buf, &pf_key, sizeof(pf_key));
+
+        *out_data = buf;
+        *out_size = sizeof(pf_key);
+    } else {
+        *out_data = NULL;
+        *out_size = 0;
+    }
+    ret = 0;
+out:
+    if (key) {
+        if (key->name)
+            free(key->name);
+        free(key);
+    }
+    return ret;
 }
 
 static int key_save(struct libos_dentry* dent, const char* data, size_t size) {
@@ -338,6 +455,13 @@ static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_n
     pseudo_add_str(attestation, "attestation_type", attestation_type_load);
     pseudo_add_str(attestation, "my_target_info", &my_target_info_load);
     pseudo_add_str(attestation, "report", &report_load);
+    struct pseudo_node* cpu_svn = pseudo_add_str(attestation, "cpu_svn", &cpu_svn_load);
+#ifdef DEBUG
+    cpu_svn->perm = PSEUDO_PERM_FILE_RW;
+    cpu_svn->str.save = &cpu_svn_save;
+#else
+    cpu_svn->perm = PSEUDO_PERM_FILE_R;
+#endif /* DEBUG */
 
     struct pseudo_node* user_report_data = pseudo_add_str(attestation, "user_report_data", NULL);
     user_report_data->perm = PSEUDO_PERM_FILE_RW;
@@ -361,6 +485,13 @@ static int init_sgx_attestation(struct pseudo_node* attestation, struct pseudo_n
     /* SGX sealing keys must be read-only, so we mount them over other /dev/attestation/keys/ */
     pseudo_add_str(keys, PAL_KEY_NAME_SGX_MRENCLAVE, &key_load);
     pseudo_add_str(keys, PAL_KEY_NAME_SGX_MRSIGNER, &key_load);
+
+    struct pseudo_node* keys_svn = pseudo_add_dir(keys, "svn");
+    struct pseudo_node* keys_svn_mrenclave_key =
+        pseudo_add_dir(keys_svn, PAL_KEY_NAME_SGX_MRENCLAVE);
+    struct pseudo_node* key_cpu_svn = pseudo_add_str(keys_svn_mrenclave_key, NULL, &key_load_svn);
+    key_cpu_svn->name_exists = &key_name_exists_svn;
+    key_cpu_svn->list_names = &key_list_names_svn;
 
     if (!strcmp(g_pal_public_state->attestation_type, "none")) {
         log_debug("host is Linux-SGX and remote attestation type is 'none', skipping "

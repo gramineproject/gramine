@@ -542,3 +542,14 @@ Additional details
     file data. Therefore, the usual NIST limits on the total number of
     invocations of the encryption operation with the same key would be reached
     much slower.
+
+- TCB migration: Gramine supports migration between different CPU SVN versions
+  by enabling it using the ``allow_tcb_migration`` mount parameter in the 
+  Gramine manifest. This feature allows encrypted files to be accessed even when 
+  the CPU SVN has changed after applying microcode updates. The current CPU SVN 
+  is stored in the mount directory in a file named ``gramine.tcb_info``. On 
+  startup if the CPU SVN has changed, Gramine will unseal the files using the 
+  old CPU SVN and reseal them with the current CPU SVN. This feature can negatively
+  impact integrity of files, as it allows files from a platform with a lower 
+  security level to be used. It is recommended to use this feature only in controlled
+  environments where the security implications are understood.

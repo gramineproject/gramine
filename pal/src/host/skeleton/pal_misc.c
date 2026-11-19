@@ -59,6 +59,28 @@ int _PalGetSpecialKey(const char* name, void* key, size_t* key_size) {
     return PAL_ERROR_NOTIMPLEMENTED;
 }
 
+int _PalGetSpecialKeyForSVN(const void* cpu_svn, size_t cpu_svn_size, const char* name, void* key,
+                            size_t* key_size) {
+    __UNUSED(cpu_svn);
+    __UNUSED(cpu_svn_size);
+    __UNUSED(name);
+    __UNUSED(key);
+    __UNUSED(key_size);
+    return PAL_ERROR_NOTIMPLEMENTED;
+}
+
+int _PalGetCPUSVN(void* cpu_svn, size_t* cpu_svn_size) {
+    __UNUSED(cpu_svn);
+    __UNUSED(cpu_svn_size);
+    return PAL_ERROR_NOTIMPLEMENTED;
+}
+
+int _PalSetCPUSVN(const void* cpu_svn, size_t cpu_svn_size) {
+    __UNUSED(cpu_svn);
+    __UNUSED(cpu_svn_size);
+    return PAL_ERROR_NOTIMPLEMENTED;
+}
+
 int _PalValidateEntrypoint(const void* buf, size_t size) {
     __UNUSED(buf);
     __UNUSED(size);

@@ -253,7 +253,8 @@ static int encrypted_file_internal_open(struct libos_encrypted_file* enc, PAL_HA
     enc->recovery_file_pal_handle = recovery_file_pal_handle;
     ret = 0;
 out:
-    free(normpath);
+    if (normpath)
+        free(normpath);
     if (ret < 0) {
         PalObjectDestroy(pal_handle);
         if (recovery_file_pal_handle)
@@ -280,6 +281,7 @@ int parse_pf_key(const char* key_str, pf_key_t* pf_key) {
     return 0;
 }
 
+
 static void encrypted_file_internal_close(struct libos_encrypted_file* enc) {
     assert(enc->pf);
 
@@ -303,6 +305,111 @@ out:
     enc->recovery_file_pal_handle = NULL;
 }
 
+static int encrypted_file_copy_contents(struct libos_encrypted_file* dest,
+                                        struct libos_encrypted_file* src) {
+    assert(dest->pf);
+    assert(src->pf);
+    int ret;
+    char * buf = NULL;
+    file_off_t buf_size = 0;
+    ret = encrypted_file_get_size(src, &buf_size);
+    if (ret < 0) {
+        log_error("copy content: encrypted_file_get_size failed for %s: %d", src->uri, ret);
+        goto out;
+    }
+
+    buf = malloc(buf_size);
+    if (!buf) {
+        ret = -ENOMEM;
+        goto out;
+    }
+    file_off_t remaining_read = buf_size;
+    while (remaining_read > 0) {
+        size_t read_size;
+        ret = encrypted_file_read(src, buf + (buf_size - remaining_read), remaining_read,
+                                  buf_size - remaining_read, &read_size);
+        if (ret < 0) {
+            log_error("copy content: encrypted_file_read failed for %s: %d", src->uri, ret);
+            goto out;
+        }
+        remaining_read -= read_size;
+    }
+
+    // write the data to the new file
+    size_t remaining_write = buf_size;
+    while (remaining_write > 0) {
+        size_t write_size;
+        ret = encrypted_file_write(dest, buf + (buf_size - remaining_write), remaining_write,
+                                   buf_size - remaining_write, &write_size);
+        if (ret < 0) {
+            log_error("copy content: encrypted_file_write failed for %s: %d", dest->uri, ret);
+            goto out;
+        }
+        remaining_write -= write_size;
+    }
+out:
+    if (buf)
+        free(buf);
+    return ret;
+}
+
+
+static int create_encrypted_files_key(const char* name,
+                                      struct libos_encrypted_files_key** out_key) {
+    if (name[0] != '_') {
+        return -EINVAL;
+    }
+
+    int ret;
+
+    struct libos_encrypted_files_key* key =  NULL;
+    key = calloc(1, sizeof(*key));
+    if (!key){
+        ret = -ENOMEM;
+        goto out;
+    }
+    key->name = strdup(name);
+    if (!key->name) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    pf_key_t pf_key;
+    size_t size = sizeof(pf_key);
+    ret = PalGetSpecialKey(name, &pf_key, &size);
+
+    if (ret == 0) {
+        if (size != sizeof(pf_key)) {
+            ret = -EINVAL;
+            goto out;
+        }
+        memcpy(&key->pf_key, &pf_key, sizeof(pf_key));
+        key->is_set = true;
+    } else if (ret == PAL_ERROR_NOTIMPLEMENTED) {
+        log_warning(
+            "Special key \"%s\" is not supported by current PAL. Mounts using this key "
+            "will not work.",
+            name);
+        /* proceed without setting value */
+    } else {
+        log_error("PalGetSpecialKey(\"%s\") failed: %s", name, pal_strerror(ret));
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    *out_key = key;
+    ret = 0;
+out:
+    if (ret < 0) {
+        if (key) {
+            if (key->name)
+                free(key->name);
+            free(key);
+        }
+    }
+    return ret;
+}
+
 static int parse_and_update_key(const char* key_name, const char* key_str) {
     pf_key_t pf_key;
     int ret = parse_pf_key(key_str, &pf_key);
@@ -318,6 +425,215 @@ static int parse_and_update_key(const char* key_name, const char* key_str) {
 
     update_encrypted_files_key(key, &pf_key);
     return 0;
+}
+
+static int migrate_file(const char* uri, struct libos_encrypted_files_key* old_key,
+                        struct libos_encrypted_files_key* new_key) {
+    struct libos_encrypted_file* new_encrypted_file = NULL;
+    struct libos_encrypted_file* old_encrypted_file = NULL;
+    char* old_file_uri = NULL;
+    int ret = encrypted_file_open(uri, old_key, /*enable_recovery=*/false, &old_encrypted_file);
+    if (ret < 0) {
+        log_error("migrate: encrypted_file_open failed for %s: %d", uri, ret);
+        return ret;
+    }
+
+    old_file_uri = alloc_concat(uri, -1, OLD_TCB_FILE_URI_SUFFIX, -1);
+    // save the old file
+    ret = encrypted_file_rename(old_encrypted_file, old_file_uri);
+    free(old_file_uri);
+    if (ret < 0) {
+        log_error("migrate: encrypted_file_rename failed for %s: %d", uri, ret);
+        goto out;
+    }
+    PAL_STREAM_ATTR pal_attr;
+    ret = PalStreamAttributesQueryByHandle(old_encrypted_file->pal_handle, &pal_attr);
+    if (ret < 0) {
+        log_warning("PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    ret = encrypted_file_create(uri, pal_attr.share_flags, new_key, /*enable_recovery=*/false,
+                                &new_encrypted_file);
+    if (ret < 0) {
+        log_error("migrate: encrypted_file_create failed for %s: %d", uri, ret);
+        goto out;
+    }
+
+    ret = encrypted_file_copy_contents(new_encrypted_file, old_encrypted_file);
+    if (ret < 0) {
+        log_error("migrate: encrypted_file_copy_contents failed for %s: %d", uri, ret);
+        goto out;
+    }
+
+out:
+    if (old_encrypted_file) {
+        encrypted_file_put(old_encrypted_file);
+        encrypted_file_destroy(old_encrypted_file);
+    }
+    if (new_encrypted_file) {
+        encrypted_file_put(new_encrypted_file);
+        encrypted_file_destroy(new_encrypted_file);
+    }
+    return ret;
+}
+
+static int migrate_dir(const char* uri, struct libos_encrypted_files_key* old_key,
+                       struct libos_encrypted_files_key* new_key) {
+    char* sub_entry_uri = NULL;
+    char* buf = NULL;
+    size_t buf_size = READDIR_BUF_SIZE;
+    PAL_HANDLE palhdl;
+    int ret = PalStreamOpen(uri, PAL_ACCESS_RDONLY, /*share_flags=*/0, PAL_CREATE_NEVER,
+                            /*options=*/0, &palhdl);
+    if (ret < 0) {
+        return pal_to_unix_errno(ret);
+    }
+    buf = malloc(buf_size);
+    if (!buf) {
+        ret = -ENOMEM;
+        goto out;
+    }
+    while (true) {
+        size_t read_size = buf_size;
+        ret = PalStreamRead(palhdl, /*offset=*/0, &read_size, buf);
+        if (ret < 0) {
+            ret = pal_to_unix_errno(ret);
+            goto out;
+        }
+
+        if (read_size == 0) {
+            /* End of directory listing */
+            break;
+        }
+
+        /* Last entry must be null-terminated */
+        assert(buf[read_size - 1] == '\0');
+
+        /* Read all entries (separated by null bytes) and invoke `migrate` on each */
+        size_t start = 0;
+        while (start < read_size - 1) {
+            size_t end = start + strlen(&buf[start]);
+
+            if (end == start) {
+                log_error("migrate: empty name returned from PAL");
+                BUG();
+            }
+
+            if (!strcmp(&buf[start], TCB_INFO_FILE_NAME)) {
+                start = end + 1;
+                continue;
+            }
+
+            /* By the PAL convention, if a name ends with '/', it is a directory. */
+            if (buf[end - 1] == '/') {
+                if (uri[strlen(uri) - 1] == '/')
+                    sub_entry_uri = alloc_concat(uri, -1, &buf[start], -1);
+                else
+                    sub_entry_uri = alloc_concat3(uri, -1, "/", 1, &buf[start], -1);
+                if (!sub_entry_uri) {
+                    ret = -ENOMEM;
+                    goto out;
+                }
+                log_debug("migrating directory %s", sub_entry_uri);
+
+                if ((ret = migrate_dir(sub_entry_uri, old_key, new_key)) < 0)
+                    goto out;
+            } else {
+                if (uri[strlen(uri) - 1] == '/')
+                    sub_entry_uri = alloc_concat3(URI_PREFIX_FILE, URI_PREFIX_FILE_LEN,
+                                                  uri + URI_PREFIX_DIR_LEN, -1, &buf[start], -1);
+                else {
+                    size_t sub_entry_uri_len = URI_PREFIX_FILE_LEN + strlen(uri) -
+                                               URI_PREFIX_DIR_LEN + 1 + strlen(&buf[start]) + 1;
+                    sub_entry_uri = malloc(sub_entry_uri_len);
+                    if (!sub_entry_uri) {
+                        ret = -ENOMEM;
+                        goto out;
+                    }
+                    snprintf(sub_entry_uri, sub_entry_uri_len, "%s%s/%s", URI_PREFIX_FILE,
+                             uri + URI_PREFIX_DIR_LEN, &buf[start]);
+                }
+                if (!sub_entry_uri) {
+                    ret = -ENOMEM;
+                    goto out;
+                }
+                log_debug("migrating file %s", sub_entry_uri);
+                if ((ret = migrate_file(sub_entry_uri, old_key, new_key)) < 0)
+                    goto out;
+            }
+            free(sub_entry_uri);
+            sub_entry_uri = NULL;
+            start = end + 1;
+        }
+    }
+    ret = 0;
+
+out:
+    if (sub_entry_uri)
+        free(sub_entry_uri);
+    if (buf)
+        free(buf);
+    PalObjectDestroy(palhdl);
+    return ret;
+}
+
+static int do_migrate(const char* uri, cpu_svn_t* old_cpu_svn, const char* key_name) {
+    struct libos_encrypted_files_key* old_key = NULL;
+    struct libos_encrypted_files_key* new_key = NULL;
+    char* dir_entry_uri = NULL;
+
+    int ret = create_encrypted_files_key_for_svn(key_name, old_cpu_svn, &old_key);
+    if (ret < 0)
+        return ret;
+
+    ret = create_encrypted_files_key(key_name, &new_key);
+    if (ret < 0) {
+        goto out;
+    }
+
+    PAL_STREAM_ATTR pal_attr;
+    ret = PalStreamAttributesQuery(uri, &pal_attr);
+    if (ret < 0) {
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+    assert(strstartswith(uri, URI_PREFIX_FILE));
+
+    switch (pal_attr.handle_type) {
+        case PAL_TYPE_FILE:
+            ret = migrate_file(uri, old_key, new_key);
+            break;
+        case PAL_TYPE_DIR:
+            dir_entry_uri =
+                alloc_concat(URI_PREFIX_DIR, URI_PREFIX_DIR_LEN, uri + URI_PREFIX_FILE_LEN, -1);
+            if (!dir_entry_uri) {
+                ret = -ENOMEM;
+                goto out;
+            }
+            ret = migrate_dir(dir_entry_uri, old_key, new_key);
+            break;
+        default:
+            log_warning("trying to access '%s' which is not an encrypted file or directory", uri);
+            ret = -EACCES;
+            goto out;
+    }
+    ret = 0;
+out:
+    if (dir_entry_uri)
+        free(dir_entry_uri);
+    if (old_key) {
+        if (old_key->name)
+            free(old_key->name);
+        free(old_key);
+    }
+    if (new_key) {
+        if (new_key->name)
+            free(new_key->name);
+        free(new_key);
+    }
+    return ret;
 }
 
 int init_encrypted_files(void) {
@@ -366,6 +682,73 @@ int init_encrypted_files(void) {
     return 0;
 }
 
+int handle_tcb_migration(const char* uri, const char* key_name) {
+    PAL_HANDLE tcb_info_file_pal_handle = NULL;
+    int ret;
+
+    cpu_svn_t current_cpu_svn;
+    size_t cpu_svn_size = sizeof(current_cpu_svn);
+    ret = PalGetCPUSVN(&current_cpu_svn, &cpu_svn_size);
+    if (ret < 0) {
+        log_warning("PalGetCPUSVN failed: %s", pal_strerror(ret));
+        return pal_to_unix_errno(ret);
+    }
+    char cpu_svn_str[CPU_SVN_SIZE * 2 + 1] = {0};
+    bytes2hex(current_cpu_svn, cpu_svn_size, cpu_svn_str, sizeof(cpu_svn_str));
+
+    log_debug("current CPU SVN %s", cpu_svn_str);
+
+    char *tcb_info_uri = NULL;
+    size_t uri_len = strlen(uri);
+    if (uri[uri_len - 1] == '/') {
+        tcb_info_uri = alloc_concat(uri, -1, TCB_INFO_FILE_NAME, -1);
+    } else {
+        tcb_info_uri = alloc_concat3(uri, -1, "/\0", -1, TCB_INFO_FILE_NAME, -1);
+    }
+
+    log_debug("Opening TCB info file URI: %s", tcb_info_uri);
+    ret = PalStreamOpen(tcb_info_uri, PAL_ACCESS_RDWR, TCB_INFO_PERM_RW, PAL_CREATE_TRY,
+                        /*options=*/0, &tcb_info_file_pal_handle);
+    free(tcb_info_uri);
+    if (ret < 0) {
+        log_warning("tcb_info PalStreamOpen failed: %s", pal_strerror(ret));
+        ret = pal_to_unix_errno(ret);
+        return ret;
+    }
+    PAL_STREAM_ATTR pal_attr;
+    ret = PalStreamAttributesQueryByHandle(tcb_info_file_pal_handle, &pal_attr);
+    if (ret < 0) {
+        log_warning("tcb_info PalStreamAttributesQueryByHandle failed: %s", pal_strerror(ret));
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+    if (pal_attr.pending_size == 0) {
+        log_debug("tcb_info file is empty - writing current CPU SVN");
+        ret = write_exact(tcb_info_file_pal_handle, current_cpu_svn, CPU_SVN_SIZE);
+        if (ret < 0) {
+            log_warning("writing to tcb_info file failed");
+            goto out;
+        }
+    } else {
+        cpu_svn_t saved_cpu_svn = {0};
+        ret = read_exact(tcb_info_file_pal_handle, saved_cpu_svn, sizeof(saved_cpu_svn));
+        if (ret < 0) {
+            log_warning("reading from tcb_info file failed");
+            goto out;
+        }
+        if (memcmp(&current_cpu_svn, &saved_cpu_svn, sizeof(saved_cpu_svn)) != 0) {
+            log_warning("CPU SVN has changed - doing TCB migration for %s", uri);
+            ret = do_migrate(uri, &saved_cpu_svn, key_name);
+        } else {
+            log_debug("CPU SVN has not changed - no TCB migration needed for %s", uri);
+        }
+    }
+out:
+    if (tcb_info_file_pal_handle)
+        PalObjectDestroy(tcb_info_file_pal_handle);
+    return ret;
+}
+
 static struct libos_encrypted_files_key* get_key(const char* name) {
     assert(locked(&g_keys_lock));
 
@@ -377,6 +760,46 @@ static struct libos_encrypted_files_key* get_key(const char* name) {
     }
 
     return NULL;
+}
+
+int set_cpu_svn(const cpu_svn_t* cpu_svn) {
+    int ret;
+    pf_key_t pf_key;
+    size_t size = sizeof(pf_key);
+    char name[] = PAL_KEY_NAME_SGX_MRENCLAVE;
+    ret = PalGetSpecialKeyForSVN(cpu_svn, sizeof(*cpu_svn), name, &pf_key, &size);
+    if (ret == 0) {
+        if (size != sizeof(pf_key)) {
+            return -EINVAL;
+        }
+    } else if (ret == PAL_ERROR_NOTIMPLEMENTED) {
+        log_warning(
+            "Special key \"%s\" is not supported by current PAL. Mounts using this key "
+            "will not work.",
+            name);
+        return -ENOSYS;
+    } else {
+        log_error("PalGetSpecialKeyForSVN(\"%s\") failed: %s", name, pal_strerror(ret));
+        return pal_to_unix_errno(ret);
+    }
+    
+    struct libos_encrypted_files_key* key = get_encrypted_files_key(PAL_KEY_NAME_SGX_MRENCLAVE);
+    if (!key) {
+        log_warning("Key with current SVN not found");
+        return -ENOENT;
+    }
+    if (!key->is_set) {
+        log_warning("Key with current SVN not set");
+        return -ENOENT;
+    }
+
+    update_encrypted_files_key(key, &pf_key);
+    ret = PalSetCPUSVN(cpu_svn, sizeof(*cpu_svn));
+    if (ret < 0) {
+        log_warning("PalSetCPUSVN failed: %s", pal_strerror(ret));
+        return pal_to_unix_errno(ret);
+    }
+    return 0;
 }
 
 static struct libos_encrypted_files_key* get_or_create_key(const char* name, bool* out_created) {
@@ -455,11 +878,13 @@ int get_or_create_encrypted_files_key(const char* name,
             memcpy(&key->pf_key, &pf_key, sizeof(pf_key));
             key->is_set = true;
         } else if (ret == PAL_ERROR_NOTIMPLEMENTED) {
-            log_debug("Special key \"%s\" is not supported by current PAL. Mounts using this key "
-                      "will not work.", name);
+            log_debug(
+                "Special key \"%s\" is not supported by current PAL. Mounts using this key "
+                "will not work.",
+                name);
             /* proceed without setting value */
         } else {
-            log_debug("PalGetSpecialKey(\"%s\") failed: %s", name, pal_strerror(ret));
+            log_error("PalGetSpecialKey(\"%s\") failed: %s", name, pal_strerror(ret));
             ret = pal_to_unix_errno(ret);
             goto out;
         }
@@ -471,6 +896,65 @@ out:
     unlock(&g_keys_lock);
     return ret;
 }
+
+int create_encrypted_files_key_for_svn(const char* name, cpu_svn_t* cpu_svn,
+                                       struct libos_encrypted_files_key** out_key) {
+    if (name[0] != '_') {
+        return -EINVAL;
+    }
+
+    int ret;
+
+    struct libos_encrypted_files_key* key =  NULL;
+    key = calloc(1, sizeof(*key));
+    if (!key){
+        ret = -ENOMEM;
+        goto out;
+    }
+    key->name = strdup(name);
+    if (!key->name) {
+        ret = -ENOMEM;
+        goto out;
+    }
+
+    pf_key_t pf_key;
+    size_t size = sizeof(pf_key);
+    ret = PalGetSpecialKeyForSVN(cpu_svn, sizeof(*cpu_svn), name, &pf_key, &size);
+
+    if (ret == 0) {
+        if (size != sizeof(pf_key)) {
+            log_debug("PalGetSpecialKeyForSVN(\"%s\") returned wrong size: %zu", name, size);
+            ret = -EINVAL;
+            goto out;
+        }
+        log_debug("Successfully retrieved special key for svn \"%s\"", name);
+        memcpy(&key->pf_key, &pf_key, sizeof(pf_key));
+        key->is_set = true;
+    } else if (ret == PAL_ERROR_NOTIMPLEMENTED) {
+        log_debug(
+            "Special key \"%s\" is not supported by current PAL. Mounts using this key "
+            "will not work.",
+            name);
+        /* proceed without setting value */
+    } else {
+        log_error("PalGetSpecialKeyForSVN(\"%s\") failed: %s", name, pal_strerror(ret));
+        ret = pal_to_unix_errno(ret);
+        goto out;
+    }
+
+    *out_key = key;
+    ret = 0;
+out:
+    if (ret < 0) {
+        if (key) {
+            if (key->name)
+                free(key->name);
+            free(key);
+        }
+    }
+    return ret;
+}
+
 
 bool read_encrypted_files_key(struct libos_encrypted_files_key* key, pf_key_t* pf_key) {
     lock(&g_keys_lock);

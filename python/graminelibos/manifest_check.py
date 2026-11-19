@@ -31,6 +31,7 @@ _fs_base = (
         Required('uri'): _uri,
         'key_name': str,
         'enable_recovery': bool,
+        'allow_tcb_migration': bool,
     },
     {
         Required('type'): 'tmpfs',

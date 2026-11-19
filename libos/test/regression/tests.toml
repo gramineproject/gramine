@@ -111,6 +111,7 @@ manifests = [
   "sched_set_get_affinity",
   "sealed_file",
   "sealed_file_mod",
+  "sealed_file_tcb_migration",
   "select",
   "send_handle",
   "shadow_pseudo_fs",

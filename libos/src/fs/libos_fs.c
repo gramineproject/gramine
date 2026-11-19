@@ -122,6 +122,7 @@ static int mount_root(void) {
     char* fs_root_uri      = NULL;
     char* fs_root_key_name = NULL;
     bool fs_root_enable_recovery;
+    bool fs_root_allow_tcb_migration;
 
     assert(g_manifest_root);
 
@@ -153,11 +154,19 @@ static int mount_root(void) {
         ret = -EINVAL;
         goto out;
     }
+    ret = toml_bool_in(g_manifest_root, "fs.root.allow_tcb_migration", /*defaultval=*/false,
+                       &fs_root_allow_tcb_migration);
+    if (ret < 0) {
+        log_error("Cannot parse 'fs.root.allow_tcb_migration'");
+        ret = -EINVAL;
+        goto out;
+    }
 
     struct libos_mount_params params = {
         .path = "/",
         .key_name = fs_root_key_name,
         .enable_recovery = fs_root_enable_recovery,
+        .allow_tcb_migration = fs_root_allow_tcb_migration,
     };
 
     if (!fs_root_type && !fs_root_uri) {
@@ -223,6 +232,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     char* mount_uri      = NULL;
     char* mount_key_name = NULL;
     bool mount_enable_recovery;
+    bool mount_allow_tcb_migration;
 
     ret = toml_string_in(mount, "type", &mount_type);
     if (ret < 0) {
@@ -255,6 +265,14 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
     ret = toml_bool_in(mount, "enable_recovery", /*defaultval=*/false, &mount_enable_recovery);
     if (ret < 0) {
         log_error("Cannot parse '%s.enable_recovery'", prefix);
+        ret = -EINVAL;
+        goto out;
+    }
+
+    ret = toml_bool_in(mount, "allow_tcb_migration", /*defaultval=*/false,
+                       &mount_allow_tcb_migration);
+    if (ret < 0) {
+        log_error("Cannot parse '%s.allow_tcb_migration'", prefix);
         ret = -EINVAL;
         goto out;
     }
@@ -305,6 +323,7 @@ static int mount_one_nonroot(toml_table_t* mount, const char* prefix) {
         .uri = mount_uri,
         .key_name = mount_key_name,
         .enable_recovery = mount_enable_recovery,
+        .allow_tcb_migration = mount_allow_tcb_migration,
     };
     ret = mount_fs(&params);
 

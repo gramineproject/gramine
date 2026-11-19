@@ -66,6 +66,10 @@ struct libos_mount_params {
     /* Whether to enable file recovery (used by `chroot_encrypted` filesystem), false if not
      * applicable */
     bool enable_recovery;
+
+    /* Whether to allow TCB migration (used by `chroot_encrypted` filesystem), false if not
+     * applicable */
+    bool allow_tcb_migration;
 };
 
 struct libos_fs_ops {

@@ -987,6 +987,54 @@ int PalAttestationQuote(const void* user_report_data, size_t user_report_data_si
  */
 int PalGetSpecialKey(const char* name, void* key, size_t* key_size);
 
+/*!
+ * \brief Get CPU SVN of the current CPU
+ *
+ * \param[out]    cpu_svn       On success, will be set to the CPU SVN.
+ * \param[in,out] cpu_svn_size  Caller specifies maximum size for `cpu_svn`. On success, will
+ * contain actual size.
+ *
+ * Retrieve the value of a CPU SVN. Currently implemented for Linux-SGX PAL, which supports two
+ * such keys: `_sgx_mrenclave` and `_sgx_mrsigner` (see macros below).
+ *
+ * If a given key is not supported by the current PAL host, the function will return
+ * PAL_ERROR_NOTIMPLEMENTED.
+ */
+int PalGetCPUSVN(void* cpu_svn, size_t* cpu_svn_size);
+
+/*!
+ * \brief Set CPU SVN to be used in subsequent calls to PalGetSpecialKey
+ *
+ * \param         cpu_svn       CPU SVN to use.
+ * \param         cpu_svn_size  Size in bytes of `cpu_svn`. Must be exactly 16B in case of SGX PAL.
+ *
+ * Set the CPU SVN to be used in subsequent calls to PalGetSpecialKey. Currently implemented
+ * for Linux-SGX PAL.
+ *
+ * If a given key is not supported by the current PAL host, the function will return
+ * PAL_ERROR_NOTIMPLEMENTED.
+ */
+int PalSetCPUSVN(const void* cpu_svn, size_t cpu_svn_size);
+
+/*!
+ * \brief Get special key with a specific CPU SVN (specific to PAL host).
+ *
+ * \param         cpu_svn       CPU SVN to use.
+ * \param         cpu_svn_size  Size in bytes of `cpu_svn`. Must be exactly 16B in case of SGX PAL.
+ * \param         name      Key name.
+ * \param[out]    key       On success, will be set to retrieved key.
+ * \param[in,out] key_size  Caller specifies maximum size for `key`. On success, will contain actual
+ *                          size.
+ *
+ * Retrieve the value of a special key. Currently implemented for Linux-SGX PAL, which supports two
+ * such keys: `_sgx_mrenclave` and `_sgx_mrsigner` (see macros below).
+ *
+ * If a given key is not supported by the current PAL host, the function will return
+ * PAL_ERROR_NOTIMPLEMENTED.
+ */
+int PalGetSpecialKeyForSVN(const void* cpu_svn, size_t cpu_svn_size, const char* name, void* key,
+                           size_t* key_size);
+
 #define PAL_KEY_NAME_SGX_MRENCLAVE "_sgx_mrenclave"
 #define PAL_KEY_NAME_SGX_MRSIGNER  "_sgx_mrsigner"
 
