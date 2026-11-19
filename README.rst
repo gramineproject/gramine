@@ -2,6 +2,7 @@
 Gramine Library OS with Intel SGX Support
 *****************************************
 
+
 .. image:: https://readthedocs.org/projects/gramine/badge/?version=latest
    :target: http://gramine.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
