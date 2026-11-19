@@ -519,6 +519,64 @@ out:
     return ret;
 }
 
+void free_threads_array(struct libos_thread** threads, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (threads[i]) {
+            put_thread(threads[i]);
+        }
+    }
+
+    free(threads);
+}
+
+static size_t dump_all_threads_with_buf(struct libos_thread** threads, size_t max_count) {
+    size_t size = 0;
+
+    lock(&g_thread_list_lock);
+
+    struct libos_thread* thread;
+    LISTP_FOR_EACH_ENTRY(thread, &g_thread_list, list) {
+        if (size < max_count) {
+            threads[size] = thread;
+            get_thread(thread);
+        }
+        size++;
+    }
+
+    unlock(&g_thread_list_lock);
+    return size;
+}
+
+int dump_all_threads(struct libos_thread*** out_threads, size_t* out_cnt) {
+    size_t count = 1;
+
+    /* We take a snapshot of g_thread_list while holding g_thread_list_lock.
+     * If our buffer is too small, dump_all_threads_with_buf() returns the
+     * total number of threads ("needed_count"). We then retry with that exact
+     * size. Because "count" monotonically increases to "needed_count" for a
+     * given snapshot, the loop terminates as long as new threads aren't being
+     * created at this point. */
+    while (true) {
+        struct libos_thread** threads = calloc(count, sizeof(*threads));
+        if (!threads) {
+            return -ENOMEM;
+        }
+
+        size_t needed_count = dump_all_threads_with_buf(threads, count);
+        if (needed_count <= count) {
+            *out_threads = threads;
+            *out_cnt = needed_count;
+            return 0;
+        }
+
+        /* Need more space - retry with the actual count needed */
+        assert(needed_count > count);
+
+        free_threads_array(threads, count);
+        count = needed_count;
+    }
+}
+
 BEGIN_CP_FUNC(signal_dispositions) {
     __UNUSED(size);
     assert(size == sizeof(struct libos_signal_dispositions));
