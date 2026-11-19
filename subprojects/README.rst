@@ -11,6 +11,9 @@ Gramine uses the following third-party components:
 - glibc/musl: used as the default libc library for applications; patched to use
   jump-into-Gramine functions instead of raw syscalls. Purely for better
   performance.
+- libcbor: used in RA-TLS/SecretProv libraries to encode and decode
+  SGX attestation evidence (quotes and related claims) in the CBOR format
+  specified by Interoperable RA-TLS.
 - mbedTLS: used for all crypto- and TLS-operations in Gramine and its tools:
 
   - crypto (``libmbedcrypto.a``) is used in Gramine core, e.g. AES-GCM on
@@ -24,5 +27,5 @@ Gramine uses the following third-party components:
   Least Recently Used (LRU) cache of blocks of encrypted files, as a performance
   optimization.
 
-For security reasons, we strive to update glibc, musl, curl and mbedTLS as soon
-as they release new versions that fix security vulnerabilities.
+For security reasons, we strive to update glibc, musl, curl, libcbor and mbedTLS
+as soon as they release new versions that fix security vulnerabilities.
