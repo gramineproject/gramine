@@ -246,14 +246,14 @@ long libos_syscall_mknodat(int dirfd, const char* pathname, mode_t mode, dev_t d
     hdl1->flags = O_RDONLY;
     hdl1->acc_mode = MAY_READ;
     get_dentry(dent);
-    hdl1->dentry = dent;
+    hdl1->dentry = dent; /* new not-yet-exported handle, so skip unnecessary handle locking */
 
     hdl2->type = TYPE_PIPE;
     hdl2->fs = &fifo_builtin_fs;
     hdl2->flags = O_WRONLY;
     hdl2->acc_mode = MAY_WRITE;
     get_dentry(dent);
-    hdl2->dentry = dent;
+    hdl2->dentry = dent; /* new not-yet-exported handle, so skip unnecessary handle locking */
 
     /* FIFO must be open'ed to start read/write operations, mark as not ready */
     hdl1->info.pipe.ready_for_ops = false;
