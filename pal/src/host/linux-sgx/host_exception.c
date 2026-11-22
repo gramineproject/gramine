@@ -88,8 +88,8 @@ static bool interrupted_in_enclave(struct ucontext* uc) {
     return rip >= (unsigned long)async_exit_pointer && rip < (unsigned long)async_exit_pointer_end;
 }
 
-static bool interrupted_in_aex_profiling(void) {
-    return pal_get_host_tcb()->is_in_aex_profiling != 0;
+static bool interrupted_in_aex(void) {
+    return pal_get_host_tcb()->is_in_aex != 0;
 }
 
 static void handle_sync_signal(int signum, siginfo_t* info, struct ucontext* uc) {
@@ -153,7 +153,7 @@ static void handle_async_signal(int signum, siginfo_t* info, struct ucontext* uc
         for (size_t i = 0; i < g_rpc_queue->rpc_threads_cnt; i++)
             DO_SYSCALL(tkill, g_rpc_queue->rpc_threads[i], SIGUSR2);
 
-    if (interrupted_in_enclave(uc) || interrupted_in_aex_profiling()) {
+    if (interrupted_in_enclave(uc) || interrupted_in_aex()) {
         /* signal arrived while in app/LibOS/trusted PAL code or when handling another AEX, handle
          * signal inside enclave */
         pal_get_host_tcb()->async_signal_cnt++;
@@ -287,3 +287,7 @@ void maybe_dump_and_reset_stats(void) {
     }
 }
 #endif
+
+void maybe_raise_pending_signal(void) {
+    /* TODO: check if there is any sync or async pending signal and raise it */
+}

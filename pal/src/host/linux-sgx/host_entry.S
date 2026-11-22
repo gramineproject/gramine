@@ -14,9 +14,8 @@
 
 #include "asm-offsets.h"
 
-    .extern tcs_base
-    .extern g_in_aex_profiling
     .extern maybe_dump_and_reset_stats
+    .extern maybe_raise_pending_signal
 
     .global sgx_ecall
     .type sgx_ecall, @function
@@ -54,9 +53,14 @@ sgx_ecall:
     leaq async_exit_pointer(%rip), %rcx
 
     movq $EENTER, %rax
+
+    .global eenter_pointer
+    .type eenter_pointer, @function
+
+eenter_pointer:
     enclu
 
-    # currently only ECALL_THREAD_RESET returns
+    # currently only ECALL_THREAD_RESET ecall returns, as well as stage-1 signal handler
 .Lafter_resume:
     popq %r15
     .cfi_adjust_cfa_offset -8
@@ -80,12 +84,15 @@ async_exit_pointer:
     .cfi_startproc
     .cfi_undefined %rip
 
+    # Inform that we are in AEX code
+    movb $1, %gs:PAL_HOST_TCB_IN_AEX
+
     # increment per-thread AEX counter for stats
     lock incq %gs:PAL_HOST_TCB_AEX_CNT
 
-#ifdef DEBUG
-    # Inform that we are in AEX profiling code
-    movb $1, %gs:PAL_HOST_TCB_IN_AEX_PROF
+    subq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset RED_ZONE_SIZE
+
     # Save ERESUME parameters
     pushq %rax
     .cfi_adjust_cfa_offset 8
@@ -99,11 +106,15 @@ async_exit_pointer:
     .cfi_def_cfa_register %rbp
     andq $~0xF, %rsp
 
+#ifdef DEBUG
     # Call sgx_profile_sample_aex with %rdi = TCS
     movq %rbx, %rdi
     call sgx_profile_sample_aex
 
     call maybe_dump_and_reset_stats
+#endif
+
+    call maybe_raise_pending_signal
 
     # Restore stack
     movq %rbp, %rsp
@@ -116,9 +127,11 @@ async_exit_pointer:
     .cfi_adjust_cfa_offset -8
     popq %rax
     .cfi_adjust_cfa_offset -8
-    movb $0, %gs:PAL_HOST_TCB_IN_AEX_PROF
-#endif
 
+    addq $RED_ZONE_SIZE, %rsp
+    .cfi_adjust_cfa_offset -RED_ZONE_SIZE
+
+    movb $0, %gs:PAL_HOST_TCB_IN_AEX
     .cfi_endproc
 
     # fall-through to ERESUME
