@@ -11,6 +11,10 @@
 #include "libos_fs_pseudo.h"
 #include "libos_process.h"
 
+/* The following values are taken from Linux v6.2 */
+#define PIPE_MAX_SIZE 1048576
+#define LEASE_BREAK_TIME 45
+
 static int proc_pid_max_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
     __UNUSED(dent);
 
@@ -29,6 +33,49 @@ static int proc_pid_max_load(struct libos_dentry* dent, char** out_data, size_t*
 
     *out_data = buffer;
     *out_size = buffer_size;
+    return 0;
+}
+
+static int proc_lease_break_time_load(struct libos_dentry* dent, char** out_data,
+                                      size_t* out_size) {
+    __UNUSED(dent);
+
+    size_t buffer_size = 16; /* enough to hold LEASE_BREAK_TIME */
+    char* buffer = malloc(buffer_size);
+    if (!buffer)
+        return -ENOMEM;
+
+    static_assert(LEASE_BREAK_TIME <= UINT_MAX, "wrong types");
+    int ret = snprintf(buffer, buffer_size, "%u", LEASE_BREAK_TIME);
+    if (ret < 0) {
+        free(buffer);
+        return ret;
+    }
+    assert((size_t)ret < buffer_size);
+
+    *out_data = buffer;
+    *out_size = ret;
+    return 0;
+}
+
+static int proc_pipe_max_size_load(struct libos_dentry* dent, char** out_data, size_t* out_size) {
+    __UNUSED(dent);
+
+    size_t buffer_size = 16; /* enough to hold PIPE_MAX_SIZE */
+    char* buffer = malloc(buffer_size);
+    if (!buffer)
+        return -ENOMEM;
+
+    static_assert(PIPE_MAX_SIZE <= UINT_MAX, "wrong types");
+    int ret = snprintf(buffer, buffer_size, "%u", PIPE_MAX_SIZE);
+    if (ret < 0) {
+        free(buffer);
+        return ret;
+    }
+    assert((size_t)ret < buffer_size);
+
+    *out_data = buffer;
+    *out_size = ret;
     return 0;
 }
 
@@ -71,6 +118,11 @@ int init_procfs(void) {
 
     struct pseudo_node* sys = pseudo_add_dir(root, "sys");
     struct pseudo_node* kernel = pseudo_add_dir(sys, "kernel");
+    struct pseudo_node* fs = pseudo_add_dir(sys, "fs");
+
+    pseudo_add_str(fs, "pipe-max-size", &proc_pipe_max_size_load);
+    pseudo_add_str(fs, "lease-break-time", &proc_lease_break_time_load);
+
     pseudo_add_str(kernel, "pid_max", &proc_pid_max_load);
 
     pseudo_add_str(root, "meminfo", &proc_meminfo_load);
