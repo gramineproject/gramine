@@ -11,6 +11,12 @@ LIBPAL_PATH=@LIBPAL_PATH@
 HOST_PAL_PATH=@HOST_PAL_PATH@
 SGX=@SGX@
 
+ENV_CONFIG_ID="${SGX_CONFIG_ID:-}"
+ENV_CONFIG_SVN="${SGX_CONFIG_SVN:-}"
+
+CONFIG_ID=""
+CONFIG_SVN=""
+
 APPLICATION=
 ENVS=()
 PREFIX=()
@@ -44,14 +50,60 @@ fi
 
 while [ "$1" != "" ];
 do
-    if [ "$APPLICATION" == "" ]; then
-        APPLICATION=$1
-        shift
-        continue
-    fi
-
-    break
+    case "$1" in
+        --config-id=*)
+            CONFIG_ID="${1#*=}"
+            if [ -z "$CONFIG_ID" ]; then
+                echo "Error: --config-id requires a non-empty value." >&2
+                exit 2
+            fi
+            shift
+            continue
+            ;;
+        --config-svn=*)
+            CONFIG_SVN="${1#*=}"
+            if [ -z "$CONFIG_SVN" ]; then
+                echo "Error: --config-svn requires a non-empty value." >&2
+                exit 2
+            fi
+            shift
+            continue
+            ;;
+        *)
+            if [ -z "$APPLICATION" ]; then
+                APPLICATION="$1"
+                shift
+                continue
+            fi
+            break
+            ;;
+    esac
 done
+
+if [ "$SGX" != "1" ]; then
+    if [ -n "$CONFIG_ID" ] || [ -n "$CONFIG_SVN" ]; then
+        echo "Error: --config-id and --config-svn are only allowed in gramine-sgx." >&2
+        exit 2
+    fi
+fi
+
+if [ -n "$CONFIG_ID" ]; then
+    if [ -n "$ENV_CONFIG_ID" ] && [ "$CONFIG_ID" != "$ENV_CONFIG_ID" ]; then
+        echo "Error: --config-id does not match SGX_CONFIG_ID environment variable." >&2
+        exit 2
+    fi
+else
+    CONFIG_ID="$ENV_CONFIG_ID"
+fi
+
+if [ -n "$CONFIG_SVN" ]; then
+    if [ -n "$ENV_CONFIG_SVN" ] && [ "$CONFIG_SVN" != "$ENV_CONFIG_SVN" ]; then
+        echo "Error: --config-svn does not match SGX_CONFIG_SVN environment variable." >&2
+        exit 2
+    fi
+else
+    CONFIG_SVN="$ENV_CONFIG_SVN"
+fi
 
 if [ "$APPLICATION" == "" ]; then
     echo "Usage: $0 [<application>] <args>..."
@@ -80,5 +132,18 @@ fi
 
 CMD=("${ENVS[@]}")
 CMD+=("${PREFIX[@]}")
-CMD+=("$PAL_CMD" "$LIBPAL_PATH" init "$APPLICATION" "$@")
+CMD+=("$PAL_CMD" "$LIBPAL_PATH" init "$APPLICATION")
+
+if [ "$SGX" == "1" ]; then
+    if [ -z "$CONFIG_ID" ]; then
+        CONFIG_ID="00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+    fi
+    if [ -z "$CONFIG_SVN" ]; then
+        CONFIG_SVN="0"
+    fi
+    CMD+=("$CONFIG_ID" "$CONFIG_SVN")
+fi
+
+CMD+=("$@")
+
 exec env "${CMD[@]}"

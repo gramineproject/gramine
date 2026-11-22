@@ -39,6 +39,10 @@ sgx.edmm_enable = {{ 'true' if env.get('EDMM', '0') == '1' else 'false' }}
 sgx.enclave_size = "1G"
 sgx.max_threads = {{ '1' if env.get('EDMM', '0') == '1' else '32' }}
 
+sgx.kss = true
+sgx.isvfamilyid = "0x00112233445566778899aabbccddeeff"
+sgx.isvextprodid = "0xcafef00dcafef00df00dcafef00dcafe"
+
 sgx.remote_attestation = "{{ ra_type }}"
 
 sgx.trusted_files = [

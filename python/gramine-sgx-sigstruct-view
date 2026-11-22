@@ -28,6 +28,8 @@ def main(sigfile, verbose, output_format, output):
         'mr_enclave': sig['enclave_hash'].hex(),
         'isv_prod_id': sig['isv_prod_id'],
         'isv_svn': sig['isv_svn'],
+        'isv_ext_prod_id': sig['isv_ext_prod_id'].hex(),
+        'isv_family_id': sig['isv_family_id'].hex(),
         'attribute_flags': hex(sig['attribute_flags']),
         'attribute_xfrms': hex(sig['attribute_xfrms']),
         'misc_select': hex(sig['misc_select']),
@@ -39,8 +41,9 @@ def main(sigfile, verbose, output_format, output):
     }
 
     if not verbose:
-        keys_to_remove = ('attribute_flags', 'attribute_xfrms', 'misc_select',
-                          'attribute_flags_mask', 'attribute_xfrm_mask', 'misc_mask', 'date')
+        keys_to_remove = ('isv_family_id', 'isv_ext_prod_id', 'attribute_flags',
+                          'attribute_xfrms', 'misc_select', 'attribute_flags_mask',
+                          'attribute_xfrm_mask', 'misc_mask', 'date')
         for key in keys_to_remove:
             del sig_readable[key]
 

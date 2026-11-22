@@ -15,6 +15,7 @@ const struct generated_offset generated_offsets[] = {
     /* defines from sgx_arch.h */
     DEFINE(SGX_FLAGS_DEBUG, SGX_FLAGS_DEBUG),
     DEFINE(SGX_FLAGS_MODE64BIT, SGX_FLAGS_MODE64BIT),
+    DEFINE(SGX_FLAGS_KSS, SGX_FLAGS_KSS),
     DEFINE(SGX_XFRM_LEGACY, SGX_XFRM_LEGACY),
     DEFINE(SGX_XFRM_AVX, SGX_XFRM_AVX),
     DEFINE(SGX_XFRM_MPX, SGX_XFRM_MPX),

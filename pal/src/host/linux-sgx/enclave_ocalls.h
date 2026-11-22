@@ -85,7 +85,8 @@ int ocall_sched_getaffinity(void* tcs, unsigned long* cpu_mask, size_t cpu_mask_
 int ocall_clone_thread(void* dynamic_tcs);
 
 int ocall_create_process(size_t nargs, const char** args, uintptr_t (*reserved_mem_ranges)[2],
-                         size_t reserved_mem_ranges_len, int* out_stream_fd);
+                         size_t reserved_mem_ranges_len, sgx_config_id_t config_id,
+                         sgx_config_svn_t config_svn, int* out_stream_fd);
 
 int ocall_futex(uint32_t* uaddr, int op, int val, uint64_t* timeout_us);
 
