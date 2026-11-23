@@ -632,11 +632,12 @@ static int populate_directory(struct libos_dentry* dent) {
 
         ret = traverse_mount_and_lookup(&child);
         put_dentry(child);
-        if (ret < 0 && ret != -EACCES) {
-            /* Fail on underlying lookup errors, except -EACCES (for which we will just ignore the
-             * file). The lookup might fail with -EACCES for host symlinks pointing to inaccessible
-             * target, since the "chroot" filesystem transparently follows symlinks instead of
-             * reporting them to Gramine. */
+        if (ret < 0 && ret != -EACCES && ret != -ELOOP) {
+            /* Fail on underlying lookup errors, except -EACCES and -ELOOP (for which we will just
+             * ignore the file). The lookup might fail with -EACCES for host symlinks pointing to
+             * inaccessible target, and with -ELOOP for host symlinks that form a loop, since the
+             * "chroot" filesystem transparently follows symlinks instead of reporting them to
+             * Gramine. */
             goto out;
         }
     }

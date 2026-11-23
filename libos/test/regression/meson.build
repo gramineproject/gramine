@@ -59,6 +59,7 @@ tests = {
     'gettimeofday': {},
     'groups': {},
     'helloworld': {},
+    'host_errno': {},
     'host_root_fs': {},
     'hostname': {},
     'init_fail': {},
