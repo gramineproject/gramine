@@ -51,6 +51,28 @@ static int positive_unix_to_pal_error(int unix_errno) {
             return PAL_ERROR_CONNFAILED_PIPE;
         case EAFNOSUPPORT:
             return PAL_ERROR_AFNOSUPPORT;
+        case ENOTEMPTY:
+            return PAL_ERROR_DIRNOTEMPTY;
+        case EROFS:
+            return PAL_ERROR_READONLYFS;
+        case ENOSPC:
+            return PAL_ERROR_NOSPACE;
+        case EDQUOT:
+            return PAL_ERROR_QUOTAEXCEEDED;
+        case EFBIG:
+            return PAL_ERROR_FILETOOBIG;
+        case EMFILE:
+            return PAL_ERROR_TOOMANYFILES;
+        case ENFILE:
+            return PAL_ERROR_FILETABLEFULL;
+        case EXDEV:
+            return PAL_ERROR_CROSSDEVICE;
+        case EBUSY:
+            return PAL_ERROR_BUSY;
+        case ETXTBSY:
+            return PAL_ERROR_TEXTBUSY;
+        case ELOOP:
+            return PAL_ERROR_SYMLINKLOOP;
         default:
             return PAL_ERROR_DENIED;
     }
