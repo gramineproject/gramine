@@ -1272,6 +1272,18 @@ class TC_40_FileSystem(RegressionTestCase):
         stdout, _ = self.run_binary(['fdleak'], timeout=40, open_fds_limit=50)
         self.assertIn("TEST OK", stdout)
 
+    def test_031_host_errno(self):
+        path = 'tmp/host_errno'
+        shutil.rmtree(path, ignore_errors=True)
+        os.mkdir(path)
+        os.symlink('loop', os.path.join(path, 'loop'))
+        try:
+            # The host limit must be lower than RLIMIT_NOFILE inside Gramine (900 by default).
+            stdout, _ = self.run_binary(['host_errno', path], open_fds_limit=64)
+        finally:
+            shutil.rmtree(path)
+        self.assertIn('TEST OK', stdout)
+
     def get_cache_levels_cnt(self):
         cpu0 = '/sys/devices/system/cpu/cpu0/'
         self.assertTrue(os.path.exists(f'{cpu0}/cache/'))
