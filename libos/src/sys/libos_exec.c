@@ -180,8 +180,32 @@ long libos_syscall_execve(const char* file, const char* const* argv, const char*
         /* Just exit current thread. */
         thread_exit(/*error_code=*/0, /*term_signal=*/0);
     }
+
+    size_t count;
+    struct libos_thread** threads;
+    ret = dump_all_threads(&threads, &count);
+    if (ret < 0) {
+        return ret;
+    }
+
     (void)kill_other_threads();
 
+    /* Wait until the async‑worker has cleared each remaining thread’s
+     * clear_child_tid before we unmap their VMAs. */
+    struct libos_thread* cur_thread = get_cur_thread();
+    for (size_t i = 0; i < count; i++) {
+        struct libos_thread* thread = threads[i];
+
+        /* Skip the main thread and current thread. */
+        if (thread->pal_handle == g_pal_public_state->first_thread || thread == cur_thread) {
+            continue;
+        }
+
+        wait_clear_child_tid(thread->clear_child_tid, thread->tid);
+    }
+
+    /* Put down the references (possibly deallocate them) and free the array */
+    free_threads_array(threads, count);
     /* All other threads are dead. Restoring initial value in case we stay inside same process
      * instance and call execve again. */
     __atomic_store_n(&first, 0, __ATOMIC_RELAXED);

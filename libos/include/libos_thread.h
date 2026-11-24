@@ -315,6 +315,10 @@ bool check_last_thread(bool mark_self_dead);
 
 int walk_thread_list(int (*callback)(struct libos_thread*, void*), void* arg, bool one_shot);
 
+/* Dump all current libos_thread entries from g_thread_list, getting one ref on each. */
+int dump_all_threads(struct libos_thread*** out_threads, size_t* out_cnt);
+void free_threads_array(struct libos_thread** threads, size_t count);
+
 void get_handle_map(struct libos_handle_map* map);
 void put_handle_map(struct libos_handle_map* map);
 
@@ -339,3 +343,4 @@ noreturn void process_exit(int error_code, int term_signal);
 
 void release_robust_list(struct robust_list_head* head);
 void release_clear_child_tid(int* clear_child_tid);
+void wait_clear_child_tid(int* clear_child_tid, int child_tid);
