@@ -1592,27 +1592,30 @@ class TC_80_Socket(RegressionTestCase):
         stdout, _ = self.run_binary(['tcp_ancillary'])
         self.assertIn('TEST OK', stdout)
 
-    # Two tests for a responsive peer: first connect() returns EINPROGRESS, then poll/epoll
-    # immediately returns because the connection is quickly refused
+    # Tests for non-blocking connect() returning EINPROGRESS; see tcp_einprogress.c for the modes.
     def test_305_socket_tcp_einprogress_responsive_poll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '127.0.0.1', 'poll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', 'responsive', 'poll'])
         self.assertIn('TEST OK (connection refused after initial EINPROGRESS)', stdout)
 
     def test_306_socket_tcp_einprogress_responsive_epoll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '127.0.0.1', 'epoll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', 'responsive', 'epoll'])
         self.assertIn('TEST OK (connection refused after initial EINPROGRESS)', stdout)
 
-    # Two tests for an unresponsive peer: first connect() returns EINPROGRESS, then poll/epoll times
-    # out because the connection cannot be established. Note that 203.0.113.1 address is taken from
-    # the reserved "Documentation" range 203.0.113.0/24 (TEST-NET-3), which should never be used in
-    # real networks.
     def test_307_socket_tcp_einprogress_unresponsive_poll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '203.0.113.1', 'poll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', 'unresponsive', 'poll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
 
     def test_308_socket_tcp_einprogress_unresponsive_epoll(self):
-        stdout, _ = self.run_binary(['tcp_einprogress', '203.0.113.1', 'epoll'])
+        stdout, _ = self.run_binary(['tcp_einprogress', 'unresponsive', 'epoll'])
         self.assertIn('TEST OK (connection timed out)', stdout)
+
+    def test_309_socket_tcp_einprogress_slow_poll(self):
+        stdout, _ = self.run_binary(['tcp_einprogress', 'slow', 'poll'])
+        self.assertIn('TEST OK (connection established after initial EINPROGRESS)', stdout)
+
+    def test_309a_socket_tcp_einprogress_slow_epoll(self):
+        stdout, _ = self.run_binary(['tcp_einprogress', 'slow', 'epoll'])
+        self.assertIn('TEST OK (connection established after initial EINPROGRESS)', stdout)
 
     def test_310_socket_tcp_ipv6_v6only(self):
         stdout, _ = self.run_binary(['tcp_ipv6_v6only'], timeout=50)
